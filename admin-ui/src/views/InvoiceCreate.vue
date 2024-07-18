@@ -485,11 +485,9 @@ const deleteInvoiceItem = (index) => {
 };
 
 const onChangeAccount = async () => {
-  console.log(111);
   selectedInstances.value = null;
 
   const account = newInvoice.value.account?.uuid;
-console.log(account);
   if (instancesAccountMap.value.has(account)) {
     return;
   }
@@ -503,8 +501,15 @@ console.log(account);
       })
     );
 
-    const data=await instancesAccountMap.value.get(account);
-    console.log(data);
+    const data = await instancesAccountMap.value.get(account);
+    instancesAccountMap.value.set(
+      account,
+      data.map((data) => ({
+        uuid: data.instance.uuid,
+        title: data.instance.title,
+        price: data.instance.estimate,
+      }))
+    );
   } finally {
     isInstancesLoading.value = false;
   }
@@ -517,22 +522,20 @@ const onChangeInstance = () => {
   const newItems = [];
 
   selectedInstances.value.forEach((instance) => {
-    const { price: productPrice, title: productTitle } =
-      instance.billingPlan.products[instance.product];
+    const { price, title, uuid } = instance;
 
     const existedProduct = newInvoice.value.items.find(
-      (item) =>
-        item.title.includes(productTitle) && item.instance === instance.uuid
+      (item) => item.description.includes(title) && item.instance === uuid
     );
 
     if (existedProduct) {
       newItems.push(existedProduct);
     } else {
       newItems.push({
-        price: productPrice,
+        price: price,
         amount: 1,
-        description: productTitle,
-        instance: instance.uuid,
+        description: title,
+        instance: uuid,
         unit: "Pcs",
       });
     }

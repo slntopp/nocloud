@@ -95,6 +95,27 @@
       </div>
     </template>
 
+    <template v-slot:[`item.billingPlan.title`]="{ item, value }">
+      <router-link
+        :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
+      >
+        {{ getShortName(value) }}
+      </router-link>
+    </template>
+
+    <template v-slot:[`item.product`]="{ item }">
+      <router-link
+        :to="{
+          name: 'Plan',
+          params: {
+            planId: item.billingPlan?.uuid,
+          },
+        }"
+      >
+        {{ getShortName(item.billingPlan.products[item.product]?.title) }}
+      </router-link>
+    </template>
+
     <template v-slot:[`item.email`]="{ item }">
       <span v-if="!isAccountsLoading">
         {{ getShortName(getAccount(item.account)?.data?.email ?? "-") }}
@@ -162,6 +183,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
   tableName: { type: String, default: "instances-table" },
@@ -171,13 +193,25 @@ const props = defineProps({
   showSelect: { type: Boolean, default: true },
   openInNewTab: { type: Boolean, default: false },
   noSearch: { type: Boolean, default: false },
+  customFilter: { type: Object, default: () => {} },
 });
-const { tableName, value, refetch, showSelect, openInNewTab } = toRefs(props);
+const { value, refetch, showSelect, openInNewTab, customFilter } =
+  toRefs(props);
 
 const emit = defineEmits(["input"]);
 
 const store = useStore();
 const { defaultCurrency, convertTo } = useCurrency();
+useSearch({
+  name: props.tableName,
+  noSearch: props.noSearch,
+  defaultLayout: {
+    title: "Default",
+    filter: {
+      "state.state": [0, 1, 2, 3, 4, 6, 7, 8],
+    },
+  },
+});
 
 const page = ref(1);
 const options = ref({});
@@ -186,6 +220,8 @@ const fetchError = ref("");
 const isUniqueFetched = ref(false);
 const uniqueProducts = ref([]);
 const uniqueLocations = ref([]);
+const uniquePlans = ref([]);
+const uniquePeriods = ref([]);
 
 const instancesTypes = ref([]);
 
@@ -270,8 +306,6 @@ const total = computed(() => store.getters["instances/total"]);
 const servicesProviders = computed(
   () => store.getters["servicesProviders/all"]
 );
-const billingPlans = computed(() => store.getters["plans/all"]);
-
 const filter = computed(() => store.getters["appSearch/filter"]);
 
 const listOptions = computed(() => {
@@ -325,6 +359,11 @@ const listOptions = computed(() => {
     filters[key] = filter.value[key];
   }
 
+  //more priority
+  for (const key in customFilter.value) {
+    filters[key] = customFilter.value[key];
+  }
+
   return {
     filters: filters,
     page: page.value,
@@ -335,105 +374,115 @@ const listOptions = computed(() => {
   };
 });
 
-const searchFields = () =>
-  computed(() => [
-    {
-      key: "title",
-      title: "Title",
-      type: "input",
-    },
-    {
-      key: "period",
-      items: [],
-      title: "Period",
-      type: "select",
-    },
-    {
-      key: "sp",
-      items: servicesProviders.value.map((sp) => ({
-        text: sp.title,
-        value: sp.uuid,
-      })),
-      type: "select",
-      title: "Service provider",
-    },
-    {
-      key: "config.location",
-      items: uniqueLocations.value,
-      type: "select",
-      title: "Location",
-    },
-    {
-      key: "account",
-      custom: true,
-      multiple: true,
-      title: "Account",
-      component: AccountsAutocomplete,
-    },
-    {
-      key: "product",
-      items: uniqueProducts.value,
-      type: "select",
-      title: "Product",
-    },
-    {
-      key: "state.state",
-      items: [
-        { text: "INIT", value: 0 },
-        { text: "RUNNING", value: 3 },
-        { text: "STOPPED", value: 2 },
-        { text: "PENDING", value: 8 },
-        { text: "OPERATION", value: 7 },
-        { text: "SUSPENDED", value: 6 },
-        { text: "DELETED", value: 5 },
-        { text: "ERROR", value: 4 },
-        { text: "UNKNOWN", value: 1 },
-      ],
-      type: "select",
-      title: "State",
-    },
-    {
-      key: "type",
-      title: "Type",
-      type: "select",
-      items: instancesTypes.value,
-    },
-    {
-      key: "billing_plan",
-      type: "select",
-      title: "Billing plan",
-      items: billingPlans.value.map((plan) => ({
-        text: plan.title,
-        value: plan.uuid,
-      })),
-    },
-    { title: "Due date", key: "data.next_payment_date", type: "date" },
-    { title: "NCU price", key: "estimate", type: "number-range" },
-    { title: "Email", key: "email", type: "input" },
-    { title: "Date", key: "created", type: "date" },
-    { title: "IP", key: "state.meta.networking", type: "input" },
-    {
-      key: "resources.cpu",
-      type: "number-range",
-      title: "CPU",
-    },
-    { title: "RAM", key: "resources.ram", type: "number-range" },
-    { title: "Disk", key: "resources.drive_size", type: "number-range" },
-    { title: "OS", key: "config.template_id", type: "input" },
-    { title: "Domain", key: "resources.domain", type: "input" },
-    { title: "DCV", key: "resources.dcv", type: "input" },
-    {
-      title: "Approver email",
-      key: "resources.approver_email",
-      type: "input",
-    },
-  ]);
+const searchFields = computed(() => [
+  {
+    key: "title",
+    title: "Title",
+    type: "input",
+  },
+  {
+    key: "period",
+    items: uniquePeriods.value.map((period) => ({
+      text: getBillingPeriod(period),
+      value: period,
+    })),
+    title: "Period",
+    type: "select",
+  },
+  {
+    key: "sp",
+    items: servicesProviders.value.map((sp) => ({
+      text: sp.title,
+      value: sp.uuid,
+    })),
+    type: "select",
+    title: "Service provider",
+  },
+  {
+    key: "config.location",
+    items: uniqueLocations.value,
+    type: "select",
+    title: "Location",
+  },
+  {
+    key: "account",
+    custom: true,
+    multiple: true,
+    title: "Account",
+    component: AccountsAutocomplete,
+  },
+  {
+    key: "product",
+    items: uniqueProducts.value,
+    type: "select",
+    title: "Product",
+  },
+  {
+    key: "state.state",
+    items: [
+      { text: "INIT", value: 0 },
+      { text: "RUNNING", value: 3 },
+      { text: "STOPPED", value: 2 },
+      { text: "PENDING", value: 8 },
+      { text: "OPERATION", value: 7 },
+      { text: "SUSPENDED", value: 6 },
+      { text: "DELETED", value: 5 },
+      { text: "ERROR", value: 4 },
+      { text: "UNKNOWN", value: 1 },
+    ],
+    type: "select",
+    title: "State",
+  },
+  {
+    key: "type",
+    title: "Type",
+    type: "select",
+    items: instancesTypes.value,
+  },
+  {
+    key: "billing_plan",
+    type: "select",
+    title: "Billing plan",
+    items: uniquePlans.value.map((plan) => ({
+      text: plan.title,
+      value: plan.uuid,
+    })),
+  },
+  { title: "Due date", key: "data.next_payment_date", type: "date" },
+  { title: "NCU price", key: "estimate", type: "number-range" },
+  { title: "Email", key: "email", type: "input" },
+  { title: "Date", key: "created", type: "date" },
+  { title: "IP", key: "state.meta.networking", type: "input" },
+  {
+    key: "resources.cpu",
+    type: "number-range",
+    title: "CPU",
+  },
+  { title: "RAM", key: "resources.ram", type: "number-range" },
+  { title: "Disk", key: "resources.drive_size", type: "number-range" },
+  { title: "OS", key: "config.template_id", type: "input" },
+  { title: "Domain", key: "resources.domain", type: "input" },
+  { title: "DCV", key: "resources.dcv", type: "input" },
+  {
+    title: "Approver email",
+    key: "resources.approver_email",
+    type: "input",
+  },
+]);
 
 const getAccount = (uuid) => {
   return accounts.value[uuid];
 };
 
 const setOptions = (newOptions) => {
+  const replaceSortKeys = { accountPrice: "estimate" };
+
+  for (const key in replaceSortKeys) {
+    if (newOptions.sortBy.includes(key)) {
+      newOptions.sortBy = [replaceSortKeys[key]];
+    }
+  }
+
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
@@ -459,6 +508,8 @@ const fetchUnique = async () => {
     const { unique } = await api.get("/instances/unique");
     uniqueLocations.value = unique.locations;
     uniqueProducts.value = unique.products;
+    uniquePlans.value = unique.billing_plans;
+    uniquePeriods.value = unique.periods;
 
     isUniqueFetched.value = true;
   } catch {
@@ -471,20 +522,9 @@ const fetchInstancesDebounce = debounce(fetchInstances, 100);
 const getPeriod = (instance) => {
   if (isInstancePayg(instance)) {
     return "PayG";
-  } else if (
-    instance.resources.period &&
-    !["ovh", "opensrs"].includes(instance.type)
-  ) {
-    const text = instance.resources.period > 1 ? "months" : "month";
-    return `${instance.resources.period} ${text}`;
-  } else if (instance.type === "opensrs") {
-    return getBillingPeriod(
-      Object.values(instance.billingPlan.resources || {})[0]?.period || 0
-    );
   }
-  const period = getBillingPeriod(
-    Object.values(instance.billingPlan.products || {})[0]?.period || 0
-  );
+
+  const period = getBillingPeriod(instance.period);
 
   return period || "Unknown";
 };
@@ -530,6 +570,7 @@ const changeRegularPayment = async (instance, value) => {
   }
 };
 
+//remake
 const updateEditValues = async (values) => {
   try {
     const promises = value?.value.map((instance) => {
@@ -574,9 +615,8 @@ const updateEditValues = async (values) => {
   }
 };
 
-watch(filter, fetchInstancesDebounce, { deep: true });
-watch(options, fetchInstancesDebounce);
-watch(refetch, fetchInstancesDebounce);
+watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
+watch([options, refetch], fetchInstancesDebounce);
 
 watch(instances, () => {
   instances.value.forEach(async ({ account: uuid }) => {
@@ -604,20 +644,7 @@ watch(
 </script>
 
 <script>
-import searchMixin from "@/mixins/search";
-
 export default {
   name: "instances-table",
-  mixins: [
-    searchMixin({
-      name: "instances-table",
-      defaultLayout: {
-        title: "Default",
-        filter: {
-          state: [0, 1, 2, 3, 4, 6, 7, 8],
-        },
-      },
-    }),
-  ],
 };
 </script>
