@@ -124,7 +124,7 @@ const headers = ref([
   { text: "Created date", value: "data.date_create" },
   { text: "Country", value: "data.country" },
   { text: "Address", value: "address" },
-  { text: "Client currency", value: "currency" },
+  { text: "Client currency", value: "currency.title" },
   { text: "Access level", value: "access.level" },
   { text: "WHMCS ID", value: "data.whmcs_id" },
   { text: "Invoice based", value: "data.regular_payment" },
@@ -187,7 +187,7 @@ const accounts = computed(() => {
       color: colorChip(a.access.level),
     },
     balance: a.balance || 0,
-    currency: a.currency?.title || defaultCurrency.value?.title,
+    currency: a.currency || defaultCurrency.value,
     data: {
       ...a.data,
       regular_payment:
@@ -245,7 +245,9 @@ const searchFields = computed(() => [
     title: "Client currency",
     key: "currency",
     type: "select",
-    items: store.getters["currencies/all"].filter((c) => c !== "NCU"),
+    items: store.getters["currencies/all"]
+      .filter((c) => c.title !== "NCU")
+      .map((c) => ({ text: c.title, value: c.id })),
   },
   {
     title: "Access level",
