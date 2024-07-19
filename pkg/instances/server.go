@@ -16,6 +16,7 @@ limitations under the License.
 package instances
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	"slices"
@@ -97,8 +98,9 @@ func (s *InstancesServer) RegisterDriver(type_key string, client driverpb.Driver
 	s.drivers[type_key] = client
 }
 
-func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*pb.InvokeResponse, error) {
+func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.InvokeRequest]) (*connect.Response[pb.InvokeResponse], error) {
 	log := s.log.Named("invoke")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -157,16 +159,17 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 	if err != nil {
 		event.Rc = 1
 		nocloud.Log(log, event)
-		return invoke, err
+		return connect.NewResponse(invoke), err
 	}
 
 	nocloud.Log(log, event)
 
-	return invoke, nil
+	return connect.NewResponse(invoke), nil
 }
 
-func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (s *InstancesServer) Delete(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("delete")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -215,13 +218,14 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 
 	nocloud.Log(log, event)
 
-	return &pb.DeleteResponse{
+	return connect.NewResponse(&pb.DeleteResponse{
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) Create(ctx context.Context, req *pb.CreateRequest) (*pb.CreateResponse, error) {
+func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.CreateRequest]) (*connect.Response[pb.CreateResponse], error) {
 	log := s.log.Named("Create")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -248,14 +252,15 @@ func (s *InstancesServer) Create(ctx context.Context, req *pb.CreateRequest) (*p
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &pb.CreateResponse{
+	return connect.NewResponse(&pb.CreateResponse{
 		Id:     newId,
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
+func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.UpdateRequest]) (*connect.Response[pb.UpdateResponse], error) {
 	log := s.log.Named("Update")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -282,13 +287,14 @@ func (s *InstancesServer) Update(ctx context.Context, req *pb.UpdateRequest) (*p
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	return &pb.UpdateResponse{
+	return connect.NewResponse(&pb.UpdateResponse{
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (s *InstancesServer) Detach(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("Detach")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -328,13 +334,14 @@ func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*p
 
 	nocloud.Log(log, event)
 
-	return &pb.DeleteResponse{
+	return connect.NewResponse(&pb.DeleteResponse{
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) Attach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (s *InstancesServer) Attach(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("Attach")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -374,13 +381,14 @@ func (s *InstancesServer) Attach(ctx context.Context, req *pb.DeleteRequest) (*p
 
 	nocloud.Log(log, event)
 
-	return &pb.DeleteResponse{
+	return connect.NewResponse(&pb.DeleteResponse{
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) TransferIG(ctx context.Context, req *pb.TransferIGRequest) (*pb.TransferIGResponse, error) {
+func (s *InstancesServer) TransferIG(ctx context.Context, _req *connect.Request[pb.TransferIGRequest]) (*connect.Response[pb.TransferIGResponse], error) {
 	log := s.log.Named("transfer")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -422,14 +430,15 @@ func (s *InstancesServer) TransferIG(ctx context.Context, req *pb.TransferIGRequ
 		return nil, err
 	}
 
-	return &pb.TransferIGResponse{
+	return connect.NewResponse(&pb.TransferIGResponse{
 		Result: true,
 		Meta:   nil,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.TransferInstanceRequest) (*pb.TransferInstanceResponse, error) {
+func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Request[pb.TransferInstanceRequest]) (*connect.Response[pb.TransferInstanceResponse], error) {
 	log := s.log.Named("transfer")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -471,14 +480,15 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.Transfer
 		return nil, err
 	}
 
-	return &pb.TransferInstanceResponse{
+	return connect.NewResponse(&pb.TransferInstanceResponse{
 		Result: true,
 		Meta:   nil,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest) (*notes.NoteResponse, error) {
+func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[notes.AddNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
 	log := s.log.Named("AddNote")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -509,14 +519,15 @@ func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest
 		return nil, err
 	}
 
-	return &notes.NoteResponse{
+	return connect.NewResponse(&notes.NoteResponse{
 		Result:     true,
 		AdminNotes: instance.GetAdminNotes(),
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
+func (s *InstancesServer) PatchNote(ctx context.Context, _req *connect.Request[notes.PatchNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
 	log := s.log.Named("Patch")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -551,17 +562,18 @@ func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteReq
 			return nil, err
 		}
 
-		return &notes.NoteResponse{
+		return connect.NewResponse(&notes.NoteResponse{
 			Result:     true,
 			AdminNotes: instance.GetAdminNotes(),
-		}, nil
+		}), nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
 }
 
-func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteRequest) (*notes.NoteResponse, error) {
+func (s *InstancesServer) RemoveNote(ctx context.Context, _req *connect.Request[notes.RemoveNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
 	log := s.log.Named("Remove")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -593,10 +605,10 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteR
 			return nil, err
 		}
 
-		return &notes.NoteResponse{
+		return connect.NewResponse(&notes.NoteResponse{
 			Result:     true,
 			AdminNotes: instance.GetAdminNotes(),
-		}, nil
+		}), nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
@@ -844,8 +856,9 @@ return {
 }
 `
 
-func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest) (*pb.ListInstancesResponse, error) {
+func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.ListInstancesRequest]) (*connect.Response[pb.ListInstancesResponse], error) {
 	log := s.log.Named("List")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 	log.Debug("Request", zap.Any("req", req))
@@ -899,7 +912,7 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 	//}
 
 	log.Debug("Result", zap.Any("result", &result))
-	return &result, nil
+	return connect.NewResponse(&result), nil
 }
 
 const countInstancesQuery = `
@@ -995,8 +1008,9 @@ return {
 }
 `
 
-func (s *InstancesServer) GetUnique(ctx context.Context, req *pb.GetUniqueRequest) (*pb.GetUniqueResponse, error) {
+func (s *InstancesServer) GetUnique(ctx context.Context, _req *connect.Request[pb.GetUniqueRequest]) (*connect.Response[pb.GetUniqueResponse], error) {
 	log := s.log.Named("GetCount")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -1042,7 +1056,7 @@ func (s *InstancesServer) GetUnique(ctx context.Context, req *pb.GetUniqueReques
 	result.Unique = structpb.NewStructValue(obj)
 	result.Total = uint64(resp.Total)
 
-	return &result, nil
+	return connect.NewResponse(&result), nil
 }
 
 const getInstanceQuery = `
@@ -1098,8 +1112,9 @@ FILTER LENGTH(instances) > 0
 RETURN instances[0]
 `
 
-func (s *InstancesServer) Get(ctx context.Context, req *pb.Instance) (*pb.ResponseInstance, error) {
+func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Instance]) (*connect.Response[pb.ResponseInstance], error) {
 	log := s.log.Named("Get")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -1130,5 +1145,5 @@ func (s *InstancesServer) Get(ctx context.Context, req *pb.Instance) (*pb.Respon
 		return nil, err
 	}
 
-	return &result, nil
+	return connect.NewResponse(&result), nil
 }

@@ -16,21 +16,27 @@ limitations under the License.
 package main
 
 import (
+	"connectrpc.com/connect"
+	"connectrpc.com/grpchealth"
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	"net"
+	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
+	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"net/http"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
-	healthpb "github.com/slntopp/nocloud-proto/health"
-	ipb "github.com/slntopp/nocloud-proto/instances"
-	pb "github.com/slntopp/nocloud-proto/services"
 	stpb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/instances"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+	ncauth "github.com/slntopp/nocloud/pkg/nocloud/auth"
+	auth "github.com/slntopp/nocloud/pkg/nocloud/connect_auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/services"
@@ -38,8 +44,6 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -94,26 +98,21 @@ func main() {
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
 	log.Info("DB connection established")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
 		DB:   0,
 	})
 
-	auth.SetContext(log, rdb, SIGNING_KEY)
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_zap.UnaryServerInterceptor(log),
-			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
-		)),
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-			grpc.StreamServerInterceptor(auth.JWT_STREAM_INTERCEPTOR),
-		)),
-	)
+	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
+	interceptors := connect.WithInterceptors(authInterceptor)
+
+	router := mux.NewRouter()
+	router.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Debug("Request", zap.String("method", r.Method), zap.String("path", r.URL.Path))
+			h.ServeHTTP(w, r)
+		})
+	})
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
 	rbmq, err := amqp.Dial(rbmq)
@@ -121,7 +120,6 @@ func main() {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer rbmq.Close()
-	log.Info("RabbitMQ connection established")
 
 	log.Info("Setting up Pub/Sub")
 	ps, err := states.SetupStatesStreaming()
@@ -157,7 +155,7 @@ func main() {
 	defer setconn.Close()
 
 	setc := stpb.NewSettingsServiceClient(setconn)
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	token, err := ncauth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
@@ -175,11 +173,33 @@ func main() {
 	server.SetupBillingClient(billc)
 	log.Info("Billing Service registered")
 
-	pb.RegisterServicesServiceServer(s, server)
-	ipb.RegisterInstancesServiceServer(s, iserver)
+	log.Info("Registering Services Server")
+	path, handler := cc.NewServicesServiceHandler(server, interceptors)
+	router.PathPrefix(path).Handler(handler)
+	log.Info("Services Server registered", zap.String("path", path))
 
-	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
+	log.Info("Registering Instances Server")
+	path, handler = ic.NewInstancesServiceHandler(iserver, interceptors)
+	router.PathPrefix(path).Handler(handler)
+	log.Info("Instances Server registered", zap.String("path", path))
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+	checker := grpchealth.NewStaticChecker()
+	path, handler = grpchealth.NewHandler(checker)
+	router.PathPrefix(path).Handler(handler)
+
+	host := fmt.Sprintf("0.0.0.0:%s", port)
+
+	handler = cors.New(cors.Options{
+		AllowedOrigins:      []string{"*"},
+		AllowedMethods:      []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
+		AllowedHeaders:      []string{"*", "Connect-Protocol-Version"},
+		AllowCredentials:    true,
+		AllowPrivateNetwork: true,
+	}).Handler(h2c.NewHandler(router, &http2.Server{}))
+
+	log.Info("Serving", zap.String("host", host))
+	err = http.ListenAndServe(host, handler)
+	if err != nil {
+		log.Fatal("Failed to start server", zap.Error(err))
+	}
 }
