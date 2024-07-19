@@ -308,6 +308,7 @@ const servicesProviders = computed(
   () => store.getters["servicesProviders/all"]
 );
 const filter = computed(() => store.getters["appSearch/filter"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
 
 const listOptions = computed(() => {
   const filters = {};
@@ -358,6 +359,10 @@ const listOptions = computed(() => {
     }
 
     filters[key] = filter.value[key];
+  }
+
+  if (searchParam.value) {
+    filters.search_param = searchParam.value;
   }
 
   //more priority
@@ -604,7 +609,7 @@ const updateEditValues = async (values) => {
 };
 
 watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
-watch([options, refetch], fetchInstancesDebounce);
+watch([options, refetch, searchParam], fetchInstancesDebounce);
 
 watch(instances, () => {
   instances.value.forEach(async ({ account: uuid }) => {
