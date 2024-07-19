@@ -370,9 +370,10 @@ payment:
 		log.Debug("Paid action: instance start")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
+			log = log.With(zap.String("instance", i))
 			instOld, err := s.instances.Get(ctx, i)
 			if err != nil {
-				log.Error("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to get instance to start", zap.Error(err))
 				continue
 			}
 			instOld.Uuid = instOld.Key
@@ -384,10 +385,10 @@ payment:
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to update instance", zap.Error(err))
 				continue
 			}
-			log.Debug("Successfully updated auto_start for instance", zap.String("instance", i))
+			log.Debug("Successfully updated auto_start for instance")
 		}
 		log.Info("Updated auto_start for instances after invoice was paid")
 
@@ -395,60 +396,36 @@ payment:
 		log.Debug("Paid action: instance renewal")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
-			instOld, err := s.instances.Get(ctx, i)
+			log = log.With(zap.String("instance", i))
+			if i == "" {
+				log.Debug("Instance item is empty")
+				continue
+			}
+			instance, err := s.instances.Get(ctx, i)
 			if err != nil {
 				log.Error("Failed to get instance to renew", zap.Error(err))
 				continue
 			}
-			instOld.Uuid = instOld.Key
-			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
-			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
+			instance.Uuid = instance.Key
+			res, err := s.instances.GetGroup(ctx, i)
 			if err != nil {
-				log.Error("Failed to get plan", zap.Error(err))
+				log.Error("Failed to get instance group", zap.Error(err))
 				continue
 			}
-
-			// Update every *_last_monitoring data to put aside instance billing
-			// TODO: should work correctly but need to make 100% sure
-			var last, next int64
-			for _, resource := range plan.GetResources() {
-				if resource.GetPeriod() == 0 {
-					continue
-				}
-
-				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
-				if ok {
-					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
-					instNew.Data[resource.Key+"_last_monitoring"] = structpb.NewNumberValue(float64(last + resource.GetPeriod()))
-				}
-				_, ok = instOld.Data[resource.Key+"_next_payment_date"]
-				if ok {
-					next = int64(instOld.Data[resource.Key+"_next_payment_date"].GetNumberValue())
-					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next + resource.GetPeriod()))
-				}
-			}
-
-			product, ok := plan.GetProducts()[instOld.GetProduct()]
-			if ok {
-				if product.GetPeriod() > 0 {
-					_, ok := instOld.Data["last_monitoring"]
-					if ok {
-						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
-					}
-					_, ok = instOld.Data["next_payment_date"]
-					if ok {
-						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
-					}
-				}
-			}
-
-			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err))
+			client, ok := s.drivers[res.Group.Type]
+			if !ok {
+				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
 				continue
 			}
-			log.Debug("Renewed instance", zap.String("instance", i))
+			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
+				ServicesProvider: res.SP,
+				Instance:         instance.Instance,
+			})
+			if err != nil {
+				log.Error("Failed to renew instance", zap.Error(err))
+				continue
+			}
+			log.Debug("Renewed instance")
 		}
 		log.Info("Renewed instances after invoice was paid")
 	}
