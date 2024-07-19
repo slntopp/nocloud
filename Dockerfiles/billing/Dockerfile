@@ -11,7 +11,6 @@ RUN adduser -SD nocloud
 WORKDIR /health
 RUN wget https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.14/grpc_health_probe-linux-amd64 -O check && chmod +x check
 
-
 FROM scratch
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/billing /billing
