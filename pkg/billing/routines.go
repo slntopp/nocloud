@@ -88,7 +88,7 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 
 func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log *zap.Logger, tick time.Time,
 	currencyConf CurrencyConf, roundingConf RoundingConf) {
-	log.Info("Issuing invoices for expiring instances", zap.Time("tick", tick))
+	log.Info("Trying to issue invoices for expiring instances", zap.Time("tick", tick))
 
 	list, err := s.services.List(ctx, schema.ROOT_ACCOUNT_KEY, &services.ListRequest{})
 	if err != nil {
