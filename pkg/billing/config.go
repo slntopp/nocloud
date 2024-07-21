@@ -15,6 +15,7 @@ const (
 	currencyKey string = "billing-platform-currency"
 	roundingKey string = "billing-rounding"
 	suspKey     string = "global-suspend-conf"
+	invKey      string = "billing-invoices"
 )
 
 type RoutineConf struct {
@@ -45,6 +46,11 @@ type SuspendConf struct {
 	ExtraLimit     float64           `json:"extra_limit"`
 }
 
+type InvoicesConf struct {
+	Template        string `json:"template"`
+	StartWithNumber int    `json:"start_with_number"`
+}
+
 var (
 	routineSetting = &sc.Setting[RoutineConf]{
 		Value: RoutineConf{
@@ -68,6 +74,14 @@ var (
 			Rounding: "CEIl",
 		},
 		Description: "Rounding used in records, transactions and other payments",
+		Level:       access.Level_ADMIN,
+	}
+	invoicesSetting = &sc.Setting[InvoicesConf]{
+		Value: InvoicesConf{
+			Template:        "PREFIX {YEAR}/{MONTH}/{NUMBER}",
+			StartWithNumber: 0,
+		},
+		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,
 	}
 	suspendedSetting = &sc.Setting[SuspendConf]{
@@ -151,6 +165,16 @@ func MakeSuspendConf(ctx context.Context, log *zap.Logger) (conf SuspendConf) {
 
 	if err := sc.Fetch(suspKey, &conf, suspendedSetting); err != nil {
 		conf = suspendedSetting.Value
+	}
+
+	return conf
+}
+
+func MakeInvoicesConf(ctx context.Context, log *zap.Logger) (conf InvoicesConf) {
+	sc.Setup(log, ctx, &settingsClient)
+
+	if err := sc.Fetch(invKey, &conf, invoicesSetting); err != nil {
+		conf = invoicesSetting.Value
 	}
 
 	return conf
