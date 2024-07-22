@@ -164,6 +164,14 @@ const routes = [
     },
   },
   {
+    path: "/settings/invoices",
+    name: "InvoicesSetting",
+    component: () => import("../views/InvoicesSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/plugin/:title",
     name: "Plugin",
     component: () => import("../views/PluginPage.vue"),
