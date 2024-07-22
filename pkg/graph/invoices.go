@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
+	"github.com/mitchellh/mapstructure"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -73,9 +74,18 @@ func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 	var tx = &Invoice{}
 	tx.Invoice = &pb.Invoice{}
 	tx.InvoiceNumberMeta = &InvoiceNumberMeta{}
-	meta, err := ctrl.col.ReadDocument(ctx, uuid, tx)
+	result := map[string]interface{}{}
+	meta, err := ctrl.col.ReadDocument(ctx, uuid, &result)
 	if err != nil {
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
+		return nil, err
+	}
+	err = mapstructure.Decode(result, tx.Invoice)
+	if err != nil {
+		return nil, err
+	}
+	err = mapstructure.Decode(result, tx.InvoiceNumberMeta)
+	if err != nil {
 		return nil, err
 	}
 	tx.Uuid = meta.Key
