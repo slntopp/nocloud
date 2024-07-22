@@ -25,7 +25,7 @@
 
     <template v-slot:[`item.number`]="{ item }">
       <router-link :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
-        {{ `№${item.number || item.uuid}` }}
+        {{ item.number }}
       </router-link>
     </template>
 
