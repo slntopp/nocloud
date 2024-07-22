@@ -70,7 +70,7 @@ func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 	var tx = &Invoice{}
 	tx.Invoice = &pb.Invoice{}
 	result := map[string]interface{}{}
-	meta, err := ctrl.col.ReadDocument(ctx, uuid, result)
+	meta, err := ctrl.col.ReadDocument(ctx, uuid, &result)
 	if err != nil {
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
 		return nil, err
