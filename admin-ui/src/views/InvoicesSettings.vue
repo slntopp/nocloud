@@ -60,13 +60,15 @@
 
 <script setup>
 import { useStore } from "@/store";
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import api from "../api";
 
 const store = useStore();
 
 const newSettings = ref({});
 const isSaveLoading = ref(false);
+
+onMounted(() => setNewSettings());
 
 const settings = computed(() => store.getters["settings/all"]);
 const isSettingsLoading = computed(() => store.getters["settings/isLoading"]);
