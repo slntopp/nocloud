@@ -466,6 +466,7 @@ payment:
 	old.Number = strNum
 	patch["number"] = strNum
 	patch["numeric_number"] = num
+	patch["number_template"] = invConf.Template
 
 	// BALANCE action was processed after transaction was processed
 	// NO_ACTION action don't need any processing
