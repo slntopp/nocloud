@@ -47,8 +47,10 @@ type SuspendConf struct {
 }
 
 type InvoicesConf struct {
-	Template        string `json:"template"`
-	StartWithNumber int    `json:"start_with_number"`
+	Template         string `json:"template"`
+	NewTemplate      string `json:"new_template"`
+	StartWithNumber  int    `json:"start_with_number"`
+	ResetCounterMode string `json:"reset_counter_mode"`
 }
 
 var (
@@ -78,8 +80,10 @@ var (
 	}
 	invoicesSetting = &sc.Setting[InvoicesConf]{
 		Value: InvoicesConf{
-			Template:        "PREFIX {YEAR}/{MONTH}/{NUMBER}",
-			StartWithNumber: 0,
+			Template:         "PREFIX {YEAR}/{MONTH}/{NUMBER}",
+			NewTemplate:      "{NUMBER}",
+			ResetCounterMode: "MONTHLY",
+			StartWithNumber:  0,
 		},
 		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,
@@ -177,5 +181,6 @@ func MakeInvoicesConf(ctx context.Context, log *zap.Logger) (conf InvoicesConf) 
 		conf = invoicesSetting.Value
 	}
 
+	log.Debug("Got invoices config", zap.Any("conf", conf))
 	return conf
 }
