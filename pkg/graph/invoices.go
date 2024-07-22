@@ -66,7 +66,7 @@ func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 }
 
 func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
-	var tx *Invoice
+	var tx = &Invoice{}
 	tx.Invoice = &pb.Invoice{}
 	meta, err := ctrl.col.ReadDocument(ctx, uuid, tx)
 	if err != nil {
