@@ -10,6 +10,9 @@
       <v-btn color="background-light" class="mr-2" to="/settings/plugins">
         plugins settings
       </v-btn>
+      <v-btn color="background-light" class="mr-2" to="/settings/invoices">
+        invoice settings
+      </v-btn>
 
       <v-dialog style="height: 100%">
         <template v-slot:activator="{ on, attrs }">

@@ -46,8 +46,9 @@ import { computed, ref } from "vue";
 import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
 import {
+  BillingStatus,
   CreateInvoiceRequest,
-  UpdateInvoiceRequest,
+  UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 
 const selectedInvoices = ref([]);
@@ -111,12 +112,10 @@ const handleUpdateStatus = async (newStatus) => {
           return;
         }
 
-        invoicesClient.value.updateInvoice(
-          UpdateInvoiceRequest.fromJson({
-            invoice: {
-              ...invoice,
-              status: newStatus,
-            },
+        return store.getters["invoices/invoicesClient"].updateInvoiceStatus(
+          UpdateInvoiceStatusRequest.fromJson({
+            uuid: invoice.uuid,
+            status: BillingStatus[newStatus],
           })
         );
       })
