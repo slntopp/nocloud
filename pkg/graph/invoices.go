@@ -2,10 +2,10 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
-	"github.com/mitchellh/mapstructure"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -80,14 +80,17 @@ func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
 		return nil, err
 	}
-	err = mapstructure.Decode(result, tx.Invoice)
+	bytes, err := json.Marshal(result)
 	if err != nil {
 		return nil, err
 	}
-	err = mapstructure.Decode(result, tx.InvoiceNumberMeta)
-	if err != nil {
+	if err = json.Unmarshal(bytes, tx.Invoice); err != nil {
 		return nil, err
 	}
+	if err = json.Unmarshal(bytes, tx.InvoiceNumberMeta); err != nil {
+		return nil, err
+	}
+
 	tx.Uuid = meta.Key
 	return tx, err
 }
