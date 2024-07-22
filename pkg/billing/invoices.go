@@ -116,13 +116,20 @@ func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery strin
 	defer cur.Close()
 	number := 1
 	for {
-		invoice := &graph.Invoice{}
-		_, err := cur.ReadDocument(context.Background(), invoice)
+		result := map[string]interface{}{}
+		invoice := &graph.Invoice{
+			Invoice:           &pb.Invoice{},
+			InvoiceNumberMeta: &graph.InvoiceNumberMeta{},
+		}
+		_, err := cur.ReadDocument(context.Background(), &result)
 		if err != nil {
 			if driver.IsNoMoreDocuments(err) {
 				break
 			}
 			log.Error("Failed to get invoices", zap.Error(err))
+			return "", 0, fmt.Errorf("failed to decode invoices. %w", err)
+		}
+		if err = s.invoices.DecodeInvoice(result, invoice); err != nil {
 			return "", 0, fmt.Errorf("failed to decode invoice. %w", err)
 		}
 		if invoice.NumericNumber >= number {
