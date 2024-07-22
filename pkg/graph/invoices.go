@@ -71,6 +71,8 @@ func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 
 func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
 	var tx = &Invoice{}
+	tx.Invoice = &pb.Invoice{}
+	tx.InvoiceNumberMeta = &InvoiceNumberMeta{}
 	meta, err := ctrl.col.ReadDocument(ctx, uuid, tx)
 	if err != nil {
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
