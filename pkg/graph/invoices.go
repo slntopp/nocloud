@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
+	"github.com/mitchellh/mapstructure"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -14,7 +15,7 @@ import (
 )
 
 type Invoice struct {
-	*pb.Invoice
+	*pb.Invoice    `json:"invoice"`
 	NumericNumber  int    `json:"numeric_number"`
 	NumberTemplate string `json:"number_template"`
 	driver.DocumentMeta
@@ -68,13 +69,15 @@ func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
 	var tx = &Invoice{}
 	tx.Invoice = &pb.Invoice{}
-	meta, err := ctrl.col.ReadDocument(ctx, uuid, tx)
+	result := map[string]interface{}{}
+	meta, err := ctrl.col.ReadDocument(ctx, uuid, result)
 	if err != nil {
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
 		return nil, err
 	}
+	err = mapstructure.Decode(result["invoice"], tx.Invoice)
 	tx.Uuid = meta.Key
-	return tx, nil
+	return tx, err
 }
 
 func (ctrl *InvoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
