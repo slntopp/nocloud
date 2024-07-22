@@ -15,6 +15,12 @@ updates:
       - slntopp
     assignees:
       - slntopp
+    groups:
+      gomodupdates:
+        patterns:
+          - "*"
+        update-types:
+          - "*"
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "tools/buf" # Location of package manifests
     target-branch: dev
@@ -48,3 +54,9 @@ updates:
       - slntopp
     assignees:
       - slntopp
+    groups:
+      gh_actions_updates:
+        patterns:
+          - "*"
+        update-types:
+          - "*"
