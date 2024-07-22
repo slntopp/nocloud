@@ -29,9 +29,10 @@
         />
       </v-col>
       <v-col cols="6">
-        <v-text-field
+        <v-select
           :loading="isSettingsLoading"
           v-model="newSettings.reset_counter_mode"
+          :items="reset_counter_modes"
           label="reset_counter_mode"
         />
       </v-col>
@@ -67,6 +68,8 @@ const store = useStore();
 
 const newSettings = ref({});
 const isSaveLoading = ref(false);
+
+const reset_counter_modes = ["DAILY", "MONTHLY", "YEARLY", "NO RESET"];
 
 onMounted(() => setNewSettings());
 
