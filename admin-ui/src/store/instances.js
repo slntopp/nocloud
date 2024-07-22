@@ -1,7 +1,6 @@
 import { createPromiseClient } from "@connectrpc/connect";
 import { InstancesService } from "nocloud-proto/proto/es/instances/instances_connect";
 import { ListInstancesRequest } from "nocloud-proto/proto/es/instances/instances_pb";
-import api from "@/api.js";
 
 export default {
   namespaced: true,
@@ -33,19 +32,18 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit }, params) {
+    async fetch({ commit, getters }, params) {
       commit("setInstances", []);
       commit("setLoading", true);
       try {
-        console.log(ListInstancesRequest.fromJson(params));
-        // const response = await getters["instancesClient"].list(
-        //     ListInstancesRequest.fromJson(params)
-        // );
-
-        const response = await api.post("/instances", params);
-
-        commit("setInstances", response.pool);
-        commit("setTotal", response.count);
+        const response = await getters["instancesClient"].list(
+          ListInstancesRequest.fromJson(params)
+        );
+        commit(
+          "setInstances",
+          response.pool.map((i) => ({ ...i, instance: i.instance.toJson() }))
+        );
+        commit("setTotal", Number(response.count));
 
         return response.pool;
       } finally {
@@ -61,16 +59,19 @@ export default {
         commit("setLoading", false);
       }
     },
-    async fetchToCached({ state, commit }, uuid) {
+    async fetchToCached({ state, commit, getters }, uuid) {
       if (state.cached.has(uuid)) {
         return state.cached.get(uuid);
       }
 
-      commit("setToCached", { instance: api.get("/instances/" + uuid), uuid });
+      commit("setToCached", {
+        instance: getters["instancesClient"].get({ uuid }),
+        uuid,
+      });
 
       const response = await state.cached.get(uuid);
 
-      commit("setToCached", { instance: response, uuid });
+      commit("setToCached", { instance: response.toJson(), uuid });
 
       return response;
     },

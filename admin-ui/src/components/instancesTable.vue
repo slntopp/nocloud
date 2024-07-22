@@ -184,6 +184,7 @@ import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import useSearch from "@/hooks/useSearch";
+import { UpdateRequest } from "nocloud-proto/proto/es/instances/instances_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "instances-table" },
@@ -307,6 +308,7 @@ const servicesProviders = computed(
   () => store.getters["servicesProviders/all"]
 );
 const filter = computed(() => store.getters["appSearch/filter"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
 
 const listOptions = computed(() => {
   const filters = {};
@@ -357,6 +359,10 @@ const listOptions = computed(() => {
     }
 
     filters[key] = filter.value[key];
+  }
+
+  if (searchParam.value) {
+    filters.search_param = searchParam.value;
   }
 
   //more priority
@@ -524,7 +530,7 @@ const getPeriod = (instance) => {
     return "PayG";
   }
 
-  const period = getBillingPeriod(instance.period);
+  const period = getBillingPeriod(Number(instance.period));
 
   return period || "Unknown";
 };
@@ -547,67 +553,54 @@ const getServiceProvider = (uuid) => {
   return servicesProviders.value.find((sp) => sp.uuid === uuid);
 };
 
-//remake
 const changeRegularPayment = async (instance, value) => {
   isChangeRegularPaymentLoading.value = true;
   try {
-    const tempService = JSON.parse(
-      JSON.stringify(this.services?.find((s) => s.uuid === instance.service))
-    );
-    const igIndex = tempService.instancesGroups.findIndex((ig) =>
-      ig.instances?.find((i) => i.uuid === instance.uuid)
-    );
-    const instanceIndex = tempService.instancesGroups[
-      igIndex
-    ].instances.findIndex((i) => i.uuid === instance.uuid);
-
     instance.config.regular_payment = value;
 
-    tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-    await api.services._update(tempService);
+    const data = store.getters["instances/all"].find(
+      (data) => data.instance.uuid === instance.uuid
+    ).instance;
+    data.config.regular_payment = value;
+
+    await store.getters["instances/instancesClient"].update(
+      UpdateRequest.fromJson({ instance: data })
+    );
   } finally {
     isChangeRegularPaymentLoading.value = false;
   }
 };
 
-//remake
 const updateEditValues = async (values) => {
   try {
     const promises = value?.value.map((instance) => {
-      const tempService = JSON.parse(
-        JSON.stringify(this.services?.find((s) => s.uuid === instance.service))
-      );
-      const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances?.find((i) => i.uuid === instance.uuid)
-      );
-      const instanceIndex = tempService.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === instance.uuid);
+      const data = store.getters["instances/all"].find(
+        (data) => data.instance.uuid === instance.uuid
+      ).instance;
 
-      instance.config.regular_payment =
-        values["config.regular_payment"] === "True";
-      instance.created = formatDateToTimestamp(values["date"]);
-      if (["ione", "empty"].includes(instance.type)) {
-        Object.keys(instance.data).forEach((nextPaymentDateKey) => {
+      data.config.regular_payment = values["config.regular_payment"] === "True";
+      data.created = formatDateToTimestamp(values["date"]);
+      if (["ione", "empty"].includes(data.type)) {
+        Object.keys(data.data).forEach((nextPaymentDateKey) => {
           if (nextPaymentDateKey.endsWith("next_payment_date")) {
             const lastMonitoringKey = nextPaymentDateKey.replace(
               "next_payment_date",
               "last_monitoring"
             );
-            instance.data[nextPaymentDateKey] = formatDateToTimestamp(
+            data.data[nextPaymentDateKey] = formatDateToTimestamp(
               values.dueDate
             );
-            instance.data[lastMonitoringKey] =
-              instance.data[lastMonitoringKey] +
+            data.data[lastMonitoringKey] =
+              data.data[lastMonitoringKey] +
               (formatDateToTimestamp(values.dueDate) -
-                instance.data[lastMonitoringKey]);
+                data.data[lastMonitoringKey]);
           }
         });
       }
 
-      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-
-      return api.services._update(tempService);
+      return store.getters["instances/instancesClient"].update(
+        UpdateRequest.fromJson({ instance: data })
+      );
     });
     await Promise.all(promises);
   } catch (e) {
@@ -616,7 +609,7 @@ const updateEditValues = async (values) => {
 };
 
 watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
-watch([options, refetch], fetchInstancesDebounce);
+watch([options, refetch, searchParam], fetchInstancesDebounce);
 
 watch(instances, () => {
   instances.value.forEach(async ({ account: uuid }) => {
