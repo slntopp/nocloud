@@ -9,14 +9,14 @@
         <v-text-field
           :loading="isSettingsLoading"
           v-model="newSettings.template"
-          label="template"
+          label="Template"
         />
       </v-col>
       <v-col cols="6">
         <v-text-field
           :loading="isSettingsLoading"
           v-model="newSettings.new_template"
-          label="new_template"
+          label="New template"
         />
       </v-col>
 
@@ -25,15 +25,15 @@
           :loading="isSettingsLoading"
           v-model.number="newSettings.start_with_number"
           type="number"
-          label="start_with_number"
+          label="Start with number"
         />
       </v-col>
       <v-col cols="6">
         <v-select
           :loading="isSettingsLoading"
           v-model="newSettings.reset_counter_mode"
-          :items="reset_counter_modes"
-          label="reset_counter_mode"
+          :items="resetCounterModes"
+          label="Reset counter mode"
         />
       </v-col>
     </v-row>
@@ -69,7 +69,7 @@ const store = useStore();
 const newSettings = ref({});
 const isSaveLoading = ref(false);
 
-const reset_counter_modes = ["DAILY", "MONTHLY", "YEARLY", "NO RESET"];
+const resetCounterModes = ["DAILY", "MONTHLY", "YEARLY", "NO RESET"];
 
 onMounted(() => setNewSettings());
 
