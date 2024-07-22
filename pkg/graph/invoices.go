@@ -66,14 +66,15 @@ func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 }
 
 func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
-	var tx Invoice
-	meta, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
+	var tx *Invoice
+	tx.Invoice = &pb.Invoice{}
+	meta, err := ctrl.col.ReadDocument(ctx, uuid, tx)
 	if err != nil {
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
 		return nil, err
 	}
 	tx.Uuid = meta.Key
-	return &tx, nil
+	return tx, nil
 }
 
 func (ctrl *InvoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
