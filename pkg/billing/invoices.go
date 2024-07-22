@@ -335,9 +335,11 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	t.Processed = 0
 	t.Returned = 0
 	r, err := s.invoices.Create(ctx, &graph.Invoice{
-		Invoice:        t,
-		NumericNumber:  num,
-		NumberTemplate: invConf.NewTemplate,
+		Invoice: t,
+		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
+			NumericNumber:  num,
+			NumberTemplate: invConf.NewTemplate,
+		},
 	})
 	if err != nil {
 		log.Error("Failed to create invoice", zap.Error(err))
