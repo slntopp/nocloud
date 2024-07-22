@@ -65,6 +65,74 @@ LET ig = LAST( // Find Instance instance group
     )
 RETURN ig`
 
+const invoicesByPaymentDate = `
+FOR invoice IN @@invoices
+FILTER invoice.payment
+FILTER invoice.payment > 0
+FILTER invoice.payment >= @date_from
+FILTER invoice.payment < @date_to
+RETURN invoice
+`
+
+const invoicesByCreatedDate = `
+FOR invoice IN @@invoices
+FILTER invoice.created >= @date_from
+FILTER invoice.created < @date_to
+RETURN invoice
+`
+
+func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery string, date time.Time, template string, resetMode string) (string, int, error) {
+	log = log.Named("GetNewNumber")
+	var dateFrom, dateTo int64
+	switch resetMode {
+	case "DAILY":
+		dateFrom = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location()).Unix()
+		dateTo = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location()).
+			AddDate(0, 0, 1).Unix()
+	case "MONTHLY":
+		dateFrom = time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).Unix()
+		dateTo = time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).
+			AddDate(0, 1, 0).Unix()
+	case "YEARLY":
+		dateFrom = time.Date(date.Year(), 1, 1, 0, 0, 0, 0, date.Location()).Unix()
+		dateTo = time.Date(date.Year()+1, 1, 1, 0, 0, 0, 0, date.Location()).Unix()
+	default:
+		log.Info("Reset mode is unknown. Using max range", zap.String("mode", resetMode))
+		dateFrom = 0
+		dateTo = int64(^uint64(0) >> 1) // max int64
+	}
+
+	bindVars := map[string]interface{}{
+		"@invoices": schema.INVOICES_COL,
+		"date_from": dateFrom,
+		"date_to":   dateTo,
+	}
+
+	cur, err := s.db.Query(context.Background(), invoicesQuery, bindVars)
+	if err != nil {
+		log.Error("Failed to get invoices to define number", zap.Error(err))
+		return "", 0, fmt.Errorf("failed to get invoices. %w", err)
+	}
+	defer cur.Close()
+	number := 1
+	for {
+		invoice := &graph.Invoice{}
+		_, err := cur.ReadDocument(context.Background(), invoice)
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			log.Error("Failed to get invoices", zap.Error(err))
+			return "", 0, fmt.Errorf("failed to decode invoice. %w", err)
+		}
+		if invoice.NumericNumber >= number {
+			number = invoice.NumericNumber + 1
+		}
+	}
+
+	return s.invoices.ParseNumberIntoTemplate(template, number, date), number, nil
+}
+
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -225,6 +293,15 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}
 	}
 
+	now := time.Now()
+
+	invConf := MakeInvoicesConf(ctx, log)
+	strNum, num, err := s.GetNewNumber(log, invoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
+	if err != nil {
+		log.Error("Failed to get new number for invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
+	}
+
 	// Create transaction if it's balance deposit
 	if t.GetType() == pb.ActionType_BALANCE {
 		var transactionTotal = t.GetTotal()
@@ -252,11 +329,16 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Transactions = []string{newTr.Msg.Uuid}
 	}
 
-	t.Created = time.Now().Unix()
+	t.Number = strNum
+	t.Created = now.Unix()
 	t.Payment = 0
 	t.Processed = 0
 	t.Returned = 0
-	r, err := s.invoices.Create(ctx, t)
+	r, err := s.invoices.Create(ctx, &graph.Invoice{
+		Invoice:        t,
+		NumericNumber:  num,
+		NumberTemplate: invConf.NewTemplate,
+	})
 	if err != nil {
 		log.Error("Failed to create invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
@@ -270,7 +352,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		})
 	}
 
-	resp := connect.NewResponse(r)
+	resp := connect.NewResponse(r.Invoice)
 	return resp, nil
 }
 
@@ -327,6 +409,9 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	transactions := old.GetTransactions()
 	var resp *connect.Response[pb.Invoice]
+	var strNum string
+	var num int
+	invConf := MakeInvoicesConf(ctx, log)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -362,6 +447,16 @@ payment:
 		}
 	}
 	log.Debug("Transactions were updated and processed.")
+
+	// Update number
+	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(old.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
+	if err != nil {
+		log.Error("Failed to get next number", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get next number")
+	}
+	old.Number = strNum
+	patch["number"] = strNum
+	patch["numeric_number"] = num
 
 	// BALANCE action was processed after transaction was processed
 	// NO_ACTION action don't need any processing
@@ -610,7 +705,7 @@ quit:
 	}
 
 	log.Info("Finished invoice update status")
-	resp = connect.NewResponse(old)
+	resp = connect.NewResponse(old.Invoice)
 	return resp, nil
 }
 
@@ -734,6 +829,20 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetCreated() != 0 {
 		t.Created = req.GetCreated()
 	}
+
+	invConf := MakeInvoicesConf(ctx, log)
+	if newStatus == pb.BillingStatus_PAID && oldStatus != pb.BillingStatus_PAID {
+		strNum, num, err := s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(t.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
+		if err != nil {
+			log.Error("Failed to get new number for invoice", zap.Error(err))
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		t.Number = strNum
+		t.NumberTemplate = invConf.Template
+		t.NumericNumber = num
+	}
+
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
@@ -799,7 +908,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		})
 	}
 
-	return connect.NewResponse(t), nil
+	return connect.NewResponse(t.Invoice), nil
 }
 
 func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
@@ -819,7 +928,7 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 		return nil, err
 	}
 
-	return connect.NewResponse(t), nil
+	return connect.NewResponse(t.Invoice), nil
 }
 
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
@@ -834,7 +943,7 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
-	resp := connect.NewResponse(&pb.Invoices{Pool: []*pb.Invoice{tr}})
+	resp := connect.NewResponse(&pb.Invoices{Pool: []*pb.Invoice{tr.Invoice}})
 
 	return resp, nil
 }
