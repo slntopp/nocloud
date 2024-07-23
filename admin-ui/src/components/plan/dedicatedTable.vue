@@ -24,10 +24,7 @@
               @click="refreshApiPlans"
               >Fetch plans</v-btn
             >
-            <v-btn
-              :disabled="!newPlans"
-              class="ml-3"
-              @click="setRefreshedPlans"
+            <v-btn :disabled="!newPlans" class="ml-3" @click="setRefreshedPlans"
               >Set api plans</v-btn
             >
             <v-btn class="ml-3" @click="setEnabledToPlans(true)"
@@ -548,7 +545,7 @@ export default {
             kind: "PREPAID",
             public: !!addon.public,
             meta: {
-              planCode: addon.planCode,
+              key: addon.planCode,
               apiName: addon.apiName,
               id: addon.id,
               basePrice: addon.basePrice,
@@ -784,7 +781,7 @@ export default {
             id: addon.meta.id,
             group: "",
             duration,
-            planCode: addon.meta.planCode,
+            planCode: addon.meta.key,
             apiName: addon.meta.apiName,
             title: addon.title,
             price: addon.periods[this.getPeriod(duration)],
