@@ -753,6 +753,8 @@ export default {
   },
   mounted() {
     this.refreshApiPlans();
+
+    this.planAddons = [...this.template.addons];
   },
   async created() {
     this.$emit("changeFee", this.template.fee);

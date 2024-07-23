@@ -665,6 +665,8 @@ export default {
     this.$emit("changeFee", this.template.fee);
 
     this.refreshPlans();
+
+    this.planAddons = [...this.template.addons];
   },
   computed: {
     defaultCurrency() {
