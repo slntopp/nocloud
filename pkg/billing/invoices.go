@@ -525,6 +525,7 @@ payment:
 			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
 				ServicesProvider: res.SP,
 				Instance:         instance.Instance,
+				Method:           "renew",
 			})
 			if err != nil {
 				log.Error("Failed to renew instance", zap.Error(err))
@@ -600,40 +601,23 @@ returning:
 				continue
 			}
 			i.Uuid = i.Key
-			// Find instance's ig
-			cur, err := s.db.Query(ctx, instanceInstanceGroup, map[string]interface{}{
-				"instance":    i.GetUuid(),
-				"permissions": schema.PERMISSIONS_GRAPH.Name,
-				"@instances":  schema.INSTANCES_COL,
-				"@igs":        schema.INSTANCES_GROUPS_COL,
-			})
-			if err != nil {
-				log.Error("Error getting instance group", zap.Error(err))
-				continue
-			}
-			var ig graph.InstancesGroup
-			_, err = cur.ReadDocument(ctx, &ig)
-			if err != nil {
-				log.Error("Error getting instance group", zap.Error(err))
-				continue
-			}
-			ig.Uuid = ig.Key
 
-			sp, err := s.sp.Get(ctx, ig.GetSp())
+			res, err := s.instances.GetGroup(ctx, id)
 			if err != nil {
-				log.Error("Failed to get SP", zap.Error(err))
+				log.Error("Failed to get instance and sp", zap.Error(err))
+				continue
 			}
-			sp.Uuid = sp.Key
+			sp := res.SP
+			ig := res.Group
 
 			client, ok := s.drivers[ig.GetType()]
 			if !ok {
 				log.Error("Failed to get driver", zap.String("type", ig.GetType()))
 				continue
 			}
-
 			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
 				Instance:         i.Instance,
-				ServicesProvider: sp.ServicesProvider,
+				ServicesProvider: sp,
 				Method:           "suspend",
 			})
 			if err != nil {
@@ -644,64 +628,42 @@ returning:
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
-		log.Debug("Canceling instance renewal back")
+		log.Debug("Returning action: instance renewal")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
-			instOld, err := s.instances.Get(ctx, i)
+			log = log.With(zap.String("instance", i))
+			if i == "" {
+				log.Debug("Instance item is empty")
+				continue
+			}
+			instance, err := s.instances.Get(ctx, i)
 			if err != nil {
-				log.Error("Failed to get instance to renew", zap.Error(err))
+				log.Error("Failed to get instance to cancel renew", zap.Error(err))
 				continue
 			}
-			instOld.Uuid = instOld.Key
-			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
-			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
+			instance.Uuid = instance.Key
+			res, err := s.instances.GetGroup(ctx, i)
 			if err != nil {
-				log.Error("Failed to get plan", zap.Error(err))
+				log.Error("Failed to get instance group", zap.Error(err))
 				continue
 			}
-
-			// Update every *_last_monitoring data to cancel renewal
-			// TODO: make sure this works correctly
-			var last, next int64
-			for _, resource := range plan.GetResources() {
-				if resource.GetPeriod() == 0 {
-					continue
-				}
-				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
-				if ok {
-					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
-					instNew.Data[resource.Key+"_last_monitoring"] = structpb.NewNumberValue(float64(last - resource.GetPeriod()))
-				}
-				_, ok = instOld.Data[resource.Key+"_next_payment_date"]
-				if ok {
-					next = int64(instOld.Data[resource.Key+"_next_payment_date"].GetNumberValue())
-					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next - resource.GetPeriod()))
-				}
-			}
-
-			product, ok := plan.GetProducts()[instOld.GetProduct()]
-			if ok {
-				if product.GetPeriod() > 0 {
-					_, ok := instOld.Data["last_monitoring"]
-					if ok {
-						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
-					}
-					_, ok = instOld.Data["next_payment_date"]
-					if ok {
-						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
-					}
-				}
-			}
-
-			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err))
+			client, ok := s.drivers[res.Group.Type]
+			if !ok {
+				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
 				continue
 			}
-
-			log.Debug("Reverted instance renewal", zap.String("instance", i))
+			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
+				ServicesProvider: res.SP,
+				Instance:         instance.Instance,
+				Method:           "cancel_renew",
+			})
+			if err != nil {
+				log.Error("Failed to cancel renew instance", zap.Error(err))
+				continue
+			}
+			log.Debug("Renewed instance was canceled")
 		}
+		log.Info("Canceled renew for instances")
 	}
 	log.Debug("Finished invoice returning")
 	goto quit
