@@ -244,7 +244,7 @@ const fetchFlavours = async () => {
         const planCode = `${period} ${flavour.id}`;
         const price = convertFrom(
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]],
-          "PLN"
+          { title: "PLN" }
         );
 
         newFlavours.push({
