@@ -8,6 +8,8 @@
           :account="account"
           :copy-template="copyInstance"
           :template="template"
+          :addons="addons"
+          :copy-addons="copyAddons"
         />
       </v-col>
     </v-row>
@@ -149,13 +151,13 @@
       />
       <v-card-title class="primary--text">Billing info</v-card-title>
       <component
-        @update="updateCopy"
+        @update="update"
         :is="billingInfoComponent"
         :template="copyInstance"
         :service="service"
         :plans="plans"
         :sp="sp"
-        :addons="addons"
+        :addons="copyAddons"
         :account="account"
         @refresh="refreshInstance"
       />
@@ -171,11 +173,11 @@
 
     <div v-if="billingLabelComponent" class="billing-label">
       <component
-        @update="updateCopy"
+        @update="update"
         :is="billingLabelComponent"
         v-if="Object.keys(copyInstance).length"
         :account="account"
-        :addons="addons"
+        :addons="copyAddons"
         :template="copyInstance"
       />
     </div>
@@ -217,20 +219,44 @@ export default {
     templates: {},
     moveDialog: false,
     copyInstance: {},
+    copyAddons: [],
   }),
   methods: {
     addToClipboard,
     refreshInstance() {
       this.$store.dispatch("reloadBtn/onclick");
     },
-    updateCopy({ key, value }) {
+    update({ type = "template", ...params }) {
+      if (type === "addons") {
+        return this.updateCopyAddons(params);
+      }
+
+      return this.updateCopyInstance(params);
+    },
+    updateCopyAddons({ key, value }) {
+      const keys = key.split(".");
+      if (keys.length) {
+        const lastKey = keys.pop();
+        let temp = this.copyAddons;
+        keys.forEach((key, index, array) => {
+          if (["com", "net", "org"].includes(key)) {
+            temp = temp[array[index - 1] + "." + key];
+          } else if (temp[key]) {
+            temp = temp[key];
+          }
+        });
+        temp[lastKey] = value;
+      } else {
+        this.copyAddons[key] = value;
+      }
+      this.copyAddons = [...this.copyAddons];
+    },
+    updateCopyInstance({ key, value }) {
       const keys = key.split(".");
       if (keys.length) {
         const lastKey = keys.pop();
         let temp = this.copyInstance;
-        console.log(key, value);
         keys.forEach((key, index, array) => {
-          console.log(key, temp);
           if (["com", "net", "org"].includes(key)) {
             temp = temp[array[index - 1] + "." + key];
           } else if (temp[key]) {
@@ -310,6 +336,7 @@ export default {
     }
 
     this.copyInstance = JSON.parse(JSON.stringify(this.template));
+    this.copyAddons = JSON.parse(JSON.stringify(this.addons));
   },
   watch: {
     template: {

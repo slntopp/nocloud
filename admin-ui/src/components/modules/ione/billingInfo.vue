@@ -126,7 +126,7 @@
                   >
                 </template>
                 <instance-change-addons
-                v-if="isAddonsDialog"
+                  v-if="isAddonsDialog"
                   :instance="template"
                   :instance-addons="addons"
                   @update="
@@ -352,12 +352,14 @@ const getBillingItems = () => {
     });
   }
 
-  addons.value.forEach((addon) => {
+  addons.value.forEach((addon, index) => {
     const { title, periods } = addon;
     const { period, kind } = billingPlan.value.products[template.value.product];
     items.push({
       name: title,
       price: periods[period],
+      path: `${index}.periods.${period}`,
+      unit: "pcs",
       accountPrice: toAccountPrice(periods[period]),
       quantity: 1,
       isAddon: true,
@@ -377,6 +379,7 @@ const updatePrice = (item, isAccount) => {
     emit("update", {
       key: item.path,
       value: fromAccountPrice(item.accountPrice),
+      type: item.isAddon ? "addons" : "template",
     });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
@@ -385,7 +388,11 @@ const updatePrice = (item, isAccount) => {
       return p;
     });
   } else {
-    emit("update", { key: item.path, value: item.price });
+    emit("update", {
+      key: item.path,
+      value: item.price,
+      type: item.isAddon ? "addons" : "template",
+    });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
         p.accountPrice = toAccountPrice(item.price);
