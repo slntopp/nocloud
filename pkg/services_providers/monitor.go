@@ -98,12 +98,8 @@ FOR node, edge, path IN 3
 
 const getAddons = `
 LET instances = (
-    FILTER IS_ARRAY(@groups)
-	FOR ig IN @groups
-        LET ig_doc = DOCUMENT(CONCAT(@groups_col, "/", ig.uuid))
-        FILTER ig_doc
-		FOR node, edge IN 1
-			OUTBOUND ig_doc
+    FOR node, edge IN 1
+			OUTBOUND @ig
 	        GRAPH @permissions
 	        FILTER IS_SAME_COLLECTION(node, @@instances)
 	        RETURN node
@@ -184,25 +180,27 @@ start:
 				}
 
 				var addons = map[string]*pb.Addon{}
-				cur, err := s.db.Query(ctx, getAddons, map[string]any{
-					"groups":      igroups,
-					"addons":      schema.ADDONS_COL,
-					"@instances":  schema.INSTANCES_COL,
-					"groups_col":  schema.INSTANCES_GROUPS_COL,
-					"permissions": schema.PERMISSIONS_GRAPH.Name,
-				})
-				if err != nil {
-					log.Error("Failed to get addons", zap.Error(err))
-					return
-				}
-				for cur.HasMore() {
-					var addon = &pb.Addon{}
-					_, err = cur.ReadDocument(ctx, addon)
+				for _, ig := range igroups {
+					cur, err := s.db.Query(ctx, getAddons, map[string]any{
+						"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.GetUuid()),
+						"addons":      schema.ADDONS_COL,
+						"@instances":  schema.INSTANCES_COL,
+						"groups_col":  schema.INSTANCES_GROUPS_COL,
+						"permissions": schema.PERMISSIONS_GRAPH.Name,
+					})
 					if err != nil {
 						log.Error("Failed to get addons", zap.Error(err))
-						continue
+						return
 					}
-					addons[addon.Uuid] = addon
+					for cur.HasMore() {
+						var addon = &pb.Addon{}
+						_, err = cur.ReadDocument(ctx, addon)
+						if err != nil {
+							log.Error("Failed to get addons", zap.Error(err))
+							continue
+						}
+						addons[addon.Uuid] = addon
+					}
 				}
 
 				log.Debug("Got InstancesGroups", zap.Int("length", len(igroups)))
