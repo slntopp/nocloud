@@ -193,7 +193,7 @@ start:
 					return
 				}
 				for cur.HasMore() {
-					var addon *pb.Addon
+					var addon = &pb.Addon{}
 					_, err = cur.ReadDocument(ctx, addon)
 					if err != nil {
 						log.Error("Failed to get addons", zap.Error(err))
