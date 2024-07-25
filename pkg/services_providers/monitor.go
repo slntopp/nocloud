@@ -108,10 +108,9 @@ LET instances = (
 )
 
 FOR inst IN instances
-    FOR addon_id IN inst.addons
-       LET addon = DOCUMENT(CONCAT(@addons, "/", addon_id))
-       COLLECT uuid = addon_id
-       RETURN MERGE(addon, { uuid })
+FOR a IN inst.addons
+    COLLECT uuid = a
+    RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
 `
 
 func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
@@ -149,7 +148,7 @@ start:
 			}
 
 			go func(sp *graph.ServicesProvider) {
-				log = log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
+				log := log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
 				igroups, err := s.ctrl.GetGroups(ctx, sp)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
