@@ -98,6 +98,7 @@ FOR node, edge, path IN 3
 
 const getAddons = `
 LET instances = (
+    FILTER @groups
 	FOR ig IN @groups
         LET ig_doc = DOCUMENT(CONCAT(@groups_col, "/", ig.uuid))
 		FOR node, edge IN 1
@@ -107,6 +108,7 @@ LET instances = (
 	        RETURN node
 )
 
+FILTER instances
 FOR inst IN instances
 FILTER inst.addons
 FOR a IN inst.addons
