@@ -64,6 +64,7 @@ type InstancesController struct {
 	inv     InvoicesController
 	acc     AccountsController
 	cur     CurrencyController
+	addons  AddonsController
 	channel *amqp091.Channel
 
 	bp_ctrl *BillingPlansController
@@ -96,12 +97,16 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.C
 	}
 
 	bp_ctrl := NewBillingPlansController(log, db)
+	addons := NewAddonsController(log, db)
+	acc := NewAccountsController(log, db)
+	inv := NewInvoicesController(log, db)
 
-	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: &bp_ctrl}
+	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: &bp_ctrl,
+		addons: *addons, inv: inv, acc: acc, cur: NewCurrencyController(log, db)}
 }
 
-// CalculateInstanceEstimatePeriodicPrice return estimate periodic price for current instance in NCU currency
-func (ctrl *InstancesController) CalculateInstanceEstimatePeriodicPrice(i *pb.Instance) (float64, error) {
+// CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
+func (ctrl *InstancesController) CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error) {
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
 		return 0, err
@@ -109,37 +114,51 @@ func (ctrl *InstancesController) CalculateInstanceEstimatePeriodicPrice(i *pb.In
 
 	cost := 0.0
 
-	for _, res := range plan.GetResources() {
-
-		if res.GetPeriod() == 0 {
-			continue
+	product, ok := plan.GetProducts()[i.GetProduct()]
+	if ok {
+		charge := (product.GetPeriod() == 0 && includeOneTimePayments) || product.GetPeriod() != 0
+		if charge {
+			cost += product.Price
 		}
 
-		switch res.GetKey() {
-		case "cpu":
-			value := i.GetResources()["cpu"].GetNumberValue()
-			cost += value * res.GetPrice()
-		case "ram":
-			value := i.GetResources()["ram"].GetNumberValue() / 1024
-			cost += value * res.GetPrice()
-		case "ips_public":
-			value := i.GetResources()["ips_public"].GetNumberValue()
-			cost += value * res.GetPrice()
-		case "ips_private":
-			value := i.GetResources()["ips_private"].GetNumberValue()
-			cost += value * res.GetPrice()
-		default:
-			// Calculate drive size billing
-			if strings.Contains(res.GetKey(), "drive") {
-				driveType := i.GetResources()["drive_type"].GetStringValue()
-				if res.GetKey() != "drive_"+strings.ToLower(driveType) {
-					continue
-				}
-				count := i.GetResources()["drive_size"].GetNumberValue() / 1024
-				cost += res.GetPrice() * count
+		for _, addonId := range i.GetAddons() {
+			addon, err := ctrl.addons.Get(context.Background(), addonId)
+			if err != nil {
+				return 0, err
+			}
+			price := addon.GetPeriods()[product.GetPeriod()]
+			if price == 0 {
+				return 0, fmt.Errorf("addon %s has no price for period %d", addonId, product.GetPeriod())
+			}
+			if charge {
+				cost += price
 			}
 		}
 	}
+
+	for _, res := range plan.GetResources() {
+
+		if res.GetPeriod() == 0 && !includeOneTimePayments {
+			continue
+		}
+
+		// ram and drive_size calculates in GB for value
+		if res.GetKey() == "ram" {
+			value := i.GetResources()["ram"].GetNumberValue() / 1024
+			cost += value * res.GetPrice()
+		} else if strings.Contains(res.GetKey(), "drive") {
+			driveType := i.GetResources()["drive_type"].GetStringValue()
+			if res.GetKey() != "drive_"+strings.ToLower(driveType) {
+				continue
+			}
+			count := i.GetResources()["drive_size"].GetNumberValue() / 1024
+			cost += res.GetPrice() * count
+		} else {
+			count := i.GetResources()[res.GetKey()].GetNumberValue()
+			cost += res.GetPrice() * count
+		}
+	}
+
 	return cost, nil
 }
 
@@ -183,7 +202,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	i.Created = time.Now().Unix()
 
 	// Set estimate and period values
-	estimate, err := ctrl.CalculateInstanceEstimatePeriodicPrice(i)
+	estimate, err := ctrl.CalculateInstanceEstimatePrice(i, false)
 	if err != nil {
 		log.Error("Failed to calculate estimate instance periodic price", zap.Error(err))
 		return "", err
@@ -302,7 +321,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	// Recalculate estimate price and period
 	// Values would change if plan was updated or replaced
-	estimate, err := ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
+	estimate, err := ctrl.CalculateInstanceEstimatePrice(inst, false)
 	if err != nil {
 		log.Error("Failed to calculate estimate instance periodic price", zap.Error(err))
 		return err
@@ -518,7 +537,7 @@ func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instanc
 	// If values not presented in existing instance calculate estimate and period dynamically
 	// TODO: make migrations or smth instead of calculating it everytime
 	if inst.GetEstimate() == 0 {
-		inst.Estimate, _ = ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
+		inst.Estimate, _ = ctrl.CalculateInstanceEstimatePrice(inst, false)
 	}
 	if inst.GetPeriod() == 0 {
 		inst.Period, _ = ctrl.GetInstancePeriod(inst)
