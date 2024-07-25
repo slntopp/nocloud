@@ -98,9 +98,10 @@ FOR node, edge, path IN 3
 
 const getAddons = `
 LET instances = (
-    FILTER @groups
+    FILTER IS_ARRAY(@groups)
 	FOR ig IN @groups
         LET ig_doc = DOCUMENT(CONCAT(@groups_col, "/", ig.uuid))
+        FILTER ig_doc
 		FOR node, edge IN 1
 			OUTBOUND ig_doc
 	        GRAPH @permissions
@@ -108,9 +109,9 @@ LET instances = (
 	        RETURN node
 )
 
-FILTER instances
+FILTER IS_ARRAY(instances)
 FOR inst IN instances
-FILTER inst.addons
+FILTER IS_ARRAY(inst.addons)
 FOR a IN inst.addons
     COLLECT uuid = a
     RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
