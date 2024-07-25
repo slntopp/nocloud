@@ -126,8 +126,8 @@ func (ctrl *InstancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 			if err != nil {
 				return 0, err
 			}
-			price := addon.GetPeriods()[product.GetPeriod()]
-			if price == 0 {
+			price, hasPrice := addon.GetPeriods()[product.GetPeriod()]
+			if !hasPrice {
 				return 0, fmt.Errorf("addon %s has no price for period %d", addonId, product.GetPeriod())
 			}
 			if charge {
