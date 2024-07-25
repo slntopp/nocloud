@@ -108,6 +108,7 @@ LET instances = (
 )
 
 FOR inst IN instances
+FILTER inst.addons
 FOR a IN inst.addons
     COLLECT uuid = a
     RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
