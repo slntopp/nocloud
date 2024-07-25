@@ -78,6 +78,11 @@
         :show-select="false"
         hide-default-footer
       >
+        <template v-slot:[`item.name`]="{ item }">
+          <span v-html="item.name" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+        </template>
+
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
             <v-text-field
