@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
@@ -51,12 +50,13 @@ import (
 
 type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
-	db       driver.Database
-	ctrl     graph.ServicesController
-	sp_ctrl  graph.ServicesProvidersController
-	ns_ctrl  graph.NamespacesController
-	acc_ctrl graph.AccountsController
-	cur_ctrl graph.CurrencyController
+	db        driver.Database
+	ctrl      graph.ServicesController
+	sp_ctrl   graph.ServicesProvidersController
+	ns_ctrl   graph.NamespacesController
+	acc_ctrl  graph.AccountsController
+	cur_ctrl  graph.CurrencyController
+	instances graph.InstancesController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -73,12 +73,13 @@ func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, 
 
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db, conn),
-		sp_ctrl:  graph.NewServicesProvidersController(log, db),
-		ns_ctrl:  graph.NewNamespacesController(log, db),
-		acc_ctrl: graph.NewAccountsController(log, db),
-		cur_ctrl: graph.NewCurrencyController(log, db),
-		drivers:  make(map[string]driverpb.DriverServiceClient),
-		ps:       ps,
+		sp_ctrl:   graph.NewServicesProvidersController(log, db),
+		ns_ctrl:   graph.NewNamespacesController(log, db),
+		acc_ctrl:  graph.NewAccountsController(log, db),
+		cur_ctrl:  graph.NewCurrencyController(log, db),
+		instances: *graph.NewInstancesController(log, db, conn),
+		drivers:   make(map[string]driverpb.DriverServiceClient),
+		ps:        ps,
 	}
 }
 
@@ -435,46 +436,18 @@ func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[p
 	for _, group := range srv.GetInstancesGroups() {
 		for _, instance := range group.GetInstances() {
 
-			// TODO: make sure cost calculated correctly
-			var cost float64
-			for _, res := range instance.GetBillingPlan().GetResources() {
-
-				switch res.Key {
-				case "cpu":
-					count := instance.GetResources()["cpu"].GetNumberValue()
-					cost += res.GetPrice() * count
-				case "ram":
-					count := instance.GetResources()["ram"].GetNumberValue() / 1024
-					cost += res.GetPrice() * count
-				default:
-					// Calculate drive size billing
-					if strings.Contains(res.GetKey(), "drive") {
-						driveType := instance.GetResources()["drive_type"].GetStringValue()
-						if res.GetKey() != "drive_"+strings.ToLower(driveType) {
-							continue
-						}
-						count := instance.GetResources()["drive_size"].GetNumberValue() / 1024
-						cost += res.GetPrice() * count
-					}
-				}
+			cost, err := s.instances.CalculateInstanceEstimatePrice(instance, true)
+			if err != nil {
+				log.Error("Failed to calculate instance cost", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to calculate instance cost. "+err.Error())
 			}
-
-			product, ok := instance.GetBillingPlan().GetProducts()[instance.GetProduct()]
-			if !ok || product == nil {
-				log.Error("Failed to get product(instance's product not found in billing plan or nil)",
-					zap.String("product", instance.GetProduct()),
-					zap.String("instance", instance.GetUuid()))
-			} else {
-				cost += product.Price
-			}
-
 			cost *= rate // Convert NCU cost to account's currency
 
 			inv := &bpb.Invoice{
 				Status: bpb.BillingStatus_UNPAID,
 				Items: []*bpb.Item{
 					{
-						Description: fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
+						Description: fmt.Sprintf("Instance '%s' start payment", instance.GetUuid()),
 						Amount:      1,
 						Unit:        "Instance",
 						Price:       cost,

@@ -310,7 +310,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	// Create transaction if it's balance deposit
-	if t.GetType() == pb.ActionType_BALANCE {
+	if t.GetType() == pb.ActionType_BALANCE || t.GetType() == pb.ActionType_INSTANCE_START {
 		var transactionTotal = t.GetTotal()
 		transactionTotal *= -1
 
@@ -489,6 +489,7 @@ payment:
 			cfg := instNew.Config
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
+
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
 				log.Error("Failed to update instance", zap.Error(err))
 				continue
