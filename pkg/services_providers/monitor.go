@@ -185,7 +185,6 @@ start:
 						"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.GetUuid()),
 						"addons":      schema.ADDONS_COL,
 						"@instances":  schema.INSTANCES_COL,
-						"groups_col":  schema.INSTANCES_GROUPS_COL,
 						"permissions": schema.PERMISSIONS_GRAPH.Name,
 					})
 					if err != nil {
