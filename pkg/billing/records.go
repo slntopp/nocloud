@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"connectrpc.com/connect"
@@ -53,9 +54,12 @@ type RecordsController interface {
 }
 
 type RecordsServiceServer struct {
-	log     *zap.Logger
-	rbmq    *amqp.Connection
-	records RecordsController
+	log       *zap.Logger
+	rbmq      *amqp.Connection
+	records   RecordsController
+	plans     graph.BillingPlansController
+	instances graph.InstancesController
+	addons    graph.AddonsController
 
 	db driver.Database
 
@@ -66,11 +70,17 @@ func NewRecordsServiceServer(logger *zap.Logger, conn *amqp.Connection, db drive
 	log := logger.Named("RecordsService")
 
 	records := graph.NewRecordsController(log, db)
+	plans := graph.NewBillingPlansController(log, db)
+	instances := graph.NewInstancesController(log, db, conn)
+	addons := graph.NewAddonsController(log, db)
 
 	return &RecordsServiceServer{
-		log:     log,
-		rbmq:    conn,
-		records: &records,
+		log:       log,
+		rbmq:      conn,
+		records:   &records,
+		plans:     plans,
+		instances: *instances,
+		addons:    *addons,
 
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{
@@ -150,6 +160,48 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		record.Meta = map[string]*structpb.Value{}
 	}
 
+	// Find out record's item price (product, resource or addon)
+	var itemPrice float64
+	inst, err := s.instances.Get(ctx, record.Instance)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return err
+	}
+	bp, err := s.plans.Get(ctx, &pb.Plan{Uuid: inst.BillingPlan.Uuid})
+	if err != nil {
+		log.Error("Failed to get plan", zap.Error(err))
+		return err
+	}
+	if record.Product != "" {
+		itemPrice = bp.Products[record.Product].Price
+	} else if record.Resource != "" {
+		for _, res := range bp.Resources {
+			if res.Key == record.Resource {
+				itemPrice = res.Price
+				break
+			}
+		}
+	} else if record.Addon != "" {
+		if inst.Product == nil || *inst.Product == "" {
+			log.Error("Invalid record. Record is addon record but no product for instance", zap.Any("record", &record))
+			return fmt.Errorf("invalid record. Record is addon record but no product for instance")
+		}
+		product := bp.Products[*inst.Product]
+		addon, err := s.addons.Get(ctx, record.Addon)
+		if err != nil {
+			log.Error("Failed to get addon", zap.Error(err))
+			return err
+		}
+		itemPrice = addon.Periods[product.Period]
+	} else {
+		log.Warn("Invalid record. Record has no item", zap.Any("record", &record))
+		return fmt.Errorf("invalid record. Record has no item")
+	}
+	if itemPrice == 0 {
+		log.Warn("Invalid record. Item price is zero", zap.Any("record", &record))
+		return fmt.Errorf("invalid record. Item price is zero")
+	}
+
 	record.Meta["transactionType"] = structpb.NewStringValue("system")
 
 	s.records.Create(ctx, record)
@@ -158,7 +210,6 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
 			"@transactions": schema.TRANSACTIONS_COL,
 			"@instances":    schema.INSTANCES_COL,
-			"instances":     schema.INSTANCES_COL,
 			"@services":     schema.SERVICES_COL,
 			"@records":      schema.RECORDS_COL,
 			"@accounts":     schema.ACCOUNTS_COL,
@@ -168,7 +219,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			"graph":         schema.BILLING_GRAPH.Name,
 			"currencies":    schema.CUR_COL,
 			"currency":      currencyConf.Currency,
-			"billing_plans": schema.BILLING_PLANS_COL,
+			"item_price":    itemPrice,
 		})
 		if err != nil {
 			log.Error("Error Generating Transactions", zap.Error(err))
@@ -311,11 +362,6 @@ FOR service IN @@services // Iterate over Services
         FILTER !record.processed
         FILTER record.instance IN instances
 
-        LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
-		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", inst.billing_plan.uuid))
-		LET resources = bp.resources == null ? [] : bp.resources
-		LET item = record.product == null ? LAST(FOR res in resources FILTER res.key == record.resource return res) : bp.products[record.product]
-
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
 			// Cast to NCU if currency is not specified
@@ -324,7 +370,7 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET cost = record.total * rate * item.price
+        LET cost = record.total * rate * item_price
             UPDATE record._key WITH { 
 				processed: true, 
 				cost: cost,
