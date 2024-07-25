@@ -180,7 +180,7 @@ start:
 					cur.Close()
 				}
 
-				var addons map[string]*pb.Addon
+				var addons = map[string]*pb.Addon{}
 				cur, err := s.db.Query(ctx, getAddons, map[string]any{
 					"groups":      igroups,
 					"addons":      schema.ADDONS_COL,
