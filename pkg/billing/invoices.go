@@ -67,15 +67,15 @@ RETURN ig`
 
 const invoicesByPaymentDate = `
 FOR invoice IN @@invoices
-FILTER invoice.payment
-FILTER invoice.payment > 0
+FILTER invoice.payment && invoice.payment > 0
 FILTER invoice.payment >= @date_from
 FILTER invoice.payment < @date_to
 RETURN invoice
 `
 
-const invoicesByCreatedDate = `
+const unpaidInvoicesByCreatedDate = `
 FOR invoice IN @@invoices
+FILTER invoice.payment == null || invoice.payment == 0
 FILTER invoice.created >= @date_from
 FILTER invoice.created < @date_to
 RETURN invoice
@@ -303,7 +303,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	now := time.Now()
 
 	invConf := MakeInvoicesConf(ctx, log)
-	strNum, num, err := s.GetNewNumber(log, invoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
+	strNum, num, err := s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
 	if err != nil {
 		log.Error("Failed to get new number for invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
