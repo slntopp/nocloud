@@ -124,6 +124,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					i.GetStatus() == spb.NoCloudStatus_SUS ||
 					i.GetState().GetState() == stpb.NoCloudState_SUSPENDED ||
 					i.GetState().GetState() == stpb.NoCloudState_DELETED ||
+					i.GetState().GetState() == stpb.NoCloudState_STOPPED ||
+					i.GetState().GetState() == stpb.NoCloudState_FAILURE ||
 					i.GetStatus() == spb.NoCloudStatus_INIT {
 					log.Info("Instance has been deleted or PENDING or SUSPENDED or INIT state. Skipping")
 					continue
