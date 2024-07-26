@@ -149,14 +149,14 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				}
 
 				res, err := s.instances.GetGroup(ctx, i.GetUuid())
-				if err != nil {
-					log.Error("Error getting instance", zap.Error(err))
+				if err != nil || res.Group == nil || res.SP == nil {
+					log.Error("Error getting instance group or sp", zap.Error(err), zap.Any("group", res.Group), zap.Any("sp", res.SP))
 					continue
 				}
 
-				log = log.With(zap.String("driver", res.Group.Type))
+				log = log.With(zap.String("driver", res.SP.GetType()))
 
-				client, ok := s.drivers[res.Group.Type]
+				client, ok := s.drivers[res.SP.GetType()]
 				if !ok {
 					log.Error("Error getting driver. Driver not registered")
 					continue
