@@ -513,7 +513,7 @@ payment:
 				continue
 			}
 			instance.Uuid = instance.Key
-			res, err := s.instances.GetGroup(ctx, i)
+			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i).String())
 			if err != nil {
 				log.Error("Failed to get instance group", zap.Error(err))
 				continue
@@ -603,7 +603,7 @@ returning:
 			}
 			i.Uuid = i.Key
 
-			res, err := s.instances.GetGroup(ctx, id)
+			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, id).String())
 			if err != nil {
 				log.Error("Failed to get instance and sp", zap.Error(err))
 				continue
@@ -643,7 +643,7 @@ returning:
 				continue
 			}
 			instance.Uuid = instance.Key
-			res, err := s.instances.GetGroup(ctx, i)
+			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i).String())
 			if err != nil {
 				log.Error("Failed to get instance group", zap.Error(err))
 				continue

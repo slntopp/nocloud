@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/arangodb/go-driver"
 	"slices"
 	"time"
 
@@ -148,7 +149,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					}
 				}
 
-				res, err := s.instances.GetGroup(ctx, i.GetUuid())
+				res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i.GetUuid()).String())
 				if err != nil || res.Group == nil || res.SP == nil {
 					log.Error("Error getting instance group or sp", zap.Error(err), zap.Any("group", res.Group), zap.Any("sp", res.SP))
 					continue
