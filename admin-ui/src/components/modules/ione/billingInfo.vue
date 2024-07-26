@@ -309,35 +309,6 @@ const getBillingItems = () => {
     });
   }
 
-  const gbAddons = ["ram"];
-  Object.keys(template.value.resources).forEach((resourceKey) => {
-    let quantity = template.value.resources[resourceKey];
-    if (!quantity) {
-      return;
-    }
-
-    if (gbAddons.includes(resourceKey)) {
-      quantity = quantity / 1024;
-    }
-
-    const addonIndex = billingPlan.value.resources.findIndex(
-      (r) => r.key === resourceKey
-    );
-    const addon = billingPlan.value.resources[addonIndex];
-    if (addon) {
-      items.push({
-        name: resourceKey,
-        price: addon.price,
-        accountPrice: toAccountPrice(addon.price),
-        kind: addon.kind,
-        period: addon.period,
-        quantity,
-        unit: "pcs",
-        path: `billingPlan.resources.${addonIndex}.price`,
-      });
-    }
-  });
-
   const driveType = template.value.resources.drive_type?.toLowerCase();
 
   if (driveType) {

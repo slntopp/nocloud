@@ -748,22 +748,7 @@ export function getInstancePrice(inst) {
     case "cpanel": {
       const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
 
-      const countedResources = new Map();
-      return +inst.billingPlan.resources?.reduce((prev, curr) => {
-        if (countedResources.has(curr.key)) {
-          return prev;
-        }
-
-        countedResources.set(curr.key, true);
-        if (curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`) {
-          return prev + (curr?.price * inst.resources.drive_size) / 1024;
-        } else if (curr.key === "ram") {
-          return prev + (curr?.price * inst.resources.ram) / 1024;
-        } else if (inst.resources[curr.key]) {
-          return prev + curr?.price * inst.resources[curr.key];
-        }
-        return prev;
-      }, initialPrice);
+      return initialPrice;
     }
   }
 }
