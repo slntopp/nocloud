@@ -526,7 +526,10 @@ payment:
 				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
 				continue
 			}
-			instance.Access.Level = access.Level_ROOT
+			instance.Access = &access.Access{
+				Level: access.Level_ROOT,
+				Role:  "owner",
+			}
 			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
 				ServicesProvider: res.SP,
 				Instance:         instance.Instance,
