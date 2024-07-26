@@ -4,12 +4,10 @@
       <div class="d-flex align-center">
         <v-btn class="mr-1" :to="{ name: 'Invoice create' }"> Create </v-btn>
 
-        <span class="mr-3 text-h6">Show:</span>
-        <v-btn class="mr-1">overdue</v-btn>
+        <v-btn class="mr-1 ml-3">overdue</v-btn>
         <v-btn class="mr-1">unpaid</v-btn>
       </div>
       <div class="d-flex align-center">
-        <span class="text-h6">Actions:</span>
         <v-btn class="mr-1">Merge</v-btn>
         <v-btn
           :disabled="isCopyDisabled"
@@ -18,8 +16,6 @@
           class="mr-5"
           >Copy</v-btn
         >
-
-        <span class="mr-3 text-h6">Mark as:</span>
 
         <v-btn
           v-for="button in changeStatusBtns"
@@ -50,8 +46,9 @@ import { computed, ref } from "vue";
 import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
 import {
+  BillingStatus,
   CreateInvoiceRequest,
-  UpdateInvoiceRequest,
+  UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 
 const selectedInvoices = ref([]);
@@ -115,12 +112,10 @@ const handleUpdateStatus = async (newStatus) => {
           return;
         }
 
-        invoicesClient.value.updateInvoice(
-          UpdateInvoiceRequest.fromJson({
-            invoice: {
-              ...invoice,
-              status: newStatus,
-            },
+        return store.getters["invoices/invoicesClient"].updateInvoiceStatus(
+          UpdateInvoiceStatusRequest.fromJson({
+            uuid: invoice.uuid,
+            status: BillingStatus[newStatus],
           })
         );
       })

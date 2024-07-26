@@ -98,10 +98,6 @@ const onSearchInput = async (e) => {
 };
 
 const fetchAccount = async () => {
-  console.log( fetchValue.value &&
-    value.value &&
-    (typeof value.value === "string" || Object.keys(value.value).length),
-  value.value);
   if (
     fetchValue.value &&
     value.value &&

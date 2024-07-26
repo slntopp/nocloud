@@ -64,6 +64,15 @@
 
         <v-col cols="6">
           <v-text-field
+            @change="(newVal) => setValue('config.username', newVal)"
+            label="Username"
+            :value="instance.config?.username"
+          >
+          </v-text-field>
+        </v-col>
+
+        <v-col cols="6">
+          <v-text-field
             @change="(newVal) => setValue('resources.cpu', +newVal)"
             label="CPU"
             :value="instance.resources.cpu"
@@ -180,13 +189,14 @@ const emit = defineEmits(["set-instance", "set-value"]);
 
 const store = useStore();
 const { tarrifAddons, setTariffAddons, getAvailableAddons, isAddonsLoading } =
-  useInstanceAddons(instance, (key,value) => setValue(key,value));
+  useInstanceAddons(instance, (key, value) => setValue(key, value));
 
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
     template_id: "",
     password: "",
+    username: "",
     auto_renew: true,
   },
   resources: {

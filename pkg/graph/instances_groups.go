@@ -115,7 +115,7 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	}
 
 	for _, instance := range g.GetInstances() {
-		err := ctrl.inst_ctrl.Create(ctx, meta.ID, *g.Sp, instance)
+		_, err := ctrl.inst_ctrl.Create(ctx, meta.ID, *g.Sp, instance)
 		if err != nil {
 			log.Error("Failed to create Instance", zap.Error(err))
 			continue
@@ -192,7 +192,7 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 		}
 		if !instFound {
 			docID := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.Uuid)
-			err := ctrl.inst_ctrl.Create(ctx, docID, *oldIg.Sp, inst)
+			_, err := ctrl.inst_ctrl.Create(ctx, docID, *oldIg.Sp, inst)
 			if err != nil {
 				log.Error("Error while creating instance", zap.Error(err))
 				return err

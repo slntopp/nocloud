@@ -68,7 +68,7 @@
         </v-col>
       </v-row>
       <component
-        :is-edit="isEdit || route.params.instanceId"
+        :is-edit="isEdit || route.query.instanceId"
         v-if="isInstanceControlsShowed"
         @set-value="setValue"
         :instance-group="instanceGroup"
@@ -165,9 +165,9 @@ const plans = computed(() =>
 const isInstanceControlsShowed = computed(
   () =>
     type.value &&
-    (!(isEdit.value || route.params.instanceId) ||
+    (!(isEdit.value || route.query.instanceId) ||
       isEdit.value ||
-      route.params.instanceId) &&
+      route.query.instanceId) &&
     !isLoading.value
 );
 
@@ -194,7 +194,7 @@ onMounted(async () => {
       store.dispatch("servicesProviders/fetch", { anonymously: false }),
       store.dispatch("plans/fetch"),
     ]);
-    const instanceId = route.params.instanceId;
+    const instanceId = route.query.instanceId;
     if (instanceId) {
       services.value.forEach((s) => {
         s.instancesGroups.forEach((ig) => {
@@ -212,24 +212,17 @@ onMounted(async () => {
       return;
     }
 
-    let {
-      type: newType,
-      serviceId,
-      accountId,
-      serviceProviderId,
-    } = route.params;
+    let { type: newType, accountId, serviceProviderId } = route.query;
 
     if (newType) {
-      service.value = services.value.find((s) => s.uuid === serviceId);
+      account.value = accountId;
+      setService();
       if (!typeItems.value.includes(newType)) {
         customTypeName.value = newType;
         newType = "custom";
       }
       type.value = newType;
       serviceProviderId.value = serviceProviderId;
-    }
-    if (accountId) {
-      account.value = await api.accounts.get(accountId);
     }
   } finally {
     isLoading.value = false;
@@ -378,6 +371,25 @@ const fetchNamespace = async () => {
   }
 };
 
+const setService = () => {
+  let newService;
+  const serviceId = route.query.serviceId;
+
+  if (!account.value) {
+    return (service.value = null);
+  }
+
+  if (serviceId) {
+    newService = servicesByAccount.value.find((s) => s.uuid === serviceId);
+  }
+
+  if (!newService) {
+    newService = servicesByAccount.value?.[0];
+  }
+
+  service.value = newService;
+};
+
 watch(serviceProviderId, (sp_uuid) => {
   if (!sp_uuid) return;
   instanceGroupTitle.value = service.value?.instancesGroups.find(
@@ -402,11 +414,15 @@ watch(instanceGroupTitle, (newVal) => {
 });
 
 watch(account, () => {
-  service.value = servicesByAccount.value?.[0];
+  setService();
 
   if (account.value.uuid) {
     fetchNamespace();
   }
+});
+
+watch(servicesByAccount, () => {
+  setService();
 });
 
 watch(type, () => {

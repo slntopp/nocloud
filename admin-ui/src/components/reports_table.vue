@@ -61,9 +61,14 @@
         </router-link>
       </template>
       <template v-slot:[`item.instance`]="{ value }">
-        <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
+        <router-link
+          v-if="!isInstancesLoading"
+          :to="{ name: 'Instance', params: { instanceId: value } }"
+        >
           {{ getShortName(getInstance(value)?.title || value) }}
         </router-link>
+
+        <v-skeleton-loader type="text" v-else />
       </template>
       <template v-slot:[`item.meta.transactionType`]="{ item }">
         <span>{{ getReportType(item) }}</span>
@@ -148,6 +153,7 @@ const fetchError = ref("");
 const options = ref({});
 const accounts = ref({});
 const isAccountsLoading = ref(false);
+const isInstancesLoading = ref(false);
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -179,7 +185,6 @@ const reportsHeaders = computed(() => {
   return headers;
 });
 
-const instances = computed(() => store.getters["services/getInstances"]);
 const services = computed(() => store.getters["services/all"]);
 
 const isLoading = computed(() => {
@@ -314,7 +319,7 @@ const init = async () => {
 };
 
 const getAccount = (value) => accounts.value[value];
-const getInstance = (value) => instances.value.find((s) => s.uuid === value);
+const getInstance = (value) => store.getters["instances/cached"].get(value);
 const getService = (value) => services.value.find((s) => s.uuid === value);
 
 const getStatus = (item) => {
@@ -394,7 +399,7 @@ watch(rates, () => {
 watch(filters, fetchReportsDebounced, { deep: true });
 watch(options, fetchReportsDebounced);
 
-watch(reports, () => {
+watch(reports, async () => {
   reports.value.forEach(async ({ account: uuid }) => {
     isAccountsLoading.value = true;
     try {
@@ -410,5 +415,16 @@ watch(reports, () => {
       );
     }
   });
+
+  isInstancesLoading.value = true;
+  try {
+    await Promise.all(
+      reports.value.map(({ instance: uuid }) =>
+        store.dispatch("instances/fetchToCached", uuid)
+      )
+    );
+  } finally {
+    isInstancesLoading.value = false;
+  }
 });
 </script>

@@ -21,7 +21,7 @@ const isDetached = computed(() => {
 });
 
 const isFreezed = computed(() => {
-  return template.value?.data.freeze;
+  return template.value?.data?.freeze;
 });
 
 const chipColor = computed(() => {

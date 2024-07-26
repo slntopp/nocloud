@@ -15,6 +15,7 @@ const (
 	currencyKey string = "billing-platform-currency"
 	roundingKey string = "billing-rounding"
 	suspKey     string = "global-suspend-conf"
+	invKey      string = "billing-invoices"
 )
 
 type RoutineConf struct {
@@ -22,7 +23,7 @@ type RoutineConf struct {
 }
 
 type CurrencyConf struct {
-	Currency pb.Currency `json:"currency"` // Default currency for platform
+	Currency *pb.Currency `json:"currency"` // Default currency for platform
 }
 
 type RoundingConf struct {
@@ -45,6 +46,14 @@ type SuspendConf struct {
 	ExtraLimit     float64           `json:"extra_limit"`
 }
 
+type InvoicesConf struct {
+	Template                 string  `json:"template"`
+	NewTemplate              string  `json:"new_template"`
+	StartWithNumber          int     `json:"start_with_number"`
+	ResetCounterMode         string  `json:"reset_counter_mode"`
+	IssueRenewalInvoiceAfter float64 `json:"issue_renewal_invoice_after"`
+}
+
 var (
 	routineSetting = &sc.Setting[RoutineConf]{
 		Value: RoutineConf{
@@ -55,7 +64,7 @@ var (
 	}
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
-			Currency: pb.Currency{
+			Currency: &pb.Currency{
 				Id:    schema.DEFAULT_CURRENCY_ID,
 				Title: schema.DEFAULT_CURRENCY_NAME,
 			},
@@ -68,6 +77,17 @@ var (
 			Rounding: "CEIl",
 		},
 		Description: "Rounding used in records, transactions and other payments",
+		Level:       access.Level_ADMIN,
+	}
+	invoicesSetting = &sc.Setting[InvoicesConf]{
+		Value: InvoicesConf{
+			Template:                 "PREFIX {YEAR}/{MONTH}/{NUMBER}",
+			NewTemplate:              "{NUMBER}",
+			ResetCounterMode:         "MONTHLY",
+			StartWithNumber:          0,
+			IssueRenewalInvoiceAfter: 0.8,
+		},
+		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,
 	}
 	suspendedSetting = &sc.Setting[SuspendConf]{
@@ -133,13 +153,14 @@ func MakeCurrencyConf(ctx context.Context, log *zap.Logger) (conf CurrencyConf) 
 		conf = currencySetting.Value
 	}
 
+	log.Debug("Got currency config", zap.Any("conf", conf))
 	return conf
 }
 
 func MakeRoundingConf(ctx context.Context, log *zap.Logger) (conf RoundingConf) {
 	sc.Setup(log, ctx, &settingsClient)
 
-	if err := sc.Fetch(currencyKey, &conf, roundingSetting); err != nil {
+	if err := sc.Fetch(roundingKey, &conf, roundingSetting); err != nil {
 		conf = roundingSetting.Value
 	}
 
@@ -153,5 +174,16 @@ func MakeSuspendConf(ctx context.Context, log *zap.Logger) (conf SuspendConf) {
 		conf = suspendedSetting.Value
 	}
 
+	return conf
+}
+
+func MakeInvoicesConf(ctx context.Context, log *zap.Logger) (conf InvoicesConf) {
+	sc.Setup(log, ctx, &settingsClient)
+
+	if err := sc.Fetch(invKey, &conf, invoicesSetting); err != nil {
+		conf = invoicesSetting.Value
+	}
+
+	log.Debug("Got invoices config", zap.Any("conf", conf))
 	return conf
 }

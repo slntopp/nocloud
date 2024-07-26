@@ -8,8 +8,9 @@
             :disabled="isLocked"
             :to="{
               name: 'Instance create',
-              params: {
+              query: {
                 accountId: account.uuid,
+                type: 'ione',
               },
             }"
           >
@@ -169,9 +170,13 @@
       />
     </div>
     <instances-table
-      :items="filteredInstances"
+      table-name="account-instances-table"
       no-search
       :show-select="false"
+      :custom-filter="{
+        account: [uuid],
+        'state.state': !!showDeletedInstances ? [] : [0, 1, 2, 3, 4, 6, 7, 8],
+      }"
     />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
@@ -240,7 +245,7 @@ import config from "@/config.js";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
-import InstancesTable from "@/components/instances_table.vue";
+import InstancesTable from "@/components/instancesTable.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
@@ -349,6 +354,7 @@ export default {
         this.statusChangeValue = "";
       }
     },
+    //need remake to instances api
     async permanentLock() {
       const newStatus = "PERMANENT_LOCK";
       this.statusChangeValue = newStatus;
@@ -375,6 +381,7 @@ export default {
         this.statusChangeValue = "";
       }
     },
+    //need remake to instances api
     async changeRegularPayment(value) {
       this.isChangeRegularPaymentLoading = true;
       this.isChangeRegularPaymentOpen = false;

@@ -16,6 +16,7 @@ limitations under the License.
 package instances
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	"slices"
@@ -39,6 +40,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type InstancesServer struct {
@@ -96,8 +98,9 @@ func (s *InstancesServer) RegisterDriver(type_key string, client driverpb.Driver
 	s.drivers[type_key] = client
 }
 
-func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*pb.InvokeResponse, error) {
+func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.InvokeRequest]) (*connect.Response[pb.InvokeResponse], error) {
 	log := s.log.Named("invoke")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -156,16 +159,17 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 	if err != nil {
 		event.Rc = 1
 		nocloud.Log(log, event)
-		return invoke, err
+		return connect.NewResponse(invoke), err
 	}
 
 	nocloud.Log(log, event)
 
-	return invoke, nil
+	return connect.NewResponse(invoke), nil
 }
 
-func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (s *InstancesServer) Delete(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("delete")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -214,13 +218,83 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 
 	nocloud.Log(log, event)
 
-	return &pb.DeleteResponse{
+	return connect.NewResponse(&pb.DeleteResponse{
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.CreateRequest]) (*connect.Response[pb.CreateResponse], error) {
+	log := s.log.Named("Create")
+	req := _req.Msg
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
+	var ig graph.InstancesGroup
+	ig, err := graph.GetWithAccess[graph.InstancesGroup](
+		ctx, s.db,
+		igId,
+	)
+	if err != nil {
+		log.Error("Failed to get instance group", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if ig.GetAccess().GetLevel() < accesspb.Level_MGMT {
+		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	// TODO: set sp here to log service prodiver
+	newId, err := s.ctrl.Create(ctx, igId, "", req.GetInstance())
+	if err != nil {
+		log.Error("Failed to create instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return connect.NewResponse(&pb.CreateResponse{
+		Id:     newId,
+		Result: true,
+	}), nil
+}
+
+func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.UpdateRequest]) (*connect.Response[pb.UpdateResponse], error) {
+	log := s.log.Named("Update")
+	req := _req.Msg
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	igId := driver.NewDocumentID(schema.INSTANCES_COL, req.GetInstance().GetUuid())
+	var instance graph.Instance
+	instance, err := graph.GetWithAccess[graph.Instance](
+		ctx, s.db,
+		igId,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() < accesspb.Level_MGMT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	// TODO: set sp here to log service prodiver
+	err = s.ctrl.Update(ctx, "", req.GetInstance(), instance.Instance)
+	if err != nil {
+		log.Error("Failed to update instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return connect.NewResponse(&pb.UpdateResponse{
+		Result: true,
+	}), nil
+}
+
+func (s *InstancesServer) Detach(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("Detach")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -260,13 +334,14 @@ func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*p
 
 	nocloud.Log(log, event)
 
-	return &pb.DeleteResponse{
+	return connect.NewResponse(&pb.DeleteResponse{
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) Attach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+func (s *InstancesServer) Attach(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("Attach")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -306,13 +381,14 @@ func (s *InstancesServer) Attach(ctx context.Context, req *pb.DeleteRequest) (*p
 
 	nocloud.Log(log, event)
 
-	return &pb.DeleteResponse{
+	return connect.NewResponse(&pb.DeleteResponse{
 		Result: true,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) TransferIG(ctx context.Context, req *pb.TransferIGRequest) (*pb.TransferIGResponse, error) {
+func (s *InstancesServer) TransferIG(ctx context.Context, _req *connect.Request[pb.TransferIGRequest]) (*connect.Response[pb.TransferIGResponse], error) {
 	log := s.log.Named("transfer")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -354,14 +430,15 @@ func (s *InstancesServer) TransferIG(ctx context.Context, req *pb.TransferIGRequ
 		return nil, err
 	}
 
-	return &pb.TransferIGResponse{
+	return connect.NewResponse(&pb.TransferIGResponse{
 		Result: true,
 		Meta:   nil,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.TransferInstanceRequest) (*pb.TransferInstanceResponse, error) {
+func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Request[pb.TransferInstanceRequest]) (*connect.Response[pb.TransferInstanceResponse], error) {
 	log := s.log.Named("transfer")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -403,14 +480,15 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.Transfer
 		return nil, err
 	}
 
-	return &pb.TransferInstanceResponse{
+	return connect.NewResponse(&pb.TransferInstanceResponse{
 		Result: true,
 		Meta:   nil,
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest) (*notes.NoteResponse, error) {
+func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[notes.AddNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
 	log := s.log.Named("AddNote")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -441,14 +519,15 @@ func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest
 		return nil, err
 	}
 
-	return &notes.NoteResponse{
+	return connect.NewResponse(&notes.NoteResponse{
 		Result:     true,
 		AdminNotes: instance.GetAdminNotes(),
-	}, nil
+	}), nil
 }
 
-func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
+func (s *InstancesServer) PatchNote(ctx context.Context, _req *connect.Request[notes.PatchNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
 	log := s.log.Named("Patch")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -483,17 +562,18 @@ func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteReq
 			return nil, err
 		}
 
-		return &notes.NoteResponse{
+		return connect.NewResponse(&notes.NoteResponse{
 			Result:     true,
 			AdminNotes: instance.GetAdminNotes(),
-		}, nil
+		}), nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
 }
 
-func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteRequest) (*notes.NoteResponse, error) {
+func (s *InstancesServer) RemoveNote(ctx context.Context, _req *connect.Request[notes.RemoveNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
 	log := s.log.Named("Remove")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -525,16 +605,317 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteR
 			return nil, err
 		}
 
-		return &notes.NoteResponse{
+		return connect.NewResponse(&notes.NoteResponse{
 			Result:     true,
 			AdminNotes: instance.GetAdminNotes(),
-		}, nil
+		}), nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
 }
 
+func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]interface{}) string {
+	if len(filters) == 0 {
+		return ""
+	}
+
+	query := ""
+	for key, val := range filters {
+		if key == "account" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER TO_STRING(acc._key) in @%s`, key)
+			bindVars[key] = values
+		} else if key == "email" {
+			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
+		} else if key == "title" {
+			query += fmt.Sprintf(` FILTER CONTAINS(node.title, "%s")`, val.GetStringValue())
+		} else if key == "resources.dcv" {
+			query += fmt.Sprintf(` FILTER CONTAINS(node.resources.dcv, "%s")`, val.GetStringValue())
+		} else if key == "resources.approver_email" {
+			query += fmt.Sprintf(` FILTER CONTAINS(node.resources.approver_email, "%s")`, val.GetStringValue())
+		} else if key == "config.domain" {
+			query += fmt.Sprintf(` FILTER CONTAINS(node.config.domain, "%s")`, val.GetStringValue())
+		} else if key == "config.configuration.vps_os" {
+			query += fmt.Sprintf(` FILTER CONTAINS(node.config.configuration.vps_os, "%s")`, val.GetStringValue())
+		} else if key == "type" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER ig.type in @%s`, key)
+			bindVars[key] = values
+		} else if key == "namespace" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER ns in @%s`, key)
+			bindVars[key] = values
+		} else if key == "sp" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER sp in @%s`, key)
+			bindVars[key] = values
+		} else if key == "billing_plan" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER bp._key in @%s`, key)
+			bindVars[key] = values
+		} else if key == "state.state" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			bindKey := "state"
+			query += fmt.Sprintf(` FILTER node.state.state in @%s`, bindKey)
+			bindVars[bindKey] = values
+		} else if key == "estimate" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(float64)
+				query += fmt.Sprintf(` FILTER node.estimate >= %f`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := val.(float64)
+				query += fmt.Sprintf(` FILTER node.estimate <= %f`, to)
+			}
+		} else if key == "service" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER srv in @%s`, key)
+			bindVars[key] = values
+		} else if key == "period" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node.period in @%s`, key)
+			bindVars[key] = values
+		} else if key == "config.location" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			bindKey := "location"
+			query += fmt.Sprintf(` FILTER node.config.location in @%s`, bindKey)
+			bindVars[bindKey] = values
+		} else if key == "resources.cpu" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.resources.cpu >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.resources.cpu <= %d`, to)
+			}
+		} else if key == "resources.drive_size" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.resources.drive_size >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.resources.drive_size <= %d`, to)
+			}
+		} else if key == "resources.ram" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.resources.ram >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.resources.ram <= %d`, to)
+			}
+		} else if key == "data.next_payment_date" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.data.next_payment_date >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.data.next_payment_date <= %d`, to)
+			}
+		} else if key == "state.meta.networking" {
+			val := val.GetStringValue()
+			query += fmt.Sprintf(` FILTER CONTAINS(TO_STRING(node.state.meta.networking.public), "%s") || CONTAINS(TO_STRING(node.state.meta.networking.private), "%s")`, val, val)
+		} else if key == "product" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node.product in @%s`, key)
+			bindVars[key] = values
+		} else if key == "created" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.created >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := int(val.(float64))
+				query += fmt.Sprintf(` FILTER node.created <= %d`, to)
+			}
+		}
+	}
+
+	return query
+}
+
+func getSortQuery(field, order string, customOrder []interface{}, bindVars map[string]interface{}) string {
+	if field == "" || order == "" {
+		return ""
+	}
+	query := ""
+
+	if field == "account" {
+		query += fmt.Sprintf(" SORT acc.title %s", order)
+	} else if field == "email" {
+		query += fmt.Sprintf(" SORT acc.data.email %s", order)
+	} else if field == "type" {
+		query += fmt.Sprintf(" SORT bp.type %s", order)
+	} else if field == "billing_plan" {
+		query += fmt.Sprintf(" SORT bp.title %s", order)
+	} else if field == "sp" {
+		query += fmt.Sprintf(" SORT sp.title %s", order)
+
+	} else if field == "state.state" {
+		bindKey := "customOrder"
+		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) DESC", bindKey)
+		bindVars[bindKey] = []interface{}{stpb.NoCloudState_RUNNING, stpb.NoCloudState_SUSPENDED, stpb.NoCloudState_INIT, stpb.NoCloudState_PENDING,
+			stpb.NoCloudState_FAILURE, stpb.NoCloudState_OPERATION, stpb.NoCloudState_STOPPED, stpb.NoCloudState_UNKNOWN, stpb.NoCloudState_DELETED}
+	} else {
+		query += fmt.Sprintf(" SORT node.%s %s", field, order)
+	}
+
+	return query
+}
+
 const listInstancesQuery = `
+LET instances = (
+	FOR node, edge, path IN 0..10 OUTBOUND @account_node
+	    GRAPH @permissions_graph
+	    OPTIONS {order: "bfs", uniqueVertices: "global"}
+	    FILTER IS_SAME_COLLECTION(@instances, node)
+
+        LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET sp = LAST (
+            FOR sp_node IN 1 OUTBOUND ig
+	            GRAPH @permissions_graph
+	            OPTIONS {order: "bfs", uniqueVertices: "global"}
+	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
+	            RETURN sp_node
+        )
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+		
+		%s
+		
+		RETURN {
+			instance: MERGE(node, { 
+				uuid: node._key, 
+				billing_plan: {
+					uuid: bp._key,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[node.product]: bp.products[node.product],
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software 
+				}
+			}
+			),
+			service: srv,
+			sp: sp._key,
+			type: bp.type,
+			account: acc._key
+		}
+)
+
+return { 
+	pool: (@limit > 0) ? SLICE(instances, @offset, @limit) : instances,
+	count: LENGTH(instances)
+}
+`
+
+func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.ListInstancesRequest]) (*connect.Response[pb.ListInstancesResponse], error) {
+	log := s.log.Named("List")
+	req := _req.Msg
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+	log.Debug("Request", zap.Any("req", req))
+
+	limit, page := req.GetLimit(), req.GetPage()
+	offset := (page - 1) * limit
+
+	var query string
+	bindVars := map[string]interface{}{
+		"account_node":      driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"instances":         schema.INSTANCES_COL,
+		"accounts":          schema.ACCOUNTS_COL,
+		"bps":               schema.BILLING_PLANS_COL,
+		"service_provider":  schema.SERVICES_PROVIDERS_COL,
+		"offset":            offset,
+		"limit":             limit,
+	}
+
+	customOrder := req.GetCustomOrder().GetListValue().AsSlice()
+	slices.Reverse(customOrder)
+	query += getSortQuery(req.GetField(), req.GetSort(), customOrder, bindVars)
+
+	query += getFiltersQuery(req.GetFilters(), bindVars)
+
+	query = fmt.Sprintf(listInstancesQuery, query)
+
+	s.log.Debug("Query", zap.Any("q", query))
+	s.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := s.db.Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var result pb.ListInstancesResponse
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	//// Calculate estimate and period values if not presented
+	//for _, value := range result.Pool {
+	//	inst := value.Instance
+	//	if inst.GetEstimate() == 0 {
+	//		inst.Estimate, _ = s.ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
+	//	}
+	//	if inst.GetPeriod() == 0 {
+	//		inst.Period, _ = s.ctrl.GetInstancePeriod(inst)
+	//	}
+	//}
+
+	log.Debug("Result", zap.Any("result", &result))
+	return connect.NewResponse(&result), nil
+}
+
+const countInstancesQuery = `
 LET instances = (
 	FOR node, edge, path IN 0..10 OUTBOUND @account
 	    GRAPH @permissions_graph
@@ -547,9 +928,8 @@ LET instances = (
 	            GRAPH @permissions_graph
 	            OPTIONS {order: "bfs", uniqueVertices: "global"}
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
-	            RETURN sp_node._key
+	            RETURN sp_node
         )
-        LET ig = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-2]._key))
         LET srv = path.vertices[-3]._key
         LET ns = path.vertices[-4]._key
         LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
@@ -581,19 +961,63 @@ LET instances = (
 		}
 )
 
+let locations = (
+ FOR inst IN instances
+ FILTER inst.instance.config.location
+ FILTER inst.instance.config.location != ""
+ RETURN DISTINCT inst.instance.config.location
+)
+
+let periods = (
+ FOR inst IN instances
+ FILTER inst.instance.period
+ RETURN DISTINCT inst.instance.period
+)
+
+let products = (
+ FOR inst IN instances
+ FILTER inst.instance.product
+ FILTER inst.instance.product != ""
+ RETURN DISTINCT inst.instance.product
+)
+
+let billing_plans = (
+ FOR inst IN instances
+ FILTER inst.instance.billing_plan
+ FILTER inst.instance.billing_plan.uuid
+ COLLECT uuid = inst.instance.billing_plan.uuid, title = inst.instance.billing_plan.title
+ RETURN { uuid, title }
+)
+
+let service_providers = (
+ FOR inst IN instances
+ FILTER inst.sp
+ COLLECT uuid = inst.sp.uuid, title = inst.sp.title
+ RETURN { uuid, title }
+)
+
 return { 
-	pool: (@limit > 0) ? SLICE(instances, @offset, @limit) : instances,
-	count: LENGTH(instances)
+	unique: {
+        locations: locations,
+        products: products,
+        periods: periods,
+		billing_plans: billing_plans,
+        service_providers: service_providers
+	},
+	total: LENGTH(instances)
 }
 `
 
-func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest) (*pb.ListInstancesResponse, error) {
-	log := s.log.Named("List")
+func (s *InstancesServer) GetUnique(ctx context.Context, _req *connect.Request[pb.GetUniqueRequest]) (*connect.Response[pb.GetUniqueResponse], error) {
+	log := s.log.Named("GetCount")
+	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	limit, page := req.GetLimit(), req.GetPage()
-	offset := (page - 1) * limit
+	type Response struct {
+		Total  int                    `json:"total"`
+		Unique map[string]interface{} `json:"unique"`
+	}
 
 	var query string
 	bindVars := map[string]interface{}{
@@ -603,152 +1027,11 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		"accounts":          schema.ACCOUNTS_COL,
 		"bps":               schema.BILLING_PLANS_COL,
 		"service_provider":  schema.SERVICES_PROVIDERS_COL,
-		"offset":            offset,
-		"limit":             limit,
 	}
 
-	if req.Field != nil && req.Sort != nil {
-		subQuery := ` SORT node.%s %s`
-		field, sort := req.GetField(), req.GetSort()
+	query += getFiltersQuery(req.GetFilters(), bindVars)
 
-		query += fmt.Sprintf(subQuery, field, sort)
-	}
-
-	for key, val := range req.GetFilters() {
-		if key == "account" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER acc._key in @%s`, key)
-			bindVars[key] = values
-		} else if key == "email" {
-			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, %s)`, val.GetStringValue())
-		} else if key == "title" {
-			query += fmt.Sprintf(` FILTER CONTAINS(node.title, %s)`, val.GetStringValue())
-		} else if key == "os" {
-			query += fmt.Sprintf(` FILTER CONTAINS(node.config.configuration.vps_os, %s)`, val.GetStringValue())
-		} else if key == "type" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER ig.type in @%s`, key)
-			bindVars[key] = values
-		} else if key == "namespace" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER ns in @%s`, key)
-			bindVars[key] = values
-		} else if key == "sp" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER sp in @%s`, key)
-			bindVars[key] = values
-		} else if key == "billing_plan" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER bp._key in @%s`, key)
-			bindVars[key] = values
-		} else if key == "state" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER node.state.state in @%s`, key)
-			bindVars[key] = values
-		} else if key == "price" {
-			values := val.GetStructValue().AsMap()
-			if val, ok := values["from"]; ok {
-				from := val.(float64)
-				query += fmt.Sprintf(` FILTER node.price >= %f`, from)
-			}
-			if val, ok := values["to"]; ok {
-				to := val.(float64)
-				query += fmt.Sprintf(` FILTER node.price <= %f`, to)
-			}
-		} else if key == "service" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER srv in @%s`, key)
-			bindVars[key] = values
-		} else if key == "period" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
-			bindVars[key] = values
-		} else if key == "location" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER node["config"]["%s"] in @%s`, key, key)
-			bindVars[key] = values
-		} else if key == "cpu" {
-			values := val.GetStructValue().AsMap()
-			if val, ok := values["from"]; ok {
-				from := val.(int)
-				query += fmt.Sprintf(` FILTER node.resources.cpu >= %d`, from)
-			}
-			if val, ok := values["to"]; ok {
-				to := val.(int)
-				query += fmt.Sprintf(` FILTER node.resources.cpu <= %d`, to)
-			}
-		} else if key == "drive_size" {
-			values := val.GetStructValue().AsMap()
-			if val, ok := values["from"]; ok {
-				from := val.(int)
-				query += fmt.Sprintf(` FILTER node.resources.drive_size >= %d`, from)
-			}
-			if val, ok := values["to"]; ok {
-				to := val.(int)
-				query += fmt.Sprintf(` FILTER node.resources.drive_size <= %d`, to)
-			}
-		} else if key == "ram" {
-			values := val.GetStructValue().AsMap()
-			if val, ok := values["from"]; ok {
-				from := val.(int)
-				query += fmt.Sprintf(` FILTER node.resources.ram >= %d`, from)
-			}
-			if val, ok := values["to"]; ok {
-				to := val.(int)
-				query += fmt.Sprintf(` FILTER node.resources.ram <= %d`, to)
-			}
-		} else if key == "due_date" {
-			values := val.GetStructValue().AsMap()
-			if val, ok := values["from"]; ok {
-				from := val.(int)
-				query += fmt.Sprintf(` FILTER node.data.next_payment_date >= %d`, from)
-			}
-			if val, ok := values["to"]; ok {
-				to := val.(int)
-				query += fmt.Sprintf(` FILTER node.data.next_payment_date <= %d`, to)
-			}
-		} else if key == "ip" {
-			val := val.GetStringValue()
-			query += fmt.Sprintf(` FILTER @%s in node.state.meta.networking.public || @%s in node.state.meta.networking.private`, key, key)
-			bindVars[key] = val
-		} else if key == "product" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += fmt.Sprintf(` FILTER node.product in @%s`, key)
-			bindVars[key] = values
-		}
-	}
-
-	query = fmt.Sprintf(listInstancesQuery, query)
+	query = fmt.Sprintf(countInstancesQuery, query)
 
 	s.log.Debug("Query", zap.Any("q", query))
 	s.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
@@ -758,22 +1041,109 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		return nil, err
 	}
 	defer c.Close()
-	var result pb.ListInstancesResponse
+	var resp Response
+	_, err = c.ReadDocument(ctx, &resp)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("Response", zap.Any("resp", resp))
+
+	var result pb.GetUniqueResponse
+	obj, err := structpb.NewStruct(resp.Unique)
+	if err != nil {
+		return nil, err
+	}
+	result.Unique = structpb.NewStructValue(obj)
+	result.Total = uint64(resp.Total)
+
+	return connect.NewResponse(&result), nil
+}
+
+const getInstanceQuery = `
+LET instances = (
+	FOR node, edge, path IN 0..10 OUTBOUND @account
+	    GRAPH @permissions_graph
+	    OPTIONS {order: "bfs", uniqueVertices: "global"}
+	    FILTER IS_SAME_COLLECTION(@instances, node)
+
+		FILTER node._key == @uuid
+
+        LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET sp = LAST (
+            FOR sp_node IN 1 OUTBOUND ig
+	            GRAPH @permissions_graph
+	            OPTIONS {order: "bfs", uniqueVertices: "global"}
+	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
+	            RETURN sp_node
+        )
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+		
+		%s
+		
+		RETURN {
+			instance: MERGE(node, { 
+				uuid: node._key, 
+				billing_plan: {
+					uuid: bp._key,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[node.product]: bp.products[node.product],
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software 
+				}
+			}
+			),
+			service: srv,
+			sp: sp._key,
+			type: bp.type,
+			account: acc._key
+		}
+)
+
+FILTER LENGTH(instances) > 0
+RETURN instances[0]
+`
+
+func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Instance]) (*connect.Response[pb.ResponseInstance], error) {
+	log := s.log.Named("Get")
+	req := _req.Msg
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	var query string
+	bindVars := map[string]interface{}{
+		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"instances":         schema.INSTANCES_COL,
+		"accounts":          schema.ACCOUNTS_COL,
+		"bps":               schema.BILLING_PLANS_COL,
+		"service_provider":  schema.SERVICES_PROVIDERS_COL,
+		"uuid":              req.Uuid,
+	}
+
+	s.log.Debug("Query", zap.Any("q", query))
+	s.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	query = fmt.Sprintf(getInstanceQuery, query)
+
+	c, err := s.db.Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var result pb.ResponseInstance
 	_, err = c.ReadDocument(ctx, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	// Calculate estimate and period values if not presented
-	for _, value := range result.Pool {
-		inst := value.Instance
-		if inst.GetEstimate() == 0 {
-			inst.Estimate, _ = s.ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
-		}
-		if inst.GetPeriod() == 0 {
-			inst.Period, _ = s.ctrl.GetInstancePeriod(inst)
-		}
-	}
-
-	return &result, nil
+	return connect.NewResponse(&result), nil
 }

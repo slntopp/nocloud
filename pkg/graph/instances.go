@@ -64,6 +64,7 @@ type InstancesController struct {
 	inv     InvoicesController
 	acc     AccountsController
 	cur     CurrencyController
+	addons  AddonsController
 	channel *amqp091.Channel
 
 	bp_ctrl *BillingPlansController
@@ -96,12 +97,16 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.C
 	}
 
 	bp_ctrl := NewBillingPlansController(log, db)
+	addons := NewAddonsController(log, db)
+	acc := NewAccountsController(log, db)
+	inv := NewInvoicesController(log, db)
 
-	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: &bp_ctrl}
+	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: &bp_ctrl,
+		addons: *addons, inv: inv, acc: acc, cur: NewCurrencyController(log, db)}
 }
 
-// CalculateInstanceEstimatePeriodicPrice return estimate periodic price for current instance in NCU currency
-func (ctrl *InstancesController) CalculateInstanceEstimatePeriodicPrice(i *pb.Instance) (float64, error) {
+// CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
+func (ctrl *InstancesController) CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error) {
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
 		return 0, err
@@ -109,66 +114,85 @@ func (ctrl *InstancesController) CalculateInstanceEstimatePeriodicPrice(i *pb.In
 
 	cost := 0.0
 
-	for _, res := range plan.GetResources() {
-
-		if res.GetPeriod() == 0 {
-			continue
+	product, ok := plan.GetProducts()[i.GetProduct()]
+	if ok {
+		charge := (product.GetPeriod() == 0 && includeOneTimePayments) || product.GetPeriod() != 0
+		if charge {
+			cost += product.Price
 		}
 
-		switch res.GetKey() {
-		case "cpu":
-			value := i.GetResources()["cpu"].GetNumberValue()
-			cost += value * res.GetPrice()
-		case "ram":
-			value := i.GetResources()["ram"].GetNumberValue() / 1024
-			cost += value * res.GetPrice()
-		case "ips_public":
-			value := i.GetResources()["ips_public"].GetNumberValue()
-			cost += value * res.GetPrice()
-		case "ips_private":
-			value := i.GetResources()["ips_private"].GetNumberValue()
-			cost += value * res.GetPrice()
-		default:
-			// Calculate drive size billing
-			if strings.Contains(res.GetKey(), "drive") {
-				driveType := i.GetResources()["drive_type"].GetStringValue()
-				if res.GetKey() != "drive_"+strings.ToLower(driveType) {
-					continue
-				}
-				count := i.GetResources()["drive_size"].GetNumberValue() / 1024
-				cost += res.GetPrice() * count
+		for _, addonId := range i.GetAddons() {
+			addon, err := ctrl.addons.Get(context.Background(), addonId)
+			if err != nil {
+				return 0, err
+			}
+			price, hasPrice := addon.GetPeriods()[product.GetPeriod()]
+			if !hasPrice {
+				return 0, fmt.Errorf("addon %s has no price for period %d", addonId, product.GetPeriod())
+			}
+			if charge {
+				cost += price
 			}
 		}
 	}
+
+	for _, res := range plan.GetResources() {
+
+		if res.GetPeriod() == 0 && !includeOneTimePayments {
+			continue
+		}
+
+		// ram and drive_size calculates in GB for value
+		if res.GetKey() == "ram" {
+			value := i.GetResources()["ram"].GetNumberValue() / 1024
+			cost += value * res.GetPrice()
+		} else if strings.Contains(res.GetKey(), "drive") {
+			driveType := i.GetResources()["drive_type"].GetStringValue()
+			if res.GetKey() != "drive_"+strings.ToLower(driveType) {
+				continue
+			}
+			count := i.GetResources()["drive_size"].GetNumberValue() / 1024
+			cost += res.GetPrice() * count
+		} else {
+			count := i.GetResources()[res.GetKey()].GetNumberValue()
+			cost += res.GetPrice() * count
+		}
+	}
+
 	return cost, nil
 }
 
 // GetInstancePeriod returns billing period for the whole instance
 //
 // Now it simply returns product's period or period of some random resource if product is not defined or it's period is 0
-func (ctrl *InstancesController) GetInstancePeriod(i *pb.Instance) (int64, error) {
+func (ctrl *InstancesController) GetInstancePeriod(i *pb.Instance) (*int64, error) {
+	zero := int64(0)
+
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	product, ok := plan.GetProducts()[i.GetProduct()]
 	if ok {
 		if product.GetPeriod() > 0 {
-			return product.GetPeriod(), nil
+			period := product.GetPeriod()
+			return &period, nil
+		} else {
+			return &zero, nil
 		}
 	}
 
-	for _, res := range plan.GetResources() {
-		if _, ok := i.GetResources()[res.GetKey()]; ok && res.GetPeriod() > 0 {
-			return res.GetPeriod(), nil
-		}
-	}
+	//for _, res := range plan.GetResources() {
+	//	if _, ok := i.GetResources()[res.GetKey()]; ok && res.GetPeriod() > 0 {
+	//		return res.GetPeriod(), nil
+	//	}
+	//}
 
-	return 0, nil
+	return nil, nil
 }
 
-func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) error {
+func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error) {
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Instance", zap.Any("instance", i))
 
@@ -178,23 +202,23 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	i.Created = time.Now().Unix()
 
 	// Set estimate and period values
-	estimate, err := ctrl.CalculateInstanceEstimatePeriodicPrice(i)
+	estimate, err := ctrl.CalculateInstanceEstimatePrice(i, false)
 	if err != nil {
 		log.Error("Failed to calculate estimate instance periodic price", zap.Error(err))
-		return err
+		return "", err
 	}
 	i.Estimate = estimate
 	period, err := ctrl.GetInstancePeriod(i)
 	if err != nil {
 		log.Error("Failed to get instance period", zap.Error(err))
-		return err
+		return "", err
 	}
 	i.Period = period
 
 	err = hasher.SetHash(i.ProtoReflect())
 	if err != nil {
 		log.Error("Failed to calculate hash", zap.Error(err))
-		return err
+		return "", err
 	}
 
 	ctrl.log.Debug("instance for hash calculating while Creating", zap.Any("inst", i))
@@ -203,7 +227,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	meta, err := ctrl.col.CreateDocument(ctx, i)
 	if err != nil {
 		log.Error("Failed to create Instance", zap.Error(err))
-		return err
+		return "", err
 	}
 	i.Uuid = meta.Key
 
@@ -232,7 +256,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		if _, err = ctrl.col.RemoveDocument(ctx, meta.Key); err != nil {
 			log.Warn("Failed to cleanup", zap.String("uuid", meta.Key), zap.Error(err))
 		}
-		return err
+		return "", err
 	}
 
 	c := pb.Context{
@@ -255,7 +279,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		log.Error("Failed to parse", zap.Error(err))
 	}
 
-	return nil
+	return meta.Key, nil
 }
 
 const removeDataQuery = `
@@ -297,7 +321,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	// Recalculate estimate price and period
 	// Values would change if plan was updated or replaced
-	estimate, err := ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
+	estimate, err := ctrl.CalculateInstanceEstimatePrice(inst, false)
 	if err != nil {
 		log.Error("Failed to calculate estimate instance periodic price", zap.Error(err))
 		return err
@@ -513,7 +537,7 @@ func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instanc
 	// If values not presented in existing instance calculate estimate and period dynamically
 	// TODO: make migrations or smth instead of calculating it everytime
 	if inst.GetEstimate() == 0 {
-		inst.Estimate, _ = ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
+		inst.Estimate, _ = ctrl.CalculateInstanceEstimatePrice(inst, false)
 	}
 	if inst.GetPeriod() == 0 {
 		inst.Period, _ = ctrl.GetInstancePeriod(inst)

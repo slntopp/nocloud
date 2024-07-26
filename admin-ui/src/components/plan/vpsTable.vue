@@ -183,6 +183,13 @@
             </v-card>
           </template>
         </div>
+
+        <div v-else>
+          <plan-addons-table
+            @change:addons="planAddons = $event"
+            :addons="template.addons"
+          />
+        </div>
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -196,10 +203,11 @@ import {
   Addon,
   ListAddonsRequest,
 } from "nocloud-proto/proto/es/billing/addons/addons_pb";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 
 export default {
   name: "vps-table",
-  components: { nocloudTable },
+  components: { nocloudTable, planAddonsTable },
   props: {
     fee: { type: Object, required: true },
     template: { type: Object, required: true },
@@ -210,7 +218,7 @@ export default {
   data: () => ({
     groups: [],
     expanded: [],
-    tabs: ["Tariffs", "Addons", "OS"],
+    tabs: ["Tariffs", "Addons", "OS", "Custom addons"],
     images: [],
 
     plans: [],
@@ -261,6 +269,8 @@ export default {
     newPlans: null,
     newAddons: null,
     isRefreshLoading: false,
+
+    planAddons: [],
   }),
   methods: {
     changeImage(value) {
@@ -278,29 +288,45 @@ export default {
       plan.resources = [];
       plan.products = {};
 
-      const allAddons = (
-        await Promise.all(
-          this.addons.map((addon) => {
-            const data = Addon.fromJson({
-              system: true,
-              title: addon.name,
-              group: this.template.uuid,
-              periods: { [this.getPeriod(addon.duration)]: addon.value },
-              public: addon.public,
-              meta: {
-                basePrice: addon.price.value,
-                key: addon.id,
-              },
-            });
-            if (addon.uuid) {
-              data.uuid = addon.uuid;
-              return this.addonsClient.update(data);
-            }
+      const addonsForCreate = [];
+      const addonsForUpdate = [];
+      let allAddons = [];
 
-            return this.addonsClient.create(data);
-          })
-        )
-      ).map((a) => a.toJson());
+      this.addons.forEach((addon) => {
+        const data = Addon.fromJson({
+          system: true,
+          title: addon.name,
+          group: this.template.uuid,
+          periods: { [this.getPeriod(addon.duration)]: addon.value },
+          public: addon.public,
+          kind: "PREPAID",
+          meta: {
+            basePrice: addon.price.value,
+            key: addon.id,
+          },
+        });
+        if (addon.uuid) {
+          data.uuid = addon.uuid;
+          addonsForUpdate.push(data);
+        } else {
+          addonsForCreate.push(data);
+        }
+      });
+
+      if (addonsForCreate.length) {
+        const createdAddons = await this.addonsClient.createBulk({
+          addons: addonsForCreate,
+        });
+
+        allAddons.push(...createdAddons.toJson().addons);
+      }
+
+      if (addonsForUpdate.length) {
+        const updatedAddons = await this.addonsClient.updateBulk({
+          addons: addonsForUpdate,
+        });
+        allAddons.push(...updatedAddons.toJson().addons);
+      }
 
       this.plans.forEach((el) => {
         const [, , cpu, ram, disk] = el.planCode.split("-");
@@ -337,6 +363,8 @@ export default {
           installation_fee: el.installation_fee,
         };
       });
+
+      plan.addons = this.planAddons;
     },
     changePlans({ plans, windows, catalog }) {
       const result = [];
@@ -579,9 +607,10 @@ export default {
     const newImages = [];
     const { addons = [] } = (
       await this.addonsClient.list(
-        ListAddonsRequest.fromJson({ filters: { group: this.template.uuid } })
+        ListAddonsRequest.fromJson({ filters: { group: [this.template.uuid] } })
       )
     ).toJson();
+
     this.addons = addons.map((addon) => {
       const { key, basePrice } = addon.meta;
       const [duration, planCode] = key.split(" ");
@@ -636,6 +665,8 @@ export default {
     this.$emit("changeFee", this.template.fee);
 
     this.refreshPlans();
+
+    this.planAddons = [...this.template.addons];
   },
   computed: {
     defaultCurrency() {
@@ -649,7 +680,8 @@ export default {
         return 1;
       }
       return this.rates.find(
-        (r) => r.to?.title === this.defaultCurrency?.title && r.from?.title === "PLN"
+        (r) =>
+          r.to?.title === this.defaultCurrency?.title && r.from?.title === "PLN"
       )?.rate;
     },
     allImages() {

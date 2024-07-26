@@ -19,18 +19,24 @@ import (
 	"context"
 	"strconv"
 
+	"encoding/json"
+	"time"
+
 	"connectrpc.com/connect"
+
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -60,6 +66,7 @@ type BillingServiceServer struct {
 	instances    *graph.InstancesController
 	services     graph.ServicesController
 	sp           graph.ServicesProvidersController
+	addons       graph.AddonsController
 
 	db driver.Database
 
@@ -86,6 +93,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		descriptions: graph.NewDescriptionsController(log, db),
 		instances:    graph.NewInstancesController(log, db, conn),
 		sp:           graph.NewServicesProvidersController(log, db),
+		addons:       *graph.NewAddonsController(log, db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
@@ -205,12 +213,28 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 	}
 
 	res, err := s.plans.Create(ctx, plan)
+	var event = &elpb.Event{
+		Entity:    schema.BILLING_PLANS_COL,
+		Uuid:      res.GetUuid(),
+		Scope:     "database",
+		Action:    "create",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
 	if err != nil {
+		event.Rc = 1
+		nocloud.Log(log, event)
 		log.Error("Error creating plan", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error creating plan")
 	}
 
 	resp := connect.NewResponse(res.Plan)
+	nocloud.Log(log, event)
 
 	return resp, nil
 }
@@ -240,9 +264,36 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 	}
 
 	res, err := s.plans.Update(ctx, plan)
+	oldPlanMarshal, _ := json.Marshal(plan)
+	newPlanMarshal, _ := json.Marshal(res)
+
+	var event = &elpb.Event{
+		Entity:    schema.BILLING_PLANS_COL,
+		Uuid:      res.Uuid,
+		Scope:     "database",
+		Action:    "update",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
 	if err != nil {
+		event.Rc = 0
+		nocloud.Log(log, event)
 		log.Error("Error updating plan", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error updating plan")
+	}
+
+	diff, err := jsondiff.CompareJSON(oldPlanMarshal, newPlanMarshal)
+	if err != nil {
+		event.Rc = 0
+		nocloud.Log(log, event)
+	} else {
+		event.Snapshot.Diff = diff.String()
+		nocloud.Log(log, event)
 	}
 
 	resp := connect.NewResponse(res.Plan)
@@ -283,13 +334,29 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, req *connect.Requ
 		return nil, status.Error(codes.DataLoss, "Сan't delete plan due to related instances")
 	}*/
 
+	var event = &elpb.Event{
+		Entity:    schema.BILLING_PLANS_COL,
+		Uuid:      plan.Uuid,
+		Scope:     "database",
+		Action:    "delete",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
 	err = s.plans.Delete(ctx, plan)
 	if err != nil {
+		event.Rc = 1
+		nocloud.Log(log, event)
 		log.Error("Error deleting plan", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting plan")
 	}
 
 	resp := connect.NewResponse(plan)
+	nocloud.Log(log, event)
 
 	return resp, nil
 }

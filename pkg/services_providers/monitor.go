@@ -17,6 +17,7 @@ package services_providers
 
 import (
 	"context"
+	pb "github.com/slntopp/nocloud-proto/billing/addons"
 	"time"
 
 	stpb "github.com/slntopp/nocloud-proto/statuses"
@@ -95,6 +96,23 @@ FOR node, edge, path IN 3
     RETURN node.balance == null ? 0 : node.balance
 `
 
+const getAddons = `
+LET instances = (
+    FOR node, edge IN 1
+			OUTBOUND @ig
+	        GRAPH @permissions
+	        FILTER IS_SAME_COLLECTION(node, @@instances)
+	        RETURN node
+)
+
+FILTER IS_ARRAY(instances)
+FOR inst IN instances
+FILTER IS_ARRAY(inst.addons)
+FOR a IN inst.addons
+    COLLECT uuid = a
+    RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
+`
+
 func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
@@ -130,6 +148,7 @@ start:
 			}
 
 			go func(sp *graph.ServicesProvider) {
+				log := log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
 				igroups, err := s.ctrl.GetGroups(ctx, sp)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
@@ -160,7 +179,31 @@ start:
 					cur.Close()
 				}
 
+				var addons = map[string]*pb.Addon{}
+				for _, ig := range igroups {
+					cur, err := s.db.Query(ctx, getAddons, map[string]any{
+						"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.GetUuid()),
+						"addons":      schema.ADDONS_COL,
+						"@instances":  schema.INSTANCES_COL,
+						"permissions": schema.PERMISSIONS_GRAPH.Name,
+					})
+					if err != nil {
+						log.Error("Failed to get addons", zap.Error(err))
+						return
+					}
+					for cur.HasMore() {
+						var addon = &pb.Addon{}
+						_, err = cur.ReadDocument(ctx, addon)
+						if err != nil {
+							log.Error("Failed to get addons", zap.Error(err))
+							continue
+						}
+						addons[addon.Uuid] = addon
+					}
+				}
+
 				log.Debug("Got InstancesGroups", zap.Int("length", len(igroups)))
+				log.Debug("Got Addons", zap.Any("addons", addons))
 
 				client, ok := s.drivers[sp.GetType()]
 				if !ok {
@@ -173,6 +216,7 @@ start:
 					ServicesProvider: sp.ServicesProvider,
 					Scheduled:        true,
 					Balance:          balance,
+					Addons:           addons,
 				})
 				if err != nil {
 					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))

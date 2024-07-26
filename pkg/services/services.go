@@ -16,11 +16,11 @@ limitations under the License.
 package services
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
@@ -50,12 +50,13 @@ import (
 
 type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
-	db       driver.Database
-	ctrl     graph.ServicesController
-	sp_ctrl  graph.ServicesProvidersController
-	ns_ctrl  graph.NamespacesController
-	acc_ctrl graph.AccountsController
-	cur_ctrl graph.CurrencyController
+	db        driver.Database
+	ctrl      graph.ServicesController
+	sp_ctrl   graph.ServicesProvidersController
+	ns_ctrl   graph.NamespacesController
+	acc_ctrl  graph.AccountsController
+	cur_ctrl  graph.CurrencyController
+	instances graph.InstancesController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -72,12 +73,13 @@ func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, 
 
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db, conn),
-		sp_ctrl:  graph.NewServicesProvidersController(log, db),
-		ns_ctrl:  graph.NewNamespacesController(log, db),
-		acc_ctrl: graph.NewAccountsController(log, db),
-		cur_ctrl: graph.NewCurrencyController(log, db),
-		drivers:  make(map[string]driverpb.DriverServiceClient),
-		ps:       ps,
+		sp_ctrl:   graph.NewServicesProvidersController(log, db),
+		ns_ctrl:   graph.NewNamespacesController(log, db),
+		acc_ctrl:  graph.NewAccountsController(log, db),
+		cur_ctrl:  graph.NewCurrencyController(log, db),
+		instances: *graph.NewInstancesController(log, db, conn),
+		drivers:   make(map[string]driverpb.DriverServiceClient),
+		ps:        ps,
 	}
 }
 
@@ -299,8 +301,9 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 	return response, nil
 }
 
-func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
+func (s *ServicesServer) TestConfig(ctx context.Context, _request *connect.Request[pb.CreateRequest]) (*connect.Response[pb.TestConfigResponse], error) {
 	log := s.log.Named("TestServiceConfig")
+	request := _request.Msg
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -316,11 +319,12 @@ func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateReque
 	}
 
 	response, err := s.DoTestServiceConfig(ctx, log, request.GetService())
-	return response, err
+	return connect.NewResponse(response), err
 }
 
-func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
+func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[pb.CreateRequest]) (*connect.Response[pb.Service], error) {
 	log := s.log.Named("CreateService")
+	request := _request.Msg
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -432,46 +436,18 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	for _, group := range srv.GetInstancesGroups() {
 		for _, instance := range group.GetInstances() {
 
-			// TODO: make sure cost calculated correctly
-			var cost float64
-			for _, res := range instance.GetBillingPlan().GetResources() {
-
-				switch res.Key {
-				case "cpu":
-					count := instance.GetResources()["cpu"].GetNumberValue()
-					cost += res.GetPrice() * count
-				case "ram":
-					count := instance.GetResources()["ram"].GetNumberValue() / 1024
-					cost += res.GetPrice() * count
-				default:
-					// Calculate drive size billing
-					if strings.Contains(res.GetKey(), "drive") {
-						driveType := instance.GetResources()["drive_type"].GetStringValue()
-						if res.GetKey() != "drive_"+strings.ToLower(driveType) {
-							continue
-						}
-						count := instance.GetResources()["drive_size"].GetNumberValue() / 1024
-						cost += res.GetPrice() * count
-					}
-				}
+			cost, err := s.instances.CalculateInstanceEstimatePrice(instance, true)
+			if err != nil {
+				log.Error("Failed to calculate instance cost", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to calculate instance cost. "+err.Error())
 			}
-
-			product, ok := instance.GetBillingPlan().GetProducts()[instance.GetProduct()]
-			if !ok || product == nil {
-				log.Error("Failed to get product(instance's product not found in billing plan or nil)",
-					zap.String("product", instance.GetProduct()),
-					zap.String("instance", instance.GetUuid()))
-			} else {
-				cost += product.Price
-			}
-
 			cost *= rate // Convert NCU cost to account's currency
 
 			inv := &bpb.Invoice{
 				Status: bpb.BillingStatus_UNPAID,
 				Items: []*bpb.Item{
 					{
-						Description: fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
+						Description: fmt.Sprintf("Instance '%s' start payment", instance.GetUuid()),
 						Amount:      1,
 						Unit:        "Instance",
 						Price:       cost,
@@ -506,11 +482,12 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		}
 	}
 
-	return service, nil
+	return connect.NewResponse(service), nil
 }
 
-func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.Service, error) {
+func (s *ServicesServer) Update(ctx context.Context, _service *connect.Request[pb.Service]) (*connect.Response[pb.Service], error) {
 	log := s.log.Named("UpdateService")
+	service := _service.Msg
 	log.Debug("Request received", zap.Any("service", service))
 
 	testResult, err := s.DoTestServiceConfig(ctx, log, service)
@@ -550,11 +527,12 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 		log.Debug("Error getting Service from DB after Patch", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB after Patch")
 	}
-	return service, nil
+	return connect.NewResponse(service), nil
 }
 
-func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
+func (s *ServicesServer) Up(ctx context.Context, _request *connect.Request[pb.UpRequest]) (*connect.Response[pb.UpResponse], error) {
 	log := s.log.Named("Up")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -675,11 +653,12 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.UpResponse{}, nil
+	return connect.NewResponse(&pb.UpResponse{}), nil
 }
 
-func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest) (*pb.SuspendResponse, error) {
+func (s *ServicesServer) Suspend(ctx context.Context, _request *connect.Request[pb.SuspendRequest]) (*connect.Response[pb.SuspendResponse], error) {
 	log := s.log.Named("Suspend")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -733,11 +712,12 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.SuspendResponse{}, nil
+	return connect.NewResponse(&pb.SuspendResponse{}), nil
 }
 
-func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendRequest) (*pb.UnsuspendResponse, error) {
+func (s *ServicesServer) Unsuspend(ctx context.Context, _request *connect.Request[pb.UnsuspendRequest]) (*connect.Response[pb.UnsuspendResponse], error) {
 	log := s.log.Named("Unsuspend")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -790,11 +770,12 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.UnsuspendResponse{}, nil
+	return connect.NewResponse(&pb.UnsuspendResponse{}), nil
 }
 
-func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
+func (s *ServicesServer) Down(ctx context.Context, _request *connect.Request[pb.DownRequest]) (*connect.Response[pb.DownResponse], error) {
 	log := s.log.Named("Down")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -896,11 +877,12 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.DownResponse{}, nil
+	return connect.NewResponse(&pb.DownResponse{}), nil
 }
 
-func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
+func (s *ServicesServer) Get(ctx context.Context, _request *connect.Request[pb.GetRequest]) (res *connect.Response[pb.Service], err error) {
 	log := s.log.Named("Get")
+	request := _request.Msg
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -916,11 +898,12 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	return service, nil
+	return connect.NewResponse(service), nil
 }
 
-func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.Services, err error) {
+func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.ListRequest]) (response *connect.Response[pb.Services], err error) {
 	log := s.log.Named("List")
+	request := _request.Msg
 	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.Bool("show_deleted", request.GetShowDeleted()))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -932,11 +915,14 @@ func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (res
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	return &pb.Services{Pool: r.Result, Count: int64(r.Count)}, nil
+	return connect.NewResponse(&pb.Services{
+		Pool: r.Result, Count: int64(r.Count),
+	}), nil
 }
 
-func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
+func (s *ServicesServer) Delete(ctx context.Context, _request *connect.Request[pb.DeleteRequest]) (response *connect.Response[pb.DeleteResponse], err error) {
 	log := s.log.Named("Delete")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -953,20 +939,24 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 	err = s.ctrl.Delete(ctx, service)
 	if err != nil {
 		log.Error("Error Deleting Service", zap.Error(err))
-		return &pb.DeleteResponse{Result: false, Error: err.Error()}, nil
+		return connect.NewResponse(&pb.DeleteResponse{
+			Result: false,
+			Error:  err.Error(),
+		}), nil
 	}
 
-	return &pb.DeleteResponse{Result: true}, nil
+	return connect.NewResponse(&pb.DeleteResponse{Result: true}), nil
 }
 
-func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_StreamServer) (err error) {
+func (s *ServicesServer) Stream(ctx context.Context, _req *connect.Request[pb.StreamRequest], srv *connect.ServerStream[spb.ObjectState]) error {
 	log := s.log.Named("stream")
+	req := _req.Msg
 	log.Debug("Request received", zap.Any("req", req))
-	requestor := srv.Context().Value(nocloud.NoCloudAccount).(string)
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	messages := make(chan interface{}, 10)
 
-	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < access.Level_READ {
+	if service, err := s.ctrl.Get(ctx, requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < access.Level_READ {
 		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
 		return errors.New("failed access check")
 	}

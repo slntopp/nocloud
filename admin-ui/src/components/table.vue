@@ -365,13 +365,13 @@ export default {
       this.showed = this.showed?.filter((i) => i !== index);
     },
     isIdShort(id) {
-      return id.length <= 8;
+      return id?.length <= 8;
     },
     makeIdShort(id) {
       if (this.isIdShort(id)) {
         return id;
       }
-      return id.slice(0, 8) + "...";
+      return id?.slice(0, 8) + "...";
     },
     saveColumnPosition(headers) {
       if (!headers) {

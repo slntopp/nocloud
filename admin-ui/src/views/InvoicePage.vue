@@ -48,7 +48,7 @@ const navTitles = ref(config.navTitles ?? {});
 
 const invoice = computed(() => store.getters["invoices/one"]);
 const invoiceTitle = computed(() =>
-  isInvoiceLoading.value ? "..." : "#" + invoice.value?.uuid
+  isInvoiceLoading.value ? "..." : invoice.value?.number
 );
 
 onMounted(() => {

@@ -649,13 +649,45 @@ export function downloadPlanXlsx(plans) {
         }
       }
 
+      let configPrice = 0;
+
+      if (plan.type === "ione" && plan.meta.minDiskSize) {
+        const ip =
+          plan.resources.find((r) => r.key === "ips_public")?.price || 0;
+
+        configPrice += ip;
+
+        const hddMinSize = +plan.meta.minDiskSize.HDD || 20;
+        const ssdMinSize = +plan.meta.minDiskSize.SSD || 20;
+
+        const hddMin =
+          plan.resources.find((r) => r.key === "drive_hdd")?.price *
+            hddMinSize || 0;
+        const ssdMin =
+          plan.resources.find((r) => r.key === "drive_ssd")?.price *
+            ssdMinSize || 0;
+
+        if (!ssdMin && hddMin) {
+          configPrice += hddMin;
+        }
+        if (!hddMin && ssdMin) {
+          configPrice += ssdMin;
+        } else {
+          configPrice += Math.min(ssdMin, hddMin);
+        }
+      }
+
       return {
         name: plan.title,
         headers,
         items: Object.values(plan.products)
           .map((product) => {
             const result = {};
-            product = { ...product, ...product.meta };
+            product = {
+              ...product,
+              ...product.meta,
+              price: product.price + configPrice,
+            };
 
             Object.keys(product).forEach((key) => {
               if (headers.findIndex((a) => a.key === key) !== -1) {
@@ -716,16 +748,7 @@ export function getInstancePrice(inst) {
     case "cpanel": {
       const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
 
-      return +inst.billingPlan.resources?.reduce((prev, curr) => {
-        if (curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`) {
-          return prev + (curr?.price * inst.resources.drive_size) / 1024;
-        } else if (curr.key === "ram") {
-          return prev + (curr?.price * inst.resources.ram) / 1024;
-        } else if (inst.resources[curr.key]) {
-          return prev + curr?.price * inst.resources[curr.key];
-        }
-        return prev;
-      }, initialPrice);
+      return initialPrice;
     }
   }
 }

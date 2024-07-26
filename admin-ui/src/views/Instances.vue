@@ -66,7 +66,7 @@
           <v-btn
             :to="{
               name: 'Instance create',
-              params: {
+              query: {
                 serviceId,
                 accountId: newInstance.account,
                 type:
@@ -112,7 +112,7 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
-import instancesTable from "@/components/instances_table.vue";
+import instancesTable from "@/components/instancesTable.vue";
 import { defaultFilterObject } from "@/functions";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
@@ -194,7 +194,7 @@ export default {
   },
   created() {
     this.$store.dispatch("namespaces/fetch", false);
-    this.$store.dispatch("services/fetch", { showDeleted: true });
+    this.$store.dispatch("plans/fetch", { showDeleted: false });
     this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
 
     const types = require.context(
@@ -213,10 +213,6 @@ export default {
     });
   },
   mounted() {
-    this.$store.commit("reloadBtn/setCallback", {
-      type: "services/fetch",
-      params: { showDeleted: true },
-    });
     const icon = document.querySelector(".group-icon");
     icon.dispatchEvent(new Event("click"));
   },

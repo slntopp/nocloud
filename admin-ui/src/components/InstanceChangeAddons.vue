@@ -65,7 +65,7 @@ const isLoading = computed(() => store.getters["addons/isLoading"]);
 const addons = computed(() => store.getters["addons/all"]);
 
 const requestOptions = computed(() => ({
-  filters: { search_param: searchParam.value },
+  filters: { search_param: searchParam.value, system: false },
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy?.[0],

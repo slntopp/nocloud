@@ -51,6 +51,14 @@
         />
       </v-col>
 
+      <v-col>
+        <v-text-field
+          label="Deleted date"
+          readonly
+          :value="formatSecondsToDate(template.deleted, true, '-')"
+        />
+      </v-col>
+
       <v-col v-if="!isMonitoringEmpty">
         <v-text-field
           readonly
@@ -70,6 +78,11 @@
         :show-select="false"
         hide-default-footer
       >
+        <template v-slot:[`item.name`]="{ item }">
+          <span v-html="item.name" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+        </template>
+
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
             <v-text-field
@@ -118,7 +131,7 @@
                   >
                 </template>
                 <instance-change-addons
-                v-if="isAddonsDialog"
+                  v-if="isAddonsDialog"
                   :instance="template"
                   :instance-addons="addons"
                   @update="
@@ -296,35 +309,6 @@ const getBillingItems = () => {
     });
   }
 
-  const gbAddons = ["ram"];
-  Object.keys(template.value.resources).forEach((resourceKey) => {
-    let quantity = template.value.resources[resourceKey];
-    if (!quantity) {
-      return;
-    }
-
-    if (gbAddons.includes(resourceKey)) {
-      quantity = quantity / 1024;
-    }
-
-    const addonIndex = billingPlan.value.resources.findIndex(
-      (r) => r.key === resourceKey
-    );
-    const addon = billingPlan.value.resources[addonIndex];
-    if (addon) {
-      items.push({
-        name: resourceKey,
-        price: addon.price,
-        accountPrice: toAccountPrice(addon.price),
-        kind: addon.kind,
-        period: addon.period,
-        quantity,
-        unit: "pcs",
-        path: `billingPlan.resources.${addonIndex}.price`,
-      });
-    }
-  });
-
   const driveType = template.value.resources.drive_type?.toLowerCase();
 
   if (driveType) {
@@ -344,12 +328,14 @@ const getBillingItems = () => {
     });
   }
 
-  addons.value.forEach((addon) => {
+  addons.value.forEach((addon, index) => {
     const { title, periods } = addon;
     const { period, kind } = billingPlan.value.products[template.value.product];
     items.push({
       name: title,
       price: periods[period],
+      path: `${index}.periods.${period}`,
+      unit: "pcs",
       accountPrice: toAccountPrice(periods[period]),
       quantity: 1,
       isAddon: true,
@@ -369,6 +355,7 @@ const updatePrice = (item, isAccount) => {
     emit("update", {
       key: item.path,
       value: fromAccountPrice(item.accountPrice),
+      type: item.isAddon ? "addons" : "template",
     });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
@@ -377,7 +364,11 @@ const updatePrice = (item, isAccount) => {
       return p;
     });
   } else {
-    emit("update", { key: item.path, value: item.price });
+    emit("update", {
+      key: item.path,
+      value: item.price,
+      type: item.isAddon ? "addons" : "template",
+    });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
         p.accountPrice = toAccountPrice(item.price);

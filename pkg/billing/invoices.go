@@ -65,6 +65,81 @@ LET ig = LAST( // Find Instance instance group
     )
 RETURN ig`
 
+const invoicesByPaymentDate = `
+FOR invoice IN @@invoices
+FILTER invoice.payment && invoice.payment > 0
+FILTER invoice.payment >= @date_from
+FILTER invoice.payment < @date_to
+RETURN invoice
+`
+
+const unpaidInvoicesByCreatedDate = `
+FOR invoice IN @@invoices
+FILTER invoice.payment == null || invoice.payment == 0
+FILTER invoice.created >= @date_from
+FILTER invoice.created < @date_to
+RETURN invoice
+`
+
+func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery string, date time.Time, template string, resetMode string) (string, int, error) {
+	log = log.Named("GetNewNumber")
+	var dateFrom, dateTo int64
+	switch resetMode {
+	case "DAILY":
+		dateFrom = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location()).Unix()
+		dateTo = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location()).
+			AddDate(0, 0, 1).Unix()
+	case "MONTHLY":
+		dateFrom = time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).Unix()
+		dateTo = time.Date(date.Year(), date.Month(), 1, 0, 0, 0, 0, date.Location()).
+			AddDate(0, 1, 0).Unix()
+	case "YEARLY":
+		dateFrom = time.Date(date.Year(), 1, 1, 0, 0, 0, 0, date.Location()).Unix()
+		dateTo = time.Date(date.Year()+1, 1, 1, 0, 0, 0, 0, date.Location()).Unix()
+	default:
+		log.Info("Reset mode is unknown. Using max range", zap.String("mode", resetMode))
+		dateFrom = 0
+		dateTo = int64(^uint64(0) >> 1) // max int64
+	}
+
+	bindVars := map[string]interface{}{
+		"@invoices": schema.INVOICES_COL,
+		"date_from": dateFrom,
+		"date_to":   dateTo,
+	}
+
+	cur, err := s.db.Query(context.Background(), invoicesQuery, bindVars)
+	if err != nil {
+		log.Error("Failed to get invoices to define number", zap.Error(err))
+		return "", 0, fmt.Errorf("failed to get invoices. %w", err)
+	}
+	defer cur.Close()
+	number := 1
+	for {
+		result := map[string]interface{}{}
+		invoice := &graph.Invoice{
+			Invoice:           &pb.Invoice{},
+			InvoiceNumberMeta: &graph.InvoiceNumberMeta{},
+		}
+		_, err := cur.ReadDocument(context.Background(), &result)
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			log.Error("Failed to get invoices", zap.Error(err))
+			return "", 0, fmt.Errorf("failed to decode invoices. %w", err)
+		}
+		if err = s.invoices.DecodeInvoice(result, invoice); err != nil {
+			return "", 0, fmt.Errorf("failed to decode invoice. %w", err)
+		}
+		if invoice.NumericNumber >= number {
+			number = invoice.NumericNumber + 1
+		}
+	}
+
+	return s.invoices.ParseNumberIntoTemplate(template, number, date), number, nil
+}
+
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -225,14 +300,23 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}
 	}
 
+	now := time.Now()
+
+	invConf := MakeInvoicesConf(ctx, log)
+	strNum, num, err := s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
+	if err != nil {
+		log.Error("Failed to get new number for invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
+	}
+
 	// Create transaction if it's balance deposit
-	if t.GetType() == pb.ActionType_BALANCE {
+	if t.GetType() == pb.ActionType_BALANCE || t.GetType() == pb.ActionType_INSTANCE_START {
 		var transactionTotal = t.GetTotal()
 		transactionTotal *= -1
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
 		defCurr := MakeCurrencyConf(ctx, log).Currency
-		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), &defCurr)
+		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
@@ -241,7 +325,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
 			Priority: pb.Priority_NORMAL,
 			Account:  t.GetAccount(),
-			Currency: &defCurr,
+			Currency: defCurr,
 			Total:    transactionTotal * rate,
 			Exec:     0,
 		}))
@@ -252,11 +336,18 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Transactions = []string{newTr.Msg.Uuid}
 	}
 
-	t.Created = time.Now().Unix()
+	t.Number = strNum
+	t.Created = now.Unix()
 	t.Payment = 0
 	t.Processed = 0
 	t.Returned = 0
-	r, err := s.invoices.Create(ctx, t)
+	r, err := s.invoices.Create(ctx, &graph.Invoice{
+		Invoice: t,
+		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
+			NumericNumber:  num,
+			NumberTemplate: invConf.NewTemplate,
+		},
+	})
 	if err != nil {
 		log.Error("Failed to create invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
@@ -270,7 +361,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		})
 	}
 
-	resp := connect.NewResponse(r)
+	resp := connect.NewResponse(r.Invoice)
 	return resp, nil
 }
 
@@ -327,6 +418,9 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	transactions := old.GetTransactions()
 	var resp *connect.Response[pb.Invoice]
+	var strNum string
+	var num int
+	invConf := MakeInvoicesConf(ctx, log)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -363,6 +457,17 @@ payment:
 	}
 	log.Debug("Transactions were updated and processed.")
 
+	// Update number
+	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(old.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
+	if err != nil {
+		log.Error("Failed to get next number", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get next number")
+	}
+	old.Number = strNum
+	patch["number"] = strNum
+	patch["numeric_number"] = num
+	patch["number_template"] = invConf.Template
+
 	// BALANCE action was processed after transaction was processed
 	// NO_ACTION action don't need any processing
 	switch old.GetType() {
@@ -370,9 +475,10 @@ payment:
 		log.Debug("Paid action: instance start")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
+			log = log.With(zap.String("instance", i))
 			instOld, err := s.instances.Get(ctx, i)
 			if err != nil {
-				log.Error("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to get instance to start", zap.Error(err))
 				continue
 			}
 			instOld.Uuid = instOld.Key
@@ -383,11 +489,12 @@ payment:
 			cfg := instNew.Config
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
+
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to update instance", zap.Error(err))
 				continue
 			}
-			log.Debug("Successfully updated auto_start for instance", zap.String("instance", i))
+			log.Debug("Successfully updated auto_start for instance")
 		}
 		log.Info("Updated auto_start for instances after invoice was paid")
 
@@ -395,60 +502,37 @@ payment:
 		log.Debug("Paid action: instance renewal")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
-			instOld, err := s.instances.Get(ctx, i)
+			log = log.With(zap.String("instance", i))
+			if i == "" {
+				log.Debug("Instance item is empty")
+				continue
+			}
+			instance, err := s.instances.Get(ctx, i)
 			if err != nil {
 				log.Error("Failed to get instance to renew", zap.Error(err))
 				continue
 			}
-			instOld.Uuid = instOld.Key
-			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
-			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
+			instance.Uuid = instance.Key
+			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i).String())
 			if err != nil {
-				log.Error("Failed to get plan", zap.Error(err))
+				log.Error("Failed to get instance group", zap.Error(err))
 				continue
 			}
-
-			// Update every *_last_monitoring data to put aside instance billing
-			// TODO: should work correctly but need to make 100% sure
-			var last, next int64
-			for _, resource := range plan.GetResources() {
-				if resource.GetPeriod() == 0 {
-					continue
-				}
-
-				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
-				if ok {
-					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
-					instNew.Data[resource.Key+"_last_monitoring"] = structpb.NewNumberValue(float64(last + resource.GetPeriod()))
-				}
-				_, ok = instOld.Data[resource.Key+"_next_payment_date"]
-				if ok {
-					next = int64(instOld.Data[resource.Key+"_next_payment_date"].GetNumberValue())
-					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next + resource.GetPeriod()))
-				}
-			}
-
-			product, ok := plan.GetProducts()[instOld.GetProduct()]
-			if ok {
-				if product.GetPeriod() > 0 {
-					_, ok := instOld.Data["last_monitoring"]
-					if ok {
-						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
-					}
-					_, ok = instOld.Data["next_payment_date"]
-					if ok {
-						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
-					}
-				}
-			}
-
-			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err))
+			client, ok := s.drivers[res.Group.Type]
+			if !ok {
+				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
 				continue
 			}
-			log.Debug("Renewed instance", zap.String("instance", i))
+			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
+				ServicesProvider: res.SP,
+				Instance:         instance.Instance,
+				Method:           "renew",
+			})
+			if err != nil {
+				log.Error("Failed to renew instance", zap.Error(err))
+				continue
+			}
+			log.Debug("Renewed instance")
 		}
 		log.Info("Renewed instances after invoice was paid")
 	}
@@ -518,40 +602,23 @@ returning:
 				continue
 			}
 			i.Uuid = i.Key
-			// Find instance's ig
-			cur, err := s.db.Query(ctx, instanceInstanceGroup, map[string]interface{}{
-				"instance":    i.GetUuid(),
-				"permissions": schema.PERMISSIONS_GRAPH.Name,
-				"@instances":  schema.INSTANCES_COL,
-				"@igs":        schema.INSTANCES_GROUPS_COL,
-			})
-			if err != nil {
-				log.Error("Error getting instance group", zap.Error(err))
-				continue
-			}
-			var ig graph.InstancesGroup
-			_, err = cur.ReadDocument(ctx, &ig)
-			if err != nil {
-				log.Error("Error getting instance group", zap.Error(err))
-				continue
-			}
-			ig.Uuid = ig.Key
 
-			sp, err := s.sp.Get(ctx, ig.GetSp())
+			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, id).String())
 			if err != nil {
-				log.Error("Failed to get SP", zap.Error(err))
+				log.Error("Failed to get instance and sp", zap.Error(err))
+				continue
 			}
-			sp.Uuid = sp.Key
+			sp := res.SP
+			ig := res.Group
 
 			client, ok := s.drivers[ig.GetType()]
 			if !ok {
 				log.Error("Failed to get driver", zap.String("type", ig.GetType()))
 				continue
 			}
-
 			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
 				Instance:         i.Instance,
-				ServicesProvider: sp.ServicesProvider,
+				ServicesProvider: sp,
 				Method:           "suspend",
 			})
 			if err != nil {
@@ -562,64 +629,42 @@ returning:
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
-		log.Debug("Canceling instance renewal back")
+		log.Debug("Returning action: instance renewal")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
-			instOld, err := s.instances.Get(ctx, i)
+			log = log.With(zap.String("instance", i))
+			if i == "" {
+				log.Debug("Instance item is empty")
+				continue
+			}
+			instance, err := s.instances.Get(ctx, i)
 			if err != nil {
-				log.Error("Failed to get instance to renew", zap.Error(err))
+				log.Error("Failed to get instance to cancel renew", zap.Error(err))
 				continue
 			}
-			instOld.Uuid = instOld.Key
-			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
-			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
+			instance.Uuid = instance.Key
+			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i).String())
 			if err != nil {
-				log.Error("Failed to get plan", zap.Error(err))
+				log.Error("Failed to get instance group", zap.Error(err))
 				continue
 			}
-
-			// Update every *_last_monitoring data to cancel renewal
-			// TODO: make sure this works correctly
-			var last, next int64
-			for _, resource := range plan.GetResources() {
-				if resource.GetPeriod() == 0 {
-					continue
-				}
-				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
-				if ok {
-					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
-					instNew.Data[resource.Key+"_last_monitoring"] = structpb.NewNumberValue(float64(last - resource.GetPeriod()))
-				}
-				_, ok = instOld.Data[resource.Key+"_next_payment_date"]
-				if ok {
-					next = int64(instOld.Data[resource.Key+"_next_payment_date"].GetNumberValue())
-					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next - resource.GetPeriod()))
-				}
-			}
-
-			product, ok := plan.GetProducts()[instOld.GetProduct()]
-			if ok {
-				if product.GetPeriod() > 0 {
-					_, ok := instOld.Data["last_monitoring"]
-					if ok {
-						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
-					}
-					_, ok = instOld.Data["next_payment_date"]
-					if ok {
-						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
-					}
-				}
-			}
-
-			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err))
+			client, ok := s.drivers[res.Group.Type]
+			if !ok {
+				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
 				continue
 			}
-
-			log.Debug("Reverted instance renewal", zap.String("instance", i))
+			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
+				ServicesProvider: res.SP,
+				Instance:         instance.Instance,
+				Method:           "cancel_renew",
+			})
+			if err != nil {
+				log.Error("Failed to cancel renew instance", zap.Error(err))
+				continue
+			}
+			log.Debug("Renewed instance was canceled")
 		}
+		log.Info("Canceled renew for instances")
 	}
 	log.Debug("Finished invoice returning")
 	goto quit
@@ -633,7 +678,7 @@ quit:
 	}
 
 	log.Info("Finished invoice update status")
-	resp = connect.NewResponse(old)
+	resp = connect.NewResponse(old.Invoice)
 	return resp, nil
 }
 
@@ -757,6 +802,20 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetCreated() != 0 {
 		t.Created = req.GetCreated()
 	}
+
+	invConf := MakeInvoicesConf(ctx, log)
+	if newStatus == pb.BillingStatus_PAID && oldStatus != pb.BillingStatus_PAID {
+		strNum, num, err := s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(t.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
+		if err != nil {
+			log.Error("Failed to get new number for invoice", zap.Error(err))
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		t.Number = strNum
+		t.NumberTemplate = invConf.Template
+		t.NumericNumber = num
+	}
+
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
@@ -788,7 +847,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
 		defCurr := MakeCurrencyConf(ctx, log).Currency
-		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), &defCurr)
+		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
@@ -797,7 +856,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
 			Priority: pb.Priority_NORMAL,
 			Account:  t.GetAccount(),
-			Currency: &defCurr,
+			Currency: defCurr,
 			Total:    transactionTotal * rate,
 			Exec:     0,
 		}))
@@ -822,7 +881,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		})
 	}
 
-	return connect.NewResponse(t), nil
+	return connect.NewResponse(t.Invoice), nil
 }
 
 func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
@@ -842,7 +901,7 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 		return nil, err
 	}
 
-	return connect.NewResponse(t), nil
+	return connect.NewResponse(t.Invoice), nil
 }
 
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
@@ -857,7 +916,7 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
-	resp := connect.NewResponse(&pb.Invoices{Pool: []*pb.Invoice{tr}})
+	resp := connect.NewResponse(&pb.Invoices{Pool: []*pb.Invoice{tr.Invoice}})
 
 	return resp, nil
 }
