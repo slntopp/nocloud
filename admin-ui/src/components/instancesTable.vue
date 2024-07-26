@@ -33,7 +33,7 @@
           dense
           hide-details
           readonly
-          :input-value="item.config.auto_renew"
+          :input-value="item.config?.auto_renew"
         />
       </div>
     </template>
@@ -52,7 +52,7 @@
           dense
           hide-details
           :disabled="isChangeRegularPaymentLoading"
-          :input-value="item.config.regular_payment"
+          :input-value="item.config?.regular_payment"
           @change="changeRegularPayment(item, $event)"
         />
       </div>

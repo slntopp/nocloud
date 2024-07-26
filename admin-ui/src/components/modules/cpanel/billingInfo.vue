@@ -113,6 +113,25 @@
             </td>
             <td>
               <div class="d-flex justify-end mr-4">
+                <v-dialog v-model="isAddonsDialog" max-width="60%">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn class="mr-5" color="primary" v-bind="attrs" v-on="on"
+                      >addons</v-btn
+                    >
+                  </template>
+                  <instance-change-addons
+                    v-if="isAddonsDialog"
+                    :instance="template"
+                    :instance-addons="addons"
+                    @update="
+                      emit('update', {
+                        key: 'addons',
+                        value: $event,
+                      })
+                    "
+                  />
+                </v-dialog>
+
                 <v-chip color="primary" outlined>
                   {{ [totalPrice, defaultCurrency?.title].join(" ") }}
                   /
@@ -161,6 +180,7 @@ import useInstancePrices from "@/hooks/useInstancePrices";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import DatePicker from "../../ui/datePicker.vue";
 import changeMonitorings from "@/components/dialogs/changeMonitorings.vue";
+import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 
 const props = defineProps([
   "template",
@@ -187,6 +207,7 @@ const billingHeaders = ref([
 const billingItems = ref([]);
 const priceModelDialog = ref(false);
 const changeDatesDialog = ref(false);
+const isAddonsDialog = ref(false);
 
 const filtredPlans = computed(() =>
   plans.value.filter((p) => p.type === "cpanel")
@@ -233,7 +254,7 @@ const getBillingItems = () => {
     accountPrice: toAccountPrice(product?.price),
   });
 
-  addons.value.forEach((addon) => {
+  addons.value.forEach((addon, index) => {
     const { title, periods } = addon;
     const { period, kind } = billingPlan.value.products[template.value.product];
     items.push({
@@ -242,8 +263,9 @@ const getBillingItems = () => {
       accountPrice: toAccountPrice(periods[period]),
       quantity: 1,
       isAddon: true,
+      path: `${index}.periods.${period}`,
       kind,
-      period,
+      period: getBillingPeriod(period),
     });
   });
 
@@ -257,6 +279,7 @@ const updatePrice = (item, isAccount) => {
     emit("update", {
       key: item.path,
       value: fromAccountPrice(item.accountPrice),
+      type: item.isAddon ? "addons" : "template",
     });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
@@ -265,7 +288,11 @@ const updatePrice = (item, isAccount) => {
       return p;
     });
   } else {
-    emit("update", { key: item.path, value: item.price });
+    emit("update", {
+      key: item.path,
+      value: item.price,
+      type: item.isAddon ? "addons" : "template",
+    });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
         p.accountPrice = toAccountPrice(item.price);
