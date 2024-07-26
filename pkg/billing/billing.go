@@ -66,6 +66,7 @@ type BillingServiceServer struct {
 	instances    *graph.InstancesController
 	services     graph.ServicesController
 	sp           graph.ServicesProvidersController
+	addons       graph.AddonsController
 
 	db driver.Database
 
@@ -92,6 +93,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		descriptions: graph.NewDescriptionsController(log, db),
 		instances:    graph.NewInstancesController(log, db, conn),
 		sp:           graph.NewServicesProvidersController(log, db),
+		addons:       *graph.NewAddonsController(log, db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
