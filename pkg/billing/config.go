@@ -154,6 +154,13 @@ func MakeCurrencyConf(ctx context.Context, log *zap.Logger) (conf CurrencyConf) 
 	}
 
 	log.Debug("Got currency config", zap.Any("conf", conf))
+
+	if conf.Currency == nil {
+		conf.Currency = &pb.Currency{
+			Id:    schema.DEFAULT_CURRENCY_ID,
+			Title: schema.DEFAULT_CURRENCY_NAME,
+		}
+	}
 	return conf
 }
 
