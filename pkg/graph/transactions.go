@@ -44,6 +44,7 @@ func NewTransactionsController(logger *zap.Logger, db driver.Database) Transacti
 	log.Info("Creating Transaction controller")
 
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
+	migrations.MigrateOldInvoicesToNew(log, GetEnsureCollection(log, ctx, db, schema.INVOICES_COL), col)
 
 	return TransactionsController{
 		log: log, col: col,
