@@ -22,7 +22,6 @@ const { template, account, addons } = toRefs(props);
 
 const addonsPrices = computed(() => {
   const prices = {};
-  console.log(addons);
   template.value.billingPlan.resources.forEach((curr) => {
     if (
       curr.key === `drive_${template.value.resources.drive_type.toLowerCase()}`
@@ -31,10 +30,6 @@ const addonsPrices = computed(() => {
 
       return (prices[key] =
         (curr.price * template.value.resources.drive_size) / 1024);
-    } else if (curr.key === "ram") {
-      const key = "ram";
-
-      return (prices[key] = (curr.price * template.value.resources.ram) / 1024);
     } else if (template.value.resources[curr.key]) {
       const key = curr.key.replace("_", " ");
 
