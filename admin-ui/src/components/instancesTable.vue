@@ -538,7 +538,7 @@ const getPeriod = (instance) => {
 const getExpirationDate = (instance) => {
   if (isInstancePayg(instance)) return "PayG";
   if (getPeriod(instance) === "One time") return "One time";
-  return instance.data.next_payment_date || "Unknown";
+  return instance.data?.next_payment_date || "Unknown";
 };
 
 const getOSName = (instance) => {
