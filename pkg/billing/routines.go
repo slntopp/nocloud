@@ -258,9 +258,9 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				log.Debug("Instance owner found", zap.String("account", acc.GetUuid()))
 
 				if acc.Currency == nil {
-					acc.Currency = &currencyConf.Currency
+					acc.Currency = currencyConf.Currency
 				}
-				rate, _, err := s.currencies.GetExchangeRate(ctx, &currencyConf.Currency, acc.Currency)
+				rate, _, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
 				if err != nil {
 					log.Error("Error getting exchange rate", zap.Error(err))
 					continue
@@ -327,7 +327,7 @@ start:
 	routineConf := MakeRoutineConf(ctx, log)
 	roundingConf := MakeRoundingConf(ctx, log)
 	currencyConf := MakeCurrencyConf(ctx, log)
-	currencyConf.Currency = pb.Currency{
+	currencyConf.Currency = &pb.Currency{
 		Id:    0,
 		Title: "NCU",
 	}

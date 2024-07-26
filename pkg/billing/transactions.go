@@ -299,7 +299,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		var cur *pb.Currency
 
 		if dbAcc.Currency == nil {
-			cur = &currencyConf.Currency
+			cur = currencyConf.Currency
 		} else {
 			cur = dbAcc.Currency
 		}
@@ -307,7 +307,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		var rate float64 = 1
 
 		if cur.GetId() != currencyConf.Currency.GetId() {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, &currencyConf.Currency)
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -515,7 +515,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		var cur *pb.Currency
 
 		if dbAcc.Currency == nil {
-			cur = &currencyConf.Currency
+			cur = currencyConf.Currency
 		} else {
 			cur = dbAcc.Currency
 		}
@@ -523,7 +523,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		var rate float64 = 1
 
 		if cur.GetId() != currencyConf.Currency.GetId() {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, &currencyConf.Currency)
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())

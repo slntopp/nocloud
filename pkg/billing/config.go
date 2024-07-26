@@ -23,7 +23,7 @@ type RoutineConf struct {
 }
 
 type CurrencyConf struct {
-	Currency pb.Currency `json:"currency"` // Default currency for platform
+	Currency *pb.Currency `json:"currency"` // Default currency for platform
 }
 
 type RoundingConf struct {
@@ -63,7 +63,7 @@ var (
 	}
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
-			Currency: pb.Currency{
+			Currency: &pb.Currency{
 				Id:    schema.DEFAULT_CURRENCY_ID,
 				Title: schema.DEFAULT_CURRENCY_NAME,
 			},
@@ -151,13 +151,14 @@ func MakeCurrencyConf(ctx context.Context, log *zap.Logger) (conf CurrencyConf) 
 		conf = currencySetting.Value
 	}
 
+	log.Debug("Got currency config", zap.Any("conf", conf))
 	return conf
 }
 
 func MakeRoundingConf(ctx context.Context, log *zap.Logger) (conf RoundingConf) {
 	sc.Setup(log, ctx, &settingsClient)
 
-	if err := sc.Fetch(currencyKey, &conf, roundingSetting); err != nil {
+	if err := sc.Fetch(roundingKey, &conf, roundingSetting); err != nil {
 		conf = roundingSetting.Value
 	}
 
