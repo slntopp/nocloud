@@ -261,7 +261,7 @@ const fetchReports = async () => {
     const { records: result } = await api.reports.list(requestOptions.value);
     reports.value = result.map((r) => {
       return {
-        total: -r.total.toFixed(2),
+        total: -r.cost.toFixed(2),
         start: r.start,
         end: r.end,
         duration: `${formatSecondsToDate(
@@ -279,7 +279,7 @@ const fetchReports = async () => {
         meta: {
           ...r.meta,
         },
-        totalDefault: -convertFrom(r.total, r.currency),
+        totalDefault: -convertFrom(r.cost, r.currency),
       };
     });
   } catch (e) {
