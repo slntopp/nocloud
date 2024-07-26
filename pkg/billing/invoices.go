@@ -258,6 +258,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
+	invConf := MakeInvoicesConf(ctx, log)
+	defCurr := MakeCurrencyConf(ctx, log).Currency
 
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
@@ -299,10 +301,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 		}
 	}
+	if t.Currency == nil {
+		t.Currency = defCurr
+	}
 
 	now := time.Now()
 
-	invConf := MakeInvoicesConf(ctx, log)
 	strNum, num, err := s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
 	if err != nil {
 		log.Error("Failed to get new number for invoice", zap.Error(err))
@@ -315,7 +319,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		transactionTotal *= -1
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
-		defCurr := MakeCurrencyConf(ctx, log).Currency
 		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
@@ -760,6 +763,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
+	defCurr := MakeCurrencyConf(ctx, log).Currency
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
@@ -821,11 +825,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
 	t.Total = req.GetTotal()
-	t.Currency = req.GetCurrency()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
 	if req.Transactions != nil {
 		t.Transactions = req.Transactions
+	}
+	if req.Currency == nil {
+		t.Currency = defCurr
 	}
 
 	if t.Account == "" {
@@ -846,7 +852,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		transactionTotal *= -1
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
-		defCurr := MakeCurrencyConf(ctx, log).Currency
 		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
