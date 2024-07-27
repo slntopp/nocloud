@@ -213,13 +213,13 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			"@services":     schema.SERVICES_COL,
 			"@records":      schema.RECORDS_COL,
 			"@accounts":     schema.ACCOUNTS_COL,
+			"@addons":       schema.ADDONS_COL,
 			"permissions":   schema.PERMISSIONS_GRAPH.Name,
 			"priority":      record.Priority,
 			"now":           now,
 			"graph":         schema.BILLING_GRAPH.Name,
 			"currencies":    schema.CUR_COL,
 			"currency":      currencyConf.Currency,
-			"item_price":    itemPrice,
 		})
 		if err != nil {
 			log.Error("Error Generating Transactions", zap.Error(err))
@@ -370,6 +370,12 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
+
+        LET instance = DOCUMENT(@@instances, record.instance)
+        LET addon = DOCUMENT(@@addons, record.addon)
+        LET product_period = bp.products[instance.product].period
+        LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
+
         LET cost = record.total * rate * item_price
             UPDATE record._key WITH { 
 				processed: true, 
