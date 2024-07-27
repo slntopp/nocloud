@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
 	"time"
 
@@ -453,6 +454,10 @@ func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[p
 						Price:       cost,
 						Instance:    instance.GetUuid(),
 					},
+				},
+				Meta: map[string]*structpb.Value{
+					"auto_created": structpb.NewBoolValue(true),
+					"creator":      structpb.NewStringValue("nocloud.services.CreateService"),
 				},
 				Total:    cost,
 				Type:     bpb.ActionType_INSTANCE_START,
