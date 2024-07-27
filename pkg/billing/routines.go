@@ -149,6 +149,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 						log.Info("Last renew invoice for this instance didn't expired yet. Skipping invoice creation", zap.String("invoice", inv.GetUuid()))
 						continue
 					}
+				} else {
+					log.Info("No last renew invoice for this instance. Continue")
 				}
 
 				res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i.GetUuid()).String())
@@ -239,7 +241,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				_processed := 0
 				_expiring := 0
 				for _, r := range records {
-					log = log.With(zap.Any("record", r))
+					log := log.With(zap.Any("record", r))
 					if expiringTime(r.Expires, r.Period) > now {
 						log.Info("Not expiring yet")
 						_processed++
