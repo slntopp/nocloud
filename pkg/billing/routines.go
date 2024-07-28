@@ -408,16 +408,18 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 	s.gen.Status.Error = nil
 
 	_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
-		"@transactions": schema.TRANSACTIONS_COL,
-		"@instances":    schema.INSTANCES_COL,
-		"@services":     schema.SERVICES_COL,
-		"@records":      schema.RECORDS_COL,
-		"@accounts":     schema.ACCOUNTS_COL,
-		"permissions":   schema.PERMISSIONS_GRAPH.Name,
-		"now":           tick.Unix(),
-		"graph":         schema.BILLING_GRAPH.Name,
-		"currencies":    schema.CUR_COL,
-		"currency":      currencyConf.Currency,
+		"@transactions":  schema.TRANSACTIONS_COL,
+		"@instances":     schema.INSTANCES_COL,
+		"@services":      schema.SERVICES_COL,
+		"@records":       schema.RECORDS_COL,
+		"@accounts":      schema.ACCOUNTS_COL,
+		"@addons":        schema.ADDONS_COL,
+		"@billing_plans": schema.BILLING_PLANS_COL,
+		"permissions":    schema.PERMISSIONS_GRAPH.Name,
+		"now":            tick.Unix(),
+		"graph":          schema.BILLING_GRAPH.Name,
+		"currencies":     schema.CUR_COL,
+		"currency":       currencyConf.Currency,
 	})
 	if err != nil {
 		log.Error("Error Generating Transactions", zap.Error(err))
@@ -665,10 +667,12 @@ FOR service IN @@services // Iterate over Services
         FILTER !record.processed
         FILTER record.instance IN instances
 
-		LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
-		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", inst.billing_plan.uuid))
-		LET resources = bp.resources == null ? [] : bp.resources
-		LET item = record.product == null ? LAST(FOR res in resources FILTER res.key == record.resource return res) : bp.products[record.product]
+        LET instance = DOCUMENT(@@instances, record.instance)
+        LET bp = DOCUMENT(@@billing_plans, instance.billing_plan.uuid)
+        LET resources = bp.resources == null ? [] : bp.resources
+        LET addon = DOCUMENT(@@addons, record.addon)
+        LET product_period = bp.products[instance.product].period
+        LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND
@@ -678,7 +682,7 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET cost = record.total * rate * item.price
+        LET cost = record.total * rate * item_price
             UPDATE record._key WITH { 
 				processed: true, 
 				cost: cost,
