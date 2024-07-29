@@ -27,7 +27,6 @@ import (
 	"github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -35,7 +34,6 @@ import (
 	dpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
 	hpb "github.com/slntopp/nocloud-proto/health"
-	ipb "github.com/slntopp/nocloud-proto/instances"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
@@ -350,11 +348,18 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 				log.Debug("Updating instance")
 				i.Data["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
-				err = s.instances.Update(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY),
-					"", proto.Clone(i).(*ipb.Instance), proto.Clone(i).(*ipb.Instance))
+				c, err := s.db.Query(context.TODO(), updateDataQuery, map[string]interface{}{
+					"@collection": schema.INSTANCES_COL,
+					"key":         i.GetUuid(),
+					"data":        i.GetData(),
+				})
 				if err != nil {
-					log.Error("Failed to update instance. Can cause uncontrollable invoice creation", zap.Error(err))
+					log.Error("Failed to update data", zap.Error(err))
 					continue
+				}
+				log.Debug("Updated data", zap.String("type", schema.INSTANCES_COL), zap.String("uuid", i.GetUuid()), zap.Any("data", i.GetData()))
+				if err = c.Close(); err != nil {
+					log.Warn("Error closing Driver cursor", zap.Error(err))
 				}
 
 				log.Debug("Finished")
@@ -365,6 +370,10 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 	log.Info("Routine finished", zap.Int("invoices_created", counter))
 }
+
+const updateDataQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+`
 
 func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
 	log := s.log.Named("IssueInvoicesRoutine")
