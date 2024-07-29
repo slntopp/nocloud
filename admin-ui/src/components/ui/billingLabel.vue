@@ -104,7 +104,7 @@ const price = computed(() => {
 const isRenewDisabled = computed(() => {
   return (
     isDeleted.value ||
-    template.value.data.blocked ||
+    template.value.data?.blocked ||
     (account.value?.balance || 0) < price.value
   );
 });
@@ -124,6 +124,10 @@ function sendRenew() {
       template: template.value,
     })
     .then(() => {
+      if (!template.value.data) {
+        template.value.data = {};
+      }
+
       template.value.data.blocked = true;
       template.value.data = Object.assign({}, template.value.data);
     });

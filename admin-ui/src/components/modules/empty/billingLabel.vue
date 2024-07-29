@@ -3,14 +3,14 @@
     :due-date="dueDate"
     :tariff-price="instancePrice"
     :template="template"
-    :addons-price="addonsPrice"
+    :addons-price="addonsPrices"
     :account="account"
     @update="emit('update', $event)"
   />
 </template>
 
 <script setup>
-import { computed, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import billingLabel from "@/components/ui/billingLabel.vue";
 
@@ -23,13 +23,10 @@ const dueDate = computed(() => {
   return formatSecondsToDate(+props.template?.data?.next_payment_date);
 });
 
-const instancePrice = computed(() => {
-  const key = props.template.product;
+const instancePrice = ref(0);
+const addonsPrices = ref({});
 
-  return props.template.billingPlan.products[key]?.price ?? 0;
-});
-
-const addonsPrice = computed(() => {
+onMounted(() => {
   const prices = {};
 
   addons.value.forEach(
@@ -40,7 +37,11 @@ const addonsPrice = computed(() => {
         ])
   );
 
-  return prices;
+  addonsPrices.value = prices;
+
+  instancePrice.value =
+    (template.value.estimate || 0) -
+    Object.keys(prices).reduce((acc, key) => acc + prices[key], 0);
 });
 </script>
 
