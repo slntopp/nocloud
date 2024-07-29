@@ -852,7 +852,8 @@ LET instances = (
 			service: srv,
 			sp: sp._key,
 			type: bp.type,
-			account: acc._key
+			account: acc._key,
+            namespace: ns
 		}
 )
 
@@ -1110,7 +1111,8 @@ LET instances = (
 			service: srv,
 			sp: sp._key,
 			type: bp.type,
-			account: acc._key
+			account: acc._key,
+            namespace: ns
 		}
 )
 
