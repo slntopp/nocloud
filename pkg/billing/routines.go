@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	ipb "github.com/slntopp/nocloud-proto/instances"
+	"google.golang.org/protobuf/proto"
 	"slices"
 	"time"
 
@@ -137,7 +138,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					i.Data = map[string]*structpb.Value{}
 				}
 
-				lastRenewInvoice, ok := i.Data["renew_invoice"]
+				lastRenewInvoice, ok := i.Config["renew_invoice"]
 				if ok {
 					inv, err := s.invoices.Get(ctx, lastRenewInvoice.GetStringValue())
 					if err != nil {
@@ -348,12 +349,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				log.Debug("Invoice created", zap.String("invoice", inv.Uuid))
 
 				log.Debug("Updating instance")
-				i.Data["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
-				_, err = iPub(&ipb.ObjectData{
-					Uuid: i.GetUuid(),
-					Data: i.Data,
-				})
-				if err != nil {
+				i.Config["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
+				if err = s.instances.Update(ctx, "", proto.Clone(i).(*ipb.Instance), proto.Clone(i).(*ipb.Instance)); err != nil {
 					log.Error("Failed to update instance", zap.Error(err))
 					continue
 				}
