@@ -134,8 +134,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				cost := 0.0
 				now := time.Now().Unix()
 
-				if i.Data == nil {
-					i.Data = map[string]*structpb.Value{}
+				if i.Config == nil {
+					i.Config = map[string]*structpb.Value{}
 				}
 
 				lastRenewInvoice, ok := i.Config["renew_invoice"]
