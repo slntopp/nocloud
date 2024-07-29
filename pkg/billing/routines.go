@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/arangodb/go-driver"
+	ipb "github.com/slntopp/nocloud-proto/instances"
 	"slices"
 	"time"
 
@@ -87,7 +88,7 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 }
 
 func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log *zap.Logger, tick time.Time,
-	currencyConf CurrencyConf, roundingConf RoundingConf) {
+	currencyConf CurrencyConf, roundingConf RoundingConf, iPub Pub) {
 	log.Info("Trying to issue invoices for expiring instances", zap.Time("tick", tick))
 
 	list, err := s.services.List(ctx, schema.ROOT_ACCOUNT_KEY, &services.ListRequest{})
@@ -348,18 +349,13 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 				log.Debug("Updating instance")
 				i.Data["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
-				c, err := s.db.Query(context.TODO(), updateDataQuery, map[string]interface{}{
-					"@collection": schema.INSTANCES_COL,
-					"key":         i.GetUuid(),
-					"data":        i.GetData(),
+				_, err = iPub(&ipb.ObjectData{
+					Uuid: i.GetUuid(),
+					Data: i.Data,
 				})
 				if err != nil {
-					log.Error("Failed to update data", zap.Error(err))
+					log.Error("Failed to update instance", zap.Error(err))
 					continue
-				}
-				log.Debug("Updated data", zap.String("type", schema.INSTANCES_COL), zap.String("uuid", i.GetUuid()), zap.Any("data", i.GetData()))
-				if err = c.Close(); err != nil {
-					log.Warn("Error closing Driver cursor", zap.Error(err))
 				}
 
 				log.Debug("Finished")
@@ -378,6 +374,12 @@ UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
 func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
 	log := s.log.Named("IssueInvoicesRoutine")
 
+	ch, err := s.rbmq.Channel()
+	if err != nil {
+		log.Fatal("Failed to open a channel", zap.Error(err))
+	}
+	defer ch.Close()
+
 start:
 
 	routineConf := MakeRoutineConf(ctx, log)
@@ -387,6 +389,7 @@ start:
 		Id:    0,
 		Title: "NCU",
 	}
+	iPub := NewInstanceDataPublisher(ch)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{currencyKey}, upd)
@@ -397,7 +400,7 @@ start:
 	tick := time.Now()
 	for {
 		log.Info("Entering new Iteration", zap.Time("ts", tick))
-		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf)
+		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf, iPub)
 
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
