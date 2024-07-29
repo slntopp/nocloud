@@ -851,7 +851,7 @@ LET instances = (
 			),
 			service: srv,
 			sp: sp._key,
-			type: bp.type,
+			type: sp.type,
 			account: acc._key,
             namespace: ns
 		}
@@ -1110,7 +1110,7 @@ LET instances = (
 			),
 			service: srv,
 			sp: sp._key,
-			type: bp.type,
+			type: sp.type,
 			account: acc._key,
             namespace: ns
 		}
