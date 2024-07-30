@@ -11,8 +11,8 @@
 </template>
 
 <script setup>
-import { computed, toRefs } from "vue";
-import { formatSecondsToDate, getInstancePrice } from "@/functions";
+import { computed, onMounted, ref, toRefs } from "vue";
+import { formatSecondsToDate } from "@/functions";
 import billingLabel from "@/components/ui/billingLabel.vue";
 
 const props = defineProps(["template", "account", "addons"]);
@@ -20,22 +20,11 @@ const emit = defineEmits(["update"]);
 
 const { template, account, addons } = toRefs(props);
 
-const addonsPrices = computed(() => {
+const tariffPrice = ref(0);
+const addonsPrices = ref({});
+
+onMounted(() => {
   const prices = {};
-  template.value.billingPlan.resources.forEach((curr) => {
-    if (
-      curr.key === `drive_${template.value.resources.drive_type.toLowerCase()}`
-    ) {
-      const key = "drive";
-
-      return (prices[key] =
-        (curr.price * template.value.resources.drive_size) / 1024);
-    } else if (template.value.resources[curr.key]) {
-      const key = curr.key.replace("_", " ");
-
-      return (prices[key] = curr.price * template.value.resources[curr.key]);
-    }
-  });
 
   addons.value.forEach(
     (a) =>
@@ -44,14 +33,17 @@ const addonsPrices = computed(() => {
           template.value.billingPlan.products[template.value.product]?.period
         ])
   );
-  return prices;
+
+  addonsPrices.value = prices;
+
+  tariffPrice.value =
+    (template.value.estimate || 0) -
+    Object.keys(prices).reduce((acc, key) => acc + prices[key], 0);
 });
 
 const dueDate = computed(() => {
   return formatSecondsToDate(+template.value?.data?.next_payment_date);
 });
-
-const tariffPrice = computed(() => getInstancePrice(template.value));
 
 const isRenewDisabled = computed(
   () => template.value.billingPlan.kind === "DYNAMIC"

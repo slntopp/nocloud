@@ -54,7 +54,10 @@ export default {
       commit("setLoading", true);
       try {
         const response = await getters["instancesClient"].get({ uuid });
-        commit("setOne", response.toJson());
+        const data = response.toJson();
+        commit("setOne", data);
+
+        return data;
       } finally {
         commit("setLoading", false);
       }

@@ -66,12 +66,12 @@
     </instance-control-btn>
 
     <instance-control-btn
-      :hint="template.data.lock ? 'User unlock' : 'User lock'"
+      :hint="template.data?.lock ? 'User unlock' : 'User lock'"
     >
       <confirm-dialog @confirm="lockInstance" :disabled="isDeleted">
         <v-btn :loading="isLockLoading" class="ma-1" :disabled="isDeleted">
           <v-icon>
-            {{ template.data.lock ? "mdi-lock-off" : "mdi-lock" }}
+            {{ template.data?.lock ? "mdi-lock-off" : "mdi-lock" }}
           </v-icon>
         </v-btn>
       </confirm-dialog>
@@ -216,7 +216,7 @@ export default {
       }
     },
     lockInstance() {
-      const lock = !this.template.data.lock;
+      const lock = !this.template.data?.lock;
 
       const tempService = JSON.parse(JSON.stringify(this.service));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -228,7 +228,7 @@ export default {
 
       tempService.instancesGroups[igIndex].instances[instanceIndex] = {
         ...this.template,
-        data: { ...this.template.data, lock },
+        data: { ...(this.template.data || {}), lock },
       };
 
       this.isLockLoading = true;
@@ -785,7 +785,7 @@ export default {
         };
       const isRebootDisabled =
         this.template.state.state === "SUSPENDED" ||
-        this.template.state.meta.state === "BUILD" ||
+        this.template.state.meta?.state === "BUILD" ||
         this.template.state.state === "STOPPED";
 
       return {
@@ -926,7 +926,7 @@ export default {
       return this.template?.status?.toLowerCase() === "detached";
     },
     isFreezed() {
-      return this.template.data.freeze;
+      return this.template.data?.freeze;
     },
     product() {
       switch (this.template.type) {
@@ -973,11 +973,6 @@ export default {
     },
     isOperated() {
       return this.template.state.state === "OPERATION";
-    },
-    namespace() {
-      return this.$store.getters["namespaces/all"].find(
-        (n) => n.uuid === this.template.access.namespace
-      );
     },
     whmcsApi() {
       return this.$store.getters["settings/whmcsApi"];
