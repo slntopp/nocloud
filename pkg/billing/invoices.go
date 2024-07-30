@@ -533,7 +533,7 @@ payment:
 			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
 				ServicesProvider: res.SP,
 				Instance:         instance.Instance,
-				Method:           "renew",
+				Method:           "free_renew",
 			})
 			if err != nil {
 				log.Error("Failed to renew instance", zap.Error(err))
