@@ -106,6 +106,25 @@
             </td>
             <td>
               <div class="d-flex justify-end mr-4">
+                <v-dialog v-model="isAddonsDialog" max-width="60%">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn class="mr-4" color="primary" v-bind="attrs" v-on="on"
+                      >addons</v-btn
+                    >
+                  </template>
+                  <instance-change-addons
+                    v-if="isAddonsDialog"
+                    :instance="template"
+                    :instance-addons="addons"
+                    @update="
+                      emit('update', {
+                        key: 'addons',
+                        value: $event,
+                      })
+                    "
+                  />
+                </v-dialog>
+
                 <v-chip color="primary" outlined>
                   {{ [totalPrice, defaultCurrency?.title].join(" ") }}
                   /
@@ -144,6 +163,7 @@ import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
+import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 
 const props = defineProps([
   "template",
@@ -162,6 +182,7 @@ const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
   useInstancePrices(template.value, account.value);
 
 const priceModelDialog = ref(false);
+const isAddonsDialog = ref(false);
 
 const billingHeaders = ref([
   { text: "Name", value: "name" },
