@@ -118,6 +118,24 @@
             </td>
             <td>
               <div class="d-flex justify-end">
+                <v-dialog v-model="isAddonsDialog" max-width="60%">
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-btn class="mr-4" color="primary" v-bind="attrs" v-on="on"
+                      >addons</v-btn
+                    >
+                  </template>
+                  <instance-change-addons
+                    v-if="isAddonsDialog"
+                    :instance="template"
+                    :instance-addons="addons"
+                    @update="
+                      emit('update', {
+                        key: 'addons',
+                        value: $event,
+                      })
+                    "
+                  />
+                </v-dialog>
                 <v-chip outlined color="primary" class="mr-4">
                   {{
                     [totalNewPrice?.toFixed(2), defaultCurrency?.title].join(
@@ -170,6 +188,7 @@ import {
 import useInstancePrices from "@/hooks/useInstancePrices";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
+import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 
 const props = defineProps(["template", "plans", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -192,6 +211,7 @@ const pricesHeaders = ref([
 const totalNewPrice = ref(0);
 const totalBasePrice = ref(0);
 const priceModelDialog = ref(false);
+const isAddonsDialog = ref(false);
 
 onMounted(() => {
   initPrices();
@@ -313,7 +333,6 @@ const setBasePrices = () => {
     return i;
   });
 
-  console.log(total);
   totalBasePrice.value = total.toFixed(2);
 };
 
