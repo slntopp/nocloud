@@ -217,11 +217,11 @@ const getBillingItems = () => {
   });
 
   items.push(
-    ...addons.value.map((a) => ({
+    ...addons.value.map((a, index) => ({
       name: a.title,
       price: a?.periods?.[product?.period] || 0,
-      path: ``,
       kind: a?.kind,
+      path: `${index}.periods.${product?.period}`,
       period: product?.period,
       accountPrice: toAccountPrice(a?.periods?.[product?.period] || 0),
       isAddon: true,
@@ -239,6 +239,7 @@ const updatePrice = (item, isAccount) => {
     emit("update", {
       key: item.path,
       value: fromAccountPrice(item.accountPrice),
+      type: item.isAddon ? "addons" : "template",
     });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
@@ -247,7 +248,11 @@ const updatePrice = (item, isAccount) => {
       return p;
     });
   } else {
-    emit("update", { key: item.path, value: item.price });
+    emit("update", {
+      key: item.path,
+      value: item.price,
+      type: item.isAddon ? "addons" : "template",
+    });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
         p.accountPrice = toAccountPrice(item.price);
