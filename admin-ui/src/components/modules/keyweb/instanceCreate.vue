@@ -211,7 +211,7 @@ const setAddons = () => {
     if (addon?.meta?.type) {
       setValue(
         "config.configurations." + addon?.meta?.type,
-        addon.meta.keys[0]?.split("$")?.[0]
+        addon.meta.key?.split("$")?.[0]
       );
     }
 

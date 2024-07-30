@@ -45,7 +45,6 @@
 import config from "@/config.js";
 import snackbar from "@/mixins/snackbar";
 import api from "@/api";
-import { mapGetters } from "vuex";
 
 let socket;
 
@@ -121,13 +120,18 @@ export default {
     },
   },
   computed: {
-    ...mapGetters("namespaces", { namespaces: "all" }),
     instance() {
-      const id = this.$route.params?.instanceId;
+      const instanceResponse = this.$store.getters["instances/one"];
 
-      return this.$store.getters["services/getInstances"].find(
-        ({ uuid }) => uuid === id
-      );
+      if (!instanceResponse) {
+        return;
+      }
+
+      return {
+        ...instanceResponse.instance,
+        ...instanceResponse,
+        instance: undefined,
+      };
     },
     tabs() {
       return [
@@ -162,11 +166,6 @@ export default {
         },
       ].filter((el) => !!el);
     },
-    namespace() {
-      return this.namespaces?.find(
-        (n) => n.uuid == this.instance?.access.namespace
-      );
-    },
     instanceTitle() {
       if (this.isLoading) {
         return "...";
@@ -188,14 +187,18 @@ export default {
     try {
       this.isLoading = true;
       await Promise.all([
-        this.$store.dispatch("namespaces/fetch"),
-        this.$store.dispatch("services/fetch", { showDeleted: true }),
+        this.$store.dispatch("instances/get", this.$route.params?.instanceId),
       ]);
 
       this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+      this.$store.dispatch("services/fetch", {
+        filters: { uuid: [this.instance.service] },
+      });
+      this.$store.dispatch("namespaces/fetch", {
+        filters: { uuid: [this.instance.namespace] },
+      });
       this.$store.dispatch("plans/fetch");
-      this.account = await api.accounts.get(this.namespace.access.namespace);
-      console.log(this.account);
+      this.account = await api.accounts.get(this.instance.account);
     } catch (err) {
       console.log(err);
       this.$store.commit("snackbar/showSnackbarError", {

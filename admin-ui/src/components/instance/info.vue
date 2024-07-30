@@ -283,7 +283,7 @@ export default {
     ...mapGetters("servicesProviders", { servicesProviders: "all" }),
     namespace() {
       return this.namespaces?.find(
-        (n) => n.uuid == this.template.access.namespace
+        (n) => n.uuid == this.template.namespace
       );
     },
     service() {
