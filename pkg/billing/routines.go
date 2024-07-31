@@ -247,6 +247,10 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 						_processed++
 						continue
 					}
+					if r.Product == "" {
+						log.Info("Ignoring non product record")
+						continue
+					}
 					expiring = true
 					periods = append(periods, r.Period)
 					expirings = append(expirings, r.Expires)
