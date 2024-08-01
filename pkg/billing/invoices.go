@@ -913,8 +913,24 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 	return connect.NewResponse(t.Invoice), nil
 }
 
-func (s *BillingServiceServer) GetInvoiceSettingsTemplateExample(context.Context, *connect.Request[pb.GetInvoiceSettingsTemplateExampleRequest]) (*connect.Response[pb.GetInvoiceSettingsTemplateExampleResponse], error) {
-	return connect.NewResponse(&pb.GetInvoiceSettingsTemplateExampleResponse{Example: "PREFIX {YEAR}/{MONTH}/{DAY}/{NUMBER} POSTFIX"}), nil
+func (s *BillingServiceServer) GetInvoiceSettingsTemplateExample(ctx context.Context, _req *connect.Request[pb.GetInvoiceSettingsTemplateExampleRequest]) (*connect.Response[pb.GetInvoiceSettingsTemplateExampleResponse], error) {
+	log := s.log.Named("GetInvoiceSettingsTemplateExample")
+	req := _req.Msg
+	log.Debug("Request received")
+
+	example := s.invoices.ParseNumberIntoTemplate(req.Template, 1, time.Now())
+	newExample := s.invoices.ParseNumberIntoTemplate(req.NewTemplate, 1, time.Now())
+	var renewalExample string
+	if req.IssueRenewalInvoiceAfter > 0 && req.IssueRenewalInvoiceAfter < 1 {
+		monthDur := time.Duration(86400*30*(1-req.IssueRenewalInvoiceAfter)) * time.Second
+		renewalExample = fmt.Sprintf("**FOR MONTHLY PERIOD** Invoice will be issued before: %s", monthDur.String())
+	} else if req.IssueRenewalInvoiceAfter == 1 {
+		renewalExample = fmt.Sprintf("Invoice will be issued right after instance expiration")
+	} else {
+		monthDur := time.Duration(86400*30*0.1) * time.Second
+		renewalExample = fmt.Sprintf("Value must be (0:1]. Using default 0.9. **FOR MONTHLY PERIOD** Invoice will be issued before: %s", monthDur.String())
+	}
+	return connect.NewResponse(&pb.GetInvoiceSettingsTemplateExampleResponse{TemplateExample: example, NewTemplateExample: newExample, IssueRenewalInvoiceAfterExample: renewalExample}), nil
 }
 
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
