@@ -913,6 +913,10 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 	return connect.NewResponse(t.Invoice), nil
 }
 
+func (s *BillingServiceServer) GetInvoiceSettingsTemplateExample(context.Context, *connect.Request[pb.GetInvoiceSettingsTemplateExampleRequest]) (*connect.Response[pb.GetInvoiceSettingsTemplateExampleResponse], error) {
+	return connect.NewResponse(&pb.GetInvoiceSettingsTemplateExampleResponse{Example: "PREFIX {YEAR}/{MONTH}/{DAY}/{NUMBER} POSTFIX"}), nil
+}
+
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
 	tr, err := s.invoices.Get(ctx, uuid)
 	if err != nil {
