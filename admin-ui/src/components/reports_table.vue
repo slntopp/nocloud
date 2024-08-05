@@ -55,11 +55,6 @@
           </v-chip>
         </div>
       </template>
-      <template v-slot:[`item.service`]="{ value }">
-        <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-          {{ getShortName(getService(value)?.title || value) }}
-        </router-link>
-      </template>
       <template v-slot:[`item.instance`]="{ value }">
         <router-link
           v-if="!isInstancesLoading"
@@ -127,13 +122,12 @@ const props = defineProps({
   filters: { type: Object },
   hideInstance: { type: Boolean, default: false },
   hideAccount: { type: Boolean, default: false },
-  hideService: { type: Boolean, default: false },
   selectRecord: { type: Function, default: () => {} },
   tableName: { type: String },
   showDates: { type: Boolean, default: false },
   duration: { type: Object, default: () => ({ from: null, to: null }) },
 });
-const { filters, hideInstance, hideService, hideAccount, duration, showDates } =
+const { filters, hideInstance, hideAccount, duration, showDates } =
   toRefs(props);
 
 const emit = defineEmits(["input:unique", "input:duration"]);
@@ -178,14 +172,9 @@ const reportsHeaders = computed(() => {
   if (!hideInstance.value) {
     headers.push({ text: "Instance", value: "instance" });
   }
-  if (!hideService.value) {
-    headers.push({ text: "Service", value: "service" });
-  }
 
   return headers;
 });
-
-const services = computed(() => store.getters["services/all"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -273,7 +262,6 @@ const fetchReports = async () => {
         currency: r.currency,
         item: r.product || r.resource,
         uuid: r.uuid,
-        service: r.service,
         instance: r.instance,
         account: r.account,
         meta: {
@@ -320,7 +308,6 @@ const init = async () => {
 
 const getAccount = (value) => accounts.value[value];
 const getInstance = (value) => store.getters["instances/cached"].get(value);
-const getService = (value) => services.value.find((s) => s.uuid === value);
 
 const getStatus = (item) => {
   if (item.meta.status) {
