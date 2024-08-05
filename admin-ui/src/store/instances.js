@@ -72,9 +72,16 @@ export default {
         uuid,
       });
 
-      const response = await state.cached.get(uuid);
+      const response = (await state.cached.get(uuid)).toJson();
 
-      commit("setToCached", { instance: response.toJson(), uuid });
+      commit("setToCached", {
+        instance: {
+          ...response.instance,
+          ...response,
+          instance: undefined,
+        },
+        uuid,
+      });
 
       return response;
     },
