@@ -414,6 +414,7 @@ const searchFields = computed(() => [
     key: "account",
     custom: true,
     multiple: true,
+    fetchValue:true,
     title: "Account",
     component: AccountsAutocomplete,
   },
