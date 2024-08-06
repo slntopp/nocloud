@@ -658,7 +658,9 @@ watch(allFields, (fields) => {
           const correctFilter = [];
           filterValue.forEach((value) => {
             if (
-              items.find((item) => (item[options?.value] || item) === value)
+              items.find(
+                (item) => (item[options?.value || "value"] || item) === value
+              )
             ) {
               correctFilter.push(value);
             }
