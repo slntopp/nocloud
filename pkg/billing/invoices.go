@@ -174,23 +174,29 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" {
+			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" || key == "deadline" {
 				values := value.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
-					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+					query += fmt.Sprintf(` FILTER t["%s"] >= %f`, key, from)
 				}
 
 				if val, ok := values["to"]; ok {
 					to := val.(float64)
-					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
+					query += fmt.Sprintf(` FILTER t["%s"] <= %f`, key, to)
 				}
+			} else if key == "number" {
+				query += fmt.Sprintf(` FILTER t["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
+			} else if key == "search_param" {
+				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
+|| t._key LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
 				vars[key] = values
 			}
 		}
