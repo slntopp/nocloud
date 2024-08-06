@@ -40,7 +40,7 @@
     </template>
 
     <template v-slot:[`item.type`]="{ value }">
-      {{ value.replaceAll("_", " ") }}
+      {{ value?.replaceAll("_", " ") }}
     </template>
 
     <template v-slot:[`item.deadline`]="{ item }">
@@ -287,7 +287,14 @@ const fetchInvoices = async () => {
 
 const fetchInvoicesDebounce = debounce(fetchInvoices, 300);
 
-watch(invoicesFilters, fetchInvoicesDebounce, { deep: true });
+watch(
+  invoicesFilters,
+  () => {
+    page.value = 1;
+    fetchInvoicesDebounce();
+  },
+  { deep: true }
+);
 watch(options, fetchInvoicesDebounce);
 watch(refetch, fetchInvoicesDebounce);
 
