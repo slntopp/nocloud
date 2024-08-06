@@ -74,6 +74,11 @@ import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import useInvoices from "../hooks/useInvoices";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import {
+  ActionType,
+  BillingStatus,
+} from "nocloud-proto/proto/es/billing/billing_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
@@ -112,6 +117,8 @@ const headers = ref([
 ]);
 
 onMounted(() => {
+  store.commit("appSearch/setFields", searchFields.value);
+
   store.commit("reloadBtn/setCallback", {
     event: () => {
       accounts.value = [];
@@ -126,9 +133,111 @@ const isLoading = computed(() => isFetchLoading.value || isCountLoading.value);
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const filter = computed(() => store.getters["appSearch/filter"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
+const searchFields = computed(() => [
+  {
+    title: "Number",
+    key: "number",
+    type: "input",
+  },
+  {
+    title: "Status",
+    key: "status",
+    type: "select",
+    items: Object.keys(BillingStatus)
+      .filter((value) => !Number.isInteger(+value))
+      .map((key) => ({
+        text: key,
+        value: BillingStatus[key],
+      })),
+  },
+  {
+    title: "Type",
+    key: "type",
+    type: "select",
+    items: Object.keys(ActionType)
+      .filter((value) => !Number.isInteger(+value))
+      .map((key) => ({
+        text: key,
+        value: ActionType[key],
+      })),
+  },
+  {
+    key: "account",
+    custom: true,
+    multiple: true,
+    fetchValue: true,
+    title: "Account",
+    component: AccountsAutocomplete,
+  },
+  { title: "Amount", key: "total", type: "number-range" },
+  { title: "Deadline date", key: "deadline", type: "date" },
+  { title: "Created date", key: "created", type: "date" },
+  { title: "Payment date", key: "payment", type: "date" },
+  { title: "Processed date", key: "processed", type: "date" },
+  { title: "Returned date", key: "returned", type: "date" },
+]);
+
+const invoicesFilters = computed(() => {
+  const filters = {};
+  const datekeys = ["created", "processed", "returned", "payment", "deadline"];
+
+  for (const key of Object.keys(filter.value)) {
+    const value = filter.value[key];
+
+    if (
+      !value ||
+      (Array.isArray(value) && !value.length) ||
+      (typeof value === "object" && !Object.keys(value).length)
+    ) {
+      continue;
+    }
+
+    if (value?.to || value?.from) {
+      const total = {};
+      if (value?.to) {
+        total.to = +value?.to;
+      }
+      if (value?.from) {
+        total.from = +value?.from;
+      }
+
+      filters[key] = total;
+      continue;
+    }
+
+    if (datekeys.includes(key)) {
+      let dates = [];
+
+      if (value[0]) {
+        dates.push(new Date(value[0]).getTime() / 1000);
+      }
+      if (value[1]) {
+        dates.push(new Date(value[1]).getTime() / 1000);
+      }
+
+      dates = dates.sort();
+
+      const result = { from: dates[0] };
+      if (dates[1]) {
+        result.to = dates[1];
+      }
+      filters[key] = result;
+      continue;
+    }
+
+    filters[key] = filter.value[key];
+  }
+
+  if (searchParam.value) {
+    filters.search_param = searchParam.value;
+  }
+
+  return filters;
+});
 
 const listOptions = computed(() => ({
-  filters: filter.value,
+  filters: invoicesFilters.value,
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy?.[0],
@@ -136,7 +245,7 @@ const listOptions = computed(() => ({
     options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
 }));
 const countOptions = computed(() => ({
-  filters: filter.value,
+  filters: invoicesFilters.value,
 }));
 
 const account = (uuid) => {
@@ -144,7 +253,6 @@ const account = (uuid) => {
 };
 
 const setOptions = (newOptions) => {
-  console.log(newOptions);
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
@@ -177,9 +285,9 @@ const fetchInvoices = async () => {
   }
 };
 
-const fetchInvoicesDebounce = debounce(fetchInvoices, 100);
+const fetchInvoicesDebounce = debounce(fetchInvoices, 300);
 
-watch(filter, fetchInvoicesDebounce, { deep: true });
+watch(invoicesFilters, fetchInvoicesDebounce, { deep: true });
 watch(options, fetchInvoicesDebounce);
 watch(refetch, fetchInvoicesDebounce);
 
@@ -198,4 +306,13 @@ watch(invoices, () => {
     }
   });
 });
+</script>
+
+<script>
+import search from "@/mixins/search";
+
+export default {
+  name: "invoices-table",
+  mixins: [search({ name: "invoices-table" })],
+};
 </script>
