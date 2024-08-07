@@ -463,7 +463,7 @@ func ListAccounts[T Accessible](
 
 	for key, val := range filters {
 		if key == "search_param" && collectionName == schema.ACCOUNTS_COL {
-			insert += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s") || LOWER(node.data.email) LIKE LOWER("%s") || node._key LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
+			insert += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s") || LOWER(node.data.email) LIKE LOWER("%s") || node._key LIKE "%s" || LOWER(node.data.company) LIKE LOWER("%s")`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
 		} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
 			insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
 		} else if strings.HasPrefix(key, "data") {
