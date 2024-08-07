@@ -10,7 +10,7 @@
               name: 'Instance create',
               query: {
                 accountId: account.uuid,
-                type:'ione'
+                type: 'ione',
               },
             }"
           >
@@ -365,6 +365,8 @@ export default {
           accountServices.map((s) => api.services.delete(s.uuid))
         );
         await this.changeStatus(newStatus);
+
+        this.$router.push({ name: "Accounts" });
       } catch {
         this.showSnackbarError({
           message: "Error while change status",
@@ -418,7 +420,7 @@ export default {
     openTransaction() {
       this.$router.push({
         name: "Transactions create",
-        params: { account: this.account.uuid },
+        query: { account: this.account.uuid },
       });
     },
     async fetchNamespace() {
