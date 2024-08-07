@@ -37,7 +37,7 @@
             <v-chip class="mx-1">Updated at: {{ note.updated }}</v-chip>
           </div>
           <div
-            v-if="currentUserUuid === note.admin.uuid && !isEditMode"
+            v-if="currentUserUuid === note.admin && !isEditMode"
             class="d-flex"
           >
             <v-btn
