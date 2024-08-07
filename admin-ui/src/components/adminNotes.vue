@@ -36,10 +36,7 @@
             <v-chip class="mx-1">Created at: {{ note.created }}</v-chip>
             <v-chip class="mx-1">Updated at: {{ note.updated }}</v-chip>
           </div>
-          <div
-            v-if="currentUserUuid === note.admin && !isEditMode"
-            class="d-flex"
-          >
+          <div v-if="!isEditMode" class="d-flex">
             <v-btn
               :disabled="isRemoveLoading"
               class="mx-1"
@@ -110,7 +107,6 @@ onMounted(() => {
   setNotes();
 });
 
-const currentUserUuid = computed(() => store.getters["auth/userdata"]?.uuid);
 const filteredNotes = computed(() =>
   notes.value.map((n) => ({
     ...n,
