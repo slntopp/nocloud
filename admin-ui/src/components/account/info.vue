@@ -418,7 +418,7 @@ export default {
     openTransaction() {
       this.$router.push({
         name: "Transactions create",
-        params: { account: this.account.uuid },
+        query: { account: this.account.uuid },
       });
     },
     async fetchNamespace() {
