@@ -432,6 +432,11 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	nocloud.Log(log, event)
 
+	sp, err = ctrl.getSp(ctx, uuid)
+	if err != nil {
+		return err
+	}
+
 	c := pb.Context{
 		Instance: uuid,
 		Sp:       sp,
