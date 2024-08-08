@@ -33,7 +33,6 @@
             label="Product"
             :rules="requiredRule"
             :value="instance.product"
-            v-if="products.length > 0"
             :items="products"
             item-text="key"
             item-value="key"
@@ -50,91 +49,81 @@
             </template>
           </v-autocomplete>
         </v-col>
-
-        <v-col cols="6" v-if="addons.length">
-          <v-autocomplete
-            label="Addons"
-            :value="instance.config.addons"
-            :items="addons"
-            multiple
-            item-text="title"
-            item-value="key"
-            @change="setValue('config.addons', $event)"
-          />
-        </v-col>
       </v-row>
     </v-card>
   </div>
 </template>
 
-<script>
+<script setup>
+import { onMounted, ref, toRefs, watch } from "vue";
+
+const props = defineProps([
+  "plans",
+  "instance",
+  "planRules",
+  "spUuid",
+  "isEdit",
+]);
+const { isEdit, instance, planRules, plans } = toRefs(props);
+
+const emit = defineEmits(["set-instance", "set-value"]);
+
 const getDefaultInstance = () => ({
   title: "instance",
+  resources: {},
   data: {},
-  config: {
-    addons: [],
-  },
+  config: {},
   billing_plan: {},
 });
+
+const bilingPlan = ref(null);
+const products = ref([]);
+const product = ref([]);
+const requiredRule = ref([(val) => !!val || "Field required"]);
+
+onMounted(() => {
+  if (!isEdit.value) {
+    emit("set-instance", getDefaultInstance());
+  } else {
+    changeBilling(instance.value.billing_plan);
+  }
+});
+
+const changeBilling = (val) => {
+  bilingPlan.value = plans.value.find((p) => p.uuid === val);
+  if (bilingPlan.value) {
+    products.value = Object.keys(bilingPlan.value.products).map((key) => ({
+      key,
+      title: bilingPlan.value.products[key].title,
+    }));
+  }
+  setValue("billing_plan", bilingPlan.value);
+};
+const changeProduct = (val) => {
+  product.value = val;
+
+  const resources = {};
+  if (bilingPlan.value.products[val]?.meta?.resources) {
+    bilingPlan.value.products[val]?.meta?.resources.forEach((resource) => {
+      resources[resource.key] = resource.title;
+    });
+  }
+  setValue("resources", resources);
+
+  setValue("product", product.value);
+};
+const setValue = (key, value) => {
+  emit("set-value", { key, value });
+};
+
+watch(plans, () => {
+  changeBilling(instance.value.billing_plan);
+});
+</script>
+
+<script>
 export default {
   name: "instance-empty-create",
-  props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({
-    bilingPlan: null,
-    products: [],
-    product: [],
-    requiredRule: [(val) => !!val || "Field required"],
-  }),
-  mounted() {
-    if (!this.isEdit) {
-      this.$emit("set-instance", getDefaultInstance());
-    } else {
-      this.changeBilling(this.instance.billing_plan);
-    }
-  },
-  methods: {
-    changeBilling(val) {
-      this.bilingPlan = this.plans.find((p) => p.uuid === val);
-      if (this.bilingPlan) {
-        this.products = Object.keys(this.bilingPlan.products).map((key) => ({
-          key,
-          title: this.bilingPlan.products[key].title,
-        }));
-      }
-      this.setValue("billing_plan", this.bilingPlan);
-    },
-    changeProduct(val) {
-      this.product = val;
-      this.setValue("product", this.product);
-    },
-    setValue(key, value) {
-      this.$emit("set-value", { key, value });
-    },
-  },
-  computed: {
-    addons() {
-      return this.bilingPlan?.products[this.product]?.meta.addons || [];
-    },
-    autoEnabled() {
-      return (
-        this.addons.filter((key) => {
-          return this.bilingPlan?.resources.find((r) => r.key === key)?.meta
-            ?.autoEnable;
-        }) || []
-      );
-    },
-  },
-  watch: {
-    "plans"() {
-      this.changeBilling(this.instance.billing_plan);
-    },
-    autoEnabled: {
-      handler() {
-        this.setValue("config.addons", this.autoEnabled);
-      },
-      deep: true,
-    },
-  },
 };
 </script>
 
