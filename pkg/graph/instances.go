@@ -433,7 +433,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	nocloud.Log(log, event)
 
 	c := pb.Context{
-		Instance: inst.GetUuid(),
+		Instance: uuid,
 		Sp:       sp,
 		Event:    "UPDATE",
 	}
