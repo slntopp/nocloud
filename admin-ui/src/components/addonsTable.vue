@@ -183,7 +183,14 @@ watch(
   { deep: true }
 );
 
-watch(filter, fetchAddonsDebounced, { deep: true });
+watch(
+  filter,
+  () => {
+    page.value = 1;
+    fetchAddonsDebounced();
+  },
+  { deep: true }
+);
 watch(options, fetchAddonsDebounced);
 watch(refetch, fetchAddonsDebounced);
 </script>

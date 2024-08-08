@@ -20,7 +20,7 @@
         <v-text-field
           readonly
           label="Login"
-          :value="template.state.meta.login"
+          :value="template.state.meta?.login"
           @click:append="addToClipboard(template.data[ovhType + 'Name'])"
           append-icon="mdi-content-copy"
         />
@@ -28,7 +28,7 @@
       <v-col>
         <password-text-field
           readonly
-          :value="template.state.meta.password"
+          :value="template.state.meta?.password"
           copy
         />
       </v-col>

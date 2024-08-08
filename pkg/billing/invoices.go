@@ -174,23 +174,29 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" {
+			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" || key == "deadline" {
 				values := value.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
-					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+					query += fmt.Sprintf(` FILTER t["%s"] >= %f`, key, from)
 				}
 
 				if val, ok := values["to"]; ok {
 					to := val.(float64)
-					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
+					query += fmt.Sprintf(` FILTER t["%s"] <= %f`, key, to)
 				}
+			} else if key == "number" {
+				query += fmt.Sprintf(` FILTER t["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
+			} else if key == "search_param" {
+				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
+|| t._key LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
 				vars[key] = values
 			}
 		}
@@ -258,6 +264,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
+	invConf := MakeInvoicesConf(ctx, log)
+	defCurr := MakeCurrencyConf(ctx, log).Currency
 
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
@@ -299,10 +307,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 		}
 	}
+	if t.Currency == nil {
+		t.Currency = defCurr
+	}
 
 	now := time.Now()
 
-	invConf := MakeInvoicesConf(ctx, log)
 	strNum, num, err := s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
 	if err != nil {
 		log.Error("Failed to get new number for invoice", zap.Error(err))
@@ -315,7 +325,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		transactionTotal *= -1
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
-		defCurr := MakeCurrencyConf(ctx, log).Currency
 		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
@@ -523,10 +532,14 @@ payment:
 				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
 				continue
 			}
+			instance.Access = &access.Access{
+				Level: access.Level_ROOT,
+				Role:  "owner",
+			}
 			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
 				ServicesProvider: res.SP,
 				Instance:         instance.Instance,
-				Method:           "renew",
+				Method:           "free_renew",
 			})
 			if err != nil {
 				log.Error("Failed to renew instance", zap.Error(err))
@@ -695,30 +708,6 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 		"@invoices": schema.INVOICES_COL,
 	}
 
-	if req.GetFilters() != nil {
-		for key, value := range req.GetFilters() {
-			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" {
-				values := value.GetStructValue().AsMap()
-				if val, ok := values["from"]; ok {
-					from := val.(float64)
-					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
-				}
-
-				if val, ok := values["to"]; ok {
-					to := val.(float64)
-					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
-				}
-			} else {
-				values := value.GetListValue().AsSlice()
-				if len(values) == 0 {
-					continue
-				}
-				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
-				vars[key] = values
-			}
-		}
-	}
-
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
@@ -730,6 +719,36 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 	} else {
 		if acc != schema.ROOT_ACCOUNT_KEY {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" || key == "deadline" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER t["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER t["%s"] <= %f`, key, to)
+				}
+			} else if key == "number" {
+				query += fmt.Sprintf(` FILTER t["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
+			} else if key == "search_param" {
+				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
+|| t._key LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
+				vars[key] = values
+			}
 		}
 	}
 
@@ -760,6 +779,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
+	defCurr := MakeCurrencyConf(ctx, log).Currency
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
@@ -821,11 +841,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
 	t.Total = req.GetTotal()
-	t.Currency = req.GetCurrency()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
 	if req.Transactions != nil {
 		t.Transactions = req.Transactions
+	}
+	if req.Currency == nil {
+		t.Currency = defCurr
 	}
 
 	if t.Account == "" {
@@ -846,7 +868,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		transactionTotal *= -1
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
-		defCurr := MakeCurrencyConf(ctx, log).Currency
 		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
@@ -902,6 +923,26 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 	}
 
 	return connect.NewResponse(t.Invoice), nil
+}
+
+func (s *BillingServiceServer) GetInvoiceSettingsTemplateExample(ctx context.Context, _req *connect.Request[pb.GetInvoiceSettingsTemplateExampleRequest]) (*connect.Response[pb.GetInvoiceSettingsTemplateExampleResponse], error) {
+	log := s.log.Named("GetInvoiceSettingsTemplateExample")
+	req := _req.Msg
+	log.Debug("Request received")
+
+	example := s.invoices.ParseNumberIntoTemplate(req.Template, 1, time.Now())
+	newExample := s.invoices.ParseNumberIntoTemplate(req.NewTemplate, 1, time.Now())
+	var renewalExample string
+	if req.IssueRenewalInvoiceAfter > 0 && req.IssueRenewalInvoiceAfter < 1 {
+		monthDur := time.Duration(86400*30*(1-req.IssueRenewalInvoiceAfter)) * time.Second
+		renewalExample = fmt.Sprintf("**FOR MONTHLY PERIOD** Invoice will be issued before: %s", monthDur.String())
+	} else if req.IssueRenewalInvoiceAfter == 1 {
+		renewalExample = fmt.Sprintf("Invoice will be issued right after instance expiration")
+	} else {
+		monthDur := time.Duration(86400*30*0.1) * time.Second
+		renewalExample = fmt.Sprintf("Value must be (0:1]. Using default 0.9. **FOR MONTHLY PERIOD** Invoice will be issued before: %s", monthDur.String())
+	}
+	return connect.NewResponse(&pb.GetInvoiceSettingsTemplateExampleResponse{TemplateExample: example, NewTemplateExample: newExample, IssueRenewalInvoiceAfterExample: renewalExample}), nil
 }
 
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {

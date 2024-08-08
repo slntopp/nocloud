@@ -118,7 +118,7 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 		_, err := ctrl.inst_ctrl.Create(ctx, meta.ID, *g.Sp, instance)
 		if err != nil {
 			log.Error("Failed to create Instance", zap.Error(err))
-			continue
+			return err
 		}
 	}
 

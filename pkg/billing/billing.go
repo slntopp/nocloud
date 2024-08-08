@@ -95,6 +95,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		sp:           graph.NewServicesProvidersController(log, db),
 		addons:       *graph.NewAddonsController(log, db),
 		db:           db,
+		drivers:      make(map[string]driverpb.DriverServiceClient),
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{

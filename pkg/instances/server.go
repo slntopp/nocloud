@@ -628,6 +628,12 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 			query += fmt.Sprintf(` FILTER TO_STRING(acc._key) in @%s`, key)
 			bindVars[key] = values
+		} else if key == "search_param" {
+			query += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s")
+|| acc.data.email LIKE "%s"
+|| acc._key LIKE "%s"
+|| node._key LIKE "%s"`,
+				"%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
 		} else if key == "email" {
 			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
 		} else if key == "title" {
@@ -845,8 +851,9 @@ LET instances = (
 			),
 			service: srv,
 			sp: sp._key,
-			type: bp.type,
-			account: acc._key
+			type: sp.type,
+			account: acc._key,
+            namespace: ns
 		}
 )
 
@@ -1103,8 +1110,9 @@ LET instances = (
 			),
 			service: srv,
 			sp: sp._key,
-			type: bp.type,
-			account: acc._key
+			type: sp.type,
+			account: acc._key,
+            namespace: ns
 		}
 )
 

@@ -197,10 +197,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		log.Warn("Invalid record. Record has no item", zap.Any("record", &record))
 		return fmt.Errorf("invalid record. Record has no item")
 	}
-	if itemPrice == 0 {
-		log.Warn("Invalid record. Item price is zero", zap.Any("record", &record))
-		return fmt.Errorf("invalid record. Item price is zero")
-	}
+	log.Debug("Got item price", zap.Any("itemPrice", itemPrice))
 
 	record.Meta["transactionType"] = structpb.NewStringValue("system")
 
@@ -208,18 +205,19 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	if record.Priority != pb.Priority_NORMAL {
 		cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
-			"@transactions": schema.TRANSACTIONS_COL,
-			"@instances":    schema.INSTANCES_COL,
-			"@services":     schema.SERVICES_COL,
-			"@records":      schema.RECORDS_COL,
-			"@accounts":     schema.ACCOUNTS_COL,
-			"permissions":   schema.PERMISSIONS_GRAPH.Name,
-			"priority":      record.Priority,
-			"now":           now,
-			"graph":         schema.BILLING_GRAPH.Name,
-			"currencies":    schema.CUR_COL,
-			"currency":      currencyConf.Currency,
-			"item_price":    itemPrice,
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"@instances":     schema.INSTANCES_COL,
+			"@billing_plans": schema.BILLING_PLANS_COL,
+			"@services":      schema.SERVICES_COL,
+			"@records":       schema.RECORDS_COL,
+			"@accounts":      schema.ACCOUNTS_COL,
+			"@addons":        schema.ADDONS_COL,
+			"permissions":    schema.PERMISSIONS_GRAPH.Name,
+			"priority":       record.Priority,
+			"now":            now,
+			"graph":          schema.BILLING_GRAPH.Name,
+			"currencies":     schema.CUR_COL,
+			"currency":       currencyConf.Currency,
 		})
 		if err != nil {
 			log.Error("Error Generating Transactions", zap.Error(err))
@@ -370,6 +368,14 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
+
+        LET instance = DOCUMENT(@@instances, record.instance)
+        LET bp = DOCUMENT(@@billing_plans, instance.billing_plan.uuid)
+        LET resources = bp.resources == null ? [] : bp.resources
+        LET addon = DOCUMENT(@@addons, record.addon)
+        LET product_period = bp.products[instance.product].period
+        LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
+
         LET cost = record.total * rate * item_price
             UPDATE record._key WITH { 
 				processed: true, 

@@ -19,6 +19,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/arangodb/go-driver"
+	ipb "github.com/slntopp/nocloud-proto/instances"
+	"google.golang.org/protobuf/proto"
 	"slices"
 	"time"
 
@@ -27,7 +29,6 @@ import (
 	"github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -35,7 +36,6 @@ import (
 	dpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
 	hpb "github.com/slntopp/nocloud-proto/health"
-	ipb "github.com/slntopp/nocloud-proto/instances"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
@@ -89,7 +89,7 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 }
 
 func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log *zap.Logger, tick time.Time,
-	currencyConf CurrencyConf, roundingConf RoundingConf) {
+	currencyConf CurrencyConf, roundingConf RoundingConf, iPub Pub) {
 	log.Info("Trying to issue invoices for expiring instances", zap.Time("tick", tick))
 
 	list, err := s.services.List(ctx, schema.ROOT_ACCOUNT_KEY, &services.ListRequest{})
@@ -124,6 +124,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					i.GetStatus() == spb.NoCloudStatus_SUS ||
 					i.GetState().GetState() == stpb.NoCloudState_SUSPENDED ||
 					i.GetState().GetState() == stpb.NoCloudState_DELETED ||
+					i.GetState().GetState() == stpb.NoCloudState_STOPPED ||
+					i.GetState().GetState() == stpb.NoCloudState_FAILURE ||
 					i.GetStatus() == spb.NoCloudStatus_INIT {
 					log.Info("Instance has been deleted or PENDING or SUSPENDED or INIT state. Skipping")
 					continue
@@ -132,11 +134,11 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				cost := 0.0
 				now := time.Now().Unix()
 
-				if i.Data == nil {
-					i.Data = map[string]*structpb.Value{}
+				if i.Config == nil {
+					i.Config = map[string]*structpb.Value{}
 				}
 
-				lastRenewInvoice, ok := i.Data["renew_invoice"]
+				lastRenewInvoice, ok := i.Config["renew_invoice"]
 				if ok {
 					inv, err := s.invoices.Get(ctx, lastRenewInvoice.GetStringValue())
 					if err != nil {
@@ -147,6 +149,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 						log.Info("Last renew invoice for this instance didn't expired yet. Skipping invoice creation", zap.String("invoice", inv.GetUuid()))
 						continue
 					}
+				} else {
+					log.Info("No last renew invoice for this instance. Continue")
 				}
 
 				res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i.GetUuid()).String())
@@ -237,10 +241,14 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				_processed := 0
 				_expiring := 0
 				for _, r := range records {
-					log = log.With(zap.Any("record", r))
+					log := log.With(zap.Any("record", r))
 					if expiringTime(r.Expires, r.Period) > now {
 						log.Info("Not expiring yet")
 						_processed++
+						continue
+					}
+					if r.Product == "" {
+						log.Info("Ignoring non product record")
 						continue
 					}
 					expiring = true
@@ -345,11 +353,9 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				log.Debug("Invoice created", zap.String("invoice", inv.Uuid))
 
 				log.Debug("Updating instance")
-				i.Data["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
-				err = s.instances.Update(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY),
-					"", proto.Clone(i).(*ipb.Instance), proto.Clone(i).(*ipb.Instance))
-				if err != nil {
-					log.Error("Failed to update instance. Can cause uncontrollable invoice creation", zap.Error(err))
+				i.Config["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
+				if err = s.instances.Update(ctx, "", proto.Clone(i).(*ipb.Instance), proto.Clone(i).(*ipb.Instance)); err != nil {
+					log.Error("Failed to update instance", zap.Error(err))
 					continue
 				}
 
@@ -362,8 +368,18 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 	log.Info("Routine finished", zap.Int("invoices_created", counter))
 }
 
+const updateDataQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+`
+
 func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
 	log := s.log.Named("IssueInvoicesRoutine")
+
+	ch, err := s.rbmq.Channel()
+	if err != nil {
+		log.Fatal("Failed to open a channel", zap.Error(err))
+	}
+	defer ch.Close()
 
 start:
 
@@ -374,6 +390,7 @@ start:
 		Id:    0,
 		Title: "NCU",
 	}
+	iPub := NewInstanceDataPublisher(ch)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{currencyKey}, upd)
@@ -384,7 +401,7 @@ start:
 	tick := time.Now()
 	for {
 		log.Info("Entering new Iteration", zap.Time("ts", tick))
-		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf)
+		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf, iPub)
 
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
@@ -404,16 +421,18 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 	s.gen.Status.Error = nil
 
 	_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
-		"@transactions": schema.TRANSACTIONS_COL,
-		"@instances":    schema.INSTANCES_COL,
-		"@services":     schema.SERVICES_COL,
-		"@records":      schema.RECORDS_COL,
-		"@accounts":     schema.ACCOUNTS_COL,
-		"permissions":   schema.PERMISSIONS_GRAPH.Name,
-		"now":           tick.Unix(),
-		"graph":         schema.BILLING_GRAPH.Name,
-		"currencies":    schema.CUR_COL,
-		"currency":      currencyConf.Currency,
+		"@transactions":  schema.TRANSACTIONS_COL,
+		"@instances":     schema.INSTANCES_COL,
+		"@services":      schema.SERVICES_COL,
+		"@records":       schema.RECORDS_COL,
+		"@accounts":      schema.ACCOUNTS_COL,
+		"@addons":        schema.ADDONS_COL,
+		"@billing_plans": schema.BILLING_PLANS_COL,
+		"permissions":    schema.PERMISSIONS_GRAPH.Name,
+		"now":            tick.Unix(),
+		"graph":          schema.BILLING_GRAPH.Name,
+		"currencies":     schema.CUR_COL,
+		"currency":       currencyConf.Currency,
 	})
 	if err != nil {
 		log.Error("Error Generating Transactions", zap.Error(err))
@@ -661,10 +680,12 @@ FOR service IN @@services // Iterate over Services
         FILTER !record.processed
         FILTER record.instance IN instances
 
-		LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
-		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", inst.billing_plan.uuid))
-		LET resources = bp.resources == null ? [] : bp.resources
-		LET item = record.product == null ? LAST(FOR res in resources FILTER res.key == record.resource return res) : bp.products[record.product]
+        LET instance = DOCUMENT(@@instances, record.instance)
+        LET bp = DOCUMENT(@@billing_plans, instance.billing_plan.uuid)
+        LET resources = bp.resources == null ? [] : bp.resources
+        LET addon = DOCUMENT(@@addons, record.addon)
+        LET product_period = bp.products[instance.product].period
+        LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND
@@ -674,7 +695,7 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET cost = record.total * rate * item.price
+        LET cost = record.total * rate * item_price
             UPDATE record._key WITH { 
 				processed: true, 
 				cost: cost,

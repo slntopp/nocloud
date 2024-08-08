@@ -7,7 +7,7 @@
       <span v-else v-bind="attrs" v-on="on">{{ ip }}</span>
     </template>
 
-    <v-list v-if="item.state.meta.networking?.[type]?.length" dense>
+    <v-list v-if="item.state.meta?.networking?.[type]?.length" dense>
       <v-list-item v-for="net of item.state.meta.networking?.[type]" :key="net">
         <v-list-item-title>{{ net }}</v-list-item-title>
         <v-icon @click="addToClipboard(net)"> mdi-content-copy</v-icon>
@@ -27,11 +27,11 @@ const props = defineProps({
 
 const ip = computed(
   () =>
-    props.item.state.meta.networking?.[props.type]?.find(
+    props.item.state.meta?.networking?.[props.type]?.find(
       (ip) =>
         /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/gm.exec(
           ip
         ) || /\/32$/.exec(ip)
-    ) || props.item.state.meta.networking?.[props.type]?.[0]
+    ) || props.item.state.meta?.networking?.[props.type]?.[0]
 );
 </script>

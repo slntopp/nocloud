@@ -248,8 +248,8 @@ onMounted(async () => {
       };
 
       const keys = {
-        monthly: `${p.integration}_${p.name}-monthly`,
-        yearly: `${p.integration}_${p.name}-yearly`,
+        monthly: `${p.integration}_${p.name}&monthly`,
+        yearly: `${p.integration}_${p.name}&yearly`,
       };
 
       const realProducts = {
@@ -301,9 +301,9 @@ onMounted(async () => {
       });
 
       addonsValues.os.forEach((os) => {
-        os.key = os.baseName + "$" + os.duration;
+        os.key = os.baseName + "&" + os.duration;
 
-        if (oss.find((existed) => os.key === existed.key)) {
+        if (oss.find((existed) => os.baseName === existed.meta?.key)) {
           return;
         }
 
@@ -317,8 +317,8 @@ onMounted(async () => {
           .filter((addon) => addon.duration === duration)
           .map((addon) => {
             addon.key = addon.baseName + "$" + keys[duration];
-            const realAddon = addons.find((realAddon) =>
-              realAddon.meta?.keys.includes(addon.key)
+            const realAddon = addons.find(
+              (realAddon) => realAddon.meta?.key === addon.key.split("&")[0]
             );
 
             if (realAddon) {
@@ -358,9 +358,10 @@ onMounted(async () => {
       products.push(getProduct("yearly"));
     });
 
+    const osMap = new Map();
     oss.forEach((os) => {
-      const realAddon = addons.find((realAddon) =>
-        realAddon.meta?.keys.find((key) => key.startsWith(os.baseName))
+      const realAddon = addons.find(
+        (realAddon) => realAddon.meta?.key === os.baseName
       );
 
       if (realAddon) {
@@ -370,11 +371,15 @@ onMounted(async () => {
         os.uuid = realAddon.uuid;
       }
 
-      return os;
+      if (osMap.has(os.key)) {
+        return;
+      }
+
+      osMap.set(os.key, true);
+      allOs.value.push(os);
     });
 
     tariffs.value = products;
-    allOs.value = oss;
   } catch (e) {
     console.log(e);
     store.commit("snackbar/showSnackbarError", {
@@ -401,11 +406,15 @@ const setSellToSelectedTariffAddons = (value) => {
 };
 
 const setSellToAllTariffs = (value) => {
-  tariffs.value = tariffs.value.map((t) => {
-    t.sell = value;
-    t.addons = t.addons.map((a) => ({ ...a, sell: value }));
-    return t;
-  });
+  if (tabsIndex.value === 0) {
+    tariffs.value = tariffs.value.map((t) => {
+      t.sell = value;
+      t.addons = t.addons.map((a) => ({ ...a, sell: value }));
+      return t;
+    });
+  } else if (tabsIndex.value === 1) {
+    allOs.value = allOs.value.map((os) => ({ ...os, sell: value }));
+  }
 };
 
 const save = async () => {
@@ -424,18 +433,13 @@ const save = async () => {
         .map((osKey) => allOs.value.find((os) => os.key === osKey))
         .concat(t.addons)
         .forEach((addon) => {
-          const originalName = addon.key
-            .replace("-monthly", "")
-            .replace("-yearly", "");
-          const indexOfAddon = allAddons.findIndex((a) =>
-            a.meta.keys?.find((key) => key.startsWith(originalName))
+          const originalName = addon.key.split("&")[0];
+          const indexOfAddon = allAddons.findIndex(
+            (a) => a.meta.key === originalName
           );
 
           const period = getPeriod(addon.duration || t.duration);
           if (indexOfAddon !== -1) {
-            if (!allAddons[indexOfAddon].meta.keys.includes(addon.key)) {
-              allAddons[indexOfAddon].meta.keys.push(addon.key);
-            }
             allAddons[indexOfAddon].periods[period] = addon.price;
           } else {
             allAddons.push({
@@ -446,7 +450,7 @@ const save = async () => {
               system: true,
               meta: {
                 type: addon.type,
-                keys: [addon.key],
+                key: originalName,
               },
               kind: "PREPAID",
               periods: {
@@ -489,24 +493,23 @@ const save = async () => {
 
       const addons = new Set();
 
-      t.addons.forEach((addon) =>
+      t.addons.forEach((addon) => {
         addons.add(
           addon.uuid
             ? addon.uuid
-            : addonsForCreate.find((newAddon) =>
-                newAddon.meta.keys.includes(addon.key)
-              ).uuid
-        )
-      );
-      t.os.forEach((osKey) =>
+            : addonsForCreate.find(
+                (newAddon) => newAddon.meta.key === addon.key.split("&")[0]
+              )?.uuid
+        );
+      });
+      t.os.forEach((osKey) => {
+        const key = osKey.split("&")[0];
+
         addons.add(
-          addonsForCreate.find((newAddon) => newAddon.meta.keys.includes(osKey))
-            ?.uuid ||
-            addonsForUpdate.find((newAddon) =>
-              newAddon.meta.keys.includes(osKey)
-            )?.uuid
-        )
-      );
+          addonsForCreate.find((newAddon) => newAddon.meta.key === key)?.uuid ||
+            addonsForUpdate.find((newAddon) => newAddon.meta.key === key)?.uuid
+        );
+      });
 
       products[t.key] = {
         kind,

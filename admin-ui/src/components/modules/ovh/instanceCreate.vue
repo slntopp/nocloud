@@ -268,7 +268,6 @@ const tariffs = computed(() => {
     (key) => ({
       ...instance.value?.billing_plan.products[key],
       duration: key.split(" ")[0],
-      planCode: key.split(" ")[1],
       key,
     })
   );
@@ -301,6 +300,8 @@ const setValue = (path, val) => {
     if (val) {
       const product = instance.value.billing_plan.products[val];
       const resources = product.resources;
+
+      setValue("config.planCode", val.split(" ")[1]);
 
       let savedResources = {
         ips_private: 0,

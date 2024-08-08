@@ -17,24 +17,13 @@ import billingLabel from "@/components/ui/billingLabel.vue";
 const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["update"]);
 
-const { template, account, addons } = toRefs(props);
+const { template, account } = toRefs(props);
 
 const dueDate = computed(() => {
   return formatSecondsToDate(+props.template?.data?.next_payment_date);
 });
 
-const instancePrice = computed(() => {
-  const key = props.template.product;
-  const tariff = props.template.billingPlan.products[key];
-
-  return (
-    (+tariff.price || 0) +
-    (addons.value.reduce(
-      (acc, a) => acc + a.periods?.[tariff.period] || 0,
-      0
-    ) || 0)
-  );
-});
+const instancePrice = computed(() => props.template.estimate);
 </script>
 
 <style scoped></style>

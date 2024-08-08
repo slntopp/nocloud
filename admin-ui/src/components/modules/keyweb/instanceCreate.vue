@@ -54,6 +54,13 @@
           />
         </v-col>
         <v-col cols="6">
+          <v-select
+            v-model="duration"
+            label="Duration"
+            :items="Object.keys(durations)"
+          />
+        </v-col>
+        <v-col cols="6">
           <v-autocomplete
             label="Product"
             :value="instance.product"
@@ -62,24 +69,6 @@
             @change="setValue('product', $event)"
             item-text="title"
             item-value="key"
-          />
-        </v-col>
-        <v-col cols="6" class="d-flex align-center">
-          Existing:
-          <v-switch
-            class="d-inline-block ml-2"
-            :input-value="instance.data?.existing"
-            @change="setValue('data.existing', $event)"
-          />
-        </v-col>
-        <v-col cols="6" class="d-flex align-center">
-          <v-text-field
-            v-if="instance.data?.existing"
-            label="Service id"
-            type="number"
-            :value="instance.data?.serviceId"
-            :rules="rules.req"
-            @change="setValue(`data.serviceId`, +$event)"
           />
         </v-col>
         <v-col cols="6">
@@ -102,6 +91,25 @@
             item-text="title"
             return-object
             :rules="planRules"
+          />
+        </v-col>
+
+        <v-col cols="6" class="d-flex align-center">
+          Existing:
+          <v-switch
+            class="d-inline-block ml-2"
+            :input-value="instance.data?.existing"
+            @change="setValue('data.existing', $event)"
+          />
+        </v-col>
+        <v-col cols="6" class="d-flex align-center">
+          <v-text-field
+            v-if="instance.data?.existing"
+            label="Service id"
+            type="number"
+            :value="instance.data?.serviceId"
+            :rules="rules.req"
+            @change="setValue(`data.serviceId`, +$event)"
           />
         </v-col>
       </v-row>
@@ -147,6 +155,8 @@ const rules = ref({
 const addons = ref([]);
 const selectedAddons = ref([]);
 const selectedOs = ref();
+const duration = ref("Monthly");
+const durations = { Monthly: "2592000", Yearly: "31536000" };
 
 const billingPlan = computed(() =>
   instance.value.billing_plan.uuid
@@ -170,6 +180,12 @@ const os = computed(() => {
 const products = computed(() => {
   const products = [];
   Object.keys(billingPlan.value?.products || {}).forEach((key) => {
+    if (
+      billingPlan.value?.products[key]?.period !== durations[duration.value]
+    ) {
+      return;
+    }
+
     products.push({ ...billingPlan.value?.products[key], key });
   });
 
@@ -211,7 +227,7 @@ const setAddons = () => {
     if (addon?.meta?.type) {
       setValue(
         "config.configurations." + addon?.meta?.type,
-        addon.meta.keys[0]?.split("$")?.[0]
+        addon.meta.key?.split("$")?.[0]
       );
     }
 

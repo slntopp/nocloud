@@ -54,7 +54,10 @@ export default {
       commit("setLoading", true);
       try {
         const response = await getters["instancesClient"].get({ uuid });
-        commit("setOne", response.toJson());
+        const data = response.toJson();
+        commit("setOne", data);
+
+        return data;
       } finally {
         commit("setLoading", false);
       }
@@ -69,9 +72,16 @@ export default {
         uuid,
       });
 
-      const response = await state.cached.get(uuid);
+      const response = (await state.cached.get(uuid)).toJson();
 
-      commit("setToCached", { instance: response.toJson(), uuid });
+      commit("setToCached", {
+        instance: {
+          ...response.instance,
+          ...response,
+          instance: undefined,
+        },
+        uuid,
+      });
 
       return response;
     },
