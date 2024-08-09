@@ -419,7 +419,7 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 		vars["@plans"] = schema.BILLING_PLANS_COL
 	} else {
 		query = `FOR p, edge IN 1 OUTBOUND @sp GRAPH Billing`
-		query += ` FILTER IS_SAME_COLLECTION(edge, @@plans)`
+		query += ` FILTER IS_SAME_COLLECTION(p, @@plans)`
 		spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, req.GetSpUuid())
 		vars["sp"] = spDocId
 		vars["@plans"] = schema.BILLING_PLANS_COL
