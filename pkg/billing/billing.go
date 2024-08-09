@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"encoding/json"
@@ -410,45 +411,153 @@ LET cur = LAST(
 RETURN cur.to.id == 0 ? cur.from : cur.to
 `
 
+func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[string]interface{}) {
+	var query string
+	var vars = map[string]interface{}{}
+	if req.GetSpUuid() == "" {
+		query = `FOR p IN @@plans`
+		vars["@plans"] = schema.BILLING_PLANS_COL
+	} else {
+		query = `FOR p, edge IN 1 OUTBOUND @sp GRAPH Billing`
+		query += ` FILTER IS_SAME_COLLECTION(edge, @@plans)`
+		spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, req.GetSpUuid())
+		vars["sp"] = spDocId
+		vars["@plans"] = schema.BILLING_PLANS_COL
+	}
+
+	if req.GetAnonymously() {
+		query += ` FILTER p.public == true`
+	}
+
+	if !req.GetShowDeleted() {
+		query += ` FILTER p.status != @status`
+		vars["status"] = statuspb.NoCloudStatus_DEL
+	}
+
+	if !hasAccess {
+		query += ` FILTER p.public == true`
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			if key == "public" || key == "kind" || key == "type" || key == "status" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER p.%s in @%s`, key, key)
+				vars[key] = values
+			} else if key == "meta.individual" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER p.meta.individual in @individual`)
+				vars[key] = values
+			} else if key == "search_param" {
+				query += fmt.Sprintf(` FILTER LOWER(p["title"]) LIKE LOWER("%s")
+|| p._key LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
+				vars[key] = values
+			}
+		}
+	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT p.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		if field == "total" {
+			if sort == "asc" {
+				sort = "desc"
+			} else {
+				sort = "asc"
+			}
+		}
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			vars["offset"] = offset
+			vars["count"] = limit
+		}
+	}
+
+	query += ` RETURN merge(p, {uuid: p._key})`
+	return query, vars
+}
+
 func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request[pb.ListRequest]) (*connect.Response[pb.ListResponse], error) {
 	log := s.log.Named("ListPlans")
-
 	req := r.Msg
 
 	var requestor string
 	if !req.Anonymously {
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	log.Debug("Requestor", zap.String("id", requestor))
+	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
-	plans, err := s.plans.List(ctx, req.SpUuid)
+	if req.GetUuid() != "" {
+		return s._HandleGetSinglePlan(ctx, requestor, req.GetUuid(), req.GetAnonymously())
+	}
+
+	query, vars := buildPlansListQuery(req, ok)
+	log.Debug("Ready to retrieve plans", zap.String("query", query), zap.Any("vars", vars))
+	req.Limit = nil
+	req.Page = nil
+	countQuery, countVars := buildPlansListQuery(req, ok)
+	countQuery = fmt.Sprintf(`RETURN COUNT(%s)`, countQuery)
+
+	// Getting plans
+	cursor, err := s.db.Query(ctx, query, vars)
 	if err != nil {
-		log.Error("Error listing plans", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error listing plans")
+		log.Error("Failed to retrieve plans", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve plans")
+	}
+	defer cursor.Close()
+
+	var plans []*pb.Plan
+	for {
+		plan := &pb.Plan{}
+		meta, err := cursor.ReadDocument(ctx, plan)
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			log.Error("Failed to retrieve plans", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to retrieve plans")
+		}
+		plan.Uuid = meta.Key
+		plans = append(plans, plan)
 	}
 
-	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
-
-	result := make([]*pb.Plan, 0)
-	for _, plan := range plans {
-		if plan.Public && (plan.GetStatus() != statuspb.NoCloudStatus_DEL || req.GetShowDeleted()) {
-			result = append(result, plan.Plan)
-			continue
-		}
-		if req.Anonymously {
-			continue
-		}
-		if !ok {
-			continue
-		}
-		if !(plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted()) {
-			continue
-		}
-
-		result = append(result, plan.Plan)
+	// Getting plans count
+	cursor, err = s.db.Query(ctx, countQuery, countVars)
+	if err != nil {
+		log.Error("Failed to retrieve plans count", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve plans count")
+	}
+	defer cursor.Close()
+	var count int
+	if _, err = cursor.ReadDocument(ctx, &count); err != nil {
+		log.Error("Failed to retrieve plans count", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve plans count")
 	}
 
+	// Apply account prices
 	if !req.Anonymously {
 		acc, err := s.accounts.Get(ctx, requestor)
 		if err != nil {
@@ -485,25 +594,21 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		}
 
 		var (
-			rate       float64
-			commission float64 = 0
+			rate float64
 		)
 
 		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
-			rate, commission, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
+			rate, _, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
 			}
 		}
 
-		// Apply commission to rate
-		rate = rate + ((commission / 100) * rate)
-
-		for planIndex := range result {
-			plan := result[planIndex]
+		for planIndex := range plans {
+			plan := plans[planIndex]
 
 			products := plan.GetProducts()
 			for key := range products {
@@ -517,12 +622,12 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			}
 			plan.Resources = resources
 
-			result[planIndex] = plan
+			plans[planIndex] = plan
 		}
 	}
 
-	resp := connect.NewResponse(&pb.ListResponse{Pool: result})
-
+	log.Debug("Plans retrieved", zap.Any("plans", plans))
+	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
 	return resp, nil
 }
 
@@ -595,6 +700,27 @@ FOR inst in Instances
 	FILTER inst.status != @status
 	RETURN inst.billing_plan.uuid
 `
+
+func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, acc, uuid string, anonymously bool) (*connect.Response[pb.ListResponse], error) {
+	p, err := s.plans.Get(ctx, &pb.Plan{Uuid: uuid})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "Plan doesn't exist")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+
+	if anonymously && p.Public {
+		resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
+		return resp, nil
+	}
+
+	if !ok && !p.Public {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
+	return resp, nil
+}
 
 /*
 const getPlanInstances = `
