@@ -556,6 +556,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		log.Error("Failed to retrieve plans count", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to retrieve plans count")
 	}
+	log.Debug("Plans count", zap.Int("count", count))
 
 	// Apply account prices
 	if !req.Anonymously {
@@ -626,7 +627,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		}
 	}
 
-	log.Debug("Plans retrieved", zap.Any("plans", plans))
+	log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
 	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
 	return resp, nil
 }
