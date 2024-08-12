@@ -449,12 +449,12 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 				}
 				query += fmt.Sprintf(` FILTER p.%s in @%s`, key, key)
 				vars[key] = values
-			} else if key == "meta.individual" {
+			} else if key == "meta.isIndividual" {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER TO_BOOL(p.meta.individual) in @individual`)
+				query += fmt.Sprintf(` FILTER TO_BOOL(p.meta.isIndividual) in @individual`)
 				vars["individual"] = values
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(p["title"]) LIKE LOWER("%s")
