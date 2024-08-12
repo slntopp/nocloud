@@ -647,6 +647,75 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 	return resp, nil
 }
 
+const countPlansQuery = `
+LET plans = (
+    %s
+)
+
+let type = (
+ FOR p IN plans
+ FILTER p.type
+ FILTER p.type != ""
+ RETURN DISTINCT p.type
+)
+
+return { 
+	unique: {
+        type: type,
+	},
+	total: LENGTH(plans)
+}
+`
+
+func (s *BillingServiceServer) PlansUnique(ctx context.Context, _req *connect.Request[pb.PlansUniqueRequest]) (*connect.Response[pb.PlansUniqueResponse], error) {
+	log := s.log.Named("PlansUnique")
+	req := _req.Msg
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+
+	type Response struct {
+		Total  int                    `json:"total"`
+		Unique map[string]interface{} `json:"unique"`
+	}
+
+	query, vars := buildPlansListQuery(&pb.ListRequest{
+		SpUuid:      req.GetSpUuid(),
+		Anonymously: req.GetAnonymously(),
+		ShowDeleted: req.GetShowDeleted(),
+		Filters:     req.GetFilters(),
+	}, ok)
+
+	query = fmt.Sprintf(countPlansQuery, query)
+
+	s.log.Debug("Query", zap.Any("q", query))
+	s.log.Debug("Ready to build query", zap.Any("bindVars", vars))
+
+	c, err := s.db.Query(ctx, query, vars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var resp Response
+	_, err = c.ReadDocument(ctx, &resp)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("Response", zap.Any("resp", resp))
+
+	var result pb.PlansUniqueResponse
+	obj, err := structpb.NewStruct(resp.Unique)
+	if err != nil {
+		return nil, err
+	}
+	result.Unique = structpb.NewStructValue(obj)
+	result.Total = uint64(resp.Total)
+
+	return connect.NewResponse(&result), nil
+}
+
 // ListPlansInstances TODO: Optimize to fetch only provided plans in uuids array, not all plans by query
 func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connect.Request[pb.ListPlansInstancesRequest]) (*connect.Response[pb.ListPlansInstancesResponse], error) {
 	log := s.log.Named("ListPlans")
