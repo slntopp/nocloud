@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+	"strings"
 
 	"encoding/json"
 	"time"
@@ -489,7 +490,7 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 		field, sort := req.GetField(), req.GetSort()
 
 		if field == "total" {
-			if sort == "asc" {
+			if strings.ToLower(sort) == "asc" {
 				sort = "desc"
 			} else {
 				sort = "asc"
