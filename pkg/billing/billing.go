@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"encoding/json"
@@ -646,6 +647,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 	return resp, nil
 }
 
+// ListPlansInstances TODO: Optimize to fetch only provided plans in uuids array, not all plans by query
 func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connect.Request[pb.ListPlansInstancesRequest]) (*connect.Response[pb.ListPlansInstancesResponse], error) {
 	log := s.log.Named("ListPlans")
 
@@ -656,6 +658,11 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
 	log.Debug("Requestor", zap.String("id", requestor))
+
+	var useUuidsArray = false
+	if len(req.GetUuids()) > 0 {
+		useUuidsArray = true
+	}
 
 	plans, err := s.plans.List(ctx, "")
 	if err != nil {
@@ -699,6 +706,9 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 			continue
 		}
 		if !ok {
+			continue
+		}
+		if useUuidsArray && !slices.Contains(req.GetUuids(), plan.GetUuid()) {
 			continue
 		}
 
