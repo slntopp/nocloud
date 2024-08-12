@@ -440,7 +440,7 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "public" || key == "kind" || key == "type" || key == "status" {
+			if key == "kind" || key == "type" {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
 					continue
@@ -452,12 +452,26 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER p.meta.individual in @individual`)
-				vars[key] = values
+				query += fmt.Sprintf(` FILTER TO_BOOL(p.meta.individual) in @individual`)
+				vars["individual"] = values
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(p["title"]) LIKE LOWER("%s")
 || p._key LIKE "%s"`,
 					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+			} else if key == "public" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER TO_BOOL(p.%s) in @%s`, key, key)
+				vars[key] = values
+			} else if key == "status" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER TO_NUMBER(p.%s) in @%s`, key, key)
+				vars[key] = values
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
