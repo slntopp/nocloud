@@ -150,6 +150,7 @@ start:
 
 			go func(sp *graph.ServicesProvider) {
 				log := log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
+				log.Debug("Starting MonitoringRoutine")
 				///////////////////////// SYNCING IN PROGRESS ////////////////////
 				//syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), -1)
 				//defer syncer.Open()
@@ -239,6 +240,8 @@ start:
 				if err != nil {
 					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 				}
+
+				log.Debug("Finished MonitoringRoutine")
 			}(sp)
 		}
 
