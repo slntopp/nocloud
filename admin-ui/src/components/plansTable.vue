@@ -232,7 +232,12 @@ const searchFields = computed(() => [
     key: "kind",
     type: "select",
   },
-  { items: [], title: "Type", key: "type", type: "select" },
+  {
+    items: unique.value.type?.map((type) => ({ text: type, value: type })),
+    title: "Type",
+    key: "type",
+    type: "select",
+  },
   {
     items: Object.keys(NoCloudStatus)
       .filter((value) => !Number.isInteger(+value))
@@ -287,7 +292,9 @@ const fetchInstancesCount = async () => {
 };
 
 const fetchUnique = async () => {
-  unique.value = await store.getters["plans/plansClient"].plansUnique();
+  const response = await store.getters["plans/plansClient"].plansUnique();
+
+  unique.value = response.toJson().unique;
 };
 
 const setOptions = (newOptions) => {
