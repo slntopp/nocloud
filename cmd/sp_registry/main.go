@@ -114,7 +114,7 @@ func main() {
 	defer rbmq.Close()
 	log.Info("RabbitMQ connection established")
 
-	server := sp.NewServicesProviderServer(log, db, rbmq)
+	server := sp.NewServicesProviderServer(log, db, rbmq, rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))

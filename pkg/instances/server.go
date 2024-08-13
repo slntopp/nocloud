@@ -19,6 +19,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"slices"
 	"time"
 
@@ -53,9 +54,11 @@ type InstancesServer struct {
 	drivers map[string]driverpb.DriverServiceClient
 
 	db driver.Database
+
+	rdb *redis.Client
 }
 
-func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection) *InstancesServer {
+func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *InstancesServer {
 	log := logger.Named("instances")
 	log.Debug("New Instances Server Creating")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)
@@ -91,6 +94,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 		ctrl:    ig_ctrl.Instances(),
 		ig_ctrl: ig_ctrl,
 		drivers: make(map[string]driverpb.DriverServiceClient),
+		rdb:     rdb,
 	}
 }
 

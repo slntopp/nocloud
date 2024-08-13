@@ -18,6 +18,7 @@ package services_providers
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 	"time"
 
@@ -59,9 +60,11 @@ type ServicesProviderServer struct {
 	monitoring Routine
 
 	log *zap.Logger
+
+	rdb *redis.Client
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *ServicesProviderServer {
 	s := s.NewStatesPubSub(log, &db, rbmq)
 	p := p.NewPublicDataPubSub(log, &db, rbmq)
 	statesCh := s.Channel()
@@ -80,6 +83,7 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.C
 			Name:    "Monitoring",
 			Running: false,
 		},
+		rdb: rdb,
 	}
 }
 

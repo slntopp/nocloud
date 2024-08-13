@@ -129,7 +129,7 @@ func main() {
 	log.Info("Pub/Sub setted up")
 
 	server := services.NewServicesServer(log, db, ps, rbmq)
-	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
+	iserver := instances.NewInstancesServiceServer(log, db, rbmq, rdb)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
