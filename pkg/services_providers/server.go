@@ -55,10 +55,13 @@ type ServicesProviderServer struct {
 	db                driver.Database
 	ctrl              graph.ServicesProvidersController
 	ns_ctrl           graph.NamespacesController
+	instances         graph.InstancesController
 
 	monitoring Routine
 
 	log *zap.Logger
+
+	conn *amqp.Connection
 }
 
 func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection) *ServicesProviderServer {
@@ -74,12 +77,14 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.C
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl:           graph.NewNamespacesController(log, db),
+		instances:         *graph.NewInstancesController(log, db, rbmq),
 		drivers:           make(map[string]driverpb.DriverServiceClient),
 		extention_servers: make(map[string]sppb.ServicesProvidersExtentionsServiceClient),
 		monitoring: Routine{
 			Name:    "Monitoring",
 			Running: false,
 		},
+		conn: rbmq,
 	}
 }
 
@@ -200,6 +205,11 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		s.log.Debug("Error allocating in DataBase", zap.Any("sp", sp), zap.Error(err))
 		return req, status.Error(codes.Internal, "Error allocating in DataBase")
 	}
+
+	if err = s.DriverActionsConsumersInit(s.conn); err != nil {
+		s.log.Error("Error initializing driver actions consumers", zap.Error(err))
+	}
+
 	return sp.ServicesProvider, err
 }
 

@@ -117,6 +117,10 @@ func main() {
 	server := sp.NewServicesProviderServer(log, db, rbmq)
 	s_server := showcases.NewShowcasesServer(log, db)
 
+	if err = server.DriverActionsConsumersInit(rbmq); err != nil {
+		log.Fatal("Failed to init driver actions consumers", zap.Error(err))
+	}
+
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
