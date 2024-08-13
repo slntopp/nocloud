@@ -13,6 +13,7 @@
       :custom-params="{
         showDeleted: true,
         anonymously: false,
+        filters: { 'meta.isIndividual': [isIndividual] },
       }"
       v-model="selected"
     />
