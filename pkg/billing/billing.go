@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	"slices"
 	"strconv"
 	"strings"
@@ -77,28 +78,33 @@ type BillingServiceServer struct {
 	proc *healthpb.RoutineStatus
 	sus  *healthpb.RoutineStatus
 
-	drivers map[string]driverpb.DriverServiceClient
+	drivers         map[string]driverpb.DriverServiceClient
+	instancesClient instancesconnect.InstancesServiceClient
+
+	rootToken string
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, instancesClient instancesconnect.InstancesServiceClient, rootToken string) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
-		rbmq:         conn,
-		log:          log,
-		nss:          graph.NewNamespacesController(log, db),
-		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
-		transactions: graph.NewTransactionsController(log.Named("TransactionsController"), db),
-		records:      graph.NewRecordsController(log.Named("RecordsController"), db),
-		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
-		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
-		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
-		services:     graph.NewServicesController(log.Named("ServicesController"), db, conn),
-		descriptions: graph.NewDescriptionsController(log, db),
-		instances:    graph.NewInstancesController(log, db, conn),
-		sp:           graph.NewServicesProvidersController(log, db),
-		addons:       *graph.NewAddonsController(log, db),
-		db:           db,
-		drivers:      make(map[string]driverpb.DriverServiceClient),
+		rbmq:            conn,
+		log:             log,
+		nss:             graph.NewNamespacesController(log, db),
+		plans:           graph.NewBillingPlansController(log.Named("PlansController"), db),
+		transactions:    graph.NewTransactionsController(log.Named("TransactionsController"), db),
+		records:         graph.NewRecordsController(log.Named("RecordsController"), db),
+		currencies:      graph.NewCurrencyController(log.Named("CurrenciesController"), db),
+		accounts:        graph.NewAccountsController(log.Named("AccountsController"), db),
+		invoices:        graph.NewInvoicesController(log.Named("InvoicesController"), db),
+		services:        graph.NewServicesController(log.Named("ServicesController"), db, conn),
+		descriptions:    graph.NewDescriptionsController(log, db),
+		instances:       graph.NewInstancesController(log, db, conn),
+		sp:              graph.NewServicesProvidersController(log, db),
+		addons:          *graph.NewAddonsController(log, db),
+		db:              db,
+		drivers:         make(map[string]driverpb.DriverServiceClient),
+		instancesClient: instancesClient,
+		rootToken:       rootToken,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/rs/cors"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	"github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -67,6 +68,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+	viper.SetDefault("INSTANCES_HOST", "http://services-registry:8000")
 
 	port = viper.GetString("PORT")
 
@@ -97,6 +99,11 @@ func main() {
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
 
+	rootToken, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+
 	router := mux.NewRouter()
 	router.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +118,10 @@ func main() {
 	}
 	defer conn.Close()
 
-	server := billing.NewBillingServiceServer(log, db, conn)
+	// Configure instances client
+	instancesClient := instancesconnect.NewInstancesServiceClient(http.DefaultClient, viper.GetString("INSTANCES_HOST"))
+
+	server := billing.NewBillingServiceServer(log, db, conn, instancesClient, rootToken)
 	currencies := billing.NewCurrencyServiceServer(log, db)
 	log.Info("Starting Currencies Service")
 
@@ -157,7 +167,6 @@ func main() {
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	
 	addons := billing.NewAddonsServer(log, db)
 	log.Info("Registering AddonsService Server")
 	path, handler = cc.NewAddonsServiceHandler(addons, interceptors)

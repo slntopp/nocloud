@@ -10,7 +10,6 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -522,25 +521,12 @@ payment:
 				continue
 			}
 			instance.Uuid = instance.Key
-			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i).String())
-			if err != nil {
-				log.Error("Failed to get instance group", zap.Error(err))
-				continue
-			}
-			client, ok := s.drivers[res.Group.Type]
-			if !ok {
-				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
-				continue
-			}
-			instance.Access = &access.Access{
-				Level: access.Level_ROOT,
-				Role:  "owner",
-			}
-			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
-				ServicesProvider: res.SP,
-				Instance:         instance.Instance,
-				Method:           "free_renew",
+			invReq := connect.NewRequest(&ipb.InvokeRequest{
+				Uuid:   instance.GetUuid(),
+				Method: "free_renew",
 			})
+			invReq.Header().Set("authorization", fmt.Sprintf("Bearer %s", s.rootToken))
+			_, err = s.instancesClient.Invoke(ctx, invReq)
 			if err != nil {
 				log.Error("Failed to renew instance", zap.Error(err))
 				continue
@@ -616,24 +602,12 @@ returning:
 			}
 			i.Uuid = i.Key
 
-			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, id).String())
-			if err != nil {
-				log.Error("Failed to get instance and sp", zap.Error(err))
-				continue
-			}
-			sp := res.SP
-			ig := res.Group
-
-			client, ok := s.drivers[ig.GetType()]
-			if !ok {
-				log.Error("Failed to get driver", zap.String("type", ig.GetType()))
-				continue
-			}
-			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
-				Instance:         i.Instance,
-				ServicesProvider: sp,
-				Method:           "suspend",
+			invReq := connect.NewRequest(&ipb.InvokeRequest{
+				Uuid:   i.GetUuid(),
+				Method: "suspend",
 			})
+			invReq.Header().Set("authorization", fmt.Sprintf("Bearer %s", s.rootToken))
+			_, err = s.instancesClient.Invoke(ctx, invReq)
 			if err != nil {
 				log.Error("Failed to suspend instance", zap.Error(err))
 				continue
@@ -656,21 +630,12 @@ returning:
 				continue
 			}
 			instance.Uuid = instance.Key
-			res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i).String())
-			if err != nil {
-				log.Error("Failed to get instance group", zap.Error(err))
-				continue
-			}
-			client, ok := s.drivers[res.Group.Type]
-			if !ok {
-				log.Error("Failed to get driver", zap.String("type", res.Group.Type))
-				continue
-			}
-			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
-				ServicesProvider: res.SP,
-				Instance:         instance.Instance,
-				Method:           "cancel_renew",
+			invReq := connect.NewRequest(&ipb.InvokeRequest{
+				Uuid:   instance.GetUuid(),
+				Method: "cancel_renew",
 			})
+			invReq.Header().Set("authorization", fmt.Sprintf("Bearer %s", s.rootToken))
+			_, err = s.instancesClient.Invoke(ctx, invReq)
 			if err != nil {
 				log.Error("Failed to cancel renew instance", zap.Error(err))
 				continue
