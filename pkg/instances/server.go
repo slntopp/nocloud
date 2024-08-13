@@ -113,6 +113,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 			Name:    "Monitoring",
 			Running: false,
 		},
+		spSyncers: make(map[string]*go_sync.Mutex),
 	}
 }
 
