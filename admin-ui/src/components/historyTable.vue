@@ -83,8 +83,11 @@ const expanded = ref([]);
 const options = ref({});
 const scopeItems = ref([]);
 const actionItems = ref([]);
+
 const isAccountsLoading = ref(false);
 const accounts = ref({});
+
+const plans = ref({});
 
 const store = useStore();
 
@@ -236,7 +239,7 @@ const getServiceProvider = (uuid) => {
 };
 
 const getBillingPlan = (uuid) => {
-  return plans.value.find((s) => s.uuid === uuid) || uuid;
+  return plans.value[uuid] || uuid;
 };
 
 const isLoading = computed(() => {
@@ -272,7 +275,6 @@ const searchFields = computed(() => {
 
 const services = computed(() => store.getters["services/all"]);
 const sps = computed(() => store.getters["servicesProviders/all"]);
-const plans = computed(() => store.getters["plans/all"]);
 const instances = computed(() => store.getters["services/getInstances"]);
 const filter = computed(() => store.getters["appSearch/filter"]);
 const path = computed(() => filter.value.path || undefined);
@@ -303,5 +305,20 @@ watch(logs, () => {
       );
     }
   });
+
+  logs.value
+    .filter((log) => log.entity === "BillingPlans")
+    .forEach(async ({ uuid }) => {
+      try {
+        if (!plans.value[uuid]) {
+          plans.value[uuid] = store.getters["plans/plansClient"].getPlan({
+            uuid,
+          });
+          plans.value[uuid] = await plans.value[uuid];
+        }
+      } catch {
+        plans.value[uuid] = undefined;
+      }
+    });
 });
 </script>
