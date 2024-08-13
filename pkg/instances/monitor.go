@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package services_providers
+package instances
 
 import (
 	"context"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
-	"github.com/slntopp/nocloud/pkg/nocloud/sync"
+	go_sync "sync"
 	"time"
 
 	stpb "github.com/slntopp/nocloud-proto/statuses"
@@ -84,7 +84,7 @@ func MakeConf(ctx context.Context, log *zap.Logger, upd chan bool) (conf Monitor
 	return conf
 }
 
-func (s *ServicesProviderServer) MonitoringRoutineState() Routine {
+func (s *InstancesServer) MonitoringRoutineState() Routine {
 	return s.monitoring
 }
 
@@ -114,7 +114,7 @@ FOR a IN inst.addons
     RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
 `
 
-func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
+func (s *InstancesServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
 	log.Info("Fetching Monitoring Configuration")
@@ -130,7 +130,7 @@ start:
 	for {
 		s.monitoring.Running = true
 
-		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
+		sp_pool, err := s.sp_ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
 		if err != nil {
 			log.Error("Failed to get ServicesProviders", zap.Error(err))
 			continue
@@ -142,19 +142,32 @@ start:
 				continue
 			}
 
-			sp, err := s.ctrl.Get(ctx, sp.Uuid)
+			sp, err := s.sp_ctrl.Get(ctx, sp.Uuid)
 			if err != nil {
 				log.Error("Coudln't get ServicesProvider", zap.String("sp", sp.Uuid), zap.Error(err))
 				continue
 			}
 
 			go func(sp *graph.ServicesProvider) {
-				syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), -1)
-				defer syncer.Open()
-				_ = syncer.WaitUntilOpenedAndCloseAfter()
-
 				log := log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
-				igroups, err := s.ctrl.GetGroups(ctx, sp)
+				///////////////////////// SYNCING IN PROGRESS ////////////////////
+				//syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), -1)
+				//defer syncer.Open()
+				//_ = syncer.WaitUntilOpenedAndCloseAfter()
+				log.Debug("Locking mutex")
+				m := s.spSyncers[sp.GetUuid()]
+				if m == nil {
+					m = &go_sync.Mutex{}
+					s.spSyncers[sp.GetUuid()] = m
+				}
+				m.Lock()
+				defer func() {
+					log.Debug("Unlocking mutex")
+					m.Unlock()
+				}()
+				//////////////////////////////////////////////////////
+
+				igroups, err := s.sp_ctrl.GetGroups(ctx, sp)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 					return

@@ -27,6 +27,7 @@ import (
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc/metadata"
 	"net/http"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -190,6 +191,9 @@ func main() {
 	checker := grpchealth.NewStaticChecker()
 	path, handler = grpchealth.NewHandler(checker)
 	router.PathPrefix(path).Handler(handler)
+
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+token)
+	go iserver.MonitoringRoutine(ctx)
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 
