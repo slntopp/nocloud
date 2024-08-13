@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"slices"
 	"time"
 
@@ -102,6 +103,12 @@ func (s *InstancesServer) RegisterDriver(type_key string, client driverpb.Driver
 	s.drivers[type_key] = client
 }
 
+var methodsToSync = []string{
+	"manual_renew",
+	"free_renew",
+	"cancel_renew",
+}
+
 func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.InvokeRequest]) (*connect.Response[pb.InvokeResponse], error) {
 	log := s.log.Named("invoke")
 	req := _req.Msg
@@ -109,8 +116,21 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
+	if err != nil {
+		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
+		return nil, err
+	}
+
+	// Sync with driver's monitoring
+	if slices.Contains(methodsToSync, req.Method) {
+		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), -1)
+		defer syncer.Open()
+		_ = syncer.WaitUntilOpenedAndCloseAfter()
+	}
+
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
+	instance, err = graph.GetInstanceWithAccess(
 		ctx, s.db,
 		instance_id,
 	)
@@ -127,12 +147,6 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	if instance.GetState().GetState() == stpb.NoCloudState_SUSPENDED && instance.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
-	}
-
-	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
-	if err != nil {
-		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
-		return nil, err
 	}
 
 	client, ok := s.drivers[r.SP.Type]
