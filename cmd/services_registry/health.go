@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/instances"
 
 	pb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/services"
@@ -27,8 +28,9 @@ const SERVICE = "Services Registry"
 
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer
-	log *zap.Logger
-	srv *services.ServicesServer
+	log  *zap.Logger
+	srv  *services.ServicesServer
+	isrv *instances.InstancesServer
 }
 
 func NewHealthServer(log *zap.Logger, srv *services.ServicesServer) *HealthServer {
@@ -45,5 +47,20 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 }
 
 func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
-	return &pb.RoutinesStatus{}, nil
+	state := s.isrv.MonitoringRoutineState()
+	status := &pb.RoutineStatus{
+		Routine: state.Name,
+		Status: &pb.ServingStatus{
+			Service: SERVICE,
+			Status:  pb.Status_STOPPED,
+		},
+		LastExecution: state.LastExec,
+	}
+	if state.Running {
+		status.Status.Status = pb.Status_RUNNING
+	}
+
+	return &pb.RoutinesStatus{
+		Routines: []*pb.RoutineStatus{status},
+	}, nil
 }
