@@ -97,6 +97,10 @@ func main() {
 		Addr: redisHost,
 		DB:   0,
 	})
+	if status := rdb.Ping(context.Background()); status.Err() != nil {
+		log.Fatal("Failed to connect to redis", zap.Error(status.Err()))
+	}
+	log.Info("Redis connection established")
 
 	auth.SetContext(log, rdb, SIGNING_KEY)
 	s := grpc.NewServer(
