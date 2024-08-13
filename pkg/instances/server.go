@@ -212,6 +212,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 
 	nocloud.Log(log, event)
 
+	log.Debug("Request finished")
 	return connect.NewResponse(invoke), nil
 }
 
