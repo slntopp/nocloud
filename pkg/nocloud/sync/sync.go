@@ -42,12 +42,12 @@ func (s *DataSyncer) WaitUntilOpenedAndCloseAfter() error {
 	currentRetries := 0
 	for {
 		if s.IsOpened() {
-			go s.log.Debug("Opened. Ending waiting loop")
+			s.log.Debug("Opened. Ending waiting loop")
 			return s.Close()
 		}
 		currentRetries++
 		if currentRetries > s.retries && s.retries >= 0 {
-			go s.log.Debug("Retries exceeded. Forced ending waiting loop", zap.Int("retries", s.retries))
+			s.log.Debug("Retries exceeded. Forced ending waiting loop", zap.Int("retries", s.retries))
 			return s.Close()
 		}
 		time.Sleep(s.interval)
