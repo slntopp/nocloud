@@ -42,7 +42,6 @@ func (s *DataSyncer) WaitUntilOpenedAndCloseAfter() error {
 	currentRetries := 0
 	for {
 		if s.IsOpened() {
-			s.log.Debug("Opened. Ending waiting loop")
 			return s.Close()
 		}
 		currentRetries++
@@ -79,7 +78,7 @@ func (s *DataSyncer) IsOpened() bool {
 		s.log.Error("Failed to get redis key", zap.String("key", fmt.Sprintf(DataUpdateKeyTemplate, s.sp)), zap.Error(status.Err()))
 		return true
 	}
-	s.log.Debug("Got redis key", zap.String("key", fmt.Sprintf(DataUpdateKeyTemplate, s.sp)), zap.String("val", status.Val()))
+	//s.log.Debug("Got redis key", zap.String("key", fmt.Sprintf(DataUpdateKeyTemplate, s.sp)), zap.String("val", status.Val()))
 	// Check for 'true' and empty string to check non-existence
 	if status.Val() == "true" || status.Val() == "" {
 		return true
