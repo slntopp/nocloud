@@ -91,7 +91,7 @@ func (s *PubSub) ConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) 
 }
 
 const updateDataQuery = `
-UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+UPDATE DOCUMENT(@@collection, @key) WITH { data: MERGE(@data, { is_monitored: true }) } IN @@collection
 `
 
 func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
