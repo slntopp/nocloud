@@ -55,20 +55,20 @@ func (s *DataSyncer) WaitUntilOpenedAndCloseAfter() error {
 }
 
 func (s *DataSyncer) Open() error {
-	s.log.Debug("Opening")
 	if status := s.rdb.Set(s.ctx, fmt.Sprintf(DataUpdateKeyTemplate, s.sp), "true", 0); status.Err() != nil {
 		s.log.Error("Failed to set redis key", zap.String("key", fmt.Sprintf(DataUpdateKeyTemplate, s.sp)), zap.Error(status.Err()))
 		return status.Err()
 	}
+	s.log.Debug("Opened")
 	return nil
 }
 
 func (s *DataSyncer) Close() error {
-	s.log.Debug("Closing")
 	if status := s.rdb.Set(s.ctx, fmt.Sprintf(DataUpdateKeyTemplate, s.sp), "false", 0); status.Err() != nil {
 		s.log.Error("Failed to set redis key", zap.String("key", fmt.Sprintf(DataUpdateKeyTemplate, s.sp)), zap.Error(status.Err()))
 		return status.Err()
 	}
+	s.log.Debug("Closed")
 	return nil
 }
 
