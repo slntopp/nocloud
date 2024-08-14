@@ -3,7 +3,7 @@
     v-if="accountId"
     style="height: 100vh; width: 100%"
     url="/cc.ui/"
-    :params="{ filterByAccount: accountId }"
+    :params="params"
   />
 </template>
 
@@ -17,6 +17,11 @@ const { account } = toRefs(props);
 const accountId = computed(() => {
   return account.value?.uuid;
 });
+
+const params = computed(() =>({
+  filterByAccount: accountId.value,
+  fullUrl: location.href
+}));
 
 window.addEventListener("message", ({ data, origin, source }) => {
   if (origin.includes("localhost") || !data) return;
