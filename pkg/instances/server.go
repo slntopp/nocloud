@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"slices"
 	go_sync "sync"
 	"time"
@@ -143,20 +144,20 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 
 	// Sync with driver's monitoring
 	if slices.Contains(methodsToSync, req.Method) {
-		//syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), -1)
-		//defer syncer.Open()
-		//_ = syncer.WaitUntilOpenedAndCloseAfter()
-		log.Debug("Locking mutex")
-		m := s.spSyncers[r.SP.GetUuid()]
-		if m == nil {
-			m = &go_sync.Mutex{}
-			s.spSyncers[r.SP.GetUuid()] = m
-		}
-		m.Lock()
-		defer func() {
-			log.Debug("Unlocking mutex")
-			m.Unlock()
-		}()
+		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), 5)
+		defer syncer.Open()
+		_ = syncer.WaitUntilOpenedAndCloseAfter()
+		//log.Debug("Locking mutex")
+		//m := s.spSyncers[r.SP.GetUuid()]
+		//if m == nil {
+		//	m = &go_sync.Mutex{}
+		//	s.spSyncers[r.SP.GetUuid()] = m
+		//}
+		//m.Lock()
+		//defer func() {
+		//	log.Debug("Unlocking mutex")
+		//	m.Unlock()
+		//}()
 	}
 
 	var instance graph.Instance

@@ -25,6 +25,8 @@ import (
 	"github.com/rs/cors"
 	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc/metadata"
@@ -191,6 +193,23 @@ func main() {
 	checker := grpchealth.NewStaticChecker()
 	path, handler = grpchealth.NewHandler(checker)
 	router.PathPrefix(path).Handler(handler)
+
+	log.Debug("Opening every sp syncer")
+	go func() {
+		ctrl := graph.NewServicesProvidersController(log.Named("Main"), db)
+		sps, err := ctrl.List(context.Background(), schema.ROOT_NAMESPACE_KEY, true)
+		if err != nil {
+			log.Fatal("Failed to list services providers", zap.Error(err))
+		}
+		for _, sp := range sps {
+			sp := sp
+			go func() {
+				if err := sync.NewDataSyncer(log.With(zap.String("caller", "Main")), rdb, sp.GetUuid(), -1).Open(); err != nil {
+					log.Fatal("Failed to open sp syncer", zap.Error(err))
+				}
+			}()
+		}
+	}()
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+token)
 	go iserver.MonitoringRoutine(ctx)
