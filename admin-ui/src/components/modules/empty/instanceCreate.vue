@@ -18,14 +18,16 @@
       </v-row>
       <v-row>
         <v-col cols="6">
-          <v-autocomplete
+          <plans-autocomplete
+            :value="bilingPlan"
+            :custom-params="{
+              filters: { type: ['empty'] },
+              anonymously: true,
+            }"
+            @input="setValue('billing_plan', $event)"
+            return-object
             label="Price model"
-            item-text="title"
-            item-value="uuid"
-            :value="instance.billing_plan"
-            :items="plans"
             :rules="planRules"
-            @change="changeBilling"
           />
         </v-col>
         <v-col cols="6">
@@ -69,17 +71,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
-const props = defineProps([
-  "plans",
-  "instance",
-  "planRules",
-  "spUuid",
-  "isEdit",
-]);
-const { isEdit, instance, planRules, plans } = toRefs(props);
+const props = defineProps(["instance", "planRules", "spUuid"]);
+const { instance, planRules } = toRefs(props);
 
 const emit = defineEmits(["set-instance", "set-value"]);
 
@@ -94,29 +91,25 @@ const getDefaultInstance = () => ({
   billing_plan: {},
 });
 
-const bilingPlan = ref(null);
-const products = ref([]);
 const product = ref([]);
 const requiredRule = ref([(val) => !!val || "Field required"]);
 
 onMounted(() => {
-  if (!isEdit.value) {
-    emit("set-instance", getDefaultInstance());
-  } else {
-    changeBilling(instance.value.billing_plan);
-  }
+  emit("set-instance", getDefaultInstance());
 });
 
-const changeBilling = (val) => {
-  bilingPlan.value = plans.value.find((p) => p.uuid === val);
-  if (bilingPlan.value) {
-    products.value = Object.keys(bilingPlan.value.products).map((key) => ({
+const bilingPlan = computed(() => instance.value.billing_plan);
+const products = computed(() => {
+  if (bilingPlan.value?.products) {
+    return Object.keys(bilingPlan.value.products).map((key) => ({
       key,
       title: bilingPlan.value.products[key].title,
     }));
   }
-  setValue("billing_plan", bilingPlan.value);
-};
+
+  return [];
+});
+
 const changeProduct = (val) => {
   product.value = val;
   setValue("product", product.value);
@@ -126,10 +119,6 @@ const changeProduct = (val) => {
 const setValue = (key, value) => {
   emit("set-value", { key, value });
 };
-
-watch(plans, () => {
-  changeBilling(instance.value.billing_plan);
-});
 </script>
 
 <script>

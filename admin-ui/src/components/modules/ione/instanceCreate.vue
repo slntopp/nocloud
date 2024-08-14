@@ -20,15 +20,16 @@
 
       <v-row>
         <v-col cols="6">
-          <v-autocomplete
-            :filter="defaultFilterObject"
+          <plans-autocomplete
+            :value="bilingPlan"
+            :custom-params="{
+              filters: { type: ['ione'] },
+              anonymously: true,
+            }"
+            @input="changeBilling"
+            return-object
             label="Price model"
-            item-text="title"
-            item-value="uuid"
-            :value="instance.billing_plan"
-            :items="plans"
             :rules="planRules"
-            @change="changeBilling"
           />
         </v-col>
         <v-col cols="6">
@@ -171,19 +172,13 @@
 </template>
 
 <script setup>
-import { defaultFilterObject } from "@/functions";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store/";
 import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
-const props = defineProps([
-  "plans",
-  "instance",
-  "planRules",
-  "spUuid",
-  "isEdit",
-]);
-const { instance, isEdit, planRules, plans, spUuid } = toRefs(props);
+const props = defineProps(["instance", "planRules", "spUuid", "isEdit"]);
+const { instance, isEdit, planRules, spUuid } = toRefs(props);
 
 const emit = defineEmits(["set-instance", "set-value"]);
 
@@ -304,7 +299,7 @@ const changeOS = (newVal) => {
   setValue("config.template_id", +osId);
 };
 const changeBilling = (val) => {
-  bilingPlan.value = plans.value.find((p) => p.uuid === val);
+  bilingPlan.value = val;
   if (bilingPlan.value) {
     products.value = Object.keys(bilingPlan.value.products);
   }
@@ -328,10 +323,6 @@ const setProduct = (newVal) => {
 const setValue = (key, value) => {
   emit("set-value", { key, value });
 };
-
-watch(plans, () => {
-  changeBilling(instance.value.billing_plan);
-});
 
 watch(existing, () => {
   setValue("data.vm_id", null);

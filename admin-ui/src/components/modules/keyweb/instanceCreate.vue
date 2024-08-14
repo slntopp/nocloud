@@ -41,15 +41,15 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-autocomplete
-            :filter="defaultFilterObject"
-            label="Price model"
-            item-text="title"
-            item-value="uuid"
-            return-object
+          <plans-autocomplete
             :value="instance.billing_plan"
-            @change="setValue('billing_plan', $event)"
-            :items="plans"
+            :custom-params="{
+              filters: { type: ['keyweb'] },
+              anonymously: true,
+            }"
+            @input="setValue('billing_plan', $event)"
+            return-object
+            label="Price model"
             :rules="planRules"
           />
         </v-col>
@@ -119,8 +119,8 @@
 
 <script setup>
 import { computed, onMounted, toRefs, ref, watch } from "vue";
-import { defaultFilterObject } from "@/functions";
 import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
 const getDefaultInstance = () => ({
   title: "instance",
@@ -133,14 +133,8 @@ const getDefaultInstance = () => ({
   addons: [],
 });
 
-const props = defineProps([
-  "plans",
-  "instance",
-  "planRules",
-  "spUuid",
-  "isEdit",
-]);
-const { plans, instance, planRules } = toRefs(props);
+const props = defineProps(["instance", "planRules", "spUuid", "isEdit"]);
+const { instance, planRules } = toRefs(props);
 const emits = defineEmits(["set-instance", "set-value"]);
 
 const osTypeKey = "VM Template|OS";
@@ -156,13 +150,9 @@ const addons = ref([]);
 const selectedAddons = ref([]);
 const selectedOs = ref();
 const duration = ref("Monthly");
-const durations = { Monthly: "2592000", Yearly: "31536000" };
+const durations = { Monthly: 2592000, Yearly: 31536000 };
 
-const billingPlan = computed(() =>
-  instance.value.billing_plan.uuid
-    ? instance.value.billing_plan
-    : plans.value.find((p) => p.uuid === instance.value.billing_plan)
-);
+const billingPlan = computed(() => instance.value.billing_plan);
 
 const fullProduct = computed(() => billingPlan.value?.products[product.value]);
 const addonsTypes = computed(() => {
@@ -181,7 +171,8 @@ const products = computed(() => {
   const products = [];
   Object.keys(billingPlan.value?.products || {}).forEach((key) => {
     if (
-      billingPlan.value?.products[key]?.period !== durations[duration.value]
+      Number(billingPlan.value?.products[key]?.period) !==
+      durations[duration.value]
     ) {
       return;
     }
