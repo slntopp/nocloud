@@ -178,7 +178,6 @@
       :account-currency="accountCurrency"
       v-model="priceModelDialog"
       :template="template"
-      :plans="filteredPlans"
       @refresh="emit('refresh')"
       :service="service"
     />
@@ -211,17 +210,10 @@ import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps([
-  "template",
-  "plans",
-  "service",
-  "sp",
-  "account",
-  "addons",
-]);
+const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, service, sp, plans, account, addons } = toRefs(props);
+const { template, service, sp, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -251,18 +243,14 @@ const dueDate = computed(() =>
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isMonitoringEmpty = computed(() => dueDate.value === "-");
 const isDynamicPlan = computed(() => fullPlan.value?.kind === "DYNAMIC");
-const fullPlan = computed(() =>
-  plans.value.find((p) => p.uuid === template.value.billingPlan.uuid)
-);
+const fullPlan = computed(() => store.getters["plans/one"]);
 const availableTarrifs = computed(() =>
   Object.keys(fullPlan.value?.products || {}).map((key) => ({
     title: key,
     resources: fullPlan.value.products[key].resources,
   }))
 );
-const filteredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "ione")
-);
+
 const billingPlan = computed(() => template.value.billingPlan);
 const totalPrice = computed(() =>
   Object.keys(totalPrices.value || {})

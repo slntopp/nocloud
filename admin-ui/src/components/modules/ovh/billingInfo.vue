@@ -156,7 +156,6 @@
       v-if="isPriceModelCanBeChange"
       @refresh="emit('refresh')"
       :template="template"
-      :plans="plans"
       :account-currency="accountCurrency"
       :account-rate="accountRate"
       :service="service"
@@ -190,10 +189,10 @@ import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 
-const props = defineProps(["template", "plans", "account", "addons"]);
+const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, plans, account, addons } = toRefs(props);
+const { template, account, addons } = toRefs(props);
 
 const store = useStore();
 const plnRate = usePlnRate();
