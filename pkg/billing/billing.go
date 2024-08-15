@@ -219,7 +219,6 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 	res, err := s.plans.Create(ctx, plan)
 	var event = &elpb.Event{
 		Entity:    schema.BILLING_PLANS_COL,
-		Uuid:      res.GetUuid(),
 		Scope:     "database",
 		Action:    "create",
 		Rc:        0,
@@ -229,7 +228,6 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 			Diff: "",
 		},
 	}
-
 	if err != nil {
 		event.Rc = 1
 		nocloud.Log(log, event)
@@ -270,10 +268,9 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 	res, err := s.plans.Update(ctx, plan)
 	oldPlanMarshal, _ := json.Marshal(plan)
 	newPlanMarshal, _ := json.Marshal(res)
-
 	var event = &elpb.Event{
 		Entity:    schema.BILLING_PLANS_COL,
-		Uuid:      res.Uuid,
+		Uuid:      plan.GetUuid(),
 		Scope:     "database",
 		Action:    "update",
 		Rc:        0,
@@ -283,7 +280,6 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 			Diff: "",
 		},
 	}
-
 	if err != nil {
 		event.Rc = 0
 		nocloud.Log(log, event)
