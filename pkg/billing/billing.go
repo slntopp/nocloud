@@ -234,7 +234,7 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 		event.Rc = 1
 		nocloud.Log(log, event)
 		log.Error("Error creating plan", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error creating plan")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error creating plan: %v", err))
 	}
 
 	resp := connect.NewResponse(res.Plan)
@@ -288,7 +288,7 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 		event.Rc = 0
 		nocloud.Log(log, event)
 		log.Error("Error updating plan", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error updating plan")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error updating plan: %v", err))
 	}
 
 	diff, err := jsondiff.CompareJSON(oldPlanMarshal, newPlanMarshal)
