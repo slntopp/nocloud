@@ -26,7 +26,7 @@ const src = computed(() => {
     api: location.host,
     theme: theme.value,
     params: params.value,
-    fullscrean: route.query["fullscrean"] === "true",
+    fullscreen: route.query["fullscreen"] === "true",
   });
 
   return `${url.value}?a=${Buffer.from(
