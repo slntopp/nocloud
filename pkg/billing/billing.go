@@ -427,6 +427,11 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 		vars["@plans"] = schema.BILLING_PLANS_COL
 	}
 
+	if len(req.GetExcludeUuids()) > 0 {
+		query += ` FILTER p._key NOT IN @excludeUuids`
+		vars["excludeUuids"] = req.GetExcludeUuids()
+	}
+
 	if req.GetAnonymously() {
 		query += ` FILTER p.public == true`
 	}
