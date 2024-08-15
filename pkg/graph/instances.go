@@ -442,6 +442,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		Sp:       sp,
 		Event:    "UPDATE",
 	}
+	log.Debug("publishing to ansible_hooks", zap.Any("c", c))
 	body, err := proto.Marshal(&c)
 	if err == nil {
 		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
