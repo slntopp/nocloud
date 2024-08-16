@@ -66,12 +66,17 @@
         <template v-else>
           <v-col cols="3" class="align-center d-flex">
             <v-subheader>Linked price model</v-subheader>
-            <v-autocomplete
-              clearable
-              @change="plan.meta.linkedPlan = $event ?? undefined"
+            <plans-auto-complete
               label="Price model"
-              :value="plan.meta.linkedPlan"
-              :items="filteredPlans"
+              clearable
+              fetch-value
+              :custom-params="{
+                filters: { type: [plan.type] },
+                showDeleted: false,
+                anonymously: true,
+                excludeUuids: plan.uuid ? [plan.uuid] : [],
+              }"
+              v-model="plan.meta.linkedPlan"
             />
           </v-col>
         </template>
@@ -245,6 +250,7 @@ import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 import NocloudTable from "@/components/table.vue";
 import RichEditor from "@/components/ui/richEditor.vue";
+import plansAutoComplete from "@/components/ui/plansAutoComplete.vue";
 
 export default {
   name: "plansCreate-view",
@@ -257,6 +263,7 @@ export default {
     planOpensrs,
     JsonEditor,
     RichEditor,
+    plansAutoComplete,
   },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
@@ -306,7 +313,7 @@ export default {
 
       const configs =
         type === "resource"
-          ? this.plan.resources
+          ? this.resources
           : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
 
@@ -355,21 +362,6 @@ export default {
     changeAddons(val) {
       this.plan.addons = val;
     },
-    checkName({ title, uuid }, obj, num = 2) {
-      const value = obj.find(
-        (el) => el.title === title && el.uuid !== uuid && el.status !== "DEL"
-      );
-      const oldTitle = title.split(" ");
-
-      if (oldTitle.length > 1 && num !== 2) {
-        oldTitle[oldTitle.length - 1] = num;
-      } else oldTitle.push(num);
-
-      const plan = { title: oldTitle.join(" "), uuid };
-
-      if (value) return this.checkName(plan, obj, num + 1);
-      else return title;
-    },
     async tryToSend(action, bindPlan = false) {
       if (!this.isValid || !this.isFeeValid) {
         this.$refs.form.validate();
@@ -384,7 +376,6 @@ export default {
       this.isLoading = true;
       this.isSetSpDialog = false;
       this.savePlanAction = action;
-      this.plan.title = this.checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
 
@@ -402,7 +393,7 @@ export default {
           : "DEFAULT";
       });
 
-      this.plan.resources = this.plan.resources.map((r) => {
+      this.plan.resources = this.resources.map((r) => {
         r.periodKind = periodMap[r.period] ? periodMap[r.period] : "DEFAULT";
         return r;
       });
@@ -410,7 +401,7 @@ export default {
       try {
         //update or create descriptions
         const descriptionPromises = [
-          ...this.plan.resources.map((resource, index) =>
+          ...this.resources.map((resource, index) =>
             this.updateOrCreateDescription(resource, "resources", index)
           ),
           ...Object.keys(this.plan.products).map((key) =>
@@ -482,7 +473,7 @@ export default {
     },
     setPeriod(date, id) {
       const period = getTimestamp(date);
-      const resource = this.plan.resources.find((el) => el.id === id);
+      const resource = this.resources.find((el) => el.id === id);
       const product = Object.values(this.plan.products).find(
         (el) => el.id === id
       );
@@ -521,17 +512,10 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("plans/fetch", { silent: true }).catch((err) => {
-      const message = err.response?.data?.message ?? err.message ?? err;
-
-      this.showSnackbarError({ message });
-      console.error(err);
-    });
-
     this.$store.dispatch("servicesProviders/fetch");
 
     if (this.isEdit) {
-      this.plan.resources = this.item.resources;
+      this.plan.resources = this.resources;
     }
     const types = require.context(
       "@/components/modules/",
@@ -558,16 +542,6 @@ export default {
       const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
 
       return () => import(`@/components/plans_${type}_table.vue`);
-    },
-    plans() {
-      return this.$store.getters["plans/all"];
-    },
-    filteredPlans() {
-      const items = this.plans.filter(
-        (plan) => plan.type === this.plan.type && plan.uuid !== this.plan.uuid
-      );
-
-      return items.map((item) => ({ text: item.title, value: item.uuid }));
     },
     viewport() {
       return document.documentElement.clientWidth;
@@ -624,6 +598,9 @@ export default {
     },
     isDeleted() {
       return this.plan.status === "DEL";
+    },
+    resources() {
+      return this.plan.resources || [];
     },
   },
   watch: {
