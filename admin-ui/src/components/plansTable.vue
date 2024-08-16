@@ -124,6 +124,9 @@ import {
   getShortName,
   debounce,
 } from "@/functions";
+import { NoCloudStatus } from "nocloud-proto/proto/es/statuses/statuses_pb";
+import { Plan, PlanKind } from "nocloud-proto/proto/es/billing/billing_pb";
+import useSearch from "@/hooks/useSearch";
 
 const statusMap = {
   DEL: { title: "DELETED", color: "blue-grey darken-2" },
@@ -136,12 +139,24 @@ const props = defineProps({
   showSelect: { type: Boolean, default: false },
   customParams: { type: Object, default: () => ({}) },
   refetch: { type: Boolean, default: false },
+  noSearch: { type: Boolean, default: false },
 });
-const { value, refetch, customParams } = toRefs(props);
+const { value, refetch, customParams, noSearch } = toRefs(props);
 
 const emit = defineEmits(["input", "update:options"]);
 
 const store = useStore();
+useSearch({
+  name: props.tableName,
+  noSearch: props.noSearch,
+  defaultLayout: {
+    title: "Default",
+    filter: {
+      public: [true],
+      status: [NoCloudStatus.UNSPECIFIED],
+    },
+  },
+});
 
 const headers = ref([
   { text: "Title ", value: "title" },
@@ -333,6 +348,9 @@ const isDeleted = (plan) => {
 };
 
 const setSearchFields = () => {
+  if (noSearch.value) {
+    return;
+  }
   store.commit("appSearch/setFields", searchFields.value);
 };
 
@@ -393,34 +411,11 @@ watch(
   },
   { deep: true }
 );
-watch(options, fetchPlansDebounced);
-watch(refetch, fetchPlansDebounced);
+watch([options, refetch], fetchPlansDebounced);
 
 watch(plans, () => {
   if (plans.value.length) {
     fetchInstancesCount();
   }
 });
-</script>
-
-<script>
-import search from "@/mixins/search.js";
-import { NoCloudStatus } from "nocloud-proto/proto/es/statuses/statuses_pb";
-import { Plan, PlanKind } from "nocloud-proto/proto/es/billing/billing_pb";
-
-export default {
-  name: "plans-table",
-  mixins: [
-    search({
-      name: "billing-plans",
-      defaultLayout: {
-        title: "Default",
-        filter: {
-          public: [true],
-          status: [NoCloudStatus.UNSPECIFIED],
-        },
-      },
-    }),
-  ],
-};
 </script>
