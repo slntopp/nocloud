@@ -39,13 +39,17 @@ export default {
         const response = await getters["instancesClient"].list(
           ListInstancesRequest.fromJson(params)
         );
-        commit(
-          "setInstances",
-          response.pool.map((i) => ({ ...i, instance: i.instance.toJson() }))
-        );
+
+        const instances = response.pool.map((i) => ({
+          ...i,
+          ...i.instance.toJson(),
+          instance: undefined,
+        }));
+
+        commit("setInstances", instances);
         commit("setTotal", Number(response.count));
 
-        return response.pool;
+        return instances;
       } finally {
         commit("setLoading", false);
       }

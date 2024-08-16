@@ -270,7 +270,7 @@ export function getSecondsByDays(days) {
 }
 
 export function getState(item) {
-  if (!item.state) return "ERROR";
+  if (!item.state) return item?.data?.is_monitored ? "ERROR" : "LCM_INIT";
 
   return item.state.state;
 }
@@ -480,7 +480,9 @@ function fetchMDIIconsHash() {
 export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
-  if (+period === 0) {
+  period = Number(period);
+
+  if (period === 0) {
     return "One time";
   }
 

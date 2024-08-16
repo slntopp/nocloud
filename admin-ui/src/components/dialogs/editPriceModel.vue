@@ -9,13 +9,15 @@
       <v-card-title class="text-center">Change price model</v-card-title>
       <v-row align="center">
         <v-col cols="12">
-          <v-autocomplete
-            label="price model"
-            item-text="title"
-            item-value="uuid"
-            return-object
+          <plans-autocomplete
             v-model="plan"
-            :items="availablePlans"
+            fetch-value
+            :custom-params="{
+              filters: { type: [template.type] },
+              anonymously: true,
+            }"
+            return-object
+            label="Price model"
           />
         </v-col>
       </v-row>
@@ -102,16 +104,16 @@
 </template>
 
 <script setup>
-import { toRefs, ref, computed, onMounted, watch } from "vue";
+import { toRefs, ref, computed, onMounted } from "vue";
 import api from "@/api";
 import { getBillingPeriod } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
 const props = defineProps([
   "template",
   "service",
   "value",
-  "plans",
   "accountRate",
   "accountCurrency",
 ]);
@@ -119,8 +121,7 @@ const emit = defineEmits(["refresh", "input"]);
 
 const { convertTo, defaultCurrency } = useCurrency();
 
-const { template, plans, service, accountRate, accountCurrency } =
-  toRefs(props);
+const { template, service, accountRate, accountCurrency } = toRefs(props);
 
 const isChangePMLoading = ref(false);
 const plan = ref({});
@@ -195,12 +196,6 @@ const originalProduct = computed(() => {
       return template.value.product;
     }
   }
-});
-
-const availablePlans = computed(() => {
-  return JSON.parse(JSON.stringify(plans.value)).filter(
-    (p) => p.type === template.value.type && p.status !== "DEL"
-  );
 });
 
 const isChangeBtnDisabled = computed(() => {
@@ -279,9 +274,7 @@ const setDefaultPlan = () => {
 };
 
 const setPlan = () => {
-  plan.value =
-    plans.value.find(({ uuid }) => uuid === template.value.billingPlan.uuid) ||
-    template.value.billingPlan;
+  plan.value = JSON.parse(JSON.stringify(template.value.billingPlan));
 };
 
 const setProduct = () => {
@@ -292,8 +285,6 @@ const setProduct = () => {
     product.value = template.value.product;
   }
 };
-
-watch(plans, setPlan);
 </script>
 
 <style scoped></style>

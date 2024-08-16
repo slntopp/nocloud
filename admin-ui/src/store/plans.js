@@ -1,43 +1,41 @@
-import api from "@/api.js";
+import { ListRequest } from "nocloud-proto/proto/es/billing/billing_pb";
+import { BillingService } from "nocloud-proto/proto/es/billing/billing_connect";
+import { createPromiseClient } from "@connectrpc/connect";
 
 export default {
   namespaced: true,
   state: {
     plans: [],
+    total: 0,
     plan: {},
     loading: false,
-    instanceCountLoading: false,
-    instanceCountMap: {},
   },
   getters: {
     all(state) {
       return state.plans;
     },
+    total(state) {
+      return state.total;
+    },
     one(state) {
       return state.plan;
     },
-    isLoading(state) {
+    loading(state) {
       return state.loading;
     },
-    isInstanceCountLoading(state) {
-      return state.instanceCountLoading;
-    },
-    instanceCountMap(state) {
-      return state.instanceCountMap;
+    plansClient(state, getters, rootState, rootGetters) {
+      return createPromiseClient(BillingService, rootGetters["app/transport"]);
     },
   },
   mutations: {
     setPlans(state, plans) {
       state.plans = plans;
     },
+    setTotal(state, val) {
+      state.total = +val;
+    },
     setPlan(state, plan) {
       state.plan = plan;
-    },
-    setIsInstanceCountLoading(state, val) {
-      state.instanceCountLoading = val;
-    },
-    setIsInstanceCountMap(state, map) {
-      state.instanceCountMap = map;
     },
     setLoading(state, data) {
       state.loading = data;
@@ -49,81 +47,47 @@ export default {
     },
   },
   actions: {
-    fetch(
-      { commit, dispatch },
-      options = { params: { anonymously: false }, withCount: false }
-    ) {
-      console.log(options)
-      if (!options?.silent) {
-        commit("setPlans", []);
-        commit("setLoading", true);
-      }
+    async fetch({ commit, getters }, options) {
+      commit("setLoading", true);
+      commit("setPlans", []);
+      try {
+        const response = await getters.plansClient.listPlans(
+          ListRequest.fromJson(options)
+        );
 
-      if (options.withCount) {
-        dispatch("fetchCount", options);
+        const data = response.toJson();
+        commit("setPlans", data.pool);
+        commit("setTotal", data.total);
+        return data.pool;
+      } finally {
+        commit("setLoading", false);
       }
-
-      return new Promise((resolve, reject) => {
-        api.plans
-          .list(options?.params)
-          .then((response) => {
-            commit("setPlans", response.pool);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
     },
-    fetchCount({ commit }, options) {
-      commit("setIsInstanceCountLoading", true);
-      return api.plans
-        .instancesCountMap(options?.params)
-        .then((response) => {
-          commit("setIsInstanceCountMap", response.plans);
-        })
-        .finally(() => {
-          commit("setIsInstanceCountLoading", false);
-        });
-    },
-    fetchById({ commit }, id) {
+    async fetchById({ commit, getters }, id) {
       commit("setLoading", true);
 
-      return new Promise((resolve, reject) => {
-        api.plans
-          .get(id)
-          .then((response) => {
-            commit("updatePlan", response);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      try {
+        const response = await getters.plansClient.getPlan({ uuid: id });
+        const data = response.toJson();
+        commit("updatePlan", data);
+
+        return data;
+      } finally {
+        commit("setLoading", false);
+      }
     },
-    fetchItem({ commit }, id) {
+    async fetchItem({ commit, getters }, id) {
       commit("setLoading", true);
 
-      return new Promise((resolve, reject) => {
-        api.plans
-          .get(id)
-          .then((response) => {
-            commit("setPlan", response);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      try {
+        const response = await getters.plansClient.getPlan({ uuid: id });
+        const data = response.toJson();
+        commit("setPlan", data);
+
+        return data;
+      } finally {
+        commit("setLoading", false);
+      }
     },
   },
 };

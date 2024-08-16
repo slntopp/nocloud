@@ -78,13 +78,14 @@
         <v-card-title class="text-center">Change price model</v-card-title>
         <v-row align="center">
           <v-col cols="12">
-            <v-autocomplete
-              label="price model"
-              item-text="title"
-              item-value="uuid"
-              return-object
+            <plans-autocomplete
               v-model="newPlan"
-              :items="filteredPlans"
+              :custom-params="{
+                filters: { type: ['openai'] },
+                anonymously: true,
+              }"
+              return-object
+              label="Price model"
             />
           </v-col>
         </v-row>
@@ -125,18 +126,12 @@ import {
 } from "@/functions";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
-const props = defineProps([
-  "template",
-  "plans",
-  "service",
-  "sp",
-  "account",
-  "addons",
-]);
+const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, plans, service, account, addons } = toRefs(props);
+const { template, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -156,9 +151,7 @@ const billingHeaders = ref([
 onMounted(() => {
   billingItems.value = getBillingItems();
 });
-const filteredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "openai")
-);
+
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isChangeBtnDisabled = computed(() => !newPlan.value);
 

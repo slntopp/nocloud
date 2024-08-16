@@ -106,7 +106,7 @@ export default {
       this.isAddonsLoading = true;
       try {
         await Promise.allSettled(
-          this.instance.addons.map(async (uuid) => {
+          (this.instance.addons || []).map(async (uuid) => {
             const addon = await this.$store.getters["addons/addonsClient"].get({
               uuid,
             });
@@ -117,6 +117,32 @@ export default {
         this.isAddonsLoading = false;
         this.addons = addons;
       }
+    },
+    async fetchInstanceData() {
+      try {
+        this.isLoading = true;
+        await Promise.all([
+          this.$store.dispatch("instances/get", this.$route.params?.instanceId),
+        ]);
+
+        this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+        this.$store.dispatch("services/fetch", {
+          filters: { uuid: [this.instance.service] },
+        });
+        this.$store.dispatch("namespaces/fetch", {
+          filters: { uuid: [this.instance.namespace] },
+        });
+        this.account = await api.accounts.get(this.instance.account);
+      } catch (err) {
+        console.log(err);
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: err.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
+
+      this.initSocket();
     },
   },
   computed: {
@@ -177,38 +203,13 @@ export default {
       return this.instance.title;
     },
   },
-  async mounted() {
+  mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
-      params: {
-        showDeleted: true,
-      },
+      event: this.fetchInstanceData,
     });
-    try {
-      this.isLoading = true;
-      await Promise.all([
-        this.$store.dispatch("instances/get", this.$route.params?.instanceId),
-      ]);
 
-      this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
-      this.$store.dispatch("services/fetch", {
-        filters: { uuid: [this.instance.service] },
-      });
-      this.$store.dispatch("namespaces/fetch", {
-        filters: { uuid: [this.instance.namespace] },
-      });
-      this.$store.dispatch("plans/fetch");
-      this.account = await api.accounts.get(this.instance.account);
-    } catch (err) {
-      console.log(err);
-      this.$store.commit("snackbar/showSnackbarError", {
-        message: err.message,
-      });
-    } finally {
-      this.isLoading = false;
-    }
-
-    this.initSocket();
+    this.fetchInstanceData();
   },
   destroyed() {
     socket?.close(1000, "job is done");

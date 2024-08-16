@@ -61,18 +61,23 @@ export default {
 
       try {
         await this.$store.dispatch("plans/fetchItem", id);
-        this.plan = this.$store.getters["plans/one"];
+        this.plan = {
+          resources: [],
+          products: {},
+          ...this.$store.getters["plans/one"],
+        };
+
         this.planTitle = this.plan.title;
 
         document.title = `${this.planTitle} | NoCloud`;
 
         const descriptionPromises = [
-          ...this.plan.resources.map((resource, index) => ({
+          ...this.plan.resources?.map((resource, index) => ({
             id: index,
             type: "resources",
             descriptionId: resource.descriptionId,
           })),
-          ...Object.keys(this.plan.products).map((key) => ({
+          ...Object.keys(this.plan.products || {}).map((key) => ({
             id: key,
             type: "products",
             descriptionId: this.plan.products[key].descriptionId,

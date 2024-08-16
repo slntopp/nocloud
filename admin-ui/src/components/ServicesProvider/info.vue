@@ -81,28 +81,28 @@
         <v-col>
           <v-dialog max-width="60%" v-model="isDialogVisible">
             <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                class="mr-2"
-                v-bind="attrs"
-                v-on="on"
-                @click="$store.dispatch('plans/fetch')"
-              >
-                Add
-              </v-btn>
+              <v-btn class="mr-2" v-bind="attrs" v-on="on"> Add </v-btn>
             </template>
             <v-card
               max-width="100%"
               class="ma-auto pa-5"
               color="background-light"
             >
-              <nocloud-table
-                table-name="sp-binded-plans"
-                :items="plans"
-                :headers="headers"
-                :loading="isPlanLoading"
-                :footer-error="fetchError"
+              <plans-table
+                no-search
+                show-select
+                :custom-params="{
+                  showDeleted: false,
+                  anonymously: true,
+                  excludeUuids: relatedPlans.map((p) => p.uuid),
+                  filters: {
+                    type: [provider.type],
+                  },
+                }"
+                table-name="plans-sp-table"
                 v-model="selectedNewPlans"
               />
+
               <v-card-actions class="d-flex justify-end">
                 <v-btn class="mr-5" @click="isDialogVisible = false">
                   Cancel
@@ -149,238 +149,152 @@
   </v-card>
 </template>
 
-<script>
-import api from "@/api.js";
-import snackbar from "@/mixins/snackbar.js";
-import JsonEditor from "@/components/JsonEditor.vue";
+<script setup>
 import extentionsMap from "@/components/extentions/map.js";
 import nocloudTable from "@/components/table.vue";
+import plansTable from "@/components/plansTable.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { format } from "date-fns";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
+import { computed, onMounted, ref, toRefs } from "vue";
+import api from "@/api.js";
+import { useStore } from "@/store";
 
+const props = defineProps({
+  template: { type: Object, required: true },
+});
+
+const { template } = toRefs(props);
+
+const store = useStore();
+
+const copyed = ref(null);
+const provider = ref({});
+const isJson = ref(true);
+const isLoading = ref(false);
+const isDeleteLoading = ref(false);
+const isDialogVisible = ref(false);
+
+const fetchError = ref("");
+const relatedPlans = ref([]);
+const selected = ref([]);
+const selectedNewPlans = ref([]);
+
+const headers = ref([
+  { text: "Title ", value: "title" },
+  { text: "UUID ", value: "uuid" },
+  { text: "Public ", value: "public" },
+  { text: "Type ", value: "type" },
+]);
+
+onMounted(async () => {
+  provider.value = template.value;
+  if (!provider.value.proxy) {
+    provider.value.proxy = { socket: "" };
+  }
+
+  fetchPlans();
+});
+
+const fetchPlans = async () => {
+  try {
+    relatedPlans.value = (
+      await store.getters["plans/plansClient"].listPlans({
+        spUuid: template.value.uuid,
+      })
+    ).toJson().pool;
+  } catch (err) {
+    console.error(err);
+
+    fetchError.value = "Can't reach the server";
+    if (err.response) {
+      fetchError.value += `: [ERROR]: ${err.response.data.message}`;
+    } else {
+      fetchError.value += `: [ERROR]: ${err.message}`;
+    }
+  }
+};
+
+const spTypes = computed(() => {
+  switch (provider.value.type) {
+    case "ione":
+      return () => import("@/components/modules/ione/serviceProviderInfo.vue");
+    case "ovh":
+      return () => import("@/components/modules/ovh/serviceProviderInfo.vue");
+    default:
+      return () =>
+        import("@/components/modules/custom/serviceProviderInfo.vue");
+  }
+});
+const downloadedFileName = computed(() => {
+  return template.value.title
+    ? template.value.title.replaceAll(" ", "_")
+    : "unknown_sp";
+});
+
+const addToClipboard = async (text, index) => {
+  if (navigator?.clipboard) {
+    await navigator.clipboard.writeText(text);
+    copyed.value = index;
+  } else {
+    alert("Clipboard is not supported!");
+  }
+};
+
+const bindPlans = async () => {
+  if (selectedNewPlans.value.length < 1) return;
+  isLoading.value = true;
+
+  const plans = selectedNewPlans.value.map((el) => el.uuid);
+
+  try {
+    await api.servicesProviders.bindPlan(template.value.uuid, plans);
+
+    const ending = plans.length === 1 ? "" : "s";
+    relatedPlans.value.push(...selectedNewPlans.value);
+    selectedNewPlans.value = [];
+    isDialogVisible.value = false;
+
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: `Price model${ending} added successfully.`,
+    });
+  } catch (err) {
+    store.commit("snackbar/showSnackbarError", {
+      message: err,
+    });
+  } finally {
+    isLoading.value = false;
+  }
+};
+const unbindPlans = async () => {
+  isDeleteLoading.value = true;
+
+  const plans = selected.value.map((el) => el.uuid);
+
+  try {
+    await api.servicesProviders.unbindPlan(template.value.uuid, plans);
+
+    const ending = plans.length === 1 ? "" : "s";
+    relatedPlans.value = relatedPlans.value.filter(
+      (rp) => selected.value.findIndex((s) => s.uuid === rp.uuid) === -1
+    );
+    selected.value = [];
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: `Price model${ending} deleted successfully.`,
+    });
+  } catch (err) {
+    store.commit("snackbar/showSnackbarError", {
+      message: err,
+    });
+  } finally {
+    isDeleteLoading.value = false;
+  }
+};
+</script>
+
+<script>
 export default {
   name: "services-provider-info",
-  components: {
-    DownloadTemplateButton,
-    JsonEditor,
-    nocloudTable,
-    ConfirmDialog,
-  },
-  props: { template: { type: Object, required: true } },
-  mixins: [snackbar],
-  data: () => ({
-    format,
-    copyed: null,
-    opened: [],
-    extentionsMap,
-
-    provider: {},
-    isJson: true,
-    isLoading: false,
-    isTestLoading: false,
-    isTestSuccess: false,
-
-    headers: [
-      { text: "Title ", value: "title" },
-      { text: "UUID ", value: "uuid" },
-      { text: "Public ", value: "public" },
-      { text: "Type ", value: "type" },
-    ],
-    isDeleteLoading: false,
-    isDialogVisible: false,
-    relatedPlans: [],
-    selected: [],
-    selectedNewPlans: [],
-    fetchError: "",
-  }),
-  methods: {
-    addToClipboard(text, index) {
-      if (navigator?.clipboard) {
-        navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            this.copyed = index;
-          })
-          .catch((res) => {
-            console.error(res);
-          });
-      } else {
-        alert("Clipboard is not supported!");
-      }
-    },
-    editServiceProvider() {
-      if (!this.isTestSuccess) {
-        this.showSnackbarError({
-          message: "Error: Test must be passed before creation.",
-        });
-        return;
-      }
-      this.isLoading = true;
-      api.servicesProviders
-        .update(this.template.uuid, this.provider)
-        .then(() => {
-          this.isLoading = false;
-          this.showSnackbarSuccess({
-            message: "Service edited successfully",
-          });
-        })
-        .catch((err) => {
-          this.isLoading = false;
-          this.showSnackbarError({
-            message: err,
-          });
-        });
-    },
-    testConfig() {
-      this.isTestLoading = true;
-      if (this.template.type === "ione") {
-        const maxVlans = 4096;
-        let errorMessage = "";
-
-        const vlansKeys = Object.keys(this.template.secrets.vlans);
-        if (vlansKeys.length > 1) {
-          errorMessage = "Can be only one vlan key!";
-        }
-
-        const vlanStart = this.template.secrets.vlans[vlansKeys[0]].start;
-        const vlanSize = this.template.secrets.vlans[vlansKeys[0]].size;
-        if (
-          (!errorMessage && vlanStart === undefined) ||
-          vlanSize === undefined
-        ) {
-          errorMessage = `Vlans need size and start keys!`;
-        }
-
-        if (!errorMessage && vlanSize + vlanStart > maxVlans) {
-          errorMessage = `Vlans cant be more then ${maxVlans}!`;
-        }
-
-        if (errorMessage) {
-          this.isTestLoading = false;
-          this.showSnackbarError({
-            message: errorMessage,
-          });
-          return;
-        }
-      }
-
-      this.showSnackbarSuccess({
-        message: "Tests passed",
-      });
-      this.isTestSuccess = true;
-      this.isTestLoading = false;
-    },
-    bindPlans() {
-      if (this.selectedNewPlans.length < 1) return;
-      this.isLoading = true;
-
-      const plans = this.selectedNewPlans.map((el) => el.uuid);
-
-      api.servicesProviders
-        .bindPlan(this.template.uuid, plans)
-        .then(() => {
-          const ending = plans.length === 1 ? "" : "s";
-          this.relatedPlans.push(...this.selectedNewPlans);
-          this.selectedNewPlans = [];
-          this.isDialogVisible = false;
-          this.showSnackbarSuccess({
-            message: `Price model${ending} added successfully.`,
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-    unbindPlans() {
-      this.isDeleteLoading = true;
-
-      const plans = this.selected.map((el) => el.uuid);
-
-      api.servicesProviders
-        .unbindPlan(this.template.uuid, plans)
-        .then(() => {
-          const ending = plans.length === 1 ? "" : "s";
-          this.relatedPlans = this.relatedPlans.filter(
-            (rp) => this.selected.findIndex((s) => s.uuid === rp.uuid) === -1
-          );
-          this.selected = [];
-          this.showSnackbarSuccess({
-            message: `Price model${ending} deleted successfully.`,
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isDeleteLoading = false;
-        });
-    },
-  },
-  mounted() {
-    this.provider = this.template;
-    if (!this.provider.proxy) {
-      this.provider.proxy = { socket: "" };
-    }
-  },
-  created() {
-    this.$store
-      .dispatch("plans/fetch", {
-        params: {
-          sp_uuid: this.template.uuid,
-        },
-      })
-      .then(() => {
-        this.relatedPlans = this.$store.getters["plans/all"];
-        this.fetchError = "";
-      })
-      .catch((err) => {
-        console.error(err);
-
-        this.fetchError = "Can't reach the server";
-        if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-        }
-      });
-  },
-  computed: {
-    plans() {
-      const plans = this.relatedPlans.map(({ uuid }) => uuid);
-
-      return this.$store.getters["plans/all"].filter(
-        (plan) =>
-          plan.type.includes(this.provider.type) &&
-          !plans.includes(plan.uuid) &&
-          plan.status !== "DELETED"
-      );
-    },
-    isPlanLoading() {
-      return this.$store.getters["plans/isLoading"];
-    },
-    spTypes() {
-      switch (this.provider.type) {
-        case "ione":
-          return () =>
-            import("@/components/modules/ione/serviceProviderInfo.vue");
-        case "ovh":
-          return () =>
-            import("@/components/modules/ovh/serviceProviderInfo.vue");
-        default:
-          return () =>
-            import("@/components/modules/custom/serviceProviderInfo.vue");
-      }
-    },
-    downloadedFileName() {
-      return this.template.title
-        ? this.template.title.replaceAll(" ", "_")
-        : "unknown_sp";
-    },
-  },
 };
 </script>
 

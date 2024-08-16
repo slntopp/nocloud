@@ -30,16 +30,16 @@
 
       <v-row>
         <v-col cols="6">
-          <v-autocomplete
-            :filter="defaultFilterObject"
-            label="Price model"
-            item-text="title"
-            item-value="uuid"
+          <plans-autocomplete
             :value="instance.billing_plan"
-            :items="filtredPlans"
-            :rules="planRules"
+            :custom-params="{
+              filters: { type: [`ovh ${ovhType}`] },
+              anonymously: true,
+            }"
+            @input="setValue('billing_plan', $event)"
             return-object
-            @change="(value) => setValue('billing_plan', value)"
+            label="Price model"
+            :rules="planRules"
           />
         </v-col>
         <v-col cols="6">
@@ -141,6 +141,7 @@
 <script setup>
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
 const getDefaultInstance = () => ({
   title: "instance",
@@ -162,7 +163,6 @@ const getDefaultInstance = () => ({
 });
 
 const props = defineProps([
-  "plans",
   "instance",
   "planRules",
   "spUuid",
@@ -170,7 +170,7 @@ const props = defineProps([
   "isEdit",
   "instanceGroup",
 ]);
-const { instance, planRules, plans } = toRefs(props);
+const { instance, planRules } = toRefs(props);
 
 const emit = defineEmits(["set-instance", "set-value"]);
 
@@ -258,10 +258,6 @@ const addons = computed(() => {
 const addonsTypes = computed(() => [
   ...new Set(addons.value?.map((item) => item.type)),
 ]);
-
-const filtredPlans = computed(() =>
-  plans.value?.filter((p) => p.type.includes(ovhType.value))
-);
 
 const tariffs = computed(() => {
   return Object.keys(instance.value?.billing_plan.products || {}).map(

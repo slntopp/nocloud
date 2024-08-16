@@ -16,15 +16,16 @@
         </v-col>
 
         <v-col cols="6">
-          <v-autocomplete
-            label="Price model"
-            item-text="title"
-            item-value="uuid"
+          <plans-autocomplete
             :value="instance.billing_plan"
-            :items="plans"
-            :rules="planRules"
+            :custom-params="{
+              filters: { type: ['opensrs'] },
+              anonymously: true,
+            }"
+            @input="changeBilling"
             return-object
-            @change="changeBilling"
+            label="Price model"
+            :rules="planRules"
           />
         </v-col>
       </v-row>
@@ -172,15 +173,10 @@ import DomainsTable from "@/components/domains_table.vue";
 import { onMounted, toRefs, watch } from "vue";
 import useCurrency from "@/hooks/useCurrency";
 import { getMarginedValue } from "@/functions";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
-const props = defineProps([
-  "plans",
-  "instance",
-  "planRules",
-  "spUuid",
-  "isEdit",
-]);
-const { instance, planRules, plans, spUuid } = toRefs(props);
+const props = defineProps(["instance", "planRules", "spUuid", "isEdit"]);
+const { instance, planRules, spUuid } = toRefs(props);
 
 const emit = defineEmits(["set-instance", "set-value"]);
 
@@ -201,11 +197,7 @@ watch(
   () => instance.value.resources.price,
   () => {
     if (instance.value.billing_plan.uuid) {
-      const planCopy = JSON.parse(
-        JSON.stringify(
-          plans.value.find((p) => p.uuid === instance.value.billing_plan.uuid)
-        )
-      );
+      const planCopy = JSON.parse(JSON.stringify(instance.value.billing_plan));
 
       const domain = instance.value.resources.domain;
       const price = convertFrom(+instance.value.resources.price, "USD");

@@ -142,7 +142,6 @@
       :account-currency="accountCurrency"
       v-model="priceModelDialog"
       :template="template"
-      :plans="filtredPlans"
       @refresh="emit('refresh')"
       :service="service"
     />
@@ -167,7 +166,6 @@ import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 
 const props = defineProps([
   "template",
-  "plans",
   "service",
   "sp",
   "account",
@@ -175,7 +173,7 @@ const props = defineProps([
 ]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans, service, account, addons } = toRefs(props);
+const { template, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -194,10 +192,6 @@ const billingItems = ref([]);
 
 const dueDate = computed(() =>
   formatSecondsToDate(template.value?.data?.next_payment_date, true)
-);
-
-const filtredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "keyweb")
 );
 
 const totalPrice = computed(() => {
