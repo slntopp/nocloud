@@ -3,20 +3,20 @@
     <v-app
       :style="{
         background: $vuetify.theme.themes[theme].background,
-        width: isFullscrean ? '0px' : undefined,
-        height: isFullscrean ? '0px' : undefined,
+        width: isFullscreen ? '0px' : undefined,
+        height: isFullscreen ? '0px' : undefined,
       }"
     >
       <div
-        v-if="isFullscreanAvailable && isFullscrean"
+        v-if="isFullscreenAvailable && isFullscreen"
         style="position: fixed; right: 5vw; z-index: 100; margin-top: 1vh"
       >
-        <v-btn @click="toggleFullScrean" color="background-light" fab small>
+        <v-btn @click="toggleFullscreen" color="background-light" fab small>
           <v-icon>mdi-fullscreen-exit</v-icon>
         </v-btn>
       </div>
 
-      <template v-if="!isFullscrean">
+      <template v-if="!isFullscreen">
         <v-navigation-drawer
           app
           permanent
@@ -186,7 +186,7 @@
                 :to="{
                   name: 'Plugin',
                   params: plugin,
-                  query: { url: plugin.url, fullscrean: false },
+                  query: { url: plugin.url, fullscreen: (viewport > 768) ? false : true },
                 }"
               >
                 <v-list-item-icon>
@@ -336,8 +336,8 @@
                 <v-btn
                   class="ml-2"
                   color="background-light"
-                  v-if="isFullscreanAvailable && !isFullscrean"
-                  @click="toggleFullScrean"
+                  v-if="isFullscreenAvailable && !isFullscreen"
+                  @click="toggleFullscreen"
                   fab
                   small
                 >
@@ -396,7 +396,7 @@
       </template>
     </v-app>
 
-    <router-view v-if="isFullscrean" />
+    <router-view v-if="isFullscreen" />
     <instances-table-modal
       v-if="overlay.uuid"
       type="menu"
@@ -411,7 +411,7 @@
           color="success"
           :style="{
             position: 'absolute',
-            top: `${overlay.y + ((isFullscrean) ? 0 : 80)}px`,
+            top: `${overlay.y + ((isFullscreen) ? 0 : 80)}px`,
             right: `30px`,
             zIndex: 100,
             visibility: 'hidden',
@@ -451,6 +451,7 @@ export default {
     const { loginHandler } = useLoginClient();
 
     return {
+      viewport: ref(window.innerWidth),
       isMenuMinimize: ref(true),
       isMouseOnMenu: ref(false),
       easterEgg: ref(false),
@@ -475,6 +476,7 @@ export default {
       document.title = `${value} | NoCloud`;
     },
     onResize(e) {
+      this.viewport = window.innerWidth
       if (!(e instanceof UIEvent)) {
         this.isMenuMinimize = window.innerWidth <= 768;
       }
@@ -521,12 +523,12 @@ export default {
     chatClick() {
       this.$store.commit("app/setChatClicks", 1);
     },
-    toggleFullScrean() {
+    toggleFullscreen() {
       this.$router.push({
         path: this.$route.path,
         query: {
           ...this.$route.query,
-          fullscrean: !this.isFullscrean,
+          fullscreen: !this.isFullscreen,
         },
       });
     },
@@ -563,14 +565,14 @@ export default {
         };
       else return {};
     },
-    isFullscrean() {
+    isFullscreen() {
       return (
         this.$route.path.includes("vnc") ||
-        this.$route.query["fullscrean"] === "true"
+        this.$route.query["fullscreen"] === "true"
       );
     },
-    isFullscreanAvailable() {
-      return this.$route.query["fullscrean"] !== undefined;
+    isFullscreenAvailable() {
+      return this.$route.query["fullscreen"] !== undefined;
     },
     plugins() {
       return this.$store.getters["plugins/all"];

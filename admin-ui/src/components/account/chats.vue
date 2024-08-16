@@ -2,15 +2,20 @@
   <plugin-iframe
     style="height: 100vh; width: 100%"
     url="/cc.ui/"
-    :params="{ filterByAccount: $route.params.accountId }"
+    :params="params"
   />
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { useRoute } from "vue-router/composables";
 import PluginIframe from "@/components/plugin/iframe.vue";
 
 const route = useRoute()
+const params = computed(() =>({
+  filterByAccount: route.params.accountId,
+  fullUrl: location.href
+}))
 
 window.addEventListener("message", ({ data, origin, source }) => {
   if (origin.includes("localhost") || !data) return;
