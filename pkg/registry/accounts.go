@@ -428,6 +428,10 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 			log.Warn("No Enough Rights", zap.String("requestor", requestor), zap.String("mother", motherAcc.ID.String()))
 			return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 		}
+		if motherAcc.GetAccountOwner() != "" {
+			log.Warn("Subaccounts cannot create subaccounts", zap.String("account", motherAcc.GetUuid()))
+			return nil, status.Error(codes.InvalidArgument, "Subaccounts cannot create subaccounts")
+		}
 		existNs, err := s.ctrl.GetNamespace(ctx, motherAcc)
 		if err != nil {
 			if err.Error() == "no more documents" {
