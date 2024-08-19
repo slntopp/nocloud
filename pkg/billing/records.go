@@ -335,7 +335,7 @@ LET account = LAST(
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-        RETURN node
+        RETURN LENGTH(node.account_owner) > 0 ? node : DOCUMENT(@@accounts, node.account_owner)
     )
     
 RETURN account.suspended
@@ -361,7 +361,7 @@ FOR service IN @@services // Iterate over Services
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-        RETURN node
+        RETURN LENGTH(node.account_owner) > 0 ? node : DOCUMENT(@@accounts, node.account_owner)
     )
 
 	LET currency = account.currency != null ? account.currency : @currency
