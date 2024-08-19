@@ -234,6 +234,25 @@ func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred stri
 	return err
 }
 
+func (ctrl *AccountsController) GetAccountOrOwnerAccountIfPresent(ctx context.Context, id string) (Account, error) {
+	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
+	if err != nil {
+		ctrl.log.Error("Error getting account", zap.Error(err))
+		return Account{}, err
+	}
+	if account.GetAccountOwner() != "" {
+		account, err = GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, account.GetAccountOwner()))
+		if err != nil {
+			ctrl.log.Error("Error getting account owner", zap.Error(err))
+			return Account{}, err
+		}
+		ctrl.log.Debug("Got document as owner account", zap.Any("account", account))
+		return account, nil
+	}
+	ctrl.log.Debug("Got document", zap.Any("account", account))
+	return account, nil
+}
+
 func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool) {
 	cred_edge := auth_type + "-" + acc.Key
 	ctrl.log.Debug("Looking for Credentials Edge(Link)", zap.String("key", cred_edge))

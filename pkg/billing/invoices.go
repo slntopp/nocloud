@@ -319,7 +319,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
 	}
 
-	// Create transaction if it's balance deposit
+	// Create transaction if it's balance deposit or instance start
 	if t.GetType() == pb.ActionType_BALANCE || t.GetType() == pb.ActionType_INSTANCE_START {
 		var transactionTotal = t.GetTotal()
 		transactionTotal *= -1
@@ -331,9 +331,15 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
 		}
 
+		acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
+		if err != nil {
+			log.Error("Failed to get account", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get account")
+		}
+
 		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
 			Priority: pb.Priority_NORMAL,
-			Account:  t.GetAccount(),
+			Account:  acc.GetUuid(),
 			Currency: defCurr,
 			Total:    transactionTotal * rate,
 			Exec:     0,
@@ -863,30 +869,30 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 	}
 
-	if t.Type == pb.ActionType_BALANCE {
-		var transactionTotal = t.GetTotal()
-		transactionTotal *= -1
-
-		// Convert invoice's currency to default currency(according to how creating transaction works)
-		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
-		if err != nil {
-			log.Error("Failed to get exchange rate", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-		}
-
-		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
-			Priority: pb.Priority_NORMAL,
-			Account:  t.GetAccount(),
-			Currency: defCurr,
-			Total:    transactionTotal * rate,
-			Exec:     0,
-		}))
-		if err != nil {
-			log.Error("Failed to create transaction", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
-		}
-		t.Transactions = []string{newTr.Msg.Uuid}
-	}
+	//if t.Type == pb.ActionType_BALANCE {
+	//	var transactionTotal = t.GetTotal()
+	//	transactionTotal *= -1
+	//
+	//	// Convert invoice's currency to default currency(according to how creating transaction works)
+	//	rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
+	//	if err != nil {
+	//		log.Error("Failed to get exchange rate", zap.Error(err))
+	//		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+	//	}
+	//
+	//	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+	//		Priority: pb.Priority_NORMAL,
+	//		Account:  t.GetAccount(),
+	//		Currency: defCurr,
+	//		Total:    transactionTotal * rate,
+	//		Exec:     0,
+	//	}))
+	//	if err != nil {
+	//		log.Error("Failed to create transaction", zap.Error(err))
+	//		return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
+	//	}
+	//	t.Transactions = []string{newTr.Msg.Uuid}
+	//}
 
 	_, err = s.invoices.Update(ctx, t)
 	if err != nil {
