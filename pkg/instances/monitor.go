@@ -94,7 +94,7 @@ FOR node, edge, path IN 3
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-    RETURN node.balance == null ? 0 : node.balance
+    RETURN LENGTH(node.account_owner) > 0 ? TO_NUMBER(DOCUMENT(@@accounts, node.account_owner)["balance"]) : TO_NUMBER(node.balance)
 `
 
 const getAddons = `
