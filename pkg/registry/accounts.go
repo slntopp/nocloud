@@ -410,9 +410,46 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, request.Namespace)
+	var nsToConnect = request.GetNamespace()
+	isSubaccount := request.GetAccountOwner() != ""
+	var motherAcc graph.Account
+	if isSubaccount {
+		var err error
+		motherAcc, err = s.ctrl.Get(ctx, request.GetAccountOwner())
+		if err != nil {
+			log.Error("Error getting account owner", zap.Error(err), zap.String("account", request.GetAccountOwner()))
+			return nil, err
+		}
+		ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, motherAcc.ID)
+		if !ok {
+			log.Warn("No Access", zap.String("requestor", requestor), zap.String("mother", motherAcc.ID.String()))
+			return nil, status.Error(codes.PermissionDenied, "No Access")
+		} else if access_lvl < access.Level_ADMIN {
+			log.Warn("No Enough Rights", zap.String("requestor", requestor), zap.String("mother", motherAcc.ID.String()))
+			return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
+		}
+		existNs, err := s.ctrl.GetNamespace(ctx, motherAcc)
+		if err != nil {
+			if err.Error() == "no more documents" {
+				personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, request.GetAccountOwner())
+				createdNs, err := s.ns_ctrl.Create(personal_ctx, motherAcc.GetTitle())
+				if err != nil {
+					log.Error("Error creating namespace for account owner", zap.Error(err), zap.String("namespace", request.Namespace))
+					return nil, err
+				}
+				nsToConnect = createdNs.GetUuid()
+			} else {
+				log.Error("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
+				return nil, err
+			}
+		} else {
+			nsToConnect = existNs.GetUuid()
+		}
+	}
+
+	ns, err := s.ns_ctrl.Get(ctx, nsToConnect)
 	if err != nil {
-		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
+		log.Error("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
 		return nil, err
 	}
 
@@ -433,14 +470,15 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	creationAccount := accountspb.Account{
-		Title:    request.Title,
-		Currency: request.Currency,
-		Data:     request.GetData(),
+		Title:        request.Title,
+		Currency:     request.Currency,
+		Data:         request.GetData(),
+		AccountOwner: request.GetAccountOwner(),
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
 	if err != nil {
-		log.Debug("Error creating account", zap.Error(err))
+		log.Error("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
 	}
 	res := &accountspb.CreateResponse{Uuid: acc.Key}
@@ -459,7 +497,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 		createdNs, err := s.ns_ctrl.Create(personal_ctx, acc.GetTitle())
 		if err != nil {
-			log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
+			log.Error("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
 		} else {
 			res.Namespace = createdNs.ID.Key()
 		}
@@ -478,12 +516,34 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return res, err
 	}
 
+	// Patch mother account with new subaccount and link namespace
+	if isSubaccount {
+		subaccounts := motherAcc.GetSubaccounts()
+		subaccounts = append(subaccounts, acc.GetUuid())
+		if err = s.ctrl.Update(ctx, motherAcc, map[string]interface{}{
+			"subaccounts": subaccounts,
+		}); err != nil {
+			log.Error("Error updating mother account with new subaccount", zap.Error(err))
+			return res, err
+		}
+		col, _ := s.db.Collection(ctx, schema.ACC2NS)
+		if err := acc.LinkNamespace(ctx, col, ns, access.Level_MGMT, roles.DEFAULT); err != nil {
+			log.Error("Error linking child account to mother namespace", zap.Error(err))
+			return res, err
+		}
+		log.Debug("Subaccount created and linked", zap.String("subaccount", acc.GetUuid()))
+	}
+
 	return res, nil
 }
 
 func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log := s.log.Named("SignUp")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	if request.GetAccountOwner() != "" {
+		return nil, status.Error(codes.InvalidArgument, "Cannot create subaccount during SignUp")
+	}
 
 	var stdSettings SignUpSettings
 	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {

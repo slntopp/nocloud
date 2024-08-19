@@ -181,6 +181,33 @@ func (ctrl *AccountsController) Delete(ctx context.Context, id string) error {
 	return acc.Delete(ctx, ctrl.col.Database())
 }
 
+const GetAccountNamespace = `
+FOR node IN 0..1
+OUTBOUND @from
+GRAPH Permissions
+FILTER IS_SAME_COLLECTION(@@kind, node)
+    LET doc = DOCUMENT(@@kind, node._key)
+    RETURN MERGE(doc, { uuid: node._key })
+`
+
+func (ctrl *AccountsController) GetNamespace(ctx context.Context, a Account) (Namespace, error) {
+	c, err := ctrl.col.Database().Query(ctx, GetAccountNamespace, map[string]interface{}{
+		"@kind": schema.NAMESPACES_COL,
+		"from":  driver.NewDocumentID(schema.ACCOUNTS_COL, a.GetUuid()),
+	})
+	if err != nil {
+		return Namespace{}, err
+	}
+	defer c.Close()
+
+	var r Namespace
+	if _, err = c.ReadDocument(ctx, &r); err != nil {
+		return Namespace{}, err
+	}
+
+	return r, nil
+}
+
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
 func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials, role string) error {
 	cred, err := ctrl.cred.CreateDocument(ctx, c)
