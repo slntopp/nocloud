@@ -29,7 +29,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -38,7 +37,6 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -97,6 +95,10 @@ func main() {
 		Addr: redisHost,
 		DB:   0,
 	})
+	if status := rdb.Ping(context.Background()); status.Err() != nil {
+		log.Fatal("Failed to connect to redis", zap.Error(status.Err()))
+	}
+	log.Info("Redis connection established")
 
 	auth.SetContext(log, rdb, SIGNING_KEY)
 	s := grpc.NewServer(
@@ -114,7 +116,7 @@ func main() {
 	defer rbmq.Close()
 	log.Info("RabbitMQ connection established")
 
-	server := sp.NewServicesProviderServer(log, db, rbmq)
+	server := sp.NewServicesProviderServer(log, db, rbmq, rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
@@ -148,13 +150,6 @@ func main() {
 		server.RegisterExtentionServer(ext_srv_type.GetType(), client)
 		log.Info("Registered Extention Server", zap.String("ext_server", ext_server), zap.String("type", ext_srv_type.GetType()))
 	}
-
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
-	if err != nil {
-		log.Fatal("Can't generate token", zap.Error(err))
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
-	go server.MonitoringRoutine(ctx)
 	sppb.RegisterServicesProvidersServiceServer(s, server)
 	sppb.RegisterShowcasesServiceServer(s, s_server)
 

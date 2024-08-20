@@ -19,7 +19,10 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"slices"
+	go_sync "sync"
 	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
@@ -49,16 +52,30 @@ type InstancesServer struct {
 
 	ctrl    *graph.InstancesController
 	ig_ctrl *graph.InstancesGroupsController
+	sp_ctrl *graph.ServicesProvidersController
 
 	drivers map[string]driverpb.DriverServiceClient
 
 	db driver.Database
+
+	rdb *redis.Client
+
+	monitoring Routine
+
+	spSyncers map[string]*go_sync.Mutex
 }
 
-func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection) *InstancesServer {
+type Routine struct {
+	Name     string
+	LastExec string
+	Running  bool
+}
+
+func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *InstancesServer {
 	log := logger.Named("instances")
 	log.Debug("New Instances Server Creating")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)
+	sp_ctrl := graph.NewServicesProvidersController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
 	s := s.NewStatesPubSub(log, &db, rbmq)
@@ -90,12 +107,25 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 		db: db, log: log,
 		ctrl:    ig_ctrl.Instances(),
 		ig_ctrl: ig_ctrl,
+		sp_ctrl: &sp_ctrl,
 		drivers: make(map[string]driverpb.DriverServiceClient),
+		rdb:     rdb,
+		monitoring: Routine{
+			Name:    "Monitoring",
+			Running: false,
+		},
+		spSyncers: make(map[string]*go_sync.Mutex),
 	}
 }
 
 func (s *InstancesServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
+}
+
+var methodsToSync = []string{
+	"manual_renew",
+	"free_renew",
+	"cancel_renew",
 }
 
 func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.InvokeRequest]) (*connect.Response[pb.InvokeResponse], error) {
@@ -105,8 +135,33 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
+	if err != nil {
+		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
+		return nil, err
+	}
+	log = log.With(zap.String("sp", r.SP.GetUuid()))
+
+	// Sync with driver's monitoring
+	if slices.Contains(methodsToSync, req.Method) {
+		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), 5)
+		defer syncer.Open()
+		_ = syncer.WaitUntilOpenedAndCloseAfter()
+		//log.Debug("Locking mutex")
+		//m := s.spSyncers[r.SP.GetUuid()]
+		//if m == nil {
+		//	m = &go_sync.Mutex{}
+		//	s.spSyncers[r.SP.GetUuid()] = m
+		//}
+		//m.Lock()
+		//defer func() {
+		//	log.Debug("Unlocking mutex")
+		//	m.Unlock()
+		//}()
+	}
+
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
+	instance, err = graph.GetInstanceWithAccess(
 		ctx, s.db,
 		instance_id,
 	)
@@ -123,12 +178,6 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	if instance.GetState().GetState() == stpb.NoCloudState_SUSPENDED && instance.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
-	}
-
-	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
-	if err != nil {
-		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
-		return nil, err
 	}
 
 	client, ok := s.drivers[r.SP.Type]
@@ -164,6 +213,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 
 	nocloud.Log(log, event)
 
+	log.Debug("Request finished")
 	return connect.NewResponse(invoke), nil
 }
 

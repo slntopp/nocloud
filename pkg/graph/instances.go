@@ -432,11 +432,17 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	nocloud.Log(log, event)
 
+	sp, err = ctrl.getSp(ctx, uuid)
+	if err != nil {
+		return err
+	}
+
 	c := pb.Context{
-		Instance: inst.GetUuid(),
+		Instance: uuid,
 		Sp:       sp,
 		Event:    "UPDATE",
 	}
+	log.Debug("publishing to ansible_hooks", zap.Any("c", c))
 	body, err := proto.Marshal(&c)
 	if err == nil {
 		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{

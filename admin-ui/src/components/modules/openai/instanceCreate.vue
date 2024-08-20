@@ -18,14 +18,16 @@
       </v-row>
       <v-row>
         <v-col cols="6">
-          <v-autocomplete
-            label="Price model"
-            item-text="title"
-            item-value="uuid"
+          <plans-autocomplete
             :value="instance.billing_plan"
-            :items="plans"
+            :custom-params="{
+              filters: { type: ['openai'] },
+              anonymously: true,
+            }"
+            @input="changeBilling"
+            return-object
+            label="Price model"
             :rules="planRules"
-            @change="changeBilling"
           />
         </v-col>
 
@@ -49,16 +51,16 @@
 <script setup>
 import { onMounted, ref, toRefs, watch } from "vue";
 import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
 const props = defineProps([
-  "plans",
   "instance",
   "planRules",
   "spUuid",
   "isEdit",
   "accountId",
 ]);
-const { accountId, instance, isEdit, planRules, plans } = toRefs(props);
+const { accountId, instance, isEdit, planRules } = toRefs(props);
 
 const emit = defineEmits(["set-instance", "set-value"]);
 
@@ -86,7 +88,7 @@ onMounted(() => {
   setValue("config.user", accountId.value);
 });
 const changeBilling = (val) => {
-  bilingPlan.value = plans.value.find((p) => p.uuid === val);
+  bilingPlan.value = val;
   setValue("billing_plan", bilingPlan.value);
   setTariffAddons();
 };
@@ -94,9 +96,6 @@ const setValue = (key, value) => {
   emit("set-value", { key, value });
 };
 
-watch(plans, () => {
-  changeBilling(instance.value.billing_plan);
-});
 watch(accountId, () => {
   setValue("config.user", accountId.value);
 });

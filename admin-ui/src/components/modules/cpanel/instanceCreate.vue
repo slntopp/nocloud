@@ -16,16 +16,17 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
-            :items="plans"
+          <plans-autocomplete
             :value="billingPlanId"
-            @change="setValue('billing_plan', $event)"
-            item-text="title"
+            :custom-params="{
+              filters: { type: ['cpanel'] },
+              anonymously: true,
+            }"
+            @input="setValue('billing_plan', $event)"
             return-object
             label="Price model"
             :rules="planRules"
-            item-value="uuid"
-          ></v-select>
+          />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
@@ -82,15 +83,10 @@
 <script setup>
 import { computed, onMounted, ref, toRefs } from "vue";
 import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
-const props = defineProps([
-  "plans",
-  "instance",
-  "planRules",
-  "spUuid",
-  "isEdit",
-]);
-const { instance, isEdit, planRules, plans } = toRefs(props);
+const props = defineProps(["instance", "planRules", "spUuid"]);
+const { instance, planRules } = toRefs(props);
 
 const emit = defineEmits(["set-instance", "set-value"]);
 
@@ -116,19 +112,14 @@ const getDefaultInstance = () => ({
 });
 
 onMounted(() => {
-  if (!isEdit.value) {
-    emit("set-instance", getDefaultInstance());
-  } else {
-    const plan = plans.value.find((p) => p.uuid == instance.value.billing_plan);
-    setValue("billing_plan", plan);
-  }
+  emit("set-instance", getDefaultInstance());
 });
 
 const billingPlanId = computed(() => {
   return instance.value.billing_plan.uuid;
 });
 const products = computed(() => {
-  const plan = plans.value.find((p) => p.uuid == billingPlanId.value);
+  const plan = instance.value.billing_plan;
   return Object.keys(plan?.products || {}).map((key) => ({
     ...plan.products[key],
     key,

@@ -120,12 +120,12 @@
               </v-btn>
               <v-btn
                 class="mr-2"
-                :loading="isDeleteLoading"
+                :loading="isSaveLoading"
                 @click="save(true)"
               >
                 Create
               </v-btn>
-              <v-btn :loading="isDeleteLoading" @click="save(false)">
+              <v-btn :loading="isSaveLoading" @click="save(false)">
                 Edit
               </v-btn>
             </v-card-actions>
@@ -279,11 +279,9 @@ export default {
         const data = await api.plans.create(billingPlan);
         await api.servicesProviders.bindPlan(this.sp.uuid, [data.uuid]);
         return data;
-      } else {
+      } else {        
         const title = this.getPlanTitle(this.template);
-        const ogPlan = this.$store.getters["plans/all"].find(
-          (p) => p.uuid === this.copyTemplate.billingPlan.uuid
-        );
+        const ogPlan = this.$store.getters["plans/one"];
         const updatedPlan = {
           ...ogPlan,
           ...this.copyTemplate.billingPlan,
@@ -359,7 +357,8 @@ export default {
         this.showSnackbarSuccess({
           message: "Instance saved successfully",
         });
-
+        console.log('refresh');
+        
         this.$emit("refresh");
       } catch (err) {
         this.showSnackbarError({ message: err.message });

@@ -42,6 +42,17 @@ func NewBillingPlansController(logger *zap.Logger, db driver.Database) BillingPl
 	graph := GraphGetEnsure(log, ctx, db, schema.BILLING_GRAPH.Name)
 	plans := GetEnsureCollection(log, ctx, db, schema.BILLING_PLANS_COL)
 	GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
+
+	_, _, err := plans.EnsureHashIndex(ctx, []string{"title"}, &driver.EnsureHashIndexOptions{
+		Unique:        true,
+		Sparse:        false,
+		NoDeduplicate: false,
+		InBackground:  false,
+		Name:          "title-unique-index",
+	})
+	if err != nil {
+		log.Fatal("Unable to create unique index on title", zap.Error(err))
+	}
 	return BillingPlansController{
 		log: log, col: plans, graph: graph,
 	}

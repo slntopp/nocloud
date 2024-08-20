@@ -143,6 +143,10 @@ init:
 
 func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Record, currencyConf CurrencyConf, now int64) error {
 	log := s.log.Named("Process record")
+	log = log.With(zap.String("instance", record.GetInstance()),
+		zap.String("product", record.GetProduct()),
+		zap.String("resource", record.GetResource()),
+		zap.String("addon", record.GetAddon()))
 
 	if record.Total == 0 {
 		log.Warn("Got zero record, skipping", zap.Any("record", &record))
@@ -172,6 +176,13 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		log.Error("Failed to get plan", zap.Error(err))
 		return err
 	}
+
+	_, ok := bp.Products[record.Product]
+	if _, okWithAddon := bp.Products[inst.GetProduct()]; (!ok && record.Product != "") || (!okWithAddon && record.Addon != "") {
+		log.Error("Invalid record. Addon record or product record, but no product in billing plan", zap.Any("record", &record))
+		return fmt.Errorf("invalid record. Addon record or product record, but no product in billing plan")
+	}
+
 	if record.Product != "" {
 		itemPrice = bp.Products[record.Product].Price
 	} else if record.Resource != "" {
@@ -201,7 +212,8 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 
 	record.Meta["transactionType"] = structpb.NewStringValue("system")
 
-	s.records.Create(ctx, record)
+	recordId := s.records.Create(ctx, record)
+	log.Debug("Record created", zap.String("record_id", recordId.Key()))
 	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	if record.Priority != pb.Priority_NORMAL {
 		cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
@@ -323,7 +335,7 @@ LET account = LAST(
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-        RETURN node
+        RETURN LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
     )
     
 RETURN account.suspended
@@ -349,7 +361,7 @@ FOR service IN @@services // Iterate over Services
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-        RETURN node
+        RETURN LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
     )
 
 	LET currency = account.currency != null ? account.currency : @currency

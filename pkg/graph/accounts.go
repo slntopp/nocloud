@@ -181,6 +181,33 @@ func (ctrl *AccountsController) Delete(ctx context.Context, id string) error {
 	return acc.Delete(ctx, ctrl.col.Database())
 }
 
+const GetAccountNamespace = `
+FOR node IN 0..1
+OUTBOUND @from
+GRAPH Permissions
+FILTER IS_SAME_COLLECTION(@@kind, node)
+    LET doc = DOCUMENT(@@kind, node._key)
+    RETURN MERGE(doc, { uuid: node._key })
+`
+
+func (ctrl *AccountsController) GetNamespace(ctx context.Context, a Account) (Namespace, error) {
+	c, err := ctrl.col.Database().Query(ctx, GetAccountNamespace, map[string]interface{}{
+		"@kind": schema.NAMESPACES_COL,
+		"from":  driver.NewDocumentID(schema.ACCOUNTS_COL, a.GetUuid()),
+	})
+	if err != nil {
+		return Namespace{}, err
+	}
+	defer c.Close()
+
+	var r Namespace
+	if _, err = c.ReadDocument(ctx, &r); err != nil {
+		return Namespace{}, err
+	}
+
+	return r, nil
+}
+
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
 func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials, role string) error {
 	cred, err := ctrl.cred.CreateDocument(ctx, c)
@@ -205,6 +232,25 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred string, c credentials.Credentials) (err error) {
 	_, err = ctrl.cred.UpdateDocument(ctx, cred, c)
 	return err
+}
+
+func (ctrl *AccountsController) GetAccountOrOwnerAccountIfPresent(ctx context.Context, id string) (Account, error) {
+	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
+	if err != nil {
+		ctrl.log.Error("Error getting account", zap.Error(err))
+		return Account{}, err
+	}
+	if account.GetAccountOwner() != "" {
+		account, err = GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, account.GetAccountOwner()))
+		if err != nil {
+			ctrl.log.Error("Error getting account owner", zap.Error(err))
+			return Account{}, err
+		}
+		ctrl.log.Debug("Got document as owner account", zap.Any("account", account))
+		return account, nil
+	}
+	ctrl.log.Debug("Got document", zap.Any("account", account))
+	return account, nil
 }
 
 func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool) {

@@ -58,7 +58,7 @@
         <v-text-field
           readonly
           label="Start date"
-          :value="formatSecondsToDate(template.data.start) || '-'"
+          :value="formatSecondsToDate(template.data?.start) || '-'"
         />
       </v-col>
 
@@ -184,7 +184,6 @@
       :account-currency="accountCurrency"
       v-model="priceModelDialog"
       :template="template"
-      :plans="filtredPlans"
       @refresh="emit('refresh')"
       :service="service"
     />
@@ -209,7 +208,6 @@ import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 
 const props = defineProps([
   "template",
-  "plans",
   "service",
   "sp",
   "account",
@@ -217,7 +215,7 @@ const props = defineProps([
 ]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans, service, account, addons } = toRefs(props);
+const { template, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -243,10 +241,6 @@ const dueDate = computed(() =>
   formatSecondsToDate(template.value?.data?.next_payment_date, true)
 );
 const isMonitoringsEmpty = computed(() => dueDate.value === "-");
-
-const filtredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "empty")
-);
 
 const totalPrice = computed(() => {
   return billingItems.value.reduce((acc, i) => acc + +i.price, 0)?.toFixed(2);

@@ -17,7 +17,10 @@ package billing
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"strconv"
+	"strings"
 
 	"encoding/json"
 	"time"
@@ -216,7 +219,6 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 	res, err := s.plans.Create(ctx, plan)
 	var event = &elpb.Event{
 		Entity:    schema.BILLING_PLANS_COL,
-		Uuid:      res.GetUuid(),
 		Scope:     "database",
 		Action:    "create",
 		Rc:        0,
@@ -226,12 +228,11 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 			Diff: "",
 		},
 	}
-
 	if err != nil {
 		event.Rc = 1
 		nocloud.Log(log, event)
 		log.Error("Error creating plan", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error creating plan")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error creating plan: %v", err))
 	}
 
 	resp := connect.NewResponse(res.Plan)
@@ -267,10 +268,9 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 	res, err := s.plans.Update(ctx, plan)
 	oldPlanMarshal, _ := json.Marshal(plan)
 	newPlanMarshal, _ := json.Marshal(res)
-
 	var event = &elpb.Event{
 		Entity:    schema.BILLING_PLANS_COL,
-		Uuid:      res.Uuid,
+		Uuid:      plan.GetUuid(),
 		Scope:     "database",
 		Action:    "update",
 		Rc:        0,
@@ -280,12 +280,11 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 			Diff: "",
 		},
 	}
-
 	if err != nil {
 		event.Rc = 0
 		nocloud.Log(log, event)
 		log.Error("Error updating plan", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error updating plan")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error updating plan: %v", err))
 	}
 
 	diff, err := jsondiff.CompareJSON(oldPlanMarshal, newPlanMarshal)
@@ -410,45 +409,179 @@ LET cur = LAST(
 RETURN cur.to.id == 0 ? cur.from : cur.to
 `
 
+func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[string]interface{}) {
+	var query string
+	var vars = map[string]interface{}{}
+	if req.GetSpUuid() == "" {
+		query = `FOR p IN @@plans`
+		vars["@plans"] = schema.BILLING_PLANS_COL
+	} else {
+		query = `FOR p, edge IN 1 OUTBOUND @sp GRAPH Billing`
+		query += ` FILTER IS_SAME_COLLECTION(p, @@plans)`
+		spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, req.GetSpUuid())
+		vars["sp"] = spDocId
+		vars["@plans"] = schema.BILLING_PLANS_COL
+	}
+
+	if len(req.GetExcludeUuids()) > 0 {
+		query += ` FILTER p._key NOT IN @excludeUuids`
+		vars["excludeUuids"] = req.GetExcludeUuids()
+	}
+
+	if req.GetAnonymously() {
+		query += ` FILTER p.public == true`
+		query += ` FILTER COUNT(
+    FOR sp, edge IN 1 INBOUND p GRAPH Billing
+        FILTER IS_SAME_COLLECTION(@@services_providers, sp)
+        RETURN 1
+) > 0`
+		vars["@services_providers"] = schema.SERVICES_PROVIDERS_COL
+	}
+
+	if !req.GetShowDeleted() {
+		query += ` FILTER p.status != @status`
+		vars["status"] = statuspb.NoCloudStatus_DEL
+	}
+
+	if !hasAccess {
+		query += ` FILTER p.public == true`
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			if key == "kind" || key == "type" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER p.%s in @%s`, key, key)
+				vars[key] = values
+			} else if key == "meta.isIndividual" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER TO_BOOL(p.meta.isIndividual) in @individual`)
+				vars["individual"] = values
+			} else if key == "search_param" {
+				query += fmt.Sprintf(` FILTER LOWER(p["title"]) LIKE LOWER("%s")
+|| p._key LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+			} else if key == "public" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER TO_BOOL(p.%s) in @%s`, key, key)
+				vars[key] = values
+			} else if key == "status" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER TO_NUMBER(p.%s) in @%s`, key, key)
+				vars[key] = values
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
+				vars[key] = values
+			}
+		}
+	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT p.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		if field == "total" {
+			if strings.ToLower(sort) == "asc" {
+				sort = "desc"
+			} else {
+				sort = "asc"
+			}
+		}
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			vars["offset"] = offset
+			vars["count"] = limit
+		}
+	}
+
+	query += ` RETURN merge(p, {uuid: p._key})`
+	return query, vars
+}
+
 func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request[pb.ListRequest]) (*connect.Response[pb.ListResponse], error) {
 	log := s.log.Named("ListPlans")
-
 	req := r.Msg
 
 	var requestor string
 	if !req.Anonymously {
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	log.Debug("Requestor", zap.String("id", requestor))
+	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
-	plans, err := s.plans.List(ctx, req.SpUuid)
+	if req.GetUuid() != "" {
+		return s._HandleGetSinglePlan(ctx, requestor, req.GetUuid(), req.GetAnonymously())
+	}
+
+	query, vars := buildPlansListQuery(req, ok)
+	log.Debug("Ready to retrieve plans", zap.String("query", query), zap.Any("vars", vars))
+	req.Limit = nil
+	req.Page = nil
+	countQuery, countVars := buildPlansListQuery(req, ok)
+	countQuery = fmt.Sprintf(`RETURN COUNT(%s)`, countQuery)
+
+	// Getting plans
+	cursor, err := s.db.Query(ctx, query, vars)
 	if err != nil {
-		log.Error("Error listing plans", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error listing plans")
+		log.Error("Failed to retrieve plans", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve plans")
+	}
+	defer cursor.Close()
+
+	var plans []*pb.Plan
+	for {
+		plan := &pb.Plan{}
+		meta, err := cursor.ReadDocument(ctx, plan)
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			log.Error("Failed to retrieve plans", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to retrieve plans")
+		}
+		plan.Uuid = meta.Key
+		plans = append(plans, plan)
 	}
 
-	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
-
-	result := make([]*pb.Plan, 0)
-	for _, plan := range plans {
-		if plan.Public && (plan.GetStatus() != statuspb.NoCloudStatus_DEL || req.GetShowDeleted()) {
-			result = append(result, plan.Plan)
-			continue
-		}
-		if req.Anonymously {
-			continue
-		}
-		if !ok {
-			continue
-		}
-		if !(plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted()) {
-			continue
-		}
-
-		result = append(result, plan.Plan)
+	// Getting plans count
+	cursor, err = s.db.Query(ctx, countQuery, countVars)
+	if err != nil {
+		log.Error("Failed to retrieve plans count", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve plans count")
 	}
+	defer cursor.Close()
+	var count int
+	if _, err = cursor.ReadDocument(ctx, &count); err != nil {
+		log.Error("Failed to retrieve plans count", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve plans count")
+	}
+	log.Debug("Plans count", zap.Int("count", count))
 
+	// Apply account prices
 	if !req.Anonymously {
 		acc, err := s.accounts.Get(ctx, requestor)
 		if err != nil {
@@ -485,25 +618,21 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		}
 
 		var (
-			rate       float64
-			commission float64 = 0
+			rate float64
 		)
 
 		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
-			rate, commission, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
+			rate, _, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
 			}
 		}
 
-		// Apply commission to rate
-		rate = rate + ((commission / 100) * rate)
-
-		for planIndex := range result {
-			plan := result[planIndex]
+		for planIndex := range plans {
+			plan := plans[planIndex]
 
 			products := plan.GetProducts()
 			for key := range products {
@@ -517,15 +646,85 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			}
 			plan.Resources = resources
 
-			result[planIndex] = plan
+			plans[planIndex] = plan
 		}
 	}
 
-	resp := connect.NewResponse(&pb.ListResponse{Pool: result})
-
+	log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
+	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
 	return resp, nil
 }
 
+const countPlansQuery = `
+LET plans = (
+    %s
+)
+
+let type = (
+ FOR p IN plans
+ FILTER p.type
+ FILTER p.type != ""
+ RETURN DISTINCT p.type
+)
+
+return { 
+	unique: {
+        type: type,
+	},
+	total: LENGTH(plans)
+}
+`
+
+func (s *BillingServiceServer) PlansUnique(ctx context.Context, _req *connect.Request[pb.PlansUniqueRequest]) (*connect.Response[pb.PlansUniqueResponse], error) {
+	log := s.log.Named("PlansUnique")
+	req := _req.Msg
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+
+	type Response struct {
+		Total  int                    `json:"total"`
+		Unique map[string]interface{} `json:"unique"`
+	}
+
+	query, vars := buildPlansListQuery(&pb.ListRequest{
+		SpUuid:      req.GetSpUuid(),
+		Anonymously: req.GetAnonymously(),
+		ShowDeleted: req.GetShowDeleted(),
+		Filters:     req.GetFilters(),
+	}, ok)
+
+	query = fmt.Sprintf(countPlansQuery, query)
+
+	s.log.Debug("Query", zap.Any("q", query))
+	s.log.Debug("Ready to build query", zap.Any("bindVars", vars))
+
+	c, err := s.db.Query(ctx, query, vars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var resp Response
+	_, err = c.ReadDocument(ctx, &resp)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug("Response", zap.Any("resp", resp))
+
+	var result pb.PlansUniqueResponse
+	obj, err := structpb.NewStruct(resp.Unique)
+	if err != nil {
+		return nil, err
+	}
+	result.Unique = structpb.NewStructValue(obj)
+	result.Total = uint64(resp.Total)
+
+	return connect.NewResponse(&result), nil
+}
+
+// ListPlansInstances TODO: Optimize to fetch only provided plans in uuids array, not all plans by query
 func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connect.Request[pb.ListPlansInstancesRequest]) (*connect.Response[pb.ListPlansInstancesResponse], error) {
 	log := s.log.Named("ListPlans")
 
@@ -536,6 +735,11 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
 	log.Debug("Requestor", zap.String("id", requestor))
+
+	var useUuidsArray = false
+	if len(req.GetUuids()) > 0 {
+		useUuidsArray = true
+	}
 
 	plans, err := s.plans.List(ctx, "")
 	if err != nil {
@@ -581,6 +785,9 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 		if !ok {
 			continue
 		}
+		if useUuidsArray && !slices.Contains(req.GetUuids(), plan.GetUuid()) {
+			continue
+		}
 
 		result[plan.GetUuid()] = structpb.NewNumberValue(float64(planInstancesCount[plan.GetUuid()]))
 	}
@@ -595,6 +802,27 @@ FOR inst in Instances
 	FILTER inst.status != @status
 	RETURN inst.billing_plan.uuid
 `
+
+func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, acc, uuid string, anonymously bool) (*connect.Response[pb.ListResponse], error) {
+	p, err := s.plans.Get(ctx, &pb.Plan{Uuid: uuid})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "Plan doesn't exist")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+
+	if anonymously && p.Public {
+		resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
+		return resp, nil
+	}
+
+	if !ok && !p.Public {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
+	return resp, nil
+}
 
 /*
 const getPlanInstances = `

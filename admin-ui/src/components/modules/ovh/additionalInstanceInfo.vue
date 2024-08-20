@@ -5,8 +5,8 @@
         <v-text-field
           readonly
           :label="`Provider API ${ovhType}Name`"
-          :value="template.data[ovhType + 'Name']"
-          @click:append="addToClipboard(template.data[ovhType + 'Name'])"
+          :value="template.data?.[ovhType + 'Name']"
+          @click:append="addToClipboard(template.data?.[ovhType + 'Name'])"
           append-icon="mdi-content-copy"
         />
       </v-col>
@@ -21,7 +21,7 @@
           readonly
           label="Login"
           :value="template.state.meta?.login"
-          @click:append="addToClipboard(template.data[ovhType + 'Name'])"
+          @click:append="addToClipboard(template.data?.[ovhType + 'Name'])"
           append-icon="mdi-content-copy"
         />
       </v-col>

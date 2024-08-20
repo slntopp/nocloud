@@ -51,7 +51,8 @@
         <v-expansion-panel v-for="(item, i) in showcase.items" :key="i">
           <v-expansion-panel-header color="background">
             {{ getProviderTitle(item.servicesProvider) }}
-            - {{ getPlanTitle(item.plan) }}
+            -
+            {{ getPlan(item.servicesProvider, item.plan)?.title || item.plan }}
 
             <v-icon
               style="flex: 0 0 auto; margin: 0 auto 0 10px"
@@ -88,7 +89,8 @@
                   item-text="title"
                   item-value="uuid"
                   v-model="item.plan"
-                  :items="plans[i]"
+                  :loading="isPlansLoading"
+                  :items="isPlansLoading ? [] : getPlans(item.servicesProvider)"
                 />
               </v-col>
               <v-col cols="6">
@@ -156,24 +158,12 @@ const langs = ["en", "ru", "pl"];
 const isLoading = ref(false);
 const defaultLocation = ref("");
 const isSaveLoading = ref(false);
+const isPlansLoading = ref(false);
+
+const plansBySpMap = ref(new Map());
 
 const requiredRule = ref((val) => !!val || "Required field");
 const serviceProviders = computed(() => store.getters["servicesProviders/all"]);
-
-const plans = computed(() => {
-  const allPlans = store.getters["plans/all"].filter((p) => p.status !== "DEL");
-
-  return showcase.value.items.reduce((result, { servicesProvider }, i) => {
-    const { meta } =
-      serviceProviders.value.find(({ uuid }) => uuid === servicesProvider) ??
-      {};
-
-    return {
-      ...result,
-      [i]: allPlans.filter(({ uuid }) => meta?.plans?.includes(uuid)),
-    };
-  }, {});
-});
 
 const locations = computed(() =>
   showcase.value.items.reduce((result, { servicesProvider }, i) => {
@@ -192,11 +182,16 @@ const locations = computed(() =>
 );
 
 const filteredLocations = computed(() => {
+  if(isPlansLoading.value || isLoading.value){
+    return {}
+  }
+
   const result = {};
 
   Object.entries(locations.value).forEach(([i, value]) => {
-    const plan = plans.value[i].find(
-      ({ uuid }) => uuid === showcase.value.items[i].plan
+    const plan = getPlan(
+      showcase.value.items[i].servicesProvider,
+      showcase.value.items[i].plan
     );
 
     if (!plan) return;
@@ -236,10 +231,9 @@ onMounted(async () => {
     isLoading.value = true;
     await Promise.all([
       store.dispatch("servicesProviders/fetch", { anonymously: true }),
-      store.dispatch("plans/fetch"),
     ]);
+    await fetchPlans();
   } catch (e) {
-    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch info",
     });
@@ -294,7 +288,6 @@ const save = async () => {
     });
     router.push({ name: "Showcases" });
   } catch (e) {
-    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during save showcase",
     });
@@ -329,10 +322,19 @@ const removeItem = (i) => {
   showcase.value.items.splice(i, 1);
 };
 
-const getPlanTitle = (uuid) => {
-  const plans = store.getters["plans/all"] ?? [];
+const getPlan = (sp, uuid) => {
+  const plans = plansBySpMap.value.get(sp) ?? [];
 
-  return plans.find((plan) => plan.uuid === uuid)?.title ?? uuid;
+  if (Array.isArray(plans)) {
+    return plans.find((plan) => plan.uuid === uuid);
+  }
+};
+
+const getPlans = (sp) => {
+  if (!Array.isArray(plansBySpMap.value.get(sp))) {
+    return [];
+  }
+  return plansBySpMap.value.get(sp);
 };
 
 const getProviderTitle = (uuid) => {
@@ -341,6 +343,36 @@ const getProviderTitle = (uuid) => {
     uuid
   );
 };
+
+const fetchPlans = async () => {
+  isPlansLoading.value = true;
+
+  try {
+    await Promise.all(
+      showcase.value.items.map(async ({ servicesProvider: sp }) => {
+        try {
+          if (sp && !plansBySpMap.value.has(sp)) {
+            plansBySpMap.value.set(
+              sp,
+              store.getters["plans/plansClient"].listPlans({
+                spUuid: sp,
+              })
+            );
+
+            const data = await plansBySpMap.value.get(sp);
+            plansBySpMap.value.set(sp, data.toJson().pool);
+          }
+        } catch {
+          plansBySpMap.value.delete(sp);
+        }
+      })
+    );
+  } finally {
+    isPlansLoading.value = false;
+  }
+};
+
+watch(showcase.value.items, fetchPlans);
 </script>
 
 <style scoped lang="scss">
