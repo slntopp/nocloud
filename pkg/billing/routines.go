@@ -298,6 +298,12 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					continue
 				}
 				log.Debug("Instance owner found", zap.String("account", acc.GetUuid()))
+				acc, err = s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, acc.GetUuid())
+				if err != nil {
+					log.Error("Error getting instance owner", zap.Error(err))
+					continue
+				}
+				log.Debug("Instance owner after subaccount logic", zap.String("account", acc.GetUuid()))
 
 				if acc.Currency == nil {
 					acc.Currency = currencyConf.Currency
