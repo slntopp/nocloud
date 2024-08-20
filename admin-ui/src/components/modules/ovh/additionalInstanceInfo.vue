@@ -10,21 +10,21 @@
           append-icon="mdi-content-copy"
         />
       </v-col>
+
       <v-col>
         <instance-ip-menu :item="template" />
       </v-col>
-      <v-col>
-        <v-text-field readonly :value="os" label="OS" />
-      </v-col>
+
       <v-col>
         <v-text-field
           readonly
           label="Login"
           :value="template.state.meta?.login"
-          @click:append="addToClipboard(template.data?.[ovhType + 'Name'])"
+          @click:append="addToClipboard(template.state.meta?.login)"
           append-icon="mdi-content-copy"
         />
       </v-col>
+
       <v-col>
         <password-text-field
           readonly
@@ -32,30 +32,90 @@
           copy
         />
       </v-col>
+
+      <v-col>
+        <v-text-field
+          append-icon="mdi-pencil"
+          @input="
+            emit('update', {
+              key: `config.configuration.${ovhType}_os`,
+              value: $event,
+            })
+          "
+          :value="os"
+          label="OS"
+        />
+      </v-col>
     </v-row>
     <v-row>
       <v-col>
-        <v-text-field readonly :value="cpu" label="CPU" />
+        <v-text-field
+          append-icon="mdi-pencil"
+          @input="
+            emit('update', {
+              key: `config.configuration.${ovhType}_datacenter`,
+              value: $event,
+            })
+          "
+          :value="template.config.configuration?.[`${ovhType}_datacenter`]"
+          label="Datacenter"
+        />
       </v-col>
-      <v-col>
-        <v-text-field readonly :value="template.resources.ram" label="RAM" />
-      </v-col>
+
       <v-col>
         <v-text-field
-          readonly
+          append-icon="mdi-pencil"
+          @input="
+            emit('update', {
+              key: `resources.cpu`,
+              value: $event,
+            })
+          "
+          :value="cpu"
+          label="CPU"
+        />
+      </v-col>
+
+      <v-col>
+        <v-text-field
+          append-icon="mdi-pencil"
+          @input="
+            emit('update', {
+              key: `resources.ram`,
+              value: $event,
+            })
+          "
+          :value="template.resources.ram"
+          label="RAM"
+        />
+      </v-col>
+
+      <v-col>
+        <v-text-field
+          append-icon="mdi-pencil"
+          @input="
+            emit('update', {
+              key: `resources.drive_type`,
+              value: $event,
+            })
+          "
           :value="template.resources.drive_type"
           label="Disk type"
         />
       </v-col>
+
       <v-col>
         <v-text-field
-          readonly
+          append-icon="mdi-pencil"
+          @input="
+            emit('update', {
+              key: `resources.drive_size`,
+              value: $event,
+            })
+          "
           :value="template.resources.drive_size"
           label="Disk size"
         />
-      </v-col>
-      <v-col>
-        <v-text-field readonly :value="cpu" label="Software" />
       </v-col>
     </v-row>
   </div>
@@ -68,8 +128,9 @@ import { addToClipboard } from "@/functions";
 import PasswordTextField from "@/components/ui/passwordTextField.vue";
 
 const props = defineProps(["template"]);
-
 const { template } = toRefs(props);
+
+const emit = defineEmits(["update"]);
 
 const os = computed(() => {
   const os =
