@@ -590,6 +590,7 @@ let candidates = (
 	for acc in Accounts
 		filter acc.suspended
 		filter conf.auto_resume
+        filter LENGTH(acc.account_owner) == 0
 		return acc
 )
 
@@ -606,7 +607,14 @@ let global = (
         return acc
 )
 
-FOR acc IN union_distinct(local, global)
+LET subs = (
+    FOR acc IN UNION_DISTINCT(global, local)
+        FILTER IS_ARRAY(acc.subaccounts)
+        FOR sub IN acc.subaccounts
+           RETURN DOCUMENT(Accounts, sub)
+)
+
+FOR acc IN union_distinct(local, global, subs)
     RETURN MERGE(acc, {uuid:acc._key})
 `
 
@@ -623,6 +631,7 @@ LET candidates = (
         FILTER acc.balance != null
 		FILTER !acc.suspended
         FILTER !acc.suspend_conf.immune
+        FILTER LENGTH(acc.account_owner) == 0
         return acc
 )
 
@@ -649,8 +658,15 @@ LET local = (
         RETURN acc
 )
 
-FOR acc IN UNION_DISTINCT(global, local, extra)
-	RETURN MERGE(acc, {uuid: acc._key})
+LET subs = (
+    FOR acc IN UNION_DISTINCT(global, local, extra)
+        FILTER IS_ARRAY(acc.subaccounts)
+        FOR sub IN acc.subaccounts
+           RETURN DOCUMENT(Accounts, sub)
+)
+
+FOR acc IN UNION_DISTINCT(global, local, extra, subs)
+    RETURN MERGE(acc, {uuid:acc._key})
 `
 
 const generateTransactions = `
