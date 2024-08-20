@@ -372,6 +372,7 @@
             <v-col class="d-flex justify-end align-center">
               <languages v-if="false" />
               <themes />
+              <notifications />
               <user-menu v-if="isLoggedIn" />
             </v-col>
           </v-row>
@@ -425,6 +426,7 @@ import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
 import Themes from "@/components/header/themes.vue";
 import userMenu from "@/components/header/userMenu.vue";
+import notifications from "@/components/header/notifications.vue";
 
 export default {
   name: "App",
@@ -434,7 +436,8 @@ export default {
     appSearch,
     languages,
     instancesTableModal,
-    userMenu
+    userMenu,
+    notifications
   },
   setup() {
     const { loginHandler } = useLoginClient();
