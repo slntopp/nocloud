@@ -108,7 +108,7 @@
           <v-text-field
             label="Location"
             :value="template.config?.location || 'Unknown'"
-            readonly
+            @input="update({ key: 'config.location', value: $event })"
           />
         </v-col>
         <v-col>
@@ -144,6 +144,7 @@
       </nocloud-expansion-panels>
 
       <component
+        @update="update"
         :is="additionalInstanceInfoComponent"
         :sp="sp"
         :account="account"
@@ -282,9 +283,7 @@ export default {
     ...mapGetters("plans", { plans: "all" }),
     ...mapGetters("servicesProviders", { servicesProviders: "all" }),
     namespace() {
-      return this.namespaces?.find(
-        (n) => n.uuid == this.template.namespace
-      );
+      return this.namespaces?.find((n) => n.uuid == this.template.namespace);
     },
     service() {
       return this.services?.find((s) => s?.uuid == this.template.service);
