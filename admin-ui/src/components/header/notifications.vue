@@ -1,5 +1,5 @@
 <template>
-  <v-menu offset-y transition="slide-y-transition">
+  <v-menu v-model="isOpen" offset-y transition="slide-y-transition">
     <template v-slot:activator="{ on, attrs }">
       <v-btn
         class="mx-2"
@@ -41,11 +41,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import api from "@/api";
 import { formatSecondsToDate } from "@/functions";
 
+const isOpen = ref(false);
 const notifications = ref([]);
+const seen = ref([]);
 const isFetchLoading = ref(false);
 
 onMounted(() => {
@@ -53,8 +55,8 @@ onMounted(() => {
 });
 
 const isUnseenNotification = computed(() =>
-  notifications.value.find(
-    (notification) => notification.ts > Date.now() / 1000 - 86400
+  notifications.value.some(
+    (notification) => !seen.value.includes(getLogId(notification))
   )
 );
 
@@ -76,6 +78,40 @@ const fetchNotifications = async () => {
     isFetchLoading.value = false;
   }
 };
+
+const getLogId = (log) => `${log.uuid}$${log.ts}`;
+
+const getSeenNotifcations = () => {
+  seen.value = JSON.parse(
+    localStorage.getItem("nocloud-notifications") || `[]`
+  );
+};
+
+const setSeenNotifcations = (seen) => {
+  localStorage.setItem(
+    "nocloud-notifications",
+    JSON.stringify(
+      [...new Set(seen)]
+        .sort((a, b) => {
+          const bTs = +b.split("$")[1] || 0;
+          const aTs = +a.split("$")[1] || 0;
+
+          return bTs - aTs;
+        })
+        .slice(0, 20)
+    )
+  );
+  getSeenNotifcations();
+};
+
+watch(isOpen, () => {
+  setSeenNotifcations([
+    ...seen.value,
+    ...notifications.value.map((n) => getLogId(n)),
+  ]);
+});
+
+getSeenNotifcations();
 </script>
 
 <script>
