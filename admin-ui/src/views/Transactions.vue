@@ -10,34 +10,24 @@
           Create
         </v-btn>
       </v-col>
+      <v-col cols="1">
+        <v-btn
+          class="ma-2"
+          color="background-light"
+          @click="downloadTransactionsReport"
+          :loading="isReportLoading"
+          >Report</v-btn
+        >
+      </v-col>
     </v-row>
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
-    <!--    <template v-else-if="series.length < 1">-->
-    <!--      <v-subheader v-if="balance.values.length > 1"> Balance: </v-subheader>-->
-    <!--      <v-sparkline-->
-    <!--        color="primary"-->
-    <!--        height="25vh"-->
-    <!--        line-width="1"-->
-    <!--        label-size="4"-->
-    <!--        :labels="balance.labels"-->
-    <!--        :value="balance.values"-->
-    <!--      />-->
-    <!--    </template>-->
-    <!--    <apexcharts-->
-    <!--      v-else-->
-    <!--      type="line"-->
-    <!--      height="250"-->
-    <!--      :options="chartOptions"-->
-    <!--      :series="series"-->
-    <!--    />-->
 
     <reports-table
       table-name="transaction-table"
       :filters="filters"
       :duration="duration"
       @input:unique="setUniques"
-      :select-record="selectTransaction"
     />
   </div>
 </template>
@@ -45,10 +35,13 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
-
+import XlsxService from "@/services/XlsxService";
+import api from "@/api";
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import { getTodayFullDate } from "../functions";
+
 export default {
   name: "transactions-view",
   components: { reportsTable },
@@ -59,104 +52,70 @@ export default {
     products: [],
     series: [],
     chartLoading: false,
-    chartOptions: {
-      chart: { height: 250, type: "line" },
-      dataLabels: { enabled: false },
-      stroke: { curve: "smooth" },
-      xaxis: { type: "datetime" },
-      tooltip: { x: { format: "dd.MM.yy HH:mm" } },
-      theme: { palette: "palette10", mode: "dark" },
-      legend: { showForSingleSeries: true },
-    },
     duration: { to: null, from: null },
+
+    isReportLoading: false,
   }),
   methods: {
-    setTransactions(dates, labels, values) {
-      const min = Math.min(...dates);
-      let counter = 1;
-      for (let i = 1; i < dates.length; i++) {
-        const curr = Math.round(dates[i] / min);
-        const spaces = curr < 10 ? curr : 9;
-        if (spaces < 2) continue;
-        const newValues = values.splice(i + counter);
-        const newLabels = labels.splice(i + counter);
-        const diff = (newValues[0] - values.at(-1)) / spaces;
-        for (let j = 0; j < spaces - 1; j++) {
-          const prev = values[i + j + counter - 1];
-          values[i + j + counter] = prev + diff;
-          labels[i + j + counter] = " ";
-        }
-        counter += spaces - 1;
-        values = values.concat(newValues);
-        labels = labels.concat(newLabels);
-      }
-      return [labels, values];
-    },
-    selectTransaction(value) {
-      this.series = [];
-      // this.chartLoading = true;
-      value.forEach(({ total, item, exec }) => {
-        const name = item.slice(0, 8);
-        const data = { data: [{ x: exec * 1000, y: total }], name, item };
-        const i = this.series.findIndex((item) => item.name === name);
-        if (i !== -1) {
-          this.series[i].data.push({ x: exec * 1000, y: total });
-        } else {
-          this.series.push(data);
-        }
-      });
-      setTimeout(() => {
-        this.chartLoading = false;
-      }, 300);
-      if (this.series.length < 1) {
-        this.showSnackbar({
-          message: "Records not found",
-          buttonColor: "white",
-          color: "blue darken-3",
-        });
-      }
-    },
-    setListenerToLegend() {
-      const legend = document.querySelectorAll(".apexcharts-legend-text");
-      legend.forEach((el) => {
-        el.addEventListener("click", (e) => {
-          const { service } = this.series.find(
-            (item) => item.name === e.target.innerText
-          );
-          this.$router.push({
-            name: "Service",
-            params: { serviceId: service },
-          });
-        });
-      });
-    },
     setUniques({ resources, products, types }) {
       this.resources = resources;
       this.types = types;
       this.products = products;
     },
-    fetchData() {
-      console.log(1);
-      //fetch instances
+    async downloadTransactionsReport() {
+      try {
+        this.isReportLoading = true;
+
+        const transactions = await api.reports.list({ filters: this.filters });
+
+        const resultData = {};
+
+        transactions.records.forEach((transaction) => {
+          const productOrResource = transaction.product || transaction.resource;
+          if (!productOrResource) {
+            return;
+          }
+
+          let data = {};
+          if (resultData[transaction.account]) {
+            data = resultData[transaction.account];
+          }
+
+          if (!data[productOrResource]) {
+            data[productOrResource] = 0;
+          }
+          data[productOrResource] += Math.abs(+transaction.total);
+
+          resultData[transaction.account] = data;
+        });
+
+        const accounts = await Promise.allSettled(
+          Object.keys(resultData).map((key) => api.accounts.get(key))
+        );
+
+        return XlsxService.downloadXlsx(
+          "transactions_report_" + getTodayFullDate(),
+          Object.entries(resultData).map(([key, value]) => {
+            return {
+              name:
+                accounts.find((account) => account.value?.uuid == key).value
+                  ?.title || key,
+              headers: Object.keys(value).map((key) => ({
+                key,
+                title: key.replaceAll("_", " "),
+              })),
+              items: [value],
+            };
+          })
+        );
+      } finally {
+        this.isReportLoading = false;
+      }
     },
-  },
-  mounted() {
-    this.fetchData();
-    this.$store.commit("reloadBtn/setCallback", {
-      event: () => {
-        this.fetchData();
-      },
-    });
   },
   computed: {
-    ...mapGetters("transactions", ["count", "page", "isLoading", "all"]),
+    ...mapGetters("transactions", ["count", "page", "isLoading"]),
     ...mapGetters("appSearch", ["filter"]),
-    transactions() {
-      return this.all;
-    },
-    user() {
-      return this.$store.getters["auth/userdata"];
-    },
     filters() {
       const total = {};
       if (this.filter.total?.to) {
@@ -196,30 +155,6 @@ export default {
         product: this.filter.product,
       };
     },
-    instances() {
-      const instances = [];
-
-      return instances;
-    },
-    balance() {
-      const dates = [];
-      let labels = [`0 ${this.defaultCurrency}`];
-      let values = [0];
-      let balance = 0;
-      this.transactions?.forEach((el, i, arr) => {
-        values.push((balance -= el.total));
-        labels.push(`${balance.toFixed(2)} ${this.defaultCurrency}`);
-        dates.push(
-          el.proc - arr[i - 1]?.proc || arr[i + 1]?.proc - el.proc || el.proc
-        );
-      });
-      [labels, values] = this.setTransactions(dates, labels, values);
-      const amount = values.length - 12;
-      return {
-        labels: amount > 0 ? labels.slice(amount) : labels,
-        values: amount > 0 ? values.slice(amount) : values,
-      };
-    },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
@@ -236,13 +171,6 @@ export default {
           title: "Type",
         },
         {
-          key: "instance",
-          type: "select",
-          item: { value: "uuid", title: "title" },
-          items: this.instances,
-          title: "Instances",
-        },
-        {
           key: "account",
           type: "select",
           custom: true,
@@ -250,7 +178,7 @@ export default {
           label: "Accounts",
           multiple: true,
           clearable: true,
-          fetchValue:true
+          fetchValue: true,
         },
         {
           key: "product",
@@ -273,9 +201,6 @@ export default {
     },
   },
   watch: {
-    chartLoading() {
-      setTimeout(this.setListenerToLegend);
-    },
     searchFields() {
       this.$store.commit("appSearch/setFields", this.searchFields);
     },
