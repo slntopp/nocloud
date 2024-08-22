@@ -221,8 +221,9 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		return "", err
 	}
 
-	ctrl.log.Debug("instance for hash calculating while Creating", zap.Any("inst", i))
+	log.Debug("instance for hash calculating while Creating", zap.Any("inst", i))
 
+	log.Debug("period and estimate", zap.Any("period", period), zap.Any("estimate", estimate))
 	// Attempt create document
 	meta, err := ctrl.col.CreateDocument(ctx, i)
 	if err != nil {
