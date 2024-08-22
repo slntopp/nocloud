@@ -43,6 +43,9 @@ func HasAccess(ctx context.Context, db driver.Database, account string, node dri
 
 // account - Account Key, node - DocumentID
 func AccessLevel(ctx context.Context, db driver.Database, account string, node driver.DocumentID) (bool, access.Level) {
+	if driver.NewDocumentID(schema.ACCOUNTS_COL, account) == node {
+		return true, access.Level_ROOT
+	}
 	query := `FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"account":     schema.ACCOUNTS_COL + "/" + account,

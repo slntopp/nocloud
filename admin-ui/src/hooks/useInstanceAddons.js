@@ -13,9 +13,9 @@ const useInstanceAddons = (instance, setValue) => {
     if (instance.value.billing_plan) {
       instance.value.billing_plan.addons.forEach((key) => addons.push(key));
       if (instance.value.product) {
-        instance.value.billing_plan.products[
+        (instance.value.billing_plan.products[
           instance.value.product
-        ].addons.forEach((key) => addons.push(key));
+        ].addons || []).forEach((key) => addons.push(key));
       }
     }
     tarrifAddons.value = addons;

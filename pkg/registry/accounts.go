@@ -495,6 +495,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
 		log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
+	settings.CreateNamespace = true // Always create namespace
 
 	if settings.CreateNamespace {
 		personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, acc.GetUuid())
@@ -510,7 +511,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
 	if err != nil {
-		log.Debug("Error linking to namespace")
+		log.Error("Error linking to namespace")
 		return res, err
 	}
 
@@ -530,9 +531,14 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 			log.Error("Error updating mother account with new subaccount", zap.Error(err))
 			return res, err
 		}
-		col, _ := s.db.Collection(ctx, schema.ACC2NS)
-		if err := acc.LinkNamespace(ctx, col, ns, access.Level_MGMT, roles.DEFAULT); err != nil {
-			log.Error("Error linking child account to mother namespace", zap.Error(err))
+		col, _ := s.db.Collection(ctx, schema.NS2ACC)
+		accNs, err := s.ctrl.GetNamespace(ctx, acc)
+		if err != nil {
+			log.Error("Error getting personal namespace", zap.Error(err))
+			return res, err
+		}
+		if err := motherAcc.JoinNamespace(ctx, col, accNs, access.Level_MGMT, roles.DEFAULT); err != nil {
+			log.Error("Error joining child namespace to mother account", zap.Error(err))
 			return res, err
 		}
 		log.Debug("Subaccount created and linked", zap.String("subaccount", acc.GetUuid()))

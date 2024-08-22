@@ -411,7 +411,9 @@ func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[p
 	}
 
 	// Create invoice for newly created instances
-	acc, err := s.acc_ctrl.Get(ctx, requestor)
+	// TODO: You must take account according to namespace in request. Not from requester
+	log.Warn("Invalid account logic in invoice creation for instance start")
+	acc, err := s.acc_ctrl.GetAccountOrOwnerAccountIfPresent(ctx, requestor)
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
