@@ -7,6 +7,7 @@
       / {{ accountTitle }}
     </h1>
     <v-tabs
+      show-arrows
       class="rounded-t-lg"
       background-color="background-light"
       v-model="selectedTab"
