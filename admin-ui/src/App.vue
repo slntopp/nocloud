@@ -316,12 +316,12 @@
         </v-navigation-drawer>
 
         <v-app-bar app color="background" elevation="0">
-          <v-row style="width: 100%" justify="center" align="center">
+          <v-row style="width: 100%" justify="center" align="center" class="flex-nowrap">
             <template v-if="isLoggedIn">
-              <v-col>
+              <v-col :style="(viewport < 600) ? 'padding: 6px' : null">
                 <app-search />
               </v-col>
-              <v-col class="d-flex justify-start">
+              <v-col class="d-flex justify-start" :style="(viewport < 600) ? 'padding: 6px' : null">
                 <v-btn
                   v-if="btnStates.visible"
                   :disabled="btnStates.disabled"
@@ -345,7 +345,7 @@
                 </v-btn>
               </v-col>
             </template>
-            <v-col class="d-flex justify-end align-center">
+            <v-col class="d-flex justify-end align-center" :style="(viewport < 600) ? 'padding: 6px' : null">
               <languages v-if="false" />
               <themes />
               <v-menu
@@ -360,6 +360,7 @@
                     color="background-light"
                     v-bind="attrs"
                     v-on="on"
+                    :small="viewport < 600"
                   >
                     <v-icon dark> mdi-account </v-icon>
                   </v-btn>
@@ -386,7 +387,6 @@
               </v-menu>
             </v-col>
           </v-row>
-          <v-spacer></v-spacer>
         </v-app-bar>
 
         <v-main>
