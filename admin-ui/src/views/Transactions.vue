@@ -1,24 +1,21 @@
 <template>
   <div class="pa-4">
-    <v-row align="start">
-      <v-col cols="1">
-        <v-btn
-          class="ma-2"
-          color="background-light"
-          :to="{ name: 'Transactions create' }"
-        >
-          Create
-        </v-btn>
-      </v-col>
-      <v-col cols="1">
-        <v-btn
-          class="ma-2"
-          color="background-light"
-          @click="downloadTransactionsReport"
-          :loading="isReportLoading"
-          >Report</v-btn
-        >
-      </v-col>
+    <v-row align="start" class="ml-2 mb-4">
+      <v-btn
+        class="ml-2"
+        color="background-light"
+        :to="{ name: 'Transactions create' }"
+      >
+        Create
+      </v-btn>
+      <v-btn
+        class="ml-2"
+        color="background-light"
+        @click="downloadTransactionsReport"
+        :loading="isReportLoading"
+        :disabled="isPlansLoading"
+        >Report</v-btn
+      >
     </v-row>
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
@@ -56,6 +53,9 @@ export default {
 
     isReportLoading: false,
   }),
+  mounted() {
+    this.$store.dispatch("plans/fetch");
+  },
   methods: {
     setUniques({ resources, products, types }) {
       this.resources = resources;
@@ -96,10 +96,18 @@ export default {
         return XlsxService.downloadXlsx(
           "transactions_report_" + getTodayFullDate(),
           Object.entries(resultData).map(([key, value]) => {
+            const account = accounts.find(
+              (account) => account.value?.uuid == key
+            ).value;
+
+            Object.keys(value).forEach((key) => {
+              value[key] = `${value[key].toFixed(2)} ${
+                account.currency || this.defaultCurrency
+              }`;
+            });
+
             return {
-              name:
-                accounts.find((account) => account.value?.uuid == key).value
-                  ?.title || key,
+              name: `${account?.title || key} (${key})`,
               headers: Object.keys(value).map((key) => ({
                 key,
                 title: key.replaceAll("_", " "),
@@ -115,6 +123,7 @@ export default {
   },
   computed: {
     ...mapGetters("transactions", ["count", "page", "isLoading"]),
+    ...mapGetters("plans", { plans: "all", isPlansLoading: "isLoading" }),
     ...mapGetters("appSearch", ["filter"]),
     filters() {
       const total = {};
@@ -141,6 +150,25 @@ export default {
         }
       });
 
+      const resource = [];
+      const product = [];
+
+      resource.push(...(this.filter.resource || []));
+      product.push(...(this.filter.product || []));
+
+      if (this.filter.plans?.length) {
+        this.filter.plans.forEach((uuid) => {
+          const plan = this.plans.find((p) => p.uuid === uuid);
+
+          if (!plan) {
+            return;
+          }
+
+          product.push(...Object.keys(plan.products || {}));
+          resource.push(...(plan.resources.map((r) => r.key) || []));
+        });
+      }
+
       return {
         ...dates,
         account: this.filter.account?.length ? this.filter.account : undefined,
@@ -151,8 +179,8 @@ export default {
           ? this.filter.type
           : undefined,
         total: Object.keys(total).length ? total : undefined,
-        resource: this.filter.resource,
-        product: this.filter.product,
+        resource,
+        product,
       };
     },
     defaultCurrency() {
@@ -179,6 +207,13 @@ export default {
           multiple: true,
           clearable: true,
           fetchValue: true,
+        },
+        {
+          key: "plans",
+          type: "select",
+          items: this.plans.map(({ title, uuid }) => ({ title, uuid })),
+          item: { value: "uuid", title: "title" },
+          title: "Plan",
         },
         {
           key: "product",
