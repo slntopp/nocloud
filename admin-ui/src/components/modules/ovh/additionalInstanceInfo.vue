@@ -12,7 +12,10 @@
       </v-col>
 
       <v-col>
-        <instance-ip-menu :item="template" />
+        <instance-ip-menu edit :item="template" />
+      </v-col>
+      <v-col>
+        <instance-ip-menu edit type="private" :item="template" />
       </v-col>
 
       <v-col>
