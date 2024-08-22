@@ -333,6 +333,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		return err
 	}
 
+	log.Debug("period and estimate", zap.Any("period", period), zap.Any("estimate", estimate))
 	mask := &pb.Instance{
 		Config:    inst.GetConfig(),
 		Resources: inst.GetResources(),
