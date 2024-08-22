@@ -1,9 +1,10 @@
 <template>
   <v-text-field
-    readonly
+    :readonly="readonly"
     :label="label"
     :type="isVisible ? 'text' : 'password'"
     :value="value"
+    @input="$emit('input', $event)"
   >
     <template v-slot:append>
       <v-icon @click="isVisible = !isVisible">{{
@@ -27,6 +28,7 @@ const props = defineProps({
   },
   label: { type: String, default: "Password" },
   copy: { type: Boolean, default: false },
+  readonly: { type: Boolean, default: true },
 });
 const { value, label } = toRefs(props);
 
