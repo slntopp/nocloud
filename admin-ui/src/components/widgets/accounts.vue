@@ -47,6 +47,7 @@
                 :to="{
                   name: 'Account',
                   params: { accountId: account?.uuid },
+                  query: { fullscreen: (viewport > 768) ? false : true }
                 }"
               >
                 {{ getShortName(account.title) }}
@@ -66,7 +67,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { onMounted, ref, toRefs, watch } from "vue";
+import { onMounted, onUnmounted, ref, toRefs, watch } from "vue";
 import {
   endOfDay,
   endOfMonth,
@@ -87,6 +88,7 @@ const emit = defineEmits(["update", "update:key"]);
 const isLoading = ref(false);
 const isCountForPeriodLoading = ref(false);
 const periods = ref(["day", "week", "month"]);
+const viewport = ref(window.innerWidth);
 
 onMounted(async () => {
   isLoading.value = true;
@@ -102,7 +104,17 @@ onMounted(async () => {
   } finally {
     isLoading.value = false;
   }
+
+  window.addEventListener("resize", onResize)
 });
+
+onUnmounted(() => {
+  window.removeEventListener("resize", onResize)
+})
+
+function onResize() {
+  viewport.value = window.innerWidth
+}
 
 const countsForPeriod = ref({});
 const lastFiveAccounts = ref([]);
