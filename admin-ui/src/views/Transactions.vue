@@ -227,9 +227,9 @@ export default {
           items: this.resources,
           title: "Resource",
         },
-        { key: "exec", type: "date", title: "Exec" },
-        { key: "start", type: "date", title: "Start" },
-        { key: "end", type: "date", title: "End" },
+        { key: "exec", type: "date", title: "Executed date" },
+        { key: "start", type: "date", title: "Start date" },
+        { key: "end", type: "date", title: "End date" },
         { key: "payment_date", type: "date", title: "Payment date" },
         { key: "total", type: "number-range", title: "Total" },
       ];
