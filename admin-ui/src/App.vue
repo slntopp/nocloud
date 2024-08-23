@@ -3,8 +3,8 @@
     <v-app
       :style="{
         background: $vuetify.theme.themes[theme].background,
-        width: isFullscreen ? '0px' : undefined,
-        height: isFullscreen ? '0px' : undefined,
+        width: (isFullscreen && !isNotPlugin) ? '0px' : undefined,
+        height: (isFullscreen && !isNotPlugin) ? '0px' : undefined,
       }"
     >
       <div
@@ -347,7 +347,7 @@
             </template>
             <v-col class="d-flex justify-end align-center" :style="(viewport < 600) ? 'padding: 6px' : null">
               <languages v-if="false" />
-              <themes />
+              <themes v-if="viewport >= 600" />
               <v-menu
                 v-if="isLoggedIn"
                 offset-y
@@ -377,7 +377,8 @@
                     </v-list-item-content>
                   </v-list-item>
                   <v-list-item>
-                    <balance title="Balance: " loged-in-user />
+                    <balance loged-in-user title="Balance: " style="margin-right: auto" />
+                    <themes v-if="viewport < 600" />
                   </v-list-item>
                   <v-divider></v-divider>
                   <v-list-item @click="logoutHandler">
@@ -394,9 +395,13 @@
         </v-main>
         <app-snackbar />
       </template>
+
+      <v-main v-else-if="isFullscreen && isNotPlugin">
+        <router-view />
+      </v-main>
     </v-app>
 
-    <router-view v-if="isFullscreen" />
+    <router-view v-if="isFullscreen && !isNotPlugin" />
     <instances-table-modal
       v-if="overlay.uuid"
       type="menu"
@@ -573,6 +578,9 @@ export default {
     },
     isFullscreenAvailable() {
       return this.$route.query["fullscreen"] !== undefined;
+    },
+    isNotPlugin() {
+      return this.$route.name !== 'Plugin'
     },
     plugins() {
       return this.$store.getters["plugins/all"];

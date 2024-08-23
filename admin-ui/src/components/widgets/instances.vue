@@ -47,6 +47,7 @@
                 :to="{
                   name: 'Instance',
                   params: { instanceId: instance.uuid },
+                  query: { fullscreen: (viewport > 768) ? false : true }
                 }"
               >
                 {{ getShortName(instance.title) }}
@@ -62,7 +63,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { computed, onMounted, ref, toRefs } from "vue";
+import { computed, onMounted, onUnmounted, ref, toRefs } from "vue";
 import { useStore } from "@/store";
 import { getShortName } from "@/functions";
 import {
@@ -84,6 +85,7 @@ const store = useStore();
 
 const isLoading = ref(false);
 const periods = ref(["day", "week", "month"]);
+const viewport = ref(window.innerWidth);
 
 onMounted(async () => {
   isLoading.value = true;
@@ -94,7 +96,17 @@ onMounted(async () => {
   } finally {
     isLoading.value = false;
   }
+
+  window.addEventListener("resize", onResize)
 });
+
+onUnmounted(() => {
+  window.removeEventListener("resize", onResize)
+})
+
+function onResize() {
+  viewport.value = window.innerWidth
+}
 
 const instances = computed(() =>
   store.getters["services/getInstances"].map((i) => ({
