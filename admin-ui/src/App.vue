@@ -372,42 +372,8 @@
             <v-col class="d-flex justify-end align-center">
               <languages v-if="false" />
               <themes />
-              <v-menu
-                v-if="isLoggedIn"
-                offset-y
-                transition="slide-y-transition"
-              >
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn
-                    class="mx-2"
-                    fab
-                    color="background-light"
-                    v-bind="attrs"
-                    v-on="on"
-                  >
-                    <v-icon dark> mdi-account </v-icon>
-                  </v-btn>
-                </template>
-                <v-list dence min-width="250px">
-                  <v-list-item>
-                    <v-list-item-content>
-                      <v-list-item-title class="text-h6">
-                        {{ userdata.title }}
-                      </v-list-item-title>
-                      <v-list-item-subtitle
-                        >#{{ userdata.uuid }}</v-list-item-subtitle
-                      >
-                    </v-list-item-content>
-                  </v-list-item>
-                  <v-list-item>
-                    <balance title="Balance: " loged-in-user />
-                  </v-list-item>
-                  <v-divider></v-divider>
-                  <v-list-item @click="logoutHandler">
-                    <v-list-item-title>Logout</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
+              <notifications />
+              <user-menu v-if="isLoggedIn" />
             </v-col>
           </v-row>
           <v-spacer></v-spacer>
@@ -435,7 +401,7 @@
           color="success"
           :style="{
             position: 'absolute',
-            top: `${overlay.y + ((isFullscrean) ? 0 : 80)}px`,
+            top: `${overlay.y + (isFullscrean ? 0 : 80)}px`,
             right: `30px`,
             zIndex: 100,
             visibility: 'hidden',
@@ -454,22 +420,24 @@ import { mapGetters } from "vuex";
 import useLoginClient from "@/hooks/useLoginInClient.js";
 import api from "@/api.js";
 import config from "@/config.js";
-import balance from "@/components/balance.vue";
-import languages from "@/components/languages.vue";
+import languages from "@/components/header/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
-import Themes from "@/components/themes.vue";
+import Themes from "@/components/header/themes.vue";
+import userMenu from "@/components/header/userMenu.vue";
+import notifications from "@/components/header/notifications.vue";
 
 export default {
   name: "App",
   components: {
     Themes,
     AppSnackbar,
-    balance,
     appSearch,
     languages,
     instancesTableModal,
+    userMenu,
+    notifications
   },
   setup() {
     const { loginHandler } = useLoginClient();
@@ -492,9 +460,6 @@ export default {
     };
   },
   methods: {
-    logoutHandler() {
-      this.$store.dispatch("auth/logout");
-    },
     setTitle(value) {
       document.title = `${value} | NoCloud`;
     },
