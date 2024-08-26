@@ -108,7 +108,7 @@ init:
 			continue
 		}
 
-		updEvent, err := handler(ctx, &event, s.db)
+		updEvent, err := handler(ctx, log, &event, s.db)
 		if err != nil {
 			log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
 			if err = msg.Ack(false); err != nil {
