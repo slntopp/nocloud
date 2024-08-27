@@ -312,7 +312,18 @@ const fetchImages = async () => {
 };
 
 const changePlan = (plan) => {
-  plan.products = template.value.products;
+  plan.products = {};
+
+  const skeepRegions = Object.keys(flavors.value);
+  Object.keys(template.value.products).forEach((key) => {
+    if (
+      !skeepRegions.includes(
+        template.value.products[key]?.meta?.datacenter?.[0]
+      )
+    ) {
+      plan.products[key] = template.value.products[key];
+    }
+  });
 
   Object.keys(flavors.value).forEach((regionKey) => {
     const regionFlavors = flavors.value[regionKey].filter((f) => f.enabled);
