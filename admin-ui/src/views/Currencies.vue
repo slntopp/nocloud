@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4">
     <div class="buttons__inline pb-2 mt-4">
-      <v-dialog max-width="400">
+      <v-dialog v-model="isCreateCurrencyOpen" max-width="400">
         <template v-slot:activator="{ on, attrs }">
           <v-btn class="mr-2" color="background-light" v-bind="attrs" v-on="on">
             Create
@@ -189,6 +189,7 @@ const ratesHeaders = [
 const fetchError = ref("");
 const expanded = ref([]);
 
+const isCreateCurrencyOpen = ref(false);
 const isCreateCurrencyLoading = ref(false);
 const newCurrency = ref({ title: "" });
 
@@ -248,6 +249,7 @@ const createCurrency = async () => {
     );
 
     newCurrency.value = { title: "" };
+    isCreateCurrencyOpen.value = false;
 
     fetchCurrencies();
   } catch (err) {
@@ -280,6 +282,8 @@ const createRate = async (currency) => {
 
     newRate.value = {};
     fetchCurrencies(true);
+
+    isCreateRateOpen.value = false;
   } catch (err) {
     const message = err.response?.data?.message ?? err.message ?? err;
     store.commit("snackbar/showSnackbarError", { message: message });
