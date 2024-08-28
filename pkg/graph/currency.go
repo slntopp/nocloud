@@ -300,9 +300,10 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 	for cursor.HasMore() {
 		resp := struct {
 			driver.DocumentMeta
-			From Currency `json:"from"`
-			To   Currency `json:"to"`
-			Rate float64  `json:"rate"`
+			From       Currency `json:"from"`
+			To         Currency `json:"to"`
+			Rate       float64  `json:"rate"`
+			Commission float64  `json:"commission"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &resp)
 		if err != nil {
@@ -326,7 +327,8 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 				Id:    int32(idTo),
 				Title: resp.To.Title,
 			},
-			Rate: resp.Rate,
+			Rate:       resp.Rate,
+			Commission: resp.Commission,
 		})
 	}
 
