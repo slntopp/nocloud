@@ -2,6 +2,7 @@ package billing
 
 import (
 	"context"
+	"math/rand"
 
 	"connectrpc.com/connect"
 	"github.com/slntopp/nocloud-proto/access"
@@ -38,6 +39,9 @@ func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.R
 	log.Debug("Request received", zap.Any("request", req))
 	if req.Currency == nil {
 		return nil, status.Error(codes.InvalidArgument, "no currency provided")
+	}
+	if req.Currency.Id == 0 {
+		req.Currency.Id = int32(rand.Int())
 	}
 	err := s.ctrl.CreateCurrency(ctx, req.Currency)
 	if err != nil {
