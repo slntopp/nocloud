@@ -201,8 +201,8 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cur
 		"_key":       fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
 		"_from":      fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
 		"_to":        fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
-		"from":       from,
-		"to":         to,
+		"from":       CurrencyFromPb(&from),
+		"to":         CurrencyFromPb(&to),
 		"rate":       rate,
 		"commission": commission,
 	}
