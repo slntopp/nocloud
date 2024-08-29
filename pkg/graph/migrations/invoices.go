@@ -55,8 +55,12 @@ FOR t IN @@transactions
 	}
 
 	INSERT invoice INTO @@invoices
-    UPDATE invoice._key WITH invoice IN @@invoices
-    OPTIONS { keepNull: false }
+`
+
+const clearNulls = `
+FOR invoice IN @@invoices
+UPDATE invoice._key WITH invoice IN @@invoices
+OPTIONS { keepNull: false }
 `
 
 func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transactions driver.Collection) {
@@ -65,6 +69,12 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	_, err := db.Query(context.TODO(), createInvoicesBasedOnOldTransactions, map[string]interface{}{
 		"@invoices":     invoices.Name(),
 		"@transactions": transactions.Name(),
+	})
+	if err != nil {
+		log.Fatal("Error migrating old invoices to new", zap.Error(err))
+	}
+	_, err = db.Query(context.TODO(), clearNulls, map[string]interface{}{
+		"@invoices": invoices.Name(),
 	})
 	if err != nil {
 		log.Fatal("Error migrating old invoices to new", zap.Error(err))
