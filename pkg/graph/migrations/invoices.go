@@ -55,6 +55,7 @@ FOR t IN @@transactions
 	}
 
 	INSERT invoice INTO @@invoices
+    UPDATE invoice IN @@invoices
     OPTIONS { keepNull: false }
 `
 
