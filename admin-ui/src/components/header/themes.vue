@@ -76,8 +76,8 @@ watch(theme, (newValue) => {
 <template>
   <v-menu offset-y transition="slide-y-transition">
     <template v-slot:activator="{ on, attrs }">
-      <v-btn class="mx-2" icon v-bind="attrs" v-on="on">
-        <v-icon>{{ currentTheme.icon }} </v-icon>
+      <v-btn class="mx-2" fab color="background-light" v-bind="attrs" v-on="on">
+        <v-icon dark> {{ currentTheme.icon }} </v-icon>
       </v-btn>
     </template>
     <v-list flat>

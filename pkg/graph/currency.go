@@ -149,7 +149,7 @@ const getExchangeRateQuery = `
  FILTER edge
     RETURN {rate: edge.rate, commission: TO_NUMBER(edge.commission)}`
 
-func (c *CurrencyController) GetExchangeRate(ctx context.Context, from *pb.Currency, to * pb.Currency) (float64, float64, error) {
+func (c *CurrencyController) GetExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error) {
 	if from.Id == to.Id {
 		return 1, 0, nil
 	}
@@ -198,11 +198,11 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from *pb.Curre
 
 func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
 	edge := map[string]interface{}{
-		"_key":       fmt.Sprintf("%d-%d", from, to),
-		"_from":      fmt.Sprintf("%s/%d", schema.CUR_COL, from),
-		"_to":        fmt.Sprintf("%s/%d", schema.CUR_COL, to),
-		"from":       from,
-		"to":         to,
+		"_key":       fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
+		"_from":      fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
+		"_to":        fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
+		"from":       CurrencyFromPb(&from),
+		"to":         CurrencyFromPb(&to),
 		"rate":       rate,
 		"commission": commission,
 	}
@@ -212,7 +212,7 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cur
 }
 
 func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
-	key := fmt.Sprintf("%d-%d", from, to)
+	key := fmt.Sprintf("%d-%d", from.GetId(), to.GetId())
 
 	edge := map[string]interface{}{
 		"rate":       rate,
@@ -300,9 +300,10 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 	for cursor.HasMore() {
 		resp := struct {
 			driver.DocumentMeta
-			From Currency `json:"from"`
-			To   Currency `json:"to"`
-			Rate float64  `json:"rate"`
+			From       Currency `json:"from"`
+			To         Currency `json:"to"`
+			Rate       float64  `json:"rate"`
+			Commission float64  `json:"commission"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &resp)
 		if err != nil {
@@ -326,7 +327,8 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 				Id:    int32(idTo),
 				Title: resp.To.Title,
 			},
-			Rate: resp.Rate,
+			Rate:       resp.Rate,
+			Commission: resp.Commission,
 		})
 	}
 

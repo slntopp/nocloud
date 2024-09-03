@@ -1,10 +1,11 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div style="z-index: 0; position: relative; top: -25px; right: 40px">
+    <div class="actions">
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <hint-btn hint="Create instance">
           <v-btn
-            class="ma-1"
+            :class="(viewport < 600) ? 'ma-0' : 'ma-1'"
+            :small="viewport < 600"
             :disabled="isLocked"
             :to="{
               name: 'Instance create',
@@ -23,7 +24,8 @@
               <v-btn
                 :disabled="isChangeRegularPaymentLoading"
                 :loading="isChangeRegularPaymentLoading"
-                class="ma-1"
+                :small="viewport < 600"
+                :class="(viewport < 600) ? 'ma-4' : 'ma-1'"
                 v-bind="attrs"
                 v-on="on"
               >
@@ -57,6 +59,7 @@
           >
             <v-btn
               :loading="button.newStatusValue === statusChangeValue"
+              :small="viewport < 600"
               class="mr-2"
             >
               <v-icon>{{ button.icon }}</v-icon>
@@ -73,17 +76,17 @@
     </div>
 
     <v-row>
-      <v-col cols="2">
+      <v-col lg="2" md="4" sm="6" cols="12">
         <v-text-field v-model="uuid" readonly label="UUID" />
       </v-col>
-      <v-col cols="2">
-        <v-text-field v-model="title" label="name" style="width: 330px">
+      <v-col lg="2" md="4" sm="6" cols="12">
+        <v-text-field v-model="title" label="name">
           <template v-slot:append>
             <login-in-account-icon :uuid="account.uuid" />
           </template>
         </v-text-field>
       </v-col>
-      <v-col cols="2">
+      <v-col lg="2" md="4" sm="6" cols="12">
         <v-select
           :readonly="isCurrencyReadonly"
           :items="currencies"
@@ -92,7 +95,6 @@
           return-object
           item-value="id"
           label="currency"
-          style="width: 330px"
         />
       </v-col>
     </v-row>
@@ -102,11 +104,11 @@
       title="Additional info"
     >
       <v-row>
-        <v-col lg="3" md="4" sm="6">
+        <v-col lg="3" md="4" sm="6" cols="12">
           <v-text-field readonly :value="account.data?.email" label="Email" />
         </v-col>
 
-        <v-col lg="3" md="4" sm="6">
+        <v-col lg="3" md="4" sm="6" cols="12">
           <v-text-field
             readonly
             :value="account.data?.company"
@@ -114,11 +116,11 @@
           />
         </v-col>
 
-        <v-col lg="3" md="4" sm="6">
+        <v-col lg="3" md="4" sm="6" cols="12">
           <v-text-field readonly :value="account.data?.phone" label="Phone" />
         </v-col>
 
-        <v-col lg="3" md="4" sm="6">
+        <v-col lg="3" md="4" sm="6" cols="12">
           <v-text-field
             readonly
             :value="formatSecondsToDate(account.data?.date_create || 0)"
@@ -126,7 +128,7 @@
           />
         </v-col>
 
-        <v-col lg="3" md="4" sm="6">
+        <v-col lg="3" md="4" sm="6" cols="12">
           <v-text-field
             readonly
             :value="account.data?.country"
@@ -134,11 +136,11 @@
           />
         </v-col>
 
-        <v-col lg="3" md="4" sm="6">
+        <v-col lg="3" md="4" sm="6" cols="12">
           <v-text-field readonly :value="account.data?.city" label="City" />
         </v-col>
 
-        <v-col lg="3" md="4" sm="6">
+        <v-col lg="3" md="4" sm="6" cols="12">
           <v-text-field
             readonly
             :value="account.data?.address"
@@ -146,7 +148,7 @@
           />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="1" md="3" sm="4" cols="12">
           <v-text-field
             readonly
             :value="account.data?.whmcs_id"
@@ -286,6 +288,7 @@ export default {
     isChangeRegularPaymentLoading: false,
     isChangeRegularPaymentOpen: false,
     showDeletedInstances: false,
+    viewport: window.innerWidth
   }),
   methods: {
     formatSecondsToDate,
@@ -373,6 +376,8 @@ export default {
           accountServices.map((s) => api.services.delete(s.uuid))
         );
         await this.changeStatus(newStatus);
+
+        this.$router.push({ name: "Accounts" });
       } catch {
         this.showSnackbarError({
           message: "Error while change status",
@@ -427,7 +432,7 @@ export default {
     openTransaction() {
       this.$router.push({
         name: "Transactions create",
-        params: { account: this.account.uuid },
+        query: { account: this.account.uuid },
       });
     },
     async fetchNamespace() {
@@ -440,6 +445,9 @@ export default {
         console.log(e);
       }
     },
+    setViewport() {
+      this.viewport = window.innerWidth
+    }
   },
   mounted() {
     this.title = this.account.title;
@@ -449,6 +457,11 @@ export default {
     this.$store.dispatch("services/fetch", { showDeleted: true });
     this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     this.fetchNamespace();
+
+    window.addEventListener('resize', this.setViewport)
+  },
+  destroyed() {
+    window.removeEventListener('resize', this.setViewport)
   },
   computed: {
     services() {
@@ -533,9 +546,14 @@ export default {
   margin-bottom: 10px;
 }
 
-.instances-panel {
-  @media (max-width: 1300px) {
-    margin-top: 25px;
+.actions {
+  position: relative;
+  top: -15px;
+  right: 40px;
+  z-index: 0;
+
+  @media (max-width: 600px) {
+    right: auto;
   }
 }
 
@@ -544,7 +562,7 @@ export default {
     margin-top: 50px;
   }
   @media (max-width: 1250px) {
-    margin-top: 100px;
+    margin-top: 0;
   }
 }
 </style>

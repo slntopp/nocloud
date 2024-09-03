@@ -1,6 +1,6 @@
 <template>
   <nocloud-table
-    table-name="accounts"
+    :table-name="tableName"
     :headers="headers"
     :items="accounts"
     :value="selected"
@@ -90,6 +90,7 @@ import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
 import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
+import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
   value: {
@@ -102,13 +103,19 @@ const props = defineProps({
   },
   noSearch: { type: Boolean, default: false },
   customSearchParam: { type: String, default: "" },
+  customFilter: { type: Object},
+  tableName: { type: String, default: "accounts" },
 });
-const { value, singleSelect, customSearchParam, noSearch } = toRefs(props);
+const { value, singleSelect, customSearchParam, noSearch,customFilter } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
 const store = useStore();
 const router = useRouter();
+useSearch({
+  name: props.tableName,
+  noSearch: props.noSearch,
+});
 
 const selected = ref([]);
 const loading = ref(false);
@@ -210,7 +217,7 @@ const requestOptions = computed(() => ({
         search_param:
           searchParam.value || filter.value.search_param || undefined,
       }
-    : { search_param: customSearchParam.value || undefined },
+    : customFilter.value?customFilter.value:{ search_param: customSearchParam.value || undefined },
   page: options.value.page,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
@@ -238,8 +245,11 @@ const searchFields = computed(() => [
   { title: "Balance", key: "balance", type: "number-range" },
   { title: "Email", key: "data.email", type: "input" },
   { title: "Created date", key: "data.date_create", type: "date" },
+  { title: "Company", key: "data.company", type: "input" },
   { title: "Country", key: "data.country", type: "input" },
+  { title: "City", key: "data.city", type: "input" },
   { title: "Address", key: "data.address", type: "input" },
+  { title: "Phone", key: "data.phone", type: "input" },
   { title: "WHMCS ID", key: "data.whmcs_id", type: "input" },
   {
     title: "Client currency",
@@ -277,7 +287,10 @@ const setOptions = (newOptions) => {
 const fetchAccounts = async () => {
   loading.value = true;
   try {
-    await store.dispatch("accounts/fetch", requestOptions.value);
+    await store.dispatch("accounts/fetch", {
+      ...requestOptions.value,
+      silent: true,
+    });
   } catch (err) {
     fetchError.value = "Can't reach the server";
     if (err.response && err.response.data.message) {
@@ -339,11 +352,8 @@ watch(customSearchParam, fetchAccountsDebounce);
 </script>
 
 <script>
-import search from "@/mixins/search";
-
 export default {
   name: "accounts-table",
-  mixins: [search({ name: "accounts-table" })],
 };
 </script>
 

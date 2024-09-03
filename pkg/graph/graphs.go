@@ -192,9 +192,14 @@ GRAPH @credentials
 const getWithAccessLevel = `
 FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
 GRAPH @permissions SORT path.edges[0].level
+    LET cred = LAST(
+               FOR n, e IN 0..1 OUTBOUND @node GRAPH @credentials_graph 
+               OPTIONS {order: "bfs", uniqueVertices: "global"}
+                   RETURN n
+        )
     RETURN MERGE(path.vertices[-1], {
         uuid: path.vertices[-1]._key,
-	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key, username: cred.username }
 	})
 `
 
@@ -227,9 +232,10 @@ func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id dri
 	requestor_id := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 
 	vars := map[string]interface{}{
-		"account":     requestor_id,
-		"node":        id,
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"account":           requestor_id,
+		"node":              id,
+		"permissions":       schema.PERMISSIONS_GRAPH.Name,
+		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
 	}
 	c, err := db.Query(ctx, getWithAccessLevel, vars)
 	if err != nil {
@@ -410,7 +416,14 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 				FILTER IS_SAME_COLLECTION(@@subkiund, subnode)
 				RETURN subnode
 			)
-		RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+
+        LET cred = LAST(
+               FOR n, e IN 0..1 OUTBOUND node GRAPH @credentials_graph 
+               OPTIONS {order: "bfs", uniqueVertices: "global"}
+                   RETURN n
+        )
+        
+		RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key, username: cred.username } })
 	)
 	
 	LET active = LENGTH(
@@ -449,6 +462,7 @@ func ListAccounts[T Accessible](
 		"depth":             depth,
 		"from":              fromDocument,
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
 		"@kind":             collectionName,
 		"@subkiund":         schema.INSTANCES_COL,
 		"offset":            offset,

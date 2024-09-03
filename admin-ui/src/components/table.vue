@@ -130,7 +130,7 @@
     <template v-slot:[`footer.prepend`] v-if="editable">
       <div
         class="d-flex justify-end align-center"
-        style="width: calc(100% - 450px)"
+        style="min-width: calc(100% - 450px)"
       >
         <v-btn
           :disabled="value.length < 1 && !isEdit"

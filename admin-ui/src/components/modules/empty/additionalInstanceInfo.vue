@@ -25,6 +25,7 @@ import { toRefs, defineProps } from "vue";
 import InstanceIpMenu from "@/components/ui/instanceIpMenu.vue";
 
 const props = defineProps(["template", "sp"]);
+
 const { template } = toRefs(props);
 
 const emit = defineEmits(["update"]);

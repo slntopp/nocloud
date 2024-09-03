@@ -3,20 +3,20 @@
     <v-app
       :style="{
         background: $vuetify.theme.themes[theme].background,
-        width: isFullscrean ? '0px' : undefined,
-        height: isFullscrean ? '0px' : undefined,
+        width: (isFullscreen && !isNotPlugin) ? '0px' : undefined,
+        height: (isFullscreen && !isNotPlugin) ? '0px' : undefined,
       }"
     >
       <div
-        v-if="isFullscreanAvailable && isFullscrean"
+        v-if="isFullscreenAvailable && isFullscreen"
         style="position: fixed; right: 5vw; z-index: 100; margin-top: 1vh"
       >
-        <v-btn @click="toggleFullScrean" color="background-light" fab small>
+        <v-btn @click="toggleFullscreen" color="background-light" fab small>
           <v-icon>mdi-fullscreen-exit</v-icon>
         </v-btn>
       </div>
 
-      <template v-if="!isFullscrean">
+      <template v-if="!isFullscreen">
         <v-navigation-drawer
           app
           permanent
@@ -210,7 +210,7 @@
                 :to="{
                   name: 'Plugin',
                   params: plugin,
-                  query: { url: plugin.url, fullscrean: false },
+                  query: { url: plugin.url, fullscreen: (viewport > 768) ? false : true },
                 }"
               >
                 <v-list-item-icon>
@@ -340,12 +340,12 @@
         </v-navigation-drawer>
 
         <v-app-bar app color="background" elevation="0">
-          <v-row style="width: 100%" justify="center" align="center">
+          <v-row style="width: 100%" justify="center" align="center" class="flex-nowrap">
             <template v-if="isLoggedIn">
-              <v-col>
+              <v-col :style="(viewport < 600) ? 'padding: 6px' : null">
                 <app-search />
               </v-col>
-              <v-col class="d-flex justify-start">
+              <v-col class="d-flex justify-start" :style="(viewport < 600) ? 'padding: 6px' : null">
                 <v-btn
                   v-if="btnStates.visible"
                   :disabled="btnStates.disabled"
@@ -360,8 +360,8 @@
                 <v-btn
                   class="ml-2"
                   color="background-light"
-                  v-if="isFullscreanAvailable && !isFullscrean"
-                  @click="toggleFullScrean"
+                  v-if="isFullscreenAvailable && !isFullscreen"
+                  @click="toggleFullscreen"
                   fab
                   small
                 >
@@ -369,45 +369,11 @@
                 </v-btn>
               </v-col>
             </template>
-            <v-col class="d-flex justify-end align-center">
+            <v-col class="d-flex justify-end align-center" :style="(viewport < 600) ? 'padding: 6px' : null">
               <languages v-if="false" />
               <themes />
-              <v-menu
-                v-if="isLoggedIn"
-                offset-y
-                transition="slide-y-transition"
-              >
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn
-                    class="mx-2"
-                    fab
-                    color="background-light"
-                    v-bind="attrs"
-                    v-on="on"
-                  >
-                    <v-icon dark> mdi-account </v-icon>
-                  </v-btn>
-                </template>
-                <v-list dence min-width="250px">
-                  <v-list-item>
-                    <v-list-item-content>
-                      <v-list-item-title class="text-h6">
-                        {{ userdata.title }}
-                      </v-list-item-title>
-                      <v-list-item-subtitle
-                        >#{{ userdata.uuid }}</v-list-item-subtitle
-                      >
-                    </v-list-item-content>
-                  </v-list-item>
-                  <v-list-item>
-                    <balance title="Balance: " loged-in-user />
-                  </v-list-item>
-                  <v-divider></v-divider>
-                  <v-list-item @click="logoutHandler">
-                    <v-list-item-title>Logout</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
+              <notifications />
+              <user-menu v-if="isLoggedIn" />
             </v-col>
           </v-row>
           <v-spacer></v-spacer>
@@ -418,9 +384,13 @@
         </v-main>
         <app-snackbar />
       </template>
+
+      <v-main v-else-if="isFullscreen && isNotPlugin">
+        <router-view />
+      </v-main>
     </v-app>
 
-    <router-view v-if="isFullscrean" />
+    <router-view v-if="isFullscreen && !isNotPlugin" />
     <instances-table-modal
       v-if="overlay.uuid"
       type="menu"
@@ -435,7 +405,7 @@
           color="success"
           :style="{
             position: 'absolute',
-            top: `${overlay.y + ((isFullscrean) ? 0 : 80)}px`,
+            top: `${overlay.y + ((isFullscreen) ? 0 : 80)}px`,
             right: `30px`,
             zIndex: 100,
             visibility: 'hidden',
@@ -454,27 +424,30 @@ import { mapGetters } from "vuex";
 import useLoginClient from "@/hooks/useLoginInClient.js";
 import api from "@/api.js";
 import config from "@/config.js";
-import balance from "@/components/balance.vue";
-import languages from "@/components/languages.vue";
+import languages from "@/components/header/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
-import Themes from "@/components/themes.vue";
+import Themes from "@/components/header/themes.vue";
+import userMenu from "@/components/header/userMenu.vue";
+import notifications from "@/components/header/notifications.vue";
 
 export default {
   name: "App",
   components: {
     Themes,
     AppSnackbar,
-    balance,
     appSearch,
     languages,
     instancesTableModal,
+    userMenu,
+    notifications
   },
   setup() {
     const { loginHandler } = useLoginClient();
 
     return {
+      viewport: ref(window.innerWidth),
       isMenuMinimize: ref(true),
       isMouseOnMenu: ref(false),
       easterEgg: ref(false),
@@ -499,6 +472,7 @@ export default {
       document.title = `${value} | NoCloud`;
     },
     onResize(e) {
+      this.viewport = window.innerWidth
       if (!(e instanceof UIEvent)) {
         this.isMenuMinimize = window.innerWidth <= 768;
       }
@@ -545,12 +519,12 @@ export default {
     chatClick() {
       this.$store.commit("app/setChatClicks", 1);
     },
-    toggleFullScrean() {
+    toggleFullscreen() {
       this.$router.push({
         path: this.$route.path,
         query: {
           ...this.$route.query,
-          fullscrean: !this.isFullscrean,
+          fullscreen: !this.isFullscreen,
         },
       });
     },
@@ -587,14 +561,17 @@ export default {
         };
       else return {};
     },
-    isFullscrean() {
+    isFullscreen() {
       return (
         this.$route.path.includes("vnc") ||
-        this.$route.query["fullscrean"] === "true"
+        this.$route.query["fullscreen"] === "true"
       );
     },
-    isFullscreanAvailable() {
-      return this.$route.query["fullscrean"] !== undefined;
+    isFullscreenAvailable() {
+      return this.$route.query["fullscreen"] !== undefined;
+    },
+    isNotPlugin() {
+      return this.$route.name !== 'Plugin'
     },
     plugins() {
       return this.$store.getters["plugins/all"];

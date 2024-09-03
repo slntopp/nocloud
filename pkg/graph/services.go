@@ -365,7 +365,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 
 	depth := request.GetDepth()
 	if depth < 2 {
-		depth = 5
+		depth = 100
 	}
 	showDeleted := request.GetShowDeleted()
 

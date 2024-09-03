@@ -563,6 +563,7 @@ export default {
         "accountPrice",
         "access",
         "state.meta.networking.public",
+        "resources.ip",
       ];
 
       return instances.filter((item) => {

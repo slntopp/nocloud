@@ -7,6 +7,7 @@
       / {{ accountTitle }}
     </h1>
     <v-tabs
+      show-arrows
       class="rounded-t-lg"
       background-color="background-light"
       v-model="selectedTab"
@@ -48,6 +49,7 @@ import AccountsHistory from "@/components/account/history.vue";
 import AccountReport from "@/components/account/reports.vue";
 import AccountChats from "@/components/account/chats.vue";
 import AccountNotes from "@/components/account/notes.vue";
+import AccountSubaccounts from "@/components/account/subaccounts.vue";
 
 const store = useStore();
 const route = useRoute();
@@ -96,6 +98,10 @@ const tabItems = computed(() => [
     title: "reports",
   },
   {
+    component: AccountSubaccounts,
+    title: "subaccounts",
+  },
+  {
     component: AccountChats,
     title: "helpdesk",
   },
@@ -109,7 +115,12 @@ onMounted(() => {
   store.commit("reloadBtn/setCallback", {
     event: fetchAccount,
   });
-  selectedTab.value = route.query.tab || 0;
+  if (route.query.tab) {
+    selectedTab.value =
+      +route.query.tab ||
+      tabItems.value.findIndex((tab) => tab.title === route.query.tab) ||
+      0;
+  }
 
   fetchAccount();
 });
