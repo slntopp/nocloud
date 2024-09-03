@@ -359,7 +359,17 @@ export default {
           await this.createTransaction(withEmail);
         }
 
-        this.$router.push({ name: "Transactions" });
+        if (
+          this.$route.query.account &&
+          this.transaction.account.uuid === this.$route.query.account
+        ) {
+          this.$router.push({
+            name: "Account",
+            params: { accountId: this.$route.query.account },
+          });
+        } else {
+          this.$router.push({ name: "Transactions" });
+        }
       } catch (err) {
         this.showSnackbarError({
           message: err,
@@ -456,12 +466,15 @@ export default {
       );
     },
     openAccountWindow() {
-      return window.open("/accounts/" + this.transaction.account.uuid, "_blanc");
+      return window.open(
+        "/accounts/" + this.transaction.account.uuid,
+        "_blanc"
+      );
     },
   },
   async created() {
-    if (this.$route.params.account) {
-      this.transaction.account.uuid = this.$route.params.account;
+    if (this.$route.query.account) {
+      this.transaction.account.uuid = this.$route.query.account;
     }
 
     this.initDate();

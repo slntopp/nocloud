@@ -73,6 +73,18 @@ export default {
           component: () => import("@/components/ServicesProvider/info.vue"),
         },
         {
+          title: "Secrets",
+          component: () => import("@/components/ServicesProvider/secrets.vue"),
+        },
+        {
+          title: "Vars",
+          component: () => import("@/components/ServicesProvider/vars.vue"),
+        },
+        {
+          title: "Hooks",
+          component: () => import("@/components/ServicesProvider/hooks.vue"),
+        },
+        {
           title: "Map",
           component:
             this.item?.type === "ovh"
@@ -92,22 +104,6 @@ export default {
           component: () => import("@/components/ServicesProvider/template.vue"),
         },
       ].filter((el) => el?.title);
-
-      if (Object.keys(this.item?.secrets ?? {}).length > 0) tabs.splice(1, 0, {
-        title: "Secrets",
-        component: () =>
-          import(
-            `@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`
-          ).catch(() =>
-            import("@/components/modules/custom/serviceProviderSecrets.vue")
-          ),
-      });
-
-      if (Object.keys(this.item?.vars ?? {}).length > 0) tabs.splice(2, 0, {
-        title: "Vars",
-        component: () =>
-          import("@/components/modules/custom/serviceProviderVars.vue"),
-      });
 
       if (this.item?.type === "ione") tabs.splice(3, 0, {
         title: "Nebula",

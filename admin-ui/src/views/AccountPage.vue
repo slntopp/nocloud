@@ -7,6 +7,7 @@
       / {{ accountTitle }}
     </h1>
     <v-tabs
+      show-arrows
       class="rounded-t-lg"
       background-color="background-light"
       v-model="selectedTab"
@@ -114,7 +115,12 @@ onMounted(() => {
   store.commit("reloadBtn/setCallback", {
     event: fetchAccount,
   });
-  selectedTab.value = route.query.tab || 0;
+  if (route.query.tab) {
+    selectedTab.value =
+      +route.query.tab ||
+      tabItems.value.findIndex((tab) => tab.title === route.query.tab) ||
+      0;
+  }
 
   fetchAccount();
 });

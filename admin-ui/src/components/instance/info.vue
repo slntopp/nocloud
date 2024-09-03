@@ -149,6 +149,7 @@
         :sp="sp"
         :account="account"
         :template="template"
+        @update="updateCopy"
       />
       <v-card-title class="primary--text">Billing info</v-card-title>
       <component

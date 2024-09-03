@@ -1,29 +1,29 @@
 <template>
   <div class="module">
     <v-card
-      v-if="Object.keys(instance).length > 0"
-      class="mb-4 pa-2"
-      color="background"
-      elevation="0"
+        v-if="Object.keys(instance).length > 0"
+        class="mb-4 pa-2"
+        color="background"
+        elevation="0"
     >
       <v-row>
         <v-col cols="6">
           <v-text-field
-            label="Name"
-            :value="instance.title"
-            :rules="rules.req"
-            @change="(value) => setValue('title', value)"
+              label="Name"
+              :value="instance.title"
+              :rules="rules.req"
+              @change="(value) => setValue('title', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            :filter="defaultFilterObject"
-            label="Type"
-            :items="ovhTypes"
-            :rules="rules.req"
-            v-model="ovhType"
-            item-value="value"
-            item-text="title"
+              :filter="defaultFilterObject"
+              label="Type"
+              :items="ovhTypes"
+              :rules="rules.req"
+              v-model="ovhType"
+              item-value="value"
+              item-text="title"
           />
         </v-col>
       </v-row>
@@ -31,46 +31,46 @@
       <v-row>
         <v-col cols="6">
           <plans-autocomplete
-            :value="instance.billing_plan"
-            :custom-params="{
+              :value="instance.billing_plan"
+              :custom-params="{
               filters: { type: [`ovh ${ovhType}`] },
               anonymously: true,
             }"
-            @input="setValue('billing_plan', $event)"
-            return-object
-            label="Price model"
-            :rules="planRules"
+              @input="setValue('billing_plan', $event)"
+              return-object
+              label="Price model"
+              :rules="planRules"
           />
         </v-col>
         <v-col cols="6">
           <v-select
-            :items="durationItems"
-            :value="instance.config?.duration"
-            item-value="value"
-            item-text="title"
-            label="Payment:"
-            @change="(value) => setValue('config.duration', value)"
+              :items="durationItems"
+              :value="instance.config?.duration"
+              item-value="value"
+              item-text="title"
+              label="Payment:"
+              @change="(value) => setValue('config.duration', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="Tariff"
-            item-text="title"
-            item-value="key"
-            :value="instance.product"
-            :items="filtredTariffs"
-            :rules="rules.req"
-            @change="(value) => setValue('product', value)"
+              label="Tariff"
+              item-text="title"
+              item-value="key"
+              :value="instance.product"
+              :items="filtredTariffs"
+              :rules="rules.req"
+              @change="(value) => setValue('product', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="Region"
-            :value="instance.config?.configuration[`${ovhType}_datacenter`]"
-            :items="datacenters"
-            :rules="rules.req"
-            :disabled="!datacenters.length"
-            @change="
+              label="Region"
+              :value="instance.config?.configuration[`${ovhType}_datacenter`]"
+              :items="datacenters"
+              :rules="rules.req"
+              :disabled="!datacenters.length"
+              @change="
               (value) =>
                 setValue(`config.configuration.${ovhType}_datacenter`, value)
             "
@@ -78,44 +78,44 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="OS"
-            :value="instance.config?.configuration[`${ovhType}_os`]"
-            :items="images"
-            item-text="title"
-            item-value="id"
-            :rules="rules.req"
-            :disabled="!images.length"
-            @change="
+              label="OS"
+              :value="instance.config?.configuration[`${ovhType}_os`]"
+              :items="images"
+              item-text="title"
+              item-value="id"
+              :rules="rules.req"
+              :disabled="!images.length"
+              @change="
               (value) => setValue(`config.configuration.${ovhType}_os`, value)
             "
           />
         </v-col>
         <v-col v-if="ovhType === 'cloud'" cols="6">
           <v-text-field
-            label="SSH"
-            :value="instance?.config?.ssh"
-            @change="setValue('config.ssh', $event)"
+              label="SSH"
+              :value="instance?.config?.ssh"
+              @change="setValue('config.ssh', $event)"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
           Existing:
           <v-switch
-            class="d-inline-block ml-2"
-            :input-value="instance.data?.existing"
-            @change="(value) => setValue('data.existing', value)"
+              class="d-inline-block ml-2"
+              :input-value="instance.data?.existing"
+              @change="(value) => setValue('data.existing', value)"
           />
         </v-col>
         <v-col
-          cols="6"
-          class="d-flex align-center"
-          v-if="instance.data?.existing"
+            cols="6"
+            class="d-flex align-center"
+            v-if="instance.data?.existing"
         >
           <v-text-field
-            v-if="ovhType"
-            :label="`${ovhType} name`"
-            :value="instance.data?.[`${ovhType}Name`]"
-            :rules="rules.req"
-            @change="(value) => setValue(`data.${ovhType}Name`, value)"
+              v-if="ovhType"
+              :label="`${ovhType} name`"
+              :value="instance.data?.[`${ovhType}Name`]"
+              :rules="rules.req"
+              @change="(value) => setValue(`data.${ovhType}Name`, value)"
           />
         </v-col>
       </v-row>
@@ -123,14 +123,14 @@
       <v-row>
         <v-col cols="6" v-for="type in addonsTypes" :key="type">
           <v-autocomplete
-            :label="type.charAt(0).toUpperCase() + type.slice(1)"
-            :items="addons.filter((a) => a.type === type)"
-            item-text="title"
-            item-value="uuid"
-            :multiple="type === 'custom'"
-            clearable
-            return-object
-            @change="changeAddons($event, type)"
+              :label="type.charAt(0).toUpperCase() + type.slice(1)"
+              :items="addons.filter((a) => a.type === type)"
+              item-text="title"
+              item-value="uuid"
+              :multiple="type === 'custom'"
+              clearable
+              return-object
+              @change="changeAddons($event, type)"
           />
         </v-col>
       </v-row>
@@ -224,35 +224,35 @@ const addons = computed(() => {
     ...(currentTariff.value.addons || []),
     ...(instance.value.billing_plan.addons || []),
   ]
-    .map((uuid) => {
-      const addon = fetchedAddons.value[uuid];
-      if (!addon) {
-        return;
-      }
+      .map((uuid) => {
+        const addon = fetchedAddons.value[uuid];
+        if (!addon) {
+          return;
+        }
 
-      const allowed = [
-        "snapshot",
-        "disk",
-        "backup",
-        "traffic",
-        "ram",
-        "softraid",
-        "vrack",
-        "storage",
-        "system-storage",
-        "bandwidth",
-        "memory",
-      ];
+        const allowed = [
+          "snapshot",
+          "disk",
+          "backup",
+          "traffic",
+          "ram",
+          "softraid",
+          "vrack",
+          "storage",
+          "system-storage",
+          "bandwidth",
+          "memory",
+        ];
 
-      const type =
-        allowed.find((key) => addon.meta?.key?.includes(key)) || "custom";
+        const type =
+            allowed.find((key) => addon.meta?.key?.includes(key)) || "custom";
 
-      return {
-        ...addon,
-        type,
-      };
-    })
-    .filter((addon) => !!addon);
+        return {
+          ...addon,
+          type,
+        };
+      })
+      .filter((addon) => !!addon);
 });
 
 const addonsTypes = computed(() => [
@@ -261,16 +261,16 @@ const addonsTypes = computed(() => [
 
 const tariffs = computed(() => {
   return Object.keys(instance.value?.billing_plan.products || {}).map(
-    (key) => ({
-      ...instance.value?.billing_plan.products[key],
-      duration: key.split(" ")[0],
-      key,
-    })
+      (key) => ({
+        ...instance.value?.billing_plan.products[key],
+        duration: key.split(" ")[0],
+        key,
+      })
   );
 });
 
 const filtredTariffs = computed(() =>
-  tariffs.value.filter((t) => t?.duration === instance.value.config?.duration)
+    tariffs.value.filter((t) => t?.duration === instance.value.config?.duration)
 );
 
 const durationItems = computed(() => {
@@ -282,10 +282,10 @@ const durationItems = computed(() => {
   };
 
   return [...new Set(tariffs.value?.map((item) => item.duration))].map(
-    (duration) => ({
-      value: duration,
-      title: annotations[duration] || duration,
-    })
+      (duration) => ({
+        value: duration,
+        title: annotations[duration] || duration,
+      })
   );
 });
 
@@ -313,8 +313,8 @@ const setValue = (path, val) => {
         }
         case "cloud": {
           setValue(
-            "config.monthlyBilling",
-            instance.value.config?.duration === "P1M"
+              "config.monthlyBilling",
+              instance.value.config?.duration === "P1M"
           );
           savedResources = { ...savedResources, ...resources };
           break;
@@ -376,7 +376,7 @@ const setAddons = () => {
     } finally {
       setTimeout(() => {
         isAddonsLoading.value = Object.values(fetchedAddons.value).some(
-          (acc) => acc instanceof Promise
+            (acc) => acc instanceof Promise
         );
       }, 0);
     }
@@ -385,7 +385,7 @@ const setAddons = () => {
 
 const changeAddons = (value, type) => {
   let newAddons = instance.value.addons.map((uuid) =>
-    addons.value.find((a) => a.uuid === uuid)
+      addons.value.find((a) => a.uuid === uuid)
   );
 
   newAddons = newAddons.filter((a) => a.type !== type);
@@ -422,8 +422,8 @@ const changeAddons = (value, type) => {
   }
 
   setValue(
-    "addons",
-    newAddons.map((a) => a.uuid)
+      "addons",
+      newAddons.map((a) => a.uuid)
   );
 };
 

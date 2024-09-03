@@ -245,8 +245,11 @@ const searchFields = computed(() => [
   { title: "Balance", key: "balance", type: "number-range" },
   { title: "Email", key: "data.email", type: "input" },
   { title: "Created date", key: "data.date_create", type: "date" },
+  { title: "Company", key: "data.company", type: "input" },
   { title: "Country", key: "data.country", type: "input" },
+  { title: "City", key: "data.city", type: "input" },
   { title: "Address", key: "data.address", type: "input" },
+  { title: "Phone", key: "data.phone", type: "input" },
   { title: "WHMCS ID", key: "data.whmcs_id", type: "input" },
   {
     title: "Client currency",
