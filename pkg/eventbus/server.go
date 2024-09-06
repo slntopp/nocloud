@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
+	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -65,6 +66,53 @@ func NewServer(logger *zap.Logger, conn *amqp.Connection, db driver.Database) *E
 	}
 }
 
+const getInstanceBillingPlanCustomEvents = `
+    LET inst = DOCUMENT(@@instances, @instance)
+    FILTER inst != null && inst.billing_plan != null && inst.billing_plan.uuid != null && inst.billing_plan.uuid != ""
+	LET plan = DOCUMENT(@@plans, inst.billing_plan.uuid)
+	FILTER plan != null
+    LET events = IS_ARRAY(plan.custom_events) ? plan.custom_events : []
+    RETURN events
+`
+
+func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event) (*pb.Event, error) {
+	log = log.Named("HandleEventOverride")
+	log = log.With(zap.String("instance", event.GetUuid())).With(zap.String("key", event.GetKey()))
+
+	cursor, err := s.db.Query(context.Background(), getInstanceBillingPlanCustomEvents, map[string]interface{}{
+		"instance":   event.GetUuid(),
+		"@instances": schema.INSTANCES_COL,
+		"@plans":     schema.BILLING_PLANS_COL,
+	})
+	if err != nil {
+		log.Error("Error getting billing plan custom events", zap.Error(err))
+		return nil, err
+	}
+	defer cursor.Close()
+
+	customEvents := make([]*bpb.CustomEvent, 0)
+	for cursor.HasMore() {
+		_, err := cursor.ReadDocument(context.Background(), &customEvents)
+		if err != nil {
+			log.Error("Error getting billing plan custom events, read from cursor", zap.Error(err))
+			return nil, err
+		}
+	}
+
+	log.Debug("Custom events", zap.Any("events", customEvents))
+
+	for _, ce := range customEvents {
+		if ce.Override == event.Key {
+			log.Debug("Event override", zap.Any("old_key", event.Key), zap.Any("new_key", ce.Override))
+			event.Key = ce.Key
+			return event, nil
+		}
+	}
+
+	log.Debug("No override")
+	return event, nil
+}
+
 func (s *EventBusServer) ListenBusQueue(ctx context.Context) {
 	log := s.log.Named("Bus queue listener")
 init:
@@ -113,6 +161,15 @@ init:
 			log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
 			if err = msg.Ack(false); err != nil {
 				log.Warn("Failed to Acknowledge the delivery while executing handler", zap.Error(err))
+			}
+			continue
+		}
+
+		updEvent, err = s.HandleEventOverride(log, updEvent)
+		if err != nil {
+			log.Error("Fail event override", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while executing event override", zap.Error(err))
 			}
 			continue
 		}
