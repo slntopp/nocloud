@@ -167,7 +167,7 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
 	} else {
-		if acc != schema.ROOT_ACCOUNT_KEY {
+		if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 	}
@@ -723,7 +723,7 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
 	} else {
-		if acc != schema.ROOT_ACCOUNT_KEY {
+		if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 	}
@@ -957,10 +957,10 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 		return nil, status.Error(codes.NotFound, "Invoice doesn't exist")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
-
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
+	if ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
+		if ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN); !ok {
+			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
 	}
 
 	resp := connect.NewResponse(&pb.Invoices{Pool: []*pb.Invoice{tr.Invoice}})
