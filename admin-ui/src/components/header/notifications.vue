@@ -70,7 +70,7 @@ const fetchNotifications = async () => {
         field: "ts",
         sort: "DESC",
         filters: {
-          //   priority: 1,
+          priority: [1],
         },
       })
     ).events;
