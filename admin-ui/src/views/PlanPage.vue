@@ -123,6 +123,10 @@ export default {
           component: () => import("@/components/plan/history.vue"),
         },
         {
+          title: "Event overrides",
+          component: () => import("@/components/plan/event-overrides.vue"),
+        },
+        {
           title: "Template",
           component: () => import("@/components/plan/template.vue"),
         },
