@@ -154,6 +154,7 @@ func EventLoggingHandler(_ context.Context, log *zap.Logger, event *pb.Event, _ 
 	data := event.GetData()
 	scope := data["scope"].GetStringValue()
 	action := data["action"].GetStringValue()
+	diff := data["diff"].GetStringValue()
 	if scope == "" || action == "" {
 		log.Warn("Invalid event for logging. Scope or action missing. skip logging", zap.Any("event", event))
 		return event, nil
@@ -166,7 +167,7 @@ func EventLoggingHandler(_ context.Context, log *zap.Logger, event *pb.Event, _ 
 		Requestor: schema.ROOT_ACCOUNT_KEY,
 		Ts:        time.Now().Unix(),
 		Snapshot: &elpb.Snapshot{
-			Diff: "",
+			Diff: diff,
 		},
 		Priority: event.Priority,
 		Entity:   event.Type,
