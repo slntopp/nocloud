@@ -2,6 +2,10 @@ package eventbus
 
 import (
 	"context"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"go.uber.org/zap"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/events"
@@ -9,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type EventHandler func(context.Context, *pb.Event, driver.Database) (*pb.Event, error)
+type EventHandler func(context.Context, *zap.Logger, *pb.Event, driver.Database) (*pb.Event, error)
 
 var handlers = map[string]EventHandler{
 	"instance_suspended":          GetInstAccountHandler,
@@ -22,6 +26,7 @@ var handlers = map[string]EventHandler{
 	"instance_renew":              GetInstAccountHandler,
 	"pending_notification":        GetInstAccountHandler,
 	"instance_credentials":        GetInstAccountHandler,
+	"logging":                     EventLoggingHandler,
 }
 
 var getInstanceAccount = `
@@ -88,7 +93,7 @@ type EventInfo struct {
 	Price           float64 `json:"price,omitempty"`
 }
 
-func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
+func GetInstAccountHandler(ctx context.Context, _ *zap.Logger, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	if event.GetData() == nil {
 		event.Data = make(map[string]*structpb.Value)
 	}
@@ -141,6 +146,36 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 	event.Data["price"] = structpb.NewNumberValue(eventInfo.Price)
 	event.Uuid = eventInfo.Account
 	event.Type = "email"
+
+	return event, nil
+}
+
+func EventLoggingHandler(_ context.Context, log *zap.Logger, event *pb.Event, _ driver.Database) (*pb.Event, error) {
+	data := event.GetData()
+	scope := data["scope"].GetStringValue()
+	action := data["action"].GetStringValue()
+	diff := data["diff"].GetStringValue()
+	if scope == "" || action == "" {
+		log.Warn("Invalid event for logging. Scope or action missing. skip logging", zap.Any("event", event))
+		return event, nil
+	}
+
+	logEvent := &elpb.Event{
+		Scope:     scope,
+		Action:    action,
+		Rc:        0,
+		Requestor: schema.ROOT_ACCOUNT_KEY,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: diff,
+		},
+		Priority: event.Priority,
+		Entity:   event.Type,
+		Uuid:     event.Uuid,
+	}
+
+	nocloud.Log(log, logEvent)
+	log.Debug("Logged event", zap.Any("event", logEvent))
 
 	return event, nil
 }
