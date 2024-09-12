@@ -95,6 +95,12 @@ func main() {
 	if with_block {
 		opts = append(opts, grpc.WithBlock())
 	}
+	opts = append(opts,
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(100*1024*1024),
+			grpc.MaxCallSendMsgSize(100*1024*1024),
+		),
+	)
 
 	// Registering gRPC services
 

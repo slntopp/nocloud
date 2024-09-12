@@ -93,6 +93,8 @@ func main() {
 			grpc_zap.UnaryServerInterceptor(log),
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
+		grpc.MaxRecvMsgSize(10*1024*1024),
+		grpc.MaxSendMsgSize(10*1024*1024),
 	)
 
 	server := billing.NewBillingServiceServer(log, db)
