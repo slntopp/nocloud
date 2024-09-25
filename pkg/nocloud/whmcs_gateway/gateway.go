@@ -42,7 +42,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	// TODO: review taxed field
-	query := g.buildCreateInvoiceQueryBase(inv, account.GetData().AsMap()["whmcs_id"].(int))
+	query := g.buildCreateInvoiceQueryBase(inv, int(account.GetData().AsMap()["whmcs_id"].(float64)))
 	for i, item := range inv.GetItems() {
 		query.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
 		query.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", item.GetPrice()*float64(item.GetAmount())))
