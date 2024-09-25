@@ -72,7 +72,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	if resp.StatusCode != 200 || invResp.Status != "success" {
-		return fmt.Errorf("failed to create invoice: %s", resp.Status)
+		return fmt.Errorf("failed to create invoice: %s. Response body: %+v", resp.Status, invResp)
 	}
 
 	patch := map[string]interface{}{
