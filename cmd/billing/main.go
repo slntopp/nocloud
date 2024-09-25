@@ -111,7 +111,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	server := billing.NewBillingServiceServer(log, db, conn)
+	server := billing.NewBillingServiceServer(log, db, conn, rdb)
 	currencies := billing.NewCurrencyServiceServer(log, db)
 	log.Info("Starting Currencies Service")
 
@@ -157,7 +157,6 @@ func main() {
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	
 	addons := billing.NewAddonsServer(log, db)
 	log.Info("Registering AddonsService Server")
 	path, handler = cc.NewAddonsServiceHandler(addons, interceptors)

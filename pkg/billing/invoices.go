@@ -319,6 +319,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
 	}
 
+	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+
 	// Create transaction if it's balance deposit or instance start
 	if t.GetType() == pb.ActionType_BALANCE || t.GetType() == pb.ActionType_INSTANCE_START {
 		var transactionTotal = t.GetTotal()
@@ -329,12 +335,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-		}
-
-		acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
-		if err != nil {
-			log.Error("Failed to get account", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to get account")
 		}
 
 		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
@@ -366,6 +366,11 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if err != nil {
 		log.Error("Failed to create invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
+	}
+
+	r.Uuid = r.DocumentMeta.Key
+	if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
+		log.Error("Failed to create invoice through gateway", zap.Error(err))
 	}
 
 	if req.Msg.GetIsSendEmail() {
@@ -425,7 +430,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 	old.Status = newStatus
 
-	_, err = s.accounts.Get(ctx, old.GetAccount())
+	acc, err := s.accounts.Get(ctx, old.GetAccount())
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
@@ -696,6 +701,16 @@ quit:
 		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
 	}
 
+	upd, err := s.invoices.Get(ctx, t.GetUuid())
+	if err != nil {
+		log.Error("Failed to get updated invoice", zap.Error(err))
+	}
+	if err == nil {
+		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice); err != nil {
+			log.Error("Failed to update invoice through gateway", zap.Error(err))
+		}
+	}
+
 	log.Info("Finished invoice update status")
 	resp = connect.NewResponse(old.Invoice)
 	return resp, nil
@@ -894,10 +909,20 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	//	t.Transactions = []string{newTr.Msg.Uuid}
 	//}
 
-	_, err = s.invoices.Update(ctx, t)
+	upd, err := s.invoices.Update(ctx, t)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
+	}
+
+	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+
+	if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice); err != nil {
+		log.Error("Failed to update invoice through gateway", zap.Error(err))
 	}
 
 	if r.Msg.GetIsSendEmail() {

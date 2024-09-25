@@ -18,6 +18,9 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/nocloud_gateway"
+	"github.com/slntopp/nocloud/pkg/nocloud/whmcs_gateway"
 	"slices"
 	"strconv"
 	"strings"
@@ -78,9 +81,13 @@ type BillingServiceServer struct {
 	sus  *healthpb.RoutineStatus
 
 	drivers map[string]driverpb.DriverServiceClient
+
+	whmcsUser     string
+	whmcsPassHash string
+	whmcsBaseUrl  string
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:         conn,
@@ -129,9 +136,35 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		},
 	}
 
+	var whmcsData whmcsRedisData
+	if err := rdb.Get(context.Background(), "whmcs").Scan(&whmcsData); err != nil {
+		log.Fatal("Failed to read WHMCS data from Redis", zap.Error(err))
+	}
+	s.whmcsUser = whmcsData.WhmcsUser
+	s.whmcsPassHash = whmcsData.WhmcsPassHash
+	s.whmcsBaseUrl = whmcsData.WhmcsBaseUrl
+
 	s.migrate()
 
 	return s
+}
+
+type whmcsRedisData struct {
+	WhmcsUser     string `json:"user"`
+	WhmcsPassHash string `json:"pass_hash"`
+	WhmcsBaseUrl  string `json:"api"`
+	DangerMode    bool   `json:"danger_mode"`
+}
+
+func (s *BillingServiceServer) GetPaymentGateway(t string) PaymentGateway {
+	switch t {
+	case "nocloud":
+		return nocloud_gateway.NewNoCloudGateway()
+	case "whmcs":
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts)
+	default:
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts)
+	}
 }
 
 func (s *BillingServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
