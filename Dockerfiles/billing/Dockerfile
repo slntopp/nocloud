@@ -16,6 +16,7 @@ WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/billing /billing
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /health/check /check
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 HEALTHCHECK --start-period=5s CMD [ "/check", "-addr=:8000" ]
 
 USER nocloud
