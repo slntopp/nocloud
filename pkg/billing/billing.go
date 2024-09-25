@@ -137,7 +137,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 	}
 
 	var whmcsData whmcsRedisData
-	if err := rdb.Get(context.Background(), "whmcs").Scan(&whmcsData); err != nil {
+	if err := rdb.Get(context.Background(), "_settings:whmcs").Scan(&whmcsData); err != nil {
 		log.Fatal("Failed to read WHMCS data from Redis", zap.Error(err))
 	}
 	s.whmcsUser = whmcsData.WhmcsUser
