@@ -140,10 +140,12 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 
 	var whmcsData whmcsRedisData
 	if keys, err := rdb.HGetAll(context.Background(), whmcsRedisKey).Result(); err == nil {
-		fmt.Println("WHMCS VALUE", keys["value"])
 		if err := json.Unmarshal([]byte(keys["value"]), &whmcsData); err != nil {
 			log.Fatal("Failed to get whmcs settings", zap.Error(err))
 		}
+		s.whmcsUser = whmcsData.WhmcsUser
+		s.whmcsPassHash = whmcsData.WhmcsPassHash
+		s.whmcsBaseUrl = whmcsData.WhmcsBaseUrl
 	} else {
 		log.Fatal("Failed to get whmcs settings", zap.Error(err))
 	}
