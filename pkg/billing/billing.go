@@ -136,17 +136,15 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		},
 	}
 
-	var whmcsDataStr string
-	if err := rdb.Get(context.Background(), "_settings:whmcs").Scan(&whmcsDataStr); err != nil {
-		log.Fatal("Failed to read WHMCS data from Redis", zap.Error(err))
-	}
 	var whmcsData whmcsRedisData
-	if err := json.Unmarshal([]byte(whmcsDataStr), &whmcsData); err != nil {
-		log.Fatal("Failed to unmarshal WHMCS data from Redis", zap.Error(err))
+	if keys, err := rdb.HGetAll(context.Background(), "_settings:whmcs").Result(); err == nil {
+		whmcsData.WhmcsUser = keys["user"]
+		whmcsData.WhmcsPassHash = keys["pass_hash"]
+		whmcsData.WhmcsBaseUrl = keys["api"]
+		whmcsData.DangerMode = keys["danger_mode"] == "true"
+	} else {
+		log.Fatal("Failed to get whmcs settings", zap.Error(err))
 	}
-	s.whmcsUser = whmcsData.WhmcsUser
-	s.whmcsPassHash = whmcsData.WhmcsPassHash
-	s.whmcsBaseUrl = whmcsData.WhmcsBaseUrl
 
 	s.migrate()
 

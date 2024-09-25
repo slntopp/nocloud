@@ -35,3 +35,9 @@ type CreateInvoiceQuery struct {
 	AutoApplyCredit string `url:"autoapplycredit"`
 	ResponseType    string `url:"responsetype"`
 }
+
+type InvoiceResponse struct {
+	Status    string `json:"status"`
+	InvoiceId int    `json:"invoiceid"`
+	Result    string `json:"result"`
+}

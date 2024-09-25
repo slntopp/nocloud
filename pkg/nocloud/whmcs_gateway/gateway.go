@@ -2,6 +2,7 @@ package whmcs_gateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -16,14 +17,16 @@ type WhmcsGateway struct {
 	baseUrl     string
 
 	accounts *graph.AccountsController
+	invoices *graph.InvoicesController
 }
 
-func NewWhmcsGateway(username string, passwordHash string, host string, acc *graph.AccountsController) *WhmcsGateway {
+func NewWhmcsGateway(username string, passwordHash string, host string, acc *graph.AccountsController, inv *graph.InvoicesController) *WhmcsGateway {
 	return &WhmcsGateway{
 		apiUsername: username,
 		apiPassword: passwordHash,
 		baseUrl:     host,
 		accounts:    acc,
+		invoices:    inv,
 	}
 }
 
@@ -61,10 +64,22 @@ func (g *WhmcsGateway) CreateInvoice(_ context.Context, inv *pb.Invoice) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Create Invoice Body: ", string(b))
 
-	if resp.StatusCode != 200 {
+	var invResp InvoiceResponse
+	err = json.Unmarshal(b, &invResp)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 || invResp.Status != "success" {
 		return fmt.Errorf("failed to create invoice: %s", resp.Status)
+	}
+
+	patch := map[string]interface{}{
+		"meta.whmcs_invoice_id": invResp.InvoiceId,
+	}
+	if err := g.invoices.Patch(context.Background(), inv.GetUuid(), patch); err != nil {
+		return err
 	}
 
 	return nil
