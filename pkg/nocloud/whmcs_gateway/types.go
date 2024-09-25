@@ -40,4 +40,5 @@ type InvoiceResponse struct {
 	Status    string `json:"status"`
 	InvoiceId int    `json:"invoiceid"`
 	Result    string `json:"result"`
+	Message   string `json:"message"`
 }
