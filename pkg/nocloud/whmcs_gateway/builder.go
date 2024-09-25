@@ -9,7 +9,7 @@ import (
 )
 
 // TODO: review TaxRate, PaymentMethod, AutoApplyCredit and other fields
-func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId int) url.Values {
+func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId int) (url.Values, error) {
 	res, err := query.Values(CreateInvoiceQuery{
 		Action:          "CreateInvoice",
 		Username:        g.apiUsername,
@@ -25,8 +25,8 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 		ResponseType:    "json",
 	})
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 
-	return res
+	return res, nil
 }
