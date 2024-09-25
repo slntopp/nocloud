@@ -163,9 +163,9 @@ func (s *BillingServiceServer) GetPaymentGateway(t string) PaymentGateway {
 	case "nocloud":
 		return nocloud_gateway.NewNoCloudGateway()
 	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts)
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts, &s.invoices)
 	default:
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts)
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts, &s.invoices)
 	}
 }
 
