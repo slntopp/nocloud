@@ -93,6 +93,9 @@ func main() {
 		Addr: redisHost,
 		DB:   0,
 	})
+	if res := rdb.Ping(context.Background()); res.Err() != nil {
+		log.Fatal("Failed to connect to Redis", zap.Error(res.Err()))
+	}
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
