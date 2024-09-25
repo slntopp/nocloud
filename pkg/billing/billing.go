@@ -49,6 +49,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+const whmcsRedisKey = "_settings:whmcs"
+
 type Routine struct {
 	Name     string
 	LastExec string
@@ -137,7 +139,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 	}
 
 	var whmcsData whmcsRedisData
-	if keys, err := rdb.HGetAll(context.Background(), "_settings:whmcs").Result(); err == nil {
+	if keys, err := rdb.HGetAll(context.Background(), whmcsRedisKey).Result(); err == nil {
 		whmcsData.WhmcsUser = keys["user"]
 		whmcsData.WhmcsPassHash = keys["pass_hash"]
 		whmcsData.WhmcsBaseUrl = keys["api"]
