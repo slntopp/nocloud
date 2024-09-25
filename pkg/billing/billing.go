@@ -140,6 +140,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 
 	var whmcsData whmcsRedisData
 	if keys, err := rdb.HGetAll(context.Background(), whmcsRedisKey).Result(); err == nil {
+		fmt.Println("WHMCS DATA", keys)
 		whmcsData.WhmcsUser = keys["user"]
 		whmcsData.WhmcsPassHash = keys["pass_hash"]
 		whmcsData.WhmcsBaseUrl = keys["api"]
