@@ -30,13 +30,13 @@ func NewWhmcsGateway(username string, passwordHash string, host string, acc *gra
 	}
 }
 
-func (g *WhmcsGateway) CreateInvoice(_ context.Context, inv *pb.Invoice) error {
+func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
 	}
 
-	account, err := g.accounts.Get(context.Background(), inv.GetAccount())
+	account, err := g.accounts.Get(ctx, inv.GetAccount())
 	if err != nil {
 		return err
 	}
@@ -78,13 +78,13 @@ func (g *WhmcsGateway) CreateInvoice(_ context.Context, inv *pb.Invoice) error {
 	patch := map[string]interface{}{
 		"meta.whmcs_invoice_id": invResp.InvoiceId,
 	}
-	if err := g.invoices.Patch(context.Background(), inv.GetUuid(), patch); err != nil {
+	if err := g.invoices.Patch(ctx, inv.GetUuid(), patch); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (g *WhmcsGateway) UpdateInvoice(_ context.Context, inv *pb.Invoice) error {
+func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
 	return nil
 }
