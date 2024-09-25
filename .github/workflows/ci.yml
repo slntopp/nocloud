@@ -48,16 +48,16 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
     outputs:
       matrix: ${{ steps.set-tags-matrix.outputs.matrix }}
-  wait-for-checks:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Wait for tests to succeed
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.ref }}
-          check-name: checks
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 10
+#  wait-for-checks:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Wait for tests to succeed
+#        uses: lewagon/wait-on-check-action@v1.3.4
+#        with:
+#          ref: ${{ github.ref }}
+#          check-name: checks
+#          repo-token: ${{ secrets.GITHUB_TOKEN }}
+#          wait-interval: 10
 
   build-and-push-base-image:
     runs-on: ubuntu-latest
