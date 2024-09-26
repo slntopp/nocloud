@@ -13,6 +13,7 @@ func (g *WhmcsGateway) BuildWhmcsHooksHandler(log *zap.Logger) func(http.Respons
 		b, _ := io.ReadAll(r.Body)
 		log.Info("Request received", zap.Any("method", r.Method), zap.Any("body", string(b)), zap.Any("url", r.URL))
 		if ip := strings.Split(r.RemoteAddr, ":")[0]; ip != g.trustedIP {
+			log.Error("Forbidden IP address", zap.String("ip", ip), zap.String("trusted_ip", g.trustedIP))
 			w.WriteHeader(http.StatusForbidden)
 			_, _ = w.Write([]byte("forbidden IP address: " + ip))
 			return
