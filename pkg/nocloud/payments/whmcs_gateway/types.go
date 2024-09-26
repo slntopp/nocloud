@@ -130,13 +130,13 @@ type UpdateInvoiceQuery struct {
 	DueDate             *string               `url:"duedate,omitempty"`
 	DatePaid            *string               `url:"datepaid,omitempty"`
 	Notes               *string               `url:"notes,omitempty"`
-	ItemDescription     map[int]string        `url:"itemdescription,omitempty"`
-	ItemAmount          map[int]floatAsString `url:"itemamount,omitempty"`
-	ItemTaxed           map[int]bool          `url:"itemtaxed,omitempty"`
-	NewItemDescription  map[int]string        `url:"newitemdescription,omitempty"`
-	NewItemAmount       map[int]floatAsString `url:"newitemamount,omitempty"`
-	NewItemTaxed        map[int]bool          `url:"newitemtaxed,omitempty"`
-	DeleteLineIds       []int                 `url:"deletelineids,omitempty"`
+	ItemDescription     map[int]string        `url:"-,omitempty"`
+	ItemAmount          map[int]floatAsString `url:"-,omitempty"`
+	ItemTaxed           map[int]bool          `url:"-,omitempty"`
+	NewItemDescription  map[int]string        `url:"-,omitempty"`
+	NewItemAmount       map[int]floatAsString `url:"-,omitempty"`
+	NewItemTaxed        map[int]bool          `url:"-,omitempty"`
+	DeleteLineIds       []int                 `url:"deletelineids[],omitempty"`
 	Publish             *bool                 `url:"publish,omitempty"`
 	PublishAndSendEmail *bool                 `url:"publishandsendemail,omitempty"`
 }

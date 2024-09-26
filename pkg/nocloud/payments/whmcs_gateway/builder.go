@@ -1,12 +1,21 @@
 package whmcs_gateway
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/google/go-querystring/query"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"net/url"
 	"time"
 )
+
+func EncodeParam(s string) string {
+	return url.QueryEscape(s)
+}
+
+func EncodeStringBase64(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
 
 // TODO: review TaxRate, PaymentMethod, AutoApplyCredit and other fields
 func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId int) (url.Values, error) {
