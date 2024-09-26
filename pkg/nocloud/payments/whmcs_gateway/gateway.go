@@ -51,11 +51,6 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 		return result, err
 	}
 
-	err = json.Unmarshal(b, &result)
-	if err != nil {
-		return result, fmt.Errorf("failed to unmarshal response to result struct: %w", err)
-	}
-
 	resultChecker := struct {
 		Result  string `json:"result"`
 		Message string `json:"message"`
@@ -66,6 +61,12 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 	}
 	if resp.StatusCode != 200 || resultChecker.Result != "success" {
 		return result, fmt.Errorf("failed to create invoice: %s. Response body: %+v", resp.Status, resultChecker)
+	}
+
+	// Result
+	err = json.Unmarshal(b, &result)
+	if err != nil {
+		return result, fmt.Errorf("failed to unmarshal response to result struct: %w", err)
 	}
 
 	return result, nil

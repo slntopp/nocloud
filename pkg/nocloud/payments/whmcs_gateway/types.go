@@ -37,8 +37,9 @@ type CreateInvoiceQuery struct {
 }
 
 type GetInvoiceQuery struct {
-	Action    string `url:"action"`
-	InvoiceId int    `url:"invoiceid"`
+	Action       string `url:"action"`
+	InvoiceId    int    `url:"invoiceid"`
+	ResponseType string `url:"responsetype"`
 }
 
 type Item struct {
