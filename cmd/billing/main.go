@@ -23,6 +23,7 @@ import (
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -100,6 +101,7 @@ func main() {
 	}
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
+	restInterceptor := rest_auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
 
 	router := mux.NewRouter()
@@ -118,7 +120,9 @@ func main() {
 	accounts := graph.NewAccountsController(log, db)
 	invoices := graph.NewInvoicesController(log, db)
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, &accounts, &invoices)
-	router.PathPrefix("/nocloud.billing.Whmcs/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
+	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
+	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
+	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	conn, err := amqp.Dial(RabbitMQConn)
 	if err != nil {
