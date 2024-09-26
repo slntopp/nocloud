@@ -74,7 +74,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		return err
 	}
 
-	if resp.StatusCode != 200 || invResp.Status != "success" {
+	if resp.StatusCode != 200 || invResp.Result != "success" {
 		return fmt.Errorf("failed to create invoice: %s. Response body: %+v", resp.Status, invResp)
 	}
 
