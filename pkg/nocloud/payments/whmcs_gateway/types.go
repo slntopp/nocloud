@@ -42,3 +42,7 @@ type InvoiceResponse struct {
 	Result    string `json:"result"`
 	Message   string `json:"message"`
 }
+
+type InvoicePaid struct {
+	InvoiceId int `json:"invoiceid"`
+}
