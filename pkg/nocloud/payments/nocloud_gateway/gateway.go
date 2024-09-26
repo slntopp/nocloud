@@ -17,6 +17,6 @@ func (g *NcGateway) CreateInvoice(_ context.Context, _ *pb.Invoice) error {
 	return nil
 }
 
-func (g *NcGateway) UpdateInvoice(_ context.Context, _ *pb.Invoice) error {
+func (g *NcGateway) UpdateInvoice(_ context.Context, _ *pb.Invoice, _ *pb.Invoice) error {
 	return nil
 }
