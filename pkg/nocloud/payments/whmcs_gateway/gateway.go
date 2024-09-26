@@ -40,6 +40,7 @@ func NewWhmcsGateway(data WhmcsData, acc *graph.AccountsController, inv *graph.I
 func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, error) {
 	var result T
 
+	fmt.Println("Sending request to: ", url)
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return result, err
@@ -62,7 +63,7 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 	}{}
 	err = json.Unmarshal(b, &resultChecker)
 	if err != nil {
-		return result, fmt.Errorf("failed to unmarshal response to result checker struct: %w", err)
+		return result, fmt.Errorf("failed to unmarshal response to result checker struct: %w. Body: %s", err, string(b))
 	}
 	if resp.StatusCode != 200 || resultChecker.Result != "success" {
 		return result, fmt.Errorf("failed to perform action: %s. Response body: %+v", resp.Status, resultChecker)
