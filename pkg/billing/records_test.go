@@ -49,7 +49,7 @@ func TestConsumeMock(t *testing.T) {
 	}
 
 	conf := CurrencyConf{
-		Currency: pb.Currency{Id: 0, Title: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	db.On("Query", ctx, checkOverlap, map[string]interface{}{
@@ -90,7 +90,7 @@ func TestConsumeMock_NotNormal(t *testing.T) {
 	}
 
 	conf := CurrencyConf{
-		Currency: pb.Currency{Id: 0, Title: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	col.On("CreateDocument", ctx, &record).Return(driver.DocumentMeta{}, nil)
@@ -155,7 +155,7 @@ func TestConsumeMock_ZeroTotal(t *testing.T) {
 	}
 
 	conf := CurrencyConf{
-		Currency: pb.Currency{Id: 0, Title: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	err := ctrl.ProcessRecord(ctx, &record, conf, now)

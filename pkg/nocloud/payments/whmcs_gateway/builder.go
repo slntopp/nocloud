@@ -31,6 +31,16 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 	return res, nil
 }
 
+func (g *WhmcsGateway) buildUpdateInvoiceQueryBase(whmcsInvoiceId int) UpdateInvoiceQuery {
+	return UpdateInvoiceQuery{
+		Action:       "UpdateInvoice",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		ResponseType: "json",
+		InvoiceId:    whmcsInvoiceId,
+	}
+}
+
 func (g *WhmcsGateway) buildGetInvoiceQueryBase(whmcsInvoiceId int) (url.Values, error) {
 	res, err := query.Values(GetInvoiceQuery{
 		Action:       "GetInvoice",

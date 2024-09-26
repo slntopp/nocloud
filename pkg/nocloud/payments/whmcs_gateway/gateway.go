@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/google/go-querystring/query"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const invoiceIdField = "whmcs_invoice_id"
@@ -76,8 +78,6 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 }
 
 func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
-	fmt.Printf("WhmcsCreateInvoice: %+v\n", inv)
-
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -119,7 +119,65 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	return nil
 }
 
-func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
+func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *pb.Invoice) error {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return err
+	}
+
+	id, ok := inv.GetMeta()[invoiceIdField]
+	if !ok {
+		return fmt.Errorf("failed to get invoice id from meta")
+	}
+	body := g.buildUpdateInvoiceQueryBase(int(id.GetNumberValue()))
+
+	whmcsInv, err := g.GetInvoice(ctx, int(id.GetNumberValue()))
+	if err != nil {
+		return err
+	}
+
+	// Process params
+	if inv.Payment != old.Payment {
+		body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02"))
+	}
+	if inv.Deadline != old.Deadline {
+		body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
+	}
+	if inv.Status != old.Status {
+		body.Status = ptr(statusToWhmcs(inv.Status))
+	}
+	if inv.Created != old.Created {
+		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
+	}
+
+	// Delete all existing invoice items
+	toDelete := make([]int, 0)
+	for _, item := range whmcsInv.Items.Items {
+		toDelete = append(toDelete, item.Id)
+	}
+	body.DeleteLineIds = toDelete
+
+	// From new list of items
+	description := make(map[int]string)
+	amount := make(map[int]floatAsString)
+	taxed := make(map[int]bool)
+	for i, item := range inv.GetItems() {
+		description[i] = item.GetDescription()
+		amount[i] = floatAsString(item.GetPrice() * float64(item.GetAmount()))
+		taxed[i] = false
+	}
+	body.NewItemDescription = description
+	body.NewItemAmount = amount
+	body.NewItemTaxed = taxed
+
+	q, err := query.Values(body)
+	if err != nil {
+		return err
+	}
+	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

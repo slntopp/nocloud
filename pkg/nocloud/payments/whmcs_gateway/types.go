@@ -39,9 +39,9 @@ func statusToWhmcs(status pb.BillingStatus) string {
 	case pb.BillingStatus_CANCELED:
 		return "Cancelled"
 	case pb.BillingStatus_RETURNED:
-		return "Returned"
+		return "Refunded"
 	case pb.BillingStatus_TERMINATED:
-		return "Terminated"
+		return "Cancelled"
 	default:
 		return "Unknown"
 	}
@@ -112,6 +112,33 @@ type InvoiceResponse struct {
 	InvoiceId int    `json:"invoiceid"`
 	Result    string `json:"result"`
 	Message   string `json:"message"`
+}
+
+type UpdateInvoiceQuery struct {
+	Action       string `url:"action"`
+	InvoiceId    int    `url:"invoiceid"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+
+	Status              *string               `url:"status,omitempty"`
+	PaymentMethod       *string               `url:"paymentmethod,omitempty"`
+	TaxRate             *floatAsString        `url:"taxrate,omitempty"`
+	TaxRate2            *floatAsString        `url:"taxrate2,omitempty"`
+	Credit              *floatAsString        `url:"credit,omitempty"`
+	Date                *string               `url:"date,omitempty"`
+	DueDate             *string               `url:"duedate,omitempty"`
+	DatePaid            *string               `url:"datepaid,omitempty"`
+	Notes               *string               `url:"notes,omitempty"`
+	ItemDescription     map[int]string        `url:"itemdescription,omitempty"`
+	ItemAmount          map[int]floatAsString `url:"itemamount,omitempty"`
+	ItemTaxed           map[int]bool          `url:"itemtaxed,omitempty"`
+	NewItemDescription  map[int]string        `url:"newitemdescription,omitempty"`
+	NewItemAmount       map[int]floatAsString `url:"newitemamount,omitempty"`
+	NewItemTaxed        map[int]bool          `url:"newitemtaxed,omitempty"`
+	DeleteLineIds       []int                 `url:"deletelineids,omitempty"`
+	Publish             *bool                 `url:"publish,omitempty"`
+	PublishAndSendEmail *bool                 `url:"publishandsendemail,omitempty"`
 }
 
 type InvoicePaid struct {

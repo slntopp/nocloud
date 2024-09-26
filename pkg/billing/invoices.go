@@ -406,6 +406,8 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
+	newInv := proto.Clone(old.Invoice).(*pb.Invoice)
+
 	newStatus := t.GetStatus()
 	oldStatus := old.GetStatus()
 
@@ -427,15 +429,15 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	patch := map[string]interface{}{
 		"status": newStatus,
 	}
-	old.Status = newStatus
+	newInv.Status = newStatus
 
-	acc, err := s.accounts.Get(ctx, old.GetAccount())
+	acc, err := s.accounts.Get(ctx, newInv.GetAccount())
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	transactions := old.GetTransactions()
+	transactions := newInv.GetTransactions()
 	var resp *connect.Response[pb.Invoice]
 	var strNum string
 	var num int
@@ -450,17 +452,17 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 payment:
-	log.Info("Starting invoice payment", zap.String("invoice", old.GetUuid()))
+	log.Info("Starting invoice payment", zap.String("invoice", newInv.GetUuid()))
 	if req.Msg.GetParams().GetPaymentDate() != 0 {
 		patch["payment"] = req.Msg.GetParams().GetPaymentDate()
-		old.Payment = req.Msg.GetParams().GetPaymentDate()
+		newInv.Payment = req.Msg.GetParams().GetPaymentDate()
 	} else {
 		patch["payment"] = nowBeforeActions
-		old.Payment = nowBeforeActions
+		newInv.Payment = nowBeforeActions
 	}
 
 	log.Debug("Updating transactions to perform payment.")
-	for _, trId := range old.GetTransactions() {
+	for _, trId := range newInv.GetTransactions() {
 		tr, err := s.transactions.Get(ctx, trId)
 		if err != nil {
 			log.Error("Failed to get transaction", zap.Error(err))
@@ -477,22 +479,22 @@ payment:
 	log.Debug("Transactions were updated and processed.")
 
 	// Update number
-	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(old.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
+	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
 	if err != nil {
 		log.Error("Failed to get next number", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get next number")
 	}
-	old.Number = strNum
+	newInv.Number = strNum
 	patch["number"] = strNum
 	patch["numeric_number"] = num
 	patch["number_template"] = invConf.Template
 
 	// BALANCE action was processed after transaction was processed
 	// NO_ACTION action don't need any processing
-	switch old.GetType() {
+	switch newInv.GetType() {
 	case pb.ActionType_INSTANCE_START:
 		log.Debug("Paid action: instance start")
-		for _, item := range old.GetItems() {
+		for _, item := range newInv.GetItems() {
 			i := item.GetInstance()
 			log = log.With(zap.String("instance", i))
 			instOld, err := s.instances.Get(ctx, i)
@@ -519,7 +521,7 @@ payment:
 
 	case pb.ActionType_INSTANCE_RENEWAL:
 		log.Debug("Paid action: instance renewal")
-		for _, item := range old.GetItems() {
+		for _, item := range newInv.GetItems() {
 			i := item.GetInstance()
 			log = log.With(zap.String("instance", i))
 			if i == "" {
@@ -562,12 +564,12 @@ payment:
 
 	nowAfterActions = time.Now().Unix()
 	patch["processed"] = nowAfterActions
-	old.Processed = nowAfterActions
+	newInv.Processed = nowAfterActions
 
 	if req.Msg.GetParams().GetIsSendEmail() {
 		_, _ = eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
-			Uuid: old.GetAccount(),
+			Uuid: newInv.GetAccount(),
 			Key:  "invoice_paid",
 		})
 	}
@@ -575,13 +577,13 @@ payment:
 	goto quit
 
 returning:
-	log.Info("Starting invoice returning", zap.String("invoice", old.GetUuid()))
+	log.Info("Starting invoice returning", zap.String("invoice", newInv.GetUuid()))
 	patch["returned"] = nowBeforeActions
-	old.Returned = nowBeforeActions
+	newInv.Returned = nowBeforeActions
 	// Create same amount of transactions but rewert their total
 	// Make them urgent and set exec time to apply them to account's balance immediately
 	log.Debug("Creating rewert transactions")
-	for _, trId := range old.GetTransactions() {
+	for _, trId := range newInv.GetTransactions() {
 		tr, err := s.transactions.Get(ctx, trId)
 		if err != nil {
 			log.Error("Failed to get transaction", zap.Error(err))
@@ -605,19 +607,19 @@ returning:
 		transactions = append(transactions, t.Msg.GetUuid())
 	}
 	log.Debug("Patching invoice with rewert transactions")
-	if err = s.invoices.Patch(ctx, old.GetUuid(), map[string]interface{}{"transactions": transactions}); err != nil {
+	if err = s.invoices.Patch(ctx, newInv.GetUuid(), map[string]interface{}{"transactions": transactions}); err != nil {
 		log.Error("Failed to patch invoice with rewert transactions", zap.Error(err))
 	}
 	log.Debug("Ended revert transactions creation")
 	log.Debug("Starting action termination")
 	// BALANCE was reverted on revert transactions
 	// NO_ACTION action don't need any reverting actions
-	switch old.GetType() {
+	switch newInv.GetType() {
 	case pb.ActionType_INSTANCE_START:
 		// Suspending instance
 		// TODO: maybe start returning should be done without suspending
 		log.Debug("Returning instance from start to suspended")
-		for _, item := range old.GetItems() {
+		for _, item := range newInv.GetItems() {
 			id := item.GetInstance()
 			i, err := s.instances.Get(ctx, id)
 			if err != nil {
@@ -653,7 +655,7 @@ returning:
 
 	case pb.ActionType_INSTANCE_RENEWAL:
 		log.Debug("Returning action: instance renewal")
-		for _, item := range old.GetItems() {
+		for _, item := range newInv.GetItems() {
 			i := item.GetInstance()
 			log = log.With(zap.String("instance", i))
 			if i == "" {
@@ -705,13 +707,13 @@ quit:
 		log.Error("Failed to get updated invoice", zap.Error(err))
 	}
 	if err == nil {
-		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice); err != nil {
+		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
 
 	log.Info("Finished invoice update status")
-	resp = connect.NewResponse(old.Invoice)
+	resp = connect.NewResponse(newInv)
 	return resp, nil
 }
 
@@ -819,6 +821,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
+	old := proto.Clone(t.Invoice).(*pb.Invoice)
 
 	newStatus := req.GetStatus()
 	oldStatus := t.GetStatus()
@@ -920,7 +923,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice); err != nil {
+	if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 		log.Error("Failed to update invoice through gateway", zap.Error(err))
 	}
 
