@@ -30,3 +30,15 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 
 	return res, nil
 }
+
+func (g *WhmcsGateway) buildGetInvoiceQueryBase(whmcsInvoiceId int) (url.Values, error) {
+	res, err := query.Values(GetInvoiceQuery{
+		Action:    "GetInvoice",
+		InvoiceId: whmcsInvoiceId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

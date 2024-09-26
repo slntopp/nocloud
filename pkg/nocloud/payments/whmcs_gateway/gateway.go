@@ -32,6 +32,45 @@ func NewWhmcsGateway(data WhmcsData, acc *graph.AccountsController, inv *graph.I
 	}
 }
 
+func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, error) {
+	var result T
+
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return result, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return result, err
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return result, err
+	}
+
+	err = json.Unmarshal(b, &result)
+	if err != nil {
+		return result, fmt.Errorf("failed to unmarshal response to result struct: %w", err)
+	}
+
+	resultChecker := struct {
+		Result  string `json:"result"`
+		Message string `json:"message"`
+	}{}
+	err = json.Unmarshal(b, &resultChecker)
+	if err != nil {
+		return result, fmt.Errorf("failed to unmarshal response to result checker struct: %w", err)
+	}
+	if resp.StatusCode != 200 || resultChecker.Result != "success" {
+		return result, fmt.Errorf("failed to create invoice: %s. Response body: %+v", resp.Status, resultChecker)
+	}
+
+	return result, nil
+}
+
 func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
@@ -54,32 +93,18 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		query.Set(fmt.Sprintf("itemtaxed%d", i+1), "0")
 	}
 
-	req, err := http.NewRequest(http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
+	invResp, err := sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
 	if err != nil {
 		return err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	newInv, err := g.GetInvoice(ctx, invResp.InvoiceId)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	fmt.Printf("WhmcsGetInvoice: %+v\n", newInv)
 
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	var invResp InvoiceResponse
-	err = json.Unmarshal(b, &invResp)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != 200 || invResp.Result != "success" {
-		return fmt.Errorf("failed to create invoice: %s. Response body: %+v", resp.Status, invResp)
-	}
-
+	// Update NoCloud invoice
 	patch := map[string]interface{}{
 		"meta.whmcs_invoice_id": invResp.InvoiceId,
 	}
@@ -92,4 +117,23 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
 	return nil
+}
+
+func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invoice, error) {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return Invoice{}, err
+	}
+
+	query, err := g.buildGetInvoiceQueryBase(whmcsInvoiceId)
+	if err != nil {
+		return Invoice{}, err
+	}
+
+	invResp, err := sendRequestToWhmcs[Invoice](http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
+	if err != nil {
+		return Invoice{}, err
+	}
+
+	return invResp, nil
 }
