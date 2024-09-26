@@ -1,6 +1,32 @@
 package whmcs_gateway
 
-import pb "github.com/slntopp/nocloud-proto/billing"
+import (
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"strconv"
+	"strings"
+)
+
+type floatAsString float64
+
+func (foe *floatAsString) UnmarshalJSON(data []byte) error {
+	if string(data) == `""` {
+		if foe != nil {
+			*foe = 0
+		}
+		return nil
+	}
+	num := strings.ReplaceAll(string(data), `"`, "")
+	n, err := strconv.ParseFloat(num, 64)
+	if err != nil {
+		return err
+	}
+	*foe = floatAsString(n)
+	return nil
+}
+
+func (foe *floatAsString) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + strconv.FormatFloat(float64(*foe), 'f', -1, 64) + `"`), nil
+}
 
 func statusToWhmcs(status pb.BillingStatus) string {
 	switch status {
