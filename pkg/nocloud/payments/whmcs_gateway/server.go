@@ -27,7 +27,7 @@ func (g *WhmcsGateway) BuildWhmcsHooksHandler(log *zap.Logger) func(http.Respons
 			_, _ = w.Write([]byte("only root access allowed"))
 			return
 		}
-		go g.handleWhmcsEvent(log, r)
+		go g.handleWhmcsEvent(log, b)
 		w.WriteHeader(http.StatusOK)
 	}
 }
