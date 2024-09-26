@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"github.com/rs/cors"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -107,6 +109,16 @@ func main() {
 			h.ServeHTTP(w, r)
 		})
 	})
+
+	// Handle whmcs hooks
+	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
+	if err != nil {
+		log.Fatal("Can't get whmcs credentials", zap.Error(err))
+	}
+	accounts := graph.NewAccountsController(log, db)
+	invoices := graph.NewInvoicesController(log, db)
+	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData.WhmcsUser, whmcsData.WhmcsPassHash, whmcsData.WhmcsBaseUrl, &accounts, &invoices)
+	router.PathPrefix("whmcs_hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	conn, err := amqp.Dial(RabbitMQConn)
 	if err != nil {
