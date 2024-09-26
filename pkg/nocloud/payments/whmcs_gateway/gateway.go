@@ -6,10 +6,13 @@ import (
 	"fmt"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
 	"net/url"
 )
+
+const invoiceIdField = "whmcs_invoice_id"
 
 type WhmcsGateway struct {
 	apiUsername string
@@ -101,17 +104,15 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		return err
 	}
 
-	newInv, err := g.GetInvoice(ctx, invResp.InvoiceId)
+	// Set whmcs invoice id to invoice meta
+	invoice, err := g.invoices.Get(ctx, inv.GetUuid())
 	if err != nil {
 		return err
 	}
-	fmt.Printf("WhmcsGetInvoice: %+v\n", newInv)
-
-	// Update NoCloud invoice
-	patch := map[string]interface{}{
-		"meta.whmcs_invoice_id": invResp.InvoiceId,
-	}
-	if err := g.invoices.Patch(ctx, inv.GetUuid(), patch); err != nil {
+	meta := invoice.GetMeta()
+	meta[invoiceIdField] = structpb.NewNumberValue(float64(invResp.InvoiceId))
+	invoice.Meta = meta
+	if _, err := g.invoices.Update(ctx, invoice); err != nil {
 		return err
 	}
 
