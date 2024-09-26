@@ -60,7 +60,7 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 		return result, fmt.Errorf("failed to unmarshal response to result checker struct: %w", err)
 	}
 	if resp.StatusCode != 200 || resultChecker.Result != "success" {
-		return result, fmt.Errorf("failed to create invoice: %s. Response body: %+v", resp.Status, resultChecker)
+		return result, fmt.Errorf("failed to perform action: %s. Response body: %+v", resp.Status, resultChecker)
 	}
 
 	// Result

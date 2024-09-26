@@ -40,6 +40,8 @@ type GetInvoiceQuery struct {
 	Action       string `url:"action"`
 	InvoiceId    int    `url:"invoiceid"`
 	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
 }
 
 type Item struct {

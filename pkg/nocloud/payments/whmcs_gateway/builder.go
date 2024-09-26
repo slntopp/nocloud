@@ -36,6 +36,8 @@ func (g *WhmcsGateway) buildGetInvoiceQueryBase(whmcsInvoiceId int) (url.Values,
 		Action:       "GetInvoice",
 		InvoiceId:    whmcsInvoiceId,
 		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
 	})
 	if err != nil {
 		return nil, err

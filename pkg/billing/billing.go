@@ -145,13 +145,6 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 	return s
 }
 
-type whmcsRedisData struct {
-	WhmcsUser     string `json:"user"`
-	WhmcsPassHash string `json:"pass_hash"`
-	WhmcsBaseUrl  string `json:"api"`
-	DangerMode    bool   `json:"danger_mode"`
-}
-
 func (s *BillingServiceServer) GetPaymentGateway(t string) PaymentGateway {
 	switch t {
 	case "nocloud":
