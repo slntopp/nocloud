@@ -15,16 +15,18 @@ type WhmcsGateway struct {
 	apiUsername string
 	apiPassword string
 	baseUrl     string
+	trustedIP   string
 
 	accounts *graph.AccountsController
 	invoices *graph.InvoicesController
 }
 
-func NewWhmcsGateway(username string, passwordHash string, host string, acc *graph.AccountsController, inv *graph.InvoicesController) *WhmcsGateway {
+func NewWhmcsGateway(data WhmcsData, acc *graph.AccountsController, inv *graph.InvoicesController) *WhmcsGateway {
 	return &WhmcsGateway{
-		apiUsername: username,
-		apiPassword: passwordHash,
-		baseUrl:     host,
+		apiUsername: data.WhmcsUser,
+		apiPassword: data.WhmcsPassHash,
+		baseUrl:     data.WhmcsBaseUrl,
+		trustedIP:   data.TrustedIP,
 		accounts:    acc,
 		invoices:    inv,
 	}

@@ -82,9 +82,7 @@ type BillingServiceServer struct {
 
 	drivers map[string]driverpb.DriverServiceClient
 
-	whmcsUser     string
-	whmcsPassHash string
-	whmcsBaseUrl  string
+	whmcsData whmcs_gateway.WhmcsData
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client) *BillingServiceServer {
@@ -140,9 +138,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 	if err != nil {
 		log.Fatal("Can't get whmcs credentials", zap.Error(err))
 	}
-	s.whmcsUser = whmcsData.WhmcsUser
-	s.whmcsPassHash = whmcsData.WhmcsPassHash
-	s.whmcsBaseUrl = whmcsData.WhmcsBaseUrl
+	s.whmcsData = whmcsData
 
 	s.migrate()
 
@@ -161,9 +157,9 @@ func (s *BillingServiceServer) GetPaymentGateway(t string) PaymentGateway {
 	case "nocloud":
 		return nocloud_gateway.NewNoCloudGateway()
 	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts, &s.invoices)
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoices)
 	default:
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsUser, s.whmcsPassHash, s.whmcsBaseUrl, &s.accounts, &s.invoices)
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoices)
 	}
 }
 

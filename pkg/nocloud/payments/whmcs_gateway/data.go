@@ -13,6 +13,7 @@ type WhmcsData struct {
 	WhmcsPassHash string `json:"pass_hash"`
 	WhmcsBaseUrl  string `json:"api"`
 	DangerMode    bool   `json:"danger_mode"`
+	TrustedIP     string `json:"trusted_ip"`
 }
 
 func GetWhmcsCredentials(rdb *redis.Client) (WhmcsData, error) {
