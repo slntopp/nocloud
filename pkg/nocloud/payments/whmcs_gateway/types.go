@@ -71,12 +71,12 @@ type GetInvoiceQuery struct {
 }
 
 type Item struct {
-	Id          int     `json:"id"`
-	Type        string  `json:"type"`
-	RelId       int     `json:"relid"`
-	Description string  `json:"description"`
-	Amount      float64 `json:"amount"`
-	Taxed       int     `json:"taxed"`
+	Id          int           `json:"id"`
+	Type        string        `json:"type"`
+	RelId       int           `json:"relid"`
+	Description string        `json:"description"`
+	Amount      floatAsString `json:"amount"`
+	Taxed       int           `json:"taxed"`
 }
 
 type ItemHolder struct {
@@ -84,27 +84,27 @@ type ItemHolder struct {
 }
 
 type Invoice struct {
-	Result        string     `json:"result"`
-	InvoiceId     int        `json:"invoiceid"`
-	InvoiceNum    string     `json:"invoicenum"`
-	UserId        int        `json:"userid"`
-	Date          string     `json:"date"`     // YYYY-MM-DD
-	DueDate       string     `json:"duedate"`  // YYYY-MM-DD
-	DatePaid      string     `json:"datepaid"` // YYYY-MM-DD HH:ii:ss
-	Subtotal      float64    `json:"subtotal"`
-	Credit        float64    `json:"credit"` // credit assigned
-	Tax           float64    `json:"tax"`    // first level tax charged
-	Tax2          float64    `json:"tax2"`   // second level tax charged
-	Total         float64    `json:"total"`
-	Balance       float64    `json:"balance"` // amount left to pay
-	TaxRate       float64    `json:"taxrate"`
-	TaxRate2      float64    `json:"taxrate2"`
-	Status        string     `json:"status"`
-	PaymentMethod string     `json:"paymentmethod"`
-	Notes         string     `json:"notes"`
-	CcGateway     bool       `json:"ccgateway"` // Whether the payment method is a credit card gateway that can be submitted to attempt capture.
-	Items         ItemHolder `json:"items"`
-	Transactions  string     `json:"transactions"`
+	Result        string        `json:"result"`
+	InvoiceId     int           `json:"invoiceid"`
+	InvoiceNum    string        `json:"invoicenum"`
+	UserId        int           `json:"userid"`
+	Date          string        `json:"date"`     // YYYY-MM-DD
+	DueDate       string        `json:"duedate"`  // YYYY-MM-DD
+	DatePaid      string        `json:"datepaid"` // YYYY-MM-DD HH:ii:ss
+	Subtotal      floatAsString `json:"subtotal"`
+	Credit        floatAsString `json:"credit"` // credit assigned
+	Tax           floatAsString `json:"tax"`    // first level tax charged
+	Tax2          floatAsString `json:"tax2"`   // second level tax charged
+	Total         floatAsString `json:"total"`
+	Balance       floatAsString `json:"balance"` // amount left to pay
+	TaxRate       floatAsString `json:"taxrate"`
+	TaxRate2      floatAsString `json:"taxrate2"`
+	Status        string        `json:"status"`
+	PaymentMethod string        `json:"paymentmethod"`
+	Notes         string        `json:"notes"`
+	CcGateway     bool          `json:"ccgateway"` // Whether the payment method is a credit card gateway that can be submitted to attempt capture.
+	Items         ItemHolder    `json:"items"`
+	Transactions  string        `json:"transactions"`
 }
 
 type InvoiceResponse struct {
