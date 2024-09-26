@@ -73,6 +73,8 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 }
 
 func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
+	fmt.Printf("WhmcsCreateInvoice: %+v\n", inv)
+
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err

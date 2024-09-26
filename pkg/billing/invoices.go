@@ -368,7 +368,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	r.Uuid = r.DocumentMeta.Key
 	if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
 		log.Error("Failed to create invoice through gateway", zap.Error(err))
 	}
