@@ -118,7 +118,7 @@ func main() {
 	accounts := graph.NewAccountsController(log, db)
 	invoices := graph.NewInvoicesController(log, db)
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData.WhmcsUser, whmcsData.WhmcsPassHash, whmcsData.WhmcsBaseUrl, &accounts, &invoices)
-	router.PathPrefix("whmcs_hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
+	router.PathPrefix("/nocloud.billing.Whmcs/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	conn, err := amqp.Dial(RabbitMQConn)
 	if err != nil {
