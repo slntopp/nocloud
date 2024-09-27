@@ -117,7 +117,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 		for _, ig := range srv.GetInstancesGroups() {
 			for _, i := range ig.GetInstances() {
 				log := log.With(zap.String("instance", i.GetUuid()))
-				log.Info("Checking instance")
+				//log.Info("Checking instance")
 
 				if i.GetStatus() == spb.NoCloudStatus_DEL ||
 					i.GetState().GetState() == stpb.NoCloudState_PENDING ||
@@ -127,7 +127,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					i.GetState().GetState() == stpb.NoCloudState_STOPPED ||
 					i.GetState().GetState() == stpb.NoCloudState_FAILURE ||
 					i.GetStatus() == spb.NoCloudStatus_INIT {
-					log.Info("Instance has been deleted or PENDING or SUSPENDED or INIT state. Skipping")
+					//log.Info("Instance has been deleted or PENDING or SUSPENDED or INIT state. Skipping")
 					continue
 				}
 
