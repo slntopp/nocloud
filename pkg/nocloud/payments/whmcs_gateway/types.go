@@ -178,6 +178,10 @@ type UpdateInvoiceTotal struct {
 	InvoiceId int `json:"invoiceid"`
 }
 
+type InvoiceUnpaid struct {
+	InvoiceId int `json:"invoiceid"`
+}
+
 type InvoiceDeleted struct {
 	InvoiceId int `json:"invoiceid"`
 }

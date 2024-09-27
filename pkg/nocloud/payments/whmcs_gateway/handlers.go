@@ -66,6 +66,13 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			return
 		}
 		innerErr = g.syncWhmcsInvoice(context.Background(), data.InvoiceId)
+	case "InvoiceUnpaid":
+		data, err := unmarshal[InvoiceUnpaid](body)
+		if err != nil {
+			log.Error("Error decoding request", zap.Error(err))
+			return
+		}
+		innerErr = g.syncWhmcsInvoice(context.Background(), data.InvoiceId)
 	case "UpdateInvoiceTotal":
 		data, err := unmarshal[UpdateInvoiceTotal](body)
 		if err != nil {
