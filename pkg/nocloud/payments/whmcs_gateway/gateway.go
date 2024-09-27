@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -220,7 +221,7 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	}
 
 	inv.Status = statusToNoCloud(whmcsInv.Status)
-	if whmcsInv.DatePaid != "" {
+	if !strings.Contains(whmcsInv.DatePaid, "0000-00-00") {
 		t, err := time.Parse("2006-01-02 15:04:05", whmcsInv.DatePaid)
 		if err != nil {
 			return err
@@ -228,14 +229,14 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		inv.Payment = t.Unix()
 		inv.Processed = inv.Payment
 	}
-	if whmcsInv.DueDate != "" {
+	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
 		t, err := time.Parse("2006-01-02", whmcsInv.DueDate)
 		if err != nil {
 			return err
 		}
 		inv.Deadline = t.Unix()
 	}
-	if whmcsInv.Date != "" {
+	if !strings.Contains(whmcsInv.Date, "0000-00-00") {
 		t, err := time.Parse("2006-01-02", whmcsInv.Date)
 		if err != nil {
 			return err
