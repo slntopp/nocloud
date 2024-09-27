@@ -1,12 +1,18 @@
 package whmcs_gateway
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"go.uber.org/zap"
 )
 
-func (g *WhmcsGateway) invoicePaidHandler(log *zap.Logger, data InvoicePaid) {
+func (g *WhmcsGateway) invoiceCreatedHandler(log *zap.Logger, data InvoiceCreated) error {
+	return fmt.Errorf("not implemented invoicecreated logic")
+}
 
+func (g *WhmcsGateway) invoiceDeletedHandler(log *zap.Logger, data InvoiceDeleted) error {
+	return fmt.Errorf("not implemented invoicedeleted logic")
 }
 
 func unmarshal[T any](b []byte) (T, error) {
@@ -30,6 +36,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 
 	log.Info("Event received", zap.String("event", resp.Event))
 
+	var innerErr error
 	switch resp.Event {
 	case "InvoicePaid":
 		data, err := unmarshal[InvoicePaid](body)
@@ -37,9 +44,54 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		g.invoicePaidHandler(log, data)
+		innerErr = g.syncWhmcsInvoice(context.Background(), data.InvoiceId)
+	case "InvoiceModified":
+		data, err := unmarshal[InvoiceModified](body)
+		if err != nil {
+			log.Error("Error decoding request", zap.Error(err))
+			return
+		}
+		innerErr = g.syncWhmcsInvoice(context.Background(), data.InvoiceId)
+	case "InvoiceCancelled":
+		data, err := unmarshal[InvoiceCancelled](body)
+		if err != nil {
+			log.Error("Error decoding request", zap.Error(err))
+			return
+		}
+		innerErr = g.syncWhmcsInvoice(context.Background(), data.InvoiceId)
+	case "InvoiceRefunded":
+		data, err := unmarshal[InvoiceRefunded](body)
+		if err != nil {
+			log.Error("Error decoding request", zap.Error(err))
+			return
+		}
+		innerErr = g.syncWhmcsInvoice(context.Background(), data.InvoiceId)
+	case "UpdateInvoiceTotal":
+		data, err := unmarshal[UpdateInvoiceTotal](body)
+		if err != nil {
+			log.Error("Error decoding request", zap.Error(err))
+			return
+		}
+		innerErr = g.syncWhmcsInvoice(context.Background(), data.InvoiceId)
+	case "InvoiceCreated":
+		data, err := unmarshal[InvoiceCreated](body)
+		if err != nil {
+			log.Error("Error decoding request", zap.Error(err))
+			return
+		}
+		innerErr = g.invoiceCreatedHandler(log, data)
+	case "InvoiceDeleted":
+		data, err := unmarshal[InvoiceDeleted](body)
+		if err != nil {
+			log.Error("Error decoding request", zap.Error(err))
+			return
+		}
+		innerErr = g.invoiceDeletedHandler(log, data)
 	default:
 		log.Error("Unknown event", zap.String("event", resp.Event))
 		return
+	}
+	if innerErr != nil {
+		log.Error("Error handling event", zap.Error(innerErr))
 	}
 }

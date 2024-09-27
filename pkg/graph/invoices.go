@@ -118,3 +118,27 @@ func (ctrl *InvoicesController) Patch(ctx context.Context, id string, patch map[
 	_, err := ctrl.col.UpdateDocument(ctx, id, patch)
 	return err
 }
+
+func (ctrl *InvoicesController) List(ctx context.Context) ([]*Invoice, error) {
+	result := make([]*Invoice, 0)
+	cur, err := ctrl.col.Database().Query(ctx, "FOR doc IN "+ctrl.col.Name()+" RETURN MERGE(doc, {uuid: doc._key})", nil)
+	if err != nil {
+		ctrl.log.Error("Failed to list invoices", zap.Error(err))
+		return nil, err
+	}
+	defer cur.Close()
+	for cur.HasMore() {
+		var tx = &Invoice{
+			Invoice:           &pb.Invoice{},
+			InvoiceNumberMeta: &InvoiceNumberMeta{},
+		}
+		meta, err := cur.ReadDocument(ctx, tx)
+		if err != nil {
+			ctrl.log.Error("Failed to read invoice", zap.Error(err))
+			return nil, err
+		}
+		tx.Uuid = meta.Key
+		result = append(result, tx)
+	}
+	return result, err
+}

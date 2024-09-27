@@ -47,6 +47,23 @@ func statusToWhmcs(status pb.BillingStatus) string {
 	}
 }
 
+func statusToNoCloud(status string) pb.BillingStatus {
+	switch strings.ToLower(status) {
+	case "draft":
+		return pb.BillingStatus_DRAFT
+	case "unpaid":
+		return pb.BillingStatus_UNPAID
+	case "paid":
+		return pb.BillingStatus_PAID
+	case "cancelled":
+		return pb.BillingStatus_CANCELED
+	case "refunded":
+		return pb.BillingStatus_RETURNED
+	default:
+		return pb.BillingStatus_DRAFT
+	}
+}
+
 type CreateInvoiceQuery struct {
 	Action          string `url:"action"`
 	Username        string `url:"username"`
@@ -143,4 +160,31 @@ type UpdateInvoiceQuery struct {
 
 type InvoicePaid struct {
 	InvoiceId int `json:"invoiceid"`
+}
+
+type InvoiceCancelled struct {
+	InvoiceId int `json:"invoiceid"`
+}
+
+type InvoiceRefunded struct {
+	InvoiceId int `json:"invoiceid"`
+}
+
+type InvoiceModified struct {
+	InvoiceId int `json:"invoiceid"`
+}
+
+type UpdateInvoiceTotal struct {
+	InvoiceId int `json:"invoiceid"`
+}
+
+type InvoiceDeleted struct {
+	InvoiceId int `json:"invoiceid"`
+}
+
+// InvoiceCreated Missing user field
+type InvoiceCreated struct {
+	InvoiceId int    `json:"invoiceid"`
+	Source    string `json:"source"`
+	Status    string `json:"status"`
 }
