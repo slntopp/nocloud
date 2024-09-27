@@ -251,6 +251,7 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 			Description: item.Description,
 			Amount:      1,
 			Price:       float64(item.Amount),
+			Unit:        "Pcs",
 		})
 	}
 	meta := inv.GetMeta()
