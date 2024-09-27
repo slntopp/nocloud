@@ -146,7 +146,7 @@ onMounted(() => {
 
 const searchParam = computed(() => store.getters["appSearch/param"]);
 const filter = computed(() => {
-  const filter = store.getters["appSearch/filter"];
+  const filter = JSON.parse(JSON.stringify(store.getters["appSearch/filter"]));
   const total = {};
   if (filter.total?.to) {
     total.to = +filter.total.to;
@@ -170,6 +170,8 @@ const filter = computed(() => {
       dates[key].to = new Date(filter[key][1]).getTime() / 1000;
     }
   });
+
+  filter["status"] = filter["status"]?.map((val) => +val);
 
   return {
     ...filter,
@@ -230,9 +232,9 @@ const searchFields = computed(() => [
     type: "select",
     item: { value: "uuid", title: "title" },
     items: [
-      { title: "ACTIVE", uuid: 0 },
-      { title: "LOCK", uuid: 1 },
-      { title: "PERMANENT_LOCK", uuid: 2 },
+      { title: "ACTIVE", uuid: "0" },
+      { title: "LOCK", uuid: "1" },
+      { title: "PERMANENT_LOCK", uuid: "2" },
     ],
   },
   { title: "Balance", key: "balance", type: "number-range" },
@@ -344,7 +346,17 @@ import search from "@/mixins/search";
 
 export default {
   name: "accounts-table",
-  mixins: [search({ name: "accounts-table" })],
+  mixins: [
+    search({
+      name: "accounts-table",
+      defaultLayout: {
+        title: "Default",
+        filter: {
+          status: ["1", "0"],
+        },
+      },
+    }),
+  ],
 };
 </script>
 
