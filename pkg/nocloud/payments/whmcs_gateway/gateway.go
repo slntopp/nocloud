@@ -18,6 +18,12 @@ import (
 
 const invoiceIdField = "whmcs_invoice_id"
 
+type NoCloudInvoicesManager interface {
+	CreateInvoice(inv *pb.Invoice) error
+	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) error
+	InvoicesController() *graph.InvoicesController
+}
+
 type WhmcsGateway struct {
 	apiUsername string
 	apiPassword string
@@ -25,17 +31,17 @@ type WhmcsGateway struct {
 	trustedIP   string
 
 	accounts *graph.AccountsController
-	invoices *graph.InvoicesController
+	invMan   NoCloudInvoicesManager
 }
 
-func NewWhmcsGateway(data WhmcsData, acc *graph.AccountsController, inv *graph.InvoicesController) *WhmcsGateway {
+func NewWhmcsGateway(data WhmcsData, acc *graph.AccountsController, invMan NoCloudInvoicesManager) *WhmcsGateway {
 	return &WhmcsGateway{
 		apiUsername: data.WhmcsUser,
 		apiPassword: data.WhmcsPassHash,
 		baseUrl:     data.WhmcsBaseUrl,
 		trustedIP:   data.TrustedIP,
 		accounts:    acc,
-		invoices:    inv,
+		invMan:      invMan,
 	}
 }
 
@@ -107,14 +113,14 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	// Set whmcs invoice id to invoice meta
-	invoice, err := g.invoices.Get(ctx, inv.GetUuid())
+	invoice, err := g.invMan.InvoicesController().Get(ctx, inv.GetUuid())
 	if err != nil {
 		return err
 	}
 	meta := invoice.GetMeta()
 	meta[invoiceIdField] = structpb.NewNumberValue(float64(invResp.InvoiceId))
 	invoice.Meta = meta
-	if _, err := g.invoices.Update(ctx, invoice); err != nil {
+	if _, err := g.invMan.InvoicesController().Update(ctx, invoice); err != nil {
 		return err
 	}
 
@@ -220,7 +226,12 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		return err
 	}
 
-	inv.Status = statusToNoCloud(whmcsInv.Status)
+	if inv.Status != statusToNoCloud(whmcsInv.Status) {
+		inv.Status = statusToNoCloud(whmcsInv.Status)
+		if err := g.invMan.UpdateInvoiceStatus(inv.GetUuid(), inv.Status); err != nil {
+			return err
+		}
+	}
 	if !strings.Contains(whmcsInv.DatePaid, "0000-00-00") {
 		t, err := time.Parse("2006-01-02 15:04:05", whmcsInv.DatePaid)
 		if err != nil {
@@ -258,7 +269,7 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	meta["note"] = structpb.NewStringValue(whmcsInv.Notes)
 	inv.Meta = meta
 
-	if _, err = g.invoices.Update(ctx, &graph.Invoice{
+	if _, err = g.invMan.InvoicesController().Update(ctx, &graph.Invoice{
 		Invoice: inv,
 	}); err != nil {
 		return fmt.Errorf("failed to update invoice: %w", err)

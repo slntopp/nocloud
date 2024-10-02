@@ -8,7 +8,19 @@ import (
 )
 
 func (g *WhmcsGateway) invoiceCreatedHandler(log *zap.Logger, data InvoiceCreated) error {
-	return fmt.Errorf("not implemented invoicecreated logic")
+	whmcsInv, err := g.GetInvoice(context.Background(), data.InvoiceId)
+	if err != nil {
+		return err
+	}
+
+	_, err = g.GetAccountByWhmcsId(whmcsInv.UserId)
+	if err != nil {
+		return err
+	}
+
+	// TODO
+
+	return nil
 }
 
 func (g *WhmcsGateway) invoiceDeletedHandler(log *zap.Logger, data InvoiceDeleted) error {

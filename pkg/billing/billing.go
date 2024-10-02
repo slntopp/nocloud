@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"slices"
@@ -82,10 +83,11 @@ type BillingServiceServer struct {
 
 	drivers map[string]driverpb.DriverServiceClient
 
-	whmcsData whmcs_gateway.WhmcsData
+	whmcsData       whmcs_gateway.WhmcsData
+	invoicesManager invoices_manager.InvoicesManager
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client, invMng invoices_manager.InvoicesManager) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:         conn,
@@ -139,6 +141,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		log.Fatal("Can't get whmcs credentials", zap.Error(err))
 	}
 	s.whmcsData = whmcsData
+	s.invoicesManager = invMng
 
 	s.migrate()
 
@@ -150,9 +153,9 @@ func (s *BillingServiceServer) GetPaymentGateway(t string) PaymentGateway {
 	case "nocloud":
 		return nocloud_gateway.NewNoCloudGateway()
 	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoices)
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoicesManager)
 	default:
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoices)
+		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoicesManager)
 	}
 }
 
