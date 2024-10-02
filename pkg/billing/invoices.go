@@ -383,13 +383,14 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	nocloud.Log(log, &elpb.Event{
-		Uuid:     r.Key,
-		Entity:   "Invoices",
-		Action:   "create",
-		Scope:    "database",
-		Rc:       0,
-		Ts:       time.Now().Unix(),
-		Snapshot: &elpb.Snapshot{},
+		Uuid:      r.GetUuid(),
+		Entity:    "Invoices",
+		Action:    "create",
+		Scope:     "database",
+		Rc:        0,
+		Ts:        time.Now().Unix(),
+		Snapshot:  &elpb.Snapshot{},
+		Requestor: requestor,
 	})
 
 	resp := connect.NewResponse(r.Invoice)
