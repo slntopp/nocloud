@@ -716,13 +716,14 @@ quit:
 	}
 
 	nocloud.Log(log, &elpb.Event{
-		Uuid:     old.GetUuid(),
-		Entity:   "Invoices",
-		Action:   strings.ToLower(newStatus.String()),
-		Scope:    "database",
-		Rc:       0,
-		Ts:       time.Now().Unix(),
-		Snapshot: &elpb.Snapshot{},
+		Uuid:      old.GetUuid(),
+		Entity:    "Invoices",
+		Action:    strings.ToLower(newStatus.String()),
+		Scope:     "database",
+		Rc:        0,
+		Ts:        time.Now().Unix(),
+		Snapshot:  &elpb.Snapshot{},
+		Requestor: requestor,
 	})
 
 	upd, err := s.invoices.Get(ctx, t.GetUuid())
