@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -12,6 +13,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -380,6 +382,16 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		})
 	}
 
+	nocloud.Log(log, &elpb.Event{
+		Uuid:     r.Key,
+		Entity:   "Invoices",
+		Action:   "create",
+		Scope:    "database",
+		Rc:       0,
+		Ts:       time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{},
+	})
+
 	resp := connect.NewResponse(r.Invoice)
 	return resp, nil
 }
@@ -701,6 +713,16 @@ quit:
 		log.Error("Failed to update status", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
 	}
+
+	nocloud.Log(log, &elpb.Event{
+		Uuid:     old.GetUuid(),
+		Entity:   "Invoices",
+		Action:   strings.ToLower(newStatus.String()),
+		Scope:    "database",
+		Rc:       0,
+		Ts:       time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{},
+	})
 
 	upd, err := s.invoices.Get(ctx, t.GetUuid())
 	if err != nil {

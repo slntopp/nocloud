@@ -162,6 +162,19 @@ func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.Sus
 		return nil, status.Error(codes.Internal, "Error while updating account")
 	}
 
+	nocloud.Log(log, &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.Key,
+		Scope:     "database",
+		Action:    "suspended",
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	})
+
 	log.Debug("Suspend request end")
 	return &accountspb.SuspendResponse{Result: true}, nil
 }
@@ -210,6 +223,19 @@ func (s *AccountsServiceServer) Unsuspend(ctx context.Context, req *accountspb.U
 		log.Debug("Error updating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating account")
 	}
+
+	nocloud.Log(log, &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.Key,
+		Scope:     "database",
+		Action:    "unsuspended",
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	})
 
 	log.Debug("Unsuspend request end")
 	return &accountspb.UnsuspendResponse{Result: true}, nil
