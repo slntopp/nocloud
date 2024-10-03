@@ -2,8 +2,10 @@ package migrations
 
 import (
 	"context"
+	"encoding/csv"
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
+	"os"
 )
 
 const createInvoicesBasedOnOldTransactions = `
@@ -43,7 +45,7 @@ FOR t IN @@transactions
 		total: total,
 		processed: processed,
 		payment: payment,
-		meta: { note: note },
+		meta: { note: note, whmcs_invoice_id: @whmcsIds[newKey] },
 		status: status,
 		type: type,
 		account: account,
@@ -63,12 +65,31 @@ UPDATE invoice._key WITH invoice IN @@invoices
 OPTIONS { keepNull: false }
 `
 
-func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transactions driver.Collection) {
+func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transactions driver.Collection, whmcsInvoicesFile string) {
+	idToWhmcsId := make(map[string]string)
+	file, err := os.Open(whmcsInvoicesFile)
+	if err != nil {
+		log.Fatal("Error migrating old invoices to new", zap.Error(err))
+	}
+	defer file.Close()
+	csvReader := csv.NewReader(file)
+	records, err := csvReader.ReadAll()
+	if err != nil {
+		log.Fatal("Unable to parse file as CSV for "+whmcsInvoicesFile, zap.Error(err))
+	}
+	const id, whmcsId = 1, 2
+	log.Debug("First record", zap.Any("record", records[0]))
+	for i := 1; i < len(records); i++ {
+		log.Debug("Record", zap.Any("record", records[i]))
+		idToWhmcsId[records[i][id]] = records[i][whmcsId]
+	}
+
 	db := invoices.Database()
 	log.Info("Migrating old invoices to new")
-	_, err := db.Query(context.TODO(), createInvoicesBasedOnOldTransactions, map[string]interface{}{
+	_, err = db.Query(context.TODO(), createInvoicesBasedOnOldTransactions, map[string]interface{}{
 		"@invoices":     invoices.Name(),
 		"@transactions": transactions.Name(),
+		"@whmcsIds":     idToWhmcsId,
 	})
 	if err != nil {
 		log.Fatal("Error migrating old invoices to new", zap.Error(err))

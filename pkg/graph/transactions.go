@@ -22,8 +22,15 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
+
+var invoicesFile string
+
+func init() {
+	invoicesFile = viper.GetString("INVOICES_MIGRATIONS_FILE")
+}
 
 type Transaction struct {
 	*pb.Transaction
@@ -44,7 +51,7 @@ func NewTransactionsController(logger *zap.Logger, db driver.Database) Transacti
 	log.Info("Creating Transaction controller")
 
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
-	migrations.MigrateOldInvoicesToNew(log, GetEnsureCollection(log, ctx, db, schema.INVOICES_COL), col)
+	migrations.MigrateOldInvoicesToNew(log, GetEnsureCollection(log, ctx, db, schema.INVOICES_COL), col, invoicesFile)
 
 	return TransactionsController{
 		log: log, col: col,
