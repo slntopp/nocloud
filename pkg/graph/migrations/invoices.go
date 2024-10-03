@@ -66,6 +66,7 @@ OPTIONS { keepNull: false }
 `
 
 func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transactions driver.Collection, whmcsInvoicesFile string) {
+	log.Info("Migrating old transaction invoices to new")
 	idToWhmcsId := make(map[string]string)
 	file, err := os.Open(whmcsInvoicesFile)
 	if err != nil {
@@ -85,7 +86,6 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	}
 
 	db := invoices.Database()
-	log.Info("Migrating old invoices to new")
 	_, err = db.Query(context.TODO(), createInvoicesBasedOnOldTransactions, map[string]interface{}{
 		"@invoices":     invoices.Name(),
 		"@transactions": transactions.Name(),
