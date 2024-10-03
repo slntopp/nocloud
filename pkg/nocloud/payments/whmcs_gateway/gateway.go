@@ -231,6 +231,12 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	b, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 302 {
+		return "", fmt.Errorf("failed to get payment uri. Status code: %d, body: %s", resp.StatusCode, string(b))
+	}
+
 	location := resp.Header.Get("Location")
 	if location == "" {
 		return "", fmt.Errorf("failed to get payment uri. Location is empty")
