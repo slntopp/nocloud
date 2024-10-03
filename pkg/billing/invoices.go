@@ -1002,6 +1002,40 @@ func (s *BillingServiceServer) GetInvoiceSettingsTemplateExample(ctx context.Con
 	return connect.NewResponse(&pb.GetInvoiceSettingsTemplateExampleResponse{TemplateExample: example, NewTemplateExample: newExample, IssueRenewalInvoiceAfterExample: renewalExample}), nil
 }
 
+func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb.PayRequest]) (*connect.Response[pb.PayResponse], error) {
+	log := s.log.Named("Pay")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := _req.Msg
+	log.Debug("Request received")
+
+	inv, err := s.invoices.Get(ctx, req.InvoiceId)
+	if err != nil {
+		log.Warn("Error getting invoice", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Internal error or not found")
+	}
+
+	if requester != inv.Account {
+		ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+		if isRoot := graph.HasAccess(ctx, s.db, requester, ns, access.Level_ROOT); !isRoot {
+			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
+	}
+
+	acc, err := s.accounts.Get(ctx, inv.Account)
+	if err != nil {
+		log.Error("Error getting account", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Internal error")
+	}
+
+	uri, err := s.GetPaymentGateway(acc.GetPaymentsGateway()).PaymentURI(ctx, inv.Invoice)
+	if err != nil {
+		log.Error("Error getting payment uri", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+
+	return connect.NewResponse(&pb.PayResponse{PaymentLink: uri}), nil
+}
+
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
 	tr, err := s.invoices.Get(ctx, uuid)
 	if err != nil {

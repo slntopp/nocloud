@@ -16,8 +16,6 @@ import (
 	"time"
 )
 
-const invoiceIdField = "whmcs_invoice_id"
-
 type NoCloudInvoicesManager interface {
 	CreateInvoice(inv *pb.Invoice) error
 	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) error
@@ -195,6 +193,49 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		return err
 	}
 	return nil
+}
+
+func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string, error) {
+	reqUrl, err := url.Parse("https://test.ms.support.pl/whmcs/whmcs_CreateSsoToken.php")
+	if err != nil {
+		return "", err
+	}
+
+	acc, err := g.accounts.Get(ctx, inv.GetAccount())
+	if err != nil {
+		return "", err
+	}
+
+	userId, ok := g.getWhmcsUser(acc.Account)
+	if !ok {
+		return "", fmt.Errorf("failed to get whmcs user")
+	}
+	invId, ok := g.getWhmcsInvoice(inv)
+	if !ok {
+		return "", fmt.Errorf("failed to get whmcs invoice")
+	}
+
+	body := g.buildPaymentURIQueryBase(invId, userId)
+	q, err := query.Values(body)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest(http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return "", fmt.Errorf("failed to get payment uri. Location is empty")
+	}
+	return location, nil
 }
 
 func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invoice, error) {

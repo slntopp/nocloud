@@ -40,6 +40,13 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 	return res, nil
 }
 
+func (g *WhmcsGateway) buildPaymentURIQueryBase(whmcsInvoiceId int, clientId int) PaymentURIQuery {
+	return PaymentURIQuery{
+		InvoiceID: whmcsInvoiceId,
+		ClientID:  clientId,
+	}
+}
+
 func (g *WhmcsGateway) buildUpdateInvoiceQueryBase(whmcsInvoiceId int) UpdateInvoiceQuery {
 	return UpdateInvoiceQuery{
 		Action:       "UpdateInvoice",

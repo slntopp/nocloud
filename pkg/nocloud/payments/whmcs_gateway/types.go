@@ -158,6 +158,11 @@ type UpdateInvoiceQuery struct {
 	PublishAndSendEmail *bool                 `url:"publishandsendemail,omitempty"`
 }
 
+type PaymentURIQuery struct {
+	ClientID  int `url:"client_id"`
+	InvoiceID int `url:"invoice_id"`
+}
+
 type InvoicePaid struct {
 	InvoiceId int `json:"invoiceid"`
 }
