@@ -220,6 +220,7 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 	if err != nil {
 		return "", err
 	}
+	fmt.Println("Sending PAY request with url: " + reqUrl.String() + "?" + q.Encode())
 	req, err := http.NewRequest(http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
