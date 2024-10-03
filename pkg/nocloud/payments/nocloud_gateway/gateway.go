@@ -20,3 +20,7 @@ func (g *NcGateway) CreateInvoice(_ context.Context, _ *pb.Invoice) error {
 func (g *NcGateway) UpdateInvoice(_ context.Context, _ *pb.Invoice, _ *pb.Invoice) error {
 	return nil
 }
+
+func (g *NcGateway) PaymentURI(_ context.Context, _ *pb.Invoice) (string, error) {
+	return "", nil
+}
