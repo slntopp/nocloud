@@ -89,7 +89,7 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	_, err = db.Query(context.TODO(), createInvoicesBasedOnOldTransactions, map[string]interface{}{
 		"@invoices":     invoices.Name(),
 		"@transactions": transactions.Name(),
-		"@whmcsIds":     idToWhmcsId,
+		"whmcsIds":      idToWhmcsId,
 	})
 	if err != nil {
 		log.Fatal("Error migrating old invoices to new", zap.Error(err))
