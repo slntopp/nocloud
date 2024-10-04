@@ -201,7 +201,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 }
 
 func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string, error) {
-	reqUrl, err := url.Parse("https://test.ms.support.pl/whmcs/whmcs_CreateSsoToken.php")
+	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return "", err
 	}
@@ -220,34 +220,17 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 		return "", fmt.Errorf("failed to get whmcs invoice")
 	}
 
-	body := g.buildPaymentURIQueryBase(invId, userId)
+	body := g.buildPaymentURIQueryBase(userId)
 	q, err := query.Values(body)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("Sending PAY request with url: " + reqUrl.String() + "?" + q.Encode())
-	req, err := http.NewRequest(http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-	resp, err := client.Do(req)
+	resp, err := sendRequestToWhmcs[PaymentURIResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
 
-	b, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != 302 {
-		return "", fmt.Errorf("failed to get payment uri. Status code: %d, body: %s", resp.StatusCode, string(b))
-	}
-
-	location := resp.Header.Get("Location")
-	if location == "" {
-		return "", fmt.Errorf("failed to get payment uri. Location is empty")
-	}
-	return location, nil
+	return g.buildPaymentURI(invId, resp.AccessToken), nil
 }
 
 func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invoice, error) {

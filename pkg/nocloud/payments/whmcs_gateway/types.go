@@ -131,6 +131,12 @@ type InvoiceResponse struct {
 	Message   string `json:"message"`
 }
 
+type PaymentURIResponse struct {
+	AccessToken string `json:"access_token"`
+	Result      string `json:"result"`
+	Message     string `json:"message"`
+}
+
 type UpdateInvoiceQuery struct {
 	Action       string `url:"action"`
 	InvoiceId    int    `url:"invoiceid"`
@@ -159,8 +165,11 @@ type UpdateInvoiceQuery struct {
 }
 
 type PaymentURIQuery struct {
-	ClientID  int `url:"client_id"`
-	InvoiceID int `url:"invoice_id"`
+	Action       string `url:"action"`
+	Username     string `url:"username"`
+	Password     string `url:"password"`
+	ClientID     int    `url:"client_id"`
+	ResponseType string `url:"responsetype"`
 }
 
 type InvoicePaid struct {
