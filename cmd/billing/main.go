@@ -113,7 +113,7 @@ func main() {
 		})
 	})
 
-	bClient := cc.NewBillingServiceClient(http.DefaultClient, "billing:8000")
+	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
 	// Handle whmcs hooks
 	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
 	if err != nil {
