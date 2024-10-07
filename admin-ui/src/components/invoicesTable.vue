@@ -13,6 +13,12 @@
     :server-side-page="page"
     @update:options="setOptions"
   >
+    <template v-slot:[`uuid-actions`]="{ item }">
+      <v-btn @click="downloadInvoice(item)" icon>
+        <v-icon>mdi-download</v-icon>
+      </v-btn>
+    </template>
+
     <template v-slot:[`item.account`]="{ value }">
       <router-link
         v-if="!isAccountsLoading"
@@ -286,6 +292,22 @@ const fetchInvoices = async () => {
 };
 
 const fetchInvoicesDebounce = debounce(fetchInvoices, 300);
+
+const downloadInvoice = async (invoice) => {
+  try {
+    const { paymentLink } = await store.getters["invoices/invoicesClient"].pay({
+      invoiceId: invoice.uuid,
+    });
+    if (!paymentLink) {
+      throw new Error("No link");
+    }
+    window.open(paymentLink, "_blanc");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Document not found",
+    });
+  }
+};
 
 watch(
   invoicesFilters,
