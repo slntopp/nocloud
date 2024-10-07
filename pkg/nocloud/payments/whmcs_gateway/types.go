@@ -121,7 +121,7 @@ type Invoice struct {
 	Notes         string        `json:"notes"`
 	CcGateway     bool          `json:"ccgateway"` // Whether the payment method is a credit card gateway that can be submitted to attempt capture.
 	Items         ItemHolder    `json:"items"`
-	Transactions  string        `json:"transactions"`
+	//Transactions  string        `json:"transactions"`
 }
 
 type InvoiceResponse struct {
