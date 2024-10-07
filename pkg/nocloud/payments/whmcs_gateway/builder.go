@@ -55,7 +55,7 @@ func (g *WhmcsGateway) buildPaymentURI(invoiceId int, token string) string {
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf("%s?access_token=%s&id=%d", u.Scheme+u.Host+"/viewinvoice.php", token, invoiceId)
+	return fmt.Sprintf("%s?access_token=%s&id=%d", u.Scheme+"://"+u.Host+"/viewinvoice.php", token, invoiceId)
 }
 
 func (g *WhmcsGateway) buildUpdateInvoiceQueryBase(whmcsInvoiceId int) UpdateInvoiceQuery {
