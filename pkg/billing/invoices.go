@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"slices"
 	"strings"
 	"time"
@@ -370,8 +371,11 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
-		log.Error("Failed to create invoice through gateway", zap.Error(err))
+	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
+	if !gatewayCallback {
+		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
+			log.Error("Failed to create invoice through gateway", zap.Error(err))
+		}
 	}
 
 	if req.Msg.GetIsSendEmail() {
@@ -730,7 +734,8 @@ quit:
 	if err != nil {
 		log.Error("Failed to get updated invoice", zap.Error(err))
 	}
-	if err == nil {
+	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
+	if err == nil && !gatewayCallback {
 		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
@@ -947,8 +952,11 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
-		log.Error("Failed to update invoice through gateway", zap.Error(err))
+	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
+	if !gatewayCallback {
+		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
+			log.Error("Failed to update invoice through gateway", zap.Error(err))
+		}
 	}
 
 	if r.Msg.GetIsSendEmail() {

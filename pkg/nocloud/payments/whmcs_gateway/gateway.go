@@ -255,23 +255,23 @@ func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invo
 func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) error {
 	whmcsInv, err := g.GetInvoice(ctx, invoiceId)
 	if err != nil {
-		return err
+		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 	inv, err := g.getInvoiceByWhmcsId(invoiceId)
 	if err != nil {
-		return err
+		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
 		inv.Status = statusToNoCloud(whmcsInv.Status)
 		if err := g.invMan.UpdateInvoiceStatus(inv.GetUuid(), inv.Status); err != nil {
-			return err
+			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 	}
 	if !strings.Contains(whmcsInv.DatePaid, "0000-00-00") {
 		t, err := time.Parse("2006-01-02 15:04:05", whmcsInv.DatePaid)
 		if err != nil {
-			return err
+			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 		inv.Payment = t.Unix()
 		inv.Processed = inv.Payment
@@ -279,14 +279,14 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
 		t, err := time.Parse("2006-01-02", whmcsInv.DueDate)
 		if err != nil {
-			return err
+			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 		inv.Deadline = t.Unix()
 	}
 	if !strings.Contains(whmcsInv.Date, "0000-00-00") {
 		t, err := time.Parse("2006-01-02", whmcsInv.Date)
 		if err != nil {
-			return err
+			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 		inv.Created = t.Unix()
 	}
@@ -308,7 +308,7 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	if _, err = g.invMan.InvoicesController().Update(ctx, &graph.Invoice{
 		Invoice: inv,
 	}); err != nil {
-		return fmt.Errorf("failed to update invoice: %w", err)
+		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
 	return nil
 }
