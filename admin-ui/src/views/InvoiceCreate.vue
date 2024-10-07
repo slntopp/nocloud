@@ -317,7 +317,7 @@ const addPaymentOptions = ref({
 });
 
 const isInstancesLoading = ref(false);
-const instancesAccountMap = ref(new Map());
+const instancesAccountMap = ref({});
 
 const types = [
   { id: "NO_ACTION", title: "No action" },
@@ -356,12 +356,6 @@ const changeStatusBtns = [
 
 onMounted(async () => {
   setInvoice();
-
-  // if (isEdit.value) {
-  //   newInvoice.value.account = accounts.value.find(
-  //     (a) => a.uuid === invoice.value.account
-  //   );
-  // }
 });
 
 const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
@@ -371,7 +365,7 @@ const instances = computed(() => {
     return [];
   }
 
-  return instancesAccountMap.value.get(account);
+  return instancesAccountMap.value[account];
 });
 
 const accountCurrency = computed(
@@ -488,28 +482,26 @@ const onChangeAccount = async () => {
   selectedInstances.value = null;
 
   const account = newInvoice.value.account?.uuid;
-  if (instancesAccountMap.value.has(account)) {
+
+  if (instancesAccountMap.value[account]) {
     return;
   }
 
   isInstancesLoading.value = true;
   try {
-    instancesAccountMap.value.set(
-      account,
-      store.dispatch("instances/fetch", {
-        filters: { account: [account] },
-      })
-    );
+    instancesAccountMap.value[account] = store.dispatch("instances/fetch", {
+      filters: { account: [account] },
+    });
 
-    const data = await instancesAccountMap.value.get(account);
-    instancesAccountMap.value.set(
-      account,
-      data.map((data) => ({
-        uuid: data.instance.uuid,
-        title: data.instance.title,
-        price: data.instance.estimate,
-      }))
-    );
+    const data = await instancesAccountMap.value[account];
+
+    instancesAccountMap.value[account] = data.map((response) => ({
+      uuid: response.uuid,
+      title: response.title,
+      price: response.estimate,
+    }));
+  } catch (e) {
+    instancesAccountMap.value[account] = undefined;
   } finally {
     isInstancesLoading.value = false;
   }
