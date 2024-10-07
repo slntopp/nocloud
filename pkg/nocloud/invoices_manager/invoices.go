@@ -10,13 +10,18 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
+type tokenMaker interface {
+	MakeToken(string) (string, error)
+}
+
 type InvoicesManager struct {
 	inv     billingconnect.BillingServiceClient
 	invCtrl *graph.InvoicesController
+	tm      tokenMaker
 }
 
-func NewInvoicesManager(inv billingconnect.BillingServiceClient, invCtrl *graph.InvoicesController) *InvoicesManager {
-	return &InvoicesManager{inv: inv, invCtrl: invCtrl}
+func NewInvoicesManager(inv billingconnect.BillingServiceClient, invCtrl *graph.InvoicesController, tm tokenMaker) *InvoicesManager {
+	return &InvoicesManager{inv: inv, invCtrl: invCtrl, tm: tm}
 }
 
 func (i *InvoicesManager) CreateInvoice(inv *pb.Invoice) error {
@@ -24,7 +29,12 @@ func (i *InvoicesManager) CreateInvoice(inv *pb.Invoice) error {
 		Invoice:     inv,
 		IsSendEmail: true,
 	})
-	_, err := i.inv.CreateInvoice(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
+	token, err := i.tm.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		return err
+	}
+	req.Header().Set("Authorization", "Bearer "+token)
+	_, err = i.inv.CreateInvoice(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	return err
 }
 
@@ -33,7 +43,12 @@ func (i *InvoicesManager) UpdateInvoiceStatus(id string, newStatus pb.BillingSta
 		Status: newStatus,
 		Uuid:   id,
 	})
-	_, err := i.inv.UpdateInvoiceStatus(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
+	token, err := i.tm.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		return err
+	}
+	req.Header().Set("Authorization", "Bearer "+token)
+	_, err = i.inv.UpdateInvoiceStatus(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	return err
 }
 

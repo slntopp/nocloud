@@ -121,7 +121,7 @@ func main() {
 	}
 	accounts := graph.NewAccountsController(log, db)
 	invoices := graph.NewInvoicesController(log, db)
-	manager := invoices_manager.NewInvoicesManager(bClient, &invoices)
+	manager := invoices_manager.NewInvoicesManager(bClient, &invoices, authInterceptor)
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, &accounts, manager)
 	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
 	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
