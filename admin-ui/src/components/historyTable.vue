@@ -87,6 +87,8 @@ const actionItems = ref([]);
 const isAccountsLoading = ref(false);
 const accounts = ref({});
 
+const invoices = ref({});
+
 const plans = ref({});
 
 const store = useStore();
@@ -155,6 +157,13 @@ const getEntityByUuid = (item) => {
         route: { name: "Account", params: { accountId: item.uuid } },
         item: getAccount(item.uuid),
         type: "Account",
+      };
+    }
+    case "Invoices": {
+      return {
+        route: { name: "Invoice page", params: { uuid: item.uuid } },
+        item: getInvoice(item.uuid),
+        type: "Invoice",
       };
     }
     case "Services": {
@@ -231,6 +240,10 @@ const init = async () => {
 
 const getAccount = (uuid) => {
   return accounts.value[uuid] || uuid;
+};
+
+const getInvoice = (uuid) => {
+  return invoices.value[uuid]?.number || uuid;
 };
 
 const getInstance = (uuid) => {
@@ -325,6 +338,23 @@ watch(logs, () => {
         }
       } catch {
         plans.value[uuid] = undefined;
+      }
+    });
+
+  logs.value
+    .filter((log) => log.entity === "Invoices")
+    .forEach(async ({ uuid }) => {
+      try {
+        if (!invoices.value[uuid]) {
+          invoices.value[uuid] = store.getters[
+            "invoices/invoicesClient"
+          ].getInvoice({
+            uuid,
+          });
+          invoices.value[uuid] = await invoices.value[uuid];
+        }
+      } catch {
+        invoices.value[uuid] = undefined;
       }
     });
 });
