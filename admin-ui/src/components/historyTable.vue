@@ -150,6 +150,13 @@ const getEntityByUuid = (item) => {
         type: "Instance",
       };
     }
+    case "Accounts": {
+      return {
+        route: { name: "Account", params: { accountId: item.uuid } },
+        item: getAccount(item.uuid),
+        type: "Account",
+      };
+    }
     case "Services": {
       return {
         route: { name: "Service", params: { serviceId: item.uuid } },
