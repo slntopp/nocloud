@@ -64,6 +64,7 @@ export default {
         this.plan = {
           resources: [],
           products: {},
+          meta: {},
           ...this.$store.getters["plans/one"],
         };
 
