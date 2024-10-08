@@ -69,6 +69,8 @@
         <v-icon v-if="copyed == props.index"> mdi-check </v-icon>
         <v-icon v-else> mdi-content-copy </v-icon>
       </v-btn>
+
+      <slot name="uuid-actions" v-bind="{ item: props.item }" />
     </template>
 
     <template v-slot:[`item.titleLink`]="{ item }">
