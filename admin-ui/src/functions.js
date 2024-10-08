@@ -439,7 +439,7 @@ export function getMarginedValue(fee, val) {
     percent = range.factor / 100 + 1;
   }
 
-  return Math[round](val * percent * n) / n;
+  return Math[round](val * percent * n) / n || 0;
 }
 
 export async function getClientIP() {
