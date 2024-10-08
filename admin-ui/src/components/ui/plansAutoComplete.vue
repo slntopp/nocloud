@@ -54,7 +54,9 @@ const lastCustomParams = ref({});
 onMounted(() => {
   fetchPlan();
 
-  updatePlansDebounce("");
+  setTimeout(() => {
+    updatePlansDebounce("");
+  }, 0);
 });
 
 const updatePlans = async (param, clean) => {
