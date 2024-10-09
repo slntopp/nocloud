@@ -327,7 +327,7 @@ LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
     			FILTER IS_SAME_COLLECTION(@instances, i)
 				%s
 					LET bp = DOCUMENT(CONCAT(@bps, "/", i.billing_plan.uuid))
-                    LET bpDoc = {
+                    LET bpDoc = bp != null ? {
 							uuid: bp._key,
 							title: bp.title,
 							type: bp.type,
@@ -339,7 +339,12 @@ LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
 							meta: bp.meta,
 							fee: bp.fee,
 							software: bp.software
-						}
+						} : {
+                           uuid: "",
+                           title: "",
+                           type: "",
+                           kind: 0,
+                        }
                     LET u1 = bpDoc.fee == null ? UNSET(bpDoc, "fee") : bpDoc
                     LET u2 = u1.software == null ? UNSET(u1, "software") : u1
                     LET u3 = u2.resources == null ? UNSET(u2, "resources") : u2
