@@ -26,6 +26,7 @@ import (
 	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -194,6 +195,18 @@ func main() {
 	checker := grpchealth.NewStaticChecker()
 	path, handler = grpchealth.NewHandler(checker)
 	router.PathPrefix(path).Handler(handler)
+
+	// Migrate
+	migrateToV2 := viper.GetBool("MIGRATE_TO_V2")
+	if migrateToV2 {
+		iCtrl := graph.NewInstancesController(log.Named("Main"), db, rbmq)
+		sCtrl := graph.NewServicesController(log.Named("Main"), db, rbmq)
+		bpCtrl := graph.NewBillingPlansController(log.Named("Main"), db)
+		addCtrl := graph.NewAddonsController(log.Named("Main"), db)
+		migrations.MigrateInstancesToNewAddons(log, *iCtrl, sCtrl, bpCtrl, *addCtrl)
+	} else {
+		log.Debug("Need MIGRATE_TO_V2 set to 'true' to start instances migration to V2")
+	}
 
 	log.Debug("Opening every sp syncer")
 	ctrl := graph.NewServicesProvidersController(log.Named("Main"), db)
