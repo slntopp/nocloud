@@ -327,9 +327,7 @@ LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
     			FILTER IS_SAME_COLLECTION(@instances, i)
 				%s
 					LET bp = DOCUMENT(CONCAT(@bps, "/", i.billing_plan.uuid))
-					RETURN MERGE(i, { 
-						uuid: i._key, 
-						billing_plan: {
+                    LET bpDoc = {
 							uuid: bp._key,
 							title: bp.title,
 							type: bp.type,
@@ -341,7 +339,15 @@ LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
 							meta: bp.meta,
 							fee: bp.fee,
 							software: bp.software
-						} 
+						}
+                    LET u1 = bpDoc.fee == null ? UNSET(bpDoc, "fee") : bpDoc
+                    LET u2 = u1.software == null ? UNSET(u1, "software") : u1
+                    LET u3 = u2.resources == null ? UNSET(u2, "resources") : u2
+                    LET uProducts = u3.products[""] == null ? UNSET(u3.products, "") : u3.products
+                    LET u4 = MERGE(u3, {products: uProducts})
+					RETURN MERGE(i, { 
+						uuid: i._key, 
+						billing_plan: u4 
 					}))
     		RETURN MERGE(group, { uuid: group._key, instances })
         )
