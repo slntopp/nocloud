@@ -614,6 +614,12 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		}
 
 		cur := acc.Account.GetCurrency()
+		if cur == nil {
+			cur = &pb.Currency{
+				Id:    schema.DEFAULT_CURRENCY_ID,
+				Title: schema.DEFAULT_CURRENCY_NAME,
+			}
+		}
 
 		dbCur := struct {
 			Id    int32  `json:"id"`
