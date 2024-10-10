@@ -25,7 +25,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func MakeDBConnection(log *zap.Logger, host, cred string) (db driver.Database) {
+func MakeDBConnection(log *zap.Logger, host, cred, dbName string) (db driver.Database) {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{"http://" + cred + "@" + host},
 	})
@@ -46,7 +46,7 @@ func MakeDBConnection(log *zap.Logger, host, cred string) (db driver.Database) {
 	db_connect_attempts := 0
 db_connect:
 	log.Info("Trying to connect to DB")
-	db, err = c.Database(context.TODO(), schema.DB_NAME)
+	db, err = c.Database(context.TODO(), dbName)
 	if e, isArangoError := driver.AsArangoError(err); isArangoError && e.ErrorMessage == "database not found" {
 		log.Info("DB not found, creating it")
 		db, err = c.CreateDatabase(context.TODO(), schema.DB_NAME, nil)

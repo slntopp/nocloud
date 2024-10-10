@@ -40,7 +40,7 @@ func init() {
 
 func TestDeleteAccount(t *testing.T) {
 	ctx := context.TODO()
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, schema.DB_NAME)
 	db.Info(ctx)
 
 	ac := NewAccountsController(log, db)
@@ -109,7 +109,7 @@ func TestDeleteAccount(t *testing.T) {
 
 func TestDeleteAccountCredentials(t *testing.T) {
 	ctx := context.TODO()
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, schema.DB_NAME)
 	db.Info(ctx)
 
 	ac := NewAccountsController(log, db)

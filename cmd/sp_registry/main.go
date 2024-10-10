@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/showcases"
 	"net"
 
@@ -45,6 +46,7 @@ var (
 
 	arangodbHost string
 	arangodbCred string
+	arangodbName string
 	redisHost    string
 	drivers      []string
 	ext_servers  []string
@@ -60,6 +62,7 @@ func init() {
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DB_NAME", schema.DB_NAME)
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
@@ -70,6 +73,7 @@ func init() {
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	arangodbName = viper.GetString("DB_NAME")
 	redisHost = viper.GetString("REDIS_HOST")
 	drivers = viper.GetStringSlice("DRIVERS")
 	ext_servers = viper.GetStringSlice("EXTENTION_SERVERS")
@@ -83,7 +87,7 @@ func main() {
 	}()
 
 	log.Info("Setting up DB Connection")
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	log.Info("DB connection established")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))

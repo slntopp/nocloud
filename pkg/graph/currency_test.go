@@ -28,7 +28,7 @@ func TestConvert(t *testing.T) {
 	redisHost = viper.GetString("REDIS_HOST")
 
 	log := nocloud.NewLogger()
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, schema.DB_NAME)
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
 		DB:   0,

@@ -252,6 +252,10 @@ func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invo
 	return invResp, nil
 }
 
+func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {
+	return g.syncWhmcsInvoice(ctx, invoiceId)
+}
+
 func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) error {
 	whmcsInv, err := g.GetInvoice(ctx, invoiceId)
 	if err != nil {
