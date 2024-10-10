@@ -16,7 +16,7 @@ import (
 )
 
 type Currency struct {
-	Id    string `json:"id"`
+	Id    int32  `json:"id"`
 	Title string `json:"title"`
 	driver.DocumentMeta
 }
@@ -24,7 +24,7 @@ type Currency struct {
 func CurrencyFromPb(currency *pb.Currency) Currency {
 	key := fmt.Sprintf("%d", currency.GetId())
 	return Currency{
-		Id:    key,
+		Id:    currency.GetId(),
 		Title: currency.GetTitle(),
 		DocumentMeta: driver.DocumentMeta{
 			Key: key,
@@ -310,21 +310,15 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 			return nil, err
 		}
 
-		idFrom, err := strconv.ParseInt(resp.From.Id, 10, 32)
-		if err != nil {
-			return nil, err
-		}
-		idTo, err := strconv.ParseInt(resp.To.Id, 10, 32)
-		if err != nil {
-			return nil, err
-		}
+		idFrom := resp.From.Id
+		idTo := resp.To.Id
 		rates = append(rates, &pb.GetExchangeRateResponse{
 			From: &pb.Currency{
-				Id:    int32(idFrom),
+				Id:    idFrom,
 				Title: resp.From.Title,
 			},
 			To: &pb.Currency{
-				Id:    int32(idTo),
+				Id:    idTo,
 				Title: resp.To.Title,
 			},
 			Rate:       resp.Rate,
