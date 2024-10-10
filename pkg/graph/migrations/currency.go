@@ -15,6 +15,8 @@ var LEGACY_CURRENCIES = []*pb.Currency{
 	{Id: 2, Title: "EUR"},
 	{Id: 3, Title: "BYN"},
 	{Id: 4, Title: "PLN"},
+	{Id: 5, Title: "EUR_COLO"},
+	{Id: 6, Title: "EUR_TECH"},
 }
 
 const numericToObjectCurrency = `
