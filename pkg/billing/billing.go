@@ -23,7 +23,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"slices"
-	"strconv"
 	"strings"
 
 	"encoding/json"
@@ -617,7 +616,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		cur := acc.Account.GetCurrency()
 
 		dbCur := struct {
-			Id    string `json:"id"`
+			Id    int32  `json:"id"`
 			Title string `json:"title"`
 		}{}
 		queryContext := driver.WithQueryCount(ctx)
@@ -633,12 +632,8 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			}
 		}
 
-		id, err := strconv.ParseInt(dbCur.Id, 10, 32)
-		if err != nil {
-			log.Error("Failed to parse int", zap.Error(err))
-		}
 		defaultCur := &pb.Currency{
-			Id:    int32(id),
+			Id:    dbCur.Id,
 			Title: dbCur.Title,
 		}
 
