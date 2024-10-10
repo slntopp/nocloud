@@ -28,11 +28,11 @@ func NewDataSyncer(log *zap.Logger, rdb *redis.Client, sp string, retries int, m
 	if len(millisecondsInterval) > 0 {
 		interval = time.Duration(millisecondsInterval[0]) * time.Millisecond
 	}
+	mG.Lock()
 	if m, ok := mutexMap[sp]; !ok || m == nil {
-		mG.Lock()
 		mutexMap[sp] = &sync.Mutex{}
-		mG.Unlock()
 	}
+	mG.Unlock()
 	return &DataSyncer{
 		rdb:      rdb,
 		sp:       sp,
@@ -50,7 +50,9 @@ func (s *DataSyncer) WaitUntilOpenedAndCloseAfter() error {
 	}
 	currentRetries := 0
 	for {
+		mG.Lock()
 		mutexMap[s.sp].Lock()
+		mG.Unlock()
 		if s.IsOpened() {
 			return s.Close()
 		}
@@ -59,7 +61,9 @@ func (s *DataSyncer) WaitUntilOpenedAndCloseAfter() error {
 			s.log.Debug("Retries exceeded. Forced ending waiting loop", zap.Int("retries", s.retries))
 			return s.Close()
 		}
+		mG.Lock()
 		mutexMap[s.sp].Unlock()
+		mG.Unlock()
 		time.Sleep(s.interval)
 		go s.log.Debug("Next retry", zap.String("retry", fmt.Sprintf("%d/%d", currentRetries, s.retries)))
 	}
