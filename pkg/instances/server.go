@@ -646,9 +646,12 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, _req *connect.Request[
 	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
 
 	note := instance.GetAdminNotes()[req.GetIndex()]
+	log.Debug("Note", zap.Any("note", note))
 
 	if requestor == note.GetAdmin() || ok {
+		log.Debug("Notes before delete ", zap.Any("notes", instance.GetAdminNotes()))
 		instance.AdminNotes = slices.Delete(instance.GetAdminNotes(), int(req.GetIndex()), int(req.GetIndex()+1))
+		log.Debug("Notes after delete ", zap.Any("notes", instance.GetAdminNotes()))
 
 		err = s.ctrl.UpdateNotes(ctx, instance.Instance)
 		if err != nil {
