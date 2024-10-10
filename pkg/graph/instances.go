@@ -24,7 +24,6 @@ import (
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	servicespb "github.com/slntopp/nocloud-proto/services"
 	"google.golang.org/protobuf/types/known/structpb"
-	"math"
 	"reflect"
 	"slices"
 	"strings"
@@ -82,8 +81,8 @@ func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, 
 	log = log.Named("MigrateInstancesToNewAddons")
 	log.Debug("Starting MigrateInstancesToNewAddons")
 	page := uint64(1)
-	depth := int32(math.MaxInt32)
-	limit := uint64(math.MaxUint64)
+	depth := int32(150)
+	limit := uint64(0)
 	services, err := srvCtrl.List(context.Background(), schema.ROOT_ACCOUNT_KEY, &servicespb.ListRequest{
 		Page:  &page,
 		Limit: &limit,
