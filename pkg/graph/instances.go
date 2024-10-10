@@ -93,6 +93,7 @@ func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, 
 		log.Fatal("Failed to list services", zap.Error(err))
 		return
 	}
+	log.Debug("Found " + fmt.Sprint(len(services.Result)) + " services")
 	instances := make([]string, 0)
 	for _, srv := range services.Result {
 		for _, ig := range srv.GetInstancesGroups() {
@@ -101,11 +102,14 @@ func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, 
 			}
 		}
 	}
+	log.Debug("Found " + fmt.Sprint(len(instances)) + " instances")
 	addons, err := addCtrl.List(context.Background(), &addonspb.ListAddonsRequest{})
 	if err != nil {
 		log.Fatal("Failed to list addons", zap.Error(err))
 		return
 	}
+	log.Debug("Found " + fmt.Sprint(len(addons)) + " addons")
+	var migrated = make([]string, 0)
 	for _, id := range instances {
 		log := log.With(zap.String("instance_id", id))
 		inst, err := instCtrl.Get(context.Background(), id)
@@ -113,20 +117,26 @@ func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, 
 			log.Fatal("Failed to get instance", zap.Error(err))
 			return
 		}
-		if err := migrateInstance(log, inst, instCtrl, bpCtrl, addons); err != nil {
+		if err := migrateInstance(log, inst, instCtrl, bpCtrl, addons, &migrated); err != nil {
 			log.Fatal("Failed to migrate instance", zap.Error(err))
 			return
 		}
 	}
+	log.Debug("Migrated instances", zap.Any("uuids", migrated))
 	log.Debug("Finished MigrateInstancesToNewAddons")
 }
 
-func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesController, bpCtrl BillingPlansController, addons []*addonspb.Addon) error {
+func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesController, bpCtrl BillingPlansController, addons []*addonspb.Addon, migrated *[]string) error {
 	oldInst := proto.Clone(inst.Instance).(*instancespb.Instance)
 
 	bp, err := bpCtrl.Get(context.Background(), inst.GetBillingPlan())
 	if err != nil {
 		return err
+	}
+
+	if inst.GetProduct() == "" {
+		log.Debug("Skipping instance without product")
+		return nil
 	}
 
 	product, ok := bp.GetProducts()[inst.GetProduct()]
@@ -140,6 +150,7 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 	oldAddonKeys = append(oldAddonKeys, product.GetMeta()["addons"].GetListValue().GetValues()...) // Old addons from product meta (virtual driver)
 	_ = inst.GetConfig()["duration"].GetStringValue()
 
+	modified := false
 	for _, oldAddonKey := range oldAddonKeys {
 		var a *addonspb.Addon = nil
 		oldKey := oldAddonKey.GetStringValue()
@@ -157,12 +168,17 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 			continue
 		}
 		instAddons = append(instAddons, a.GetUuid())
+		modified = true
 		lmVal, ok := instData[oldKey+"_last_monitoring"]
 		if !ok {
 			continue
 		}
 		lm := int64(lmVal.GetNumberValue())
 		instData["addon_"+a.GetUuid()+"_last_monitoring"] = structpb.NewNumberValue(float64(lm))
+	}
+
+	if !modified {
+		return nil
 	}
 
 	inst.Addons = instAddons
@@ -172,6 +188,7 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 	if err := instCtrl.Update(context.Background(), "", inst.Instance, oldInst); err != nil {
 		return err
 	}
+	*migrated = append(*migrated, inst.GetUuid())
 
 	return nil
 }
