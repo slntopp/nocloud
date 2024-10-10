@@ -84,7 +84,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 const migrateToDynamicVertex = `
 	FOR el IN @@collection
 		FILTER el.id == null || el.title == null || el.title == ""
-		UPDATE el WITH { id: el._key, title: @names[el._key], name: null } IN @@collection
+		UPDATE el WITH { id: TO_NUMBER(el._key), title: @names[el._key], name: null } IN @@collection
         OPTIONS { keepNull: false }
 `
 const migrateToDynamicEdges = `
