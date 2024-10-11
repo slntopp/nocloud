@@ -190,8 +190,13 @@ func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsCon
 			descrId = newDesc.GetUuid()
 		}
 
+		var title = res.GetTitle()
+		if title == "" {
+			title = res.GetKey()
+		}
+
 		addon := &addonspb.Addon{
-			Title:         res.Title,
+			Title:         title,
 			Public:        true,
 			Group:         resToBp[i].GetUuid(),
 			DescriptionId: descrId,
