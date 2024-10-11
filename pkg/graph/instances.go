@@ -287,6 +287,8 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 	inst.Data = instData
 
 	log.Debug("Updating instance")
+	log.Debug("To update new", zap.Any("instance", inst.Instance))
+	log.Debug("To update old", zap.Any("old_instance", oldInst))
 	if err := instCtrl.Update(context.Background(), "", inst.Instance, oldInst); err != nil {
 		return fmt.Errorf("failed to update instance: %w", err)
 	}
@@ -351,7 +353,7 @@ func (ctrl *InstancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 		for _, addonId := range i.GetAddons() {
 			addon, err := ctrl.addons.Get(context.Background(), addonId)
 			if err != nil {
-				return 0, err
+				return 0, fmt.Errorf("failed to get addon %s: %w", addonId, err)
 			}
 			price, hasPrice := addon.GetPeriods()[product.GetPeriod()]
 			if !hasPrice {
