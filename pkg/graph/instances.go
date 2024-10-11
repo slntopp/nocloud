@@ -773,6 +773,7 @@ func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instanc
 		inst.Period, _ = ctrl.GetInstancePeriod(inst)
 	}
 
+	inst.Uuid = uuid
 	return &Instance{inst, meta}, nil
 }
 
