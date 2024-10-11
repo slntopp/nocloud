@@ -222,7 +222,7 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 
 	bp, err := bpCtrl.Get(context.Background(), inst.GetBillingPlan())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get billing plan: %w", err)
 	}
 
 	if inst.GetProduct() == "" {
@@ -280,7 +280,7 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 
 	log.Debug("Updating instance")
 	if err := instCtrl.Update(context.Background(), "", inst.Instance, oldInst); err != nil {
-		return err
+		return fmt.Errorf("failed to update instance: %w", err)
 	}
 	*migrated = append(*migrated, inst.GetUuid())
 
