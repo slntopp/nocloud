@@ -287,9 +287,7 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 	inst.Data = instData
 
 	log.Debug("Updating instance")
-	log.Debug("To update new", zap.Any("instance", inst.Instance))
-	log.Debug("To update old", zap.Any("old_instance", oldInst))
-	if err := instCtrl.Update(context.Background(), "", inst.Instance, oldInst); err != nil {
+	if err := instCtrl.Update(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), "", inst.Instance, oldInst); err != nil {
 		return fmt.Errorf("failed to update instance: %w", err)
 	}
 	*migrated = append(*migrated, inst.GetUuid())
