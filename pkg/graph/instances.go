@@ -108,7 +108,7 @@ func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, 
 		log.Fatal("Failed to list billing plans", zap.Error(err))
 		return
 	}
-	if err := createVirtualAddons(log.Named("CreateVirtualAddons"), bps, addCtrl, descCtrl); err != nil {
+	if err := createVirtualAddons(log.Named("CreateVirtualAddons"), bps, addCtrl, descCtrl, bpCtrl); err != nil {
 		log.Fatal("Failed to create virtual addons", zap.Error(err))
 		return
 	}
@@ -136,7 +136,7 @@ func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, 
 	log.Debug("Finished MigrateInstancesToNewAddons")
 }
 
-func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsController, descCtrl DescriptionsController) error {
+func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsController, descCtrl DescriptionsController, bpCtrl BillingPlansController) error {
 	// Collect only 'empty' plans
 	bps := make([]*BillingPlan, 0)
 	for _, bp := range _bps {
@@ -200,8 +200,17 @@ func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsCon
 			},
 			Created: time.Now().Unix(),
 		}
-		if _, err := addCtrl.Create(context.Background(), addon); err != nil {
+		newAddon, err := addCtrl.Create(context.Background(), addon)
+		if err != nil {
 			return fmt.Errorf("failed to create addon: %w", err)
+		}
+		if !slices.Contains(resToBp[i].GetAddons(), newAddon.GetUuid()) {
+			resToBp[i].Addons = append(resToBp[i].GetAddons(), newAddon.GetUuid())
+			if ubp, err := bpCtrl.Update(context.Background(), resToBp[i].Plan); err != nil {
+				return fmt.Errorf("failed to update billing plan: %w", err)
+			} else {
+				resToBp[i] = ubp
+			}
 		}
 	}
 
