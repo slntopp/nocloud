@@ -128,25 +128,25 @@ func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, 
 func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesController, bpCtrl BillingPlansController, addons []*addonspb.Addon, migrated *[]string) error {
 	oldInst := proto.Clone(inst.Instance).(*instancespb.Instance)
 
-	bp, err := bpCtrl.Get(context.Background(), inst.GetBillingPlan())
-	if err != nil {
-		return err
-	}
+	//bp, err := bpCtrl.Get(context.Background(), inst.GetBillingPlan())
+	//if err != nil {
+	//	return err
+	//}
 
 	if inst.GetProduct() == "" {
 		log.Debug("Skipping instance without product")
 		return nil
 	}
 
-	product, ok := bp.GetProducts()[inst.GetProduct()]
-	if !ok {
-		return fmt.Errorf("product '%s' not found in billing plan %s", inst.GetProduct(), inst.GetBillingPlan().GetUuid())
-	}
+	//product, ok := bp.GetProducts()[inst.GetProduct()]
+	//if !ok {
+	//	return fmt.Errorf("product '%s' not found in billing plan %s", inst.GetProduct(), inst.GetBillingPlan().GetUuid())
+	//}
 
 	instAddons := inst.GetAddons()
 	instData := inst.GetData()
-	oldAddonKeys := inst.GetConfig()["addons"].GetListValue().GetValues()                          // Old addons from config (ovh, virtual, keyweb...)
-	oldAddonKeys = append(oldAddonKeys, product.GetMeta()["addons"].GetListValue().GetValues()...) // Old addons from product meta (virtual driver)
+	oldAddonKeys := inst.GetConfig()["addons"].GetListValue().GetValues() // Old addons from config (ovh, virtual, keyweb...)
+	//oldAddonKeys = append(oldAddonKeys, product.GetMeta()["addons"].GetListValue().GetValues()...) // Old addons from product meta (virtual driver)
 	_ = inst.GetConfig()["duration"].GetStringValue()
 
 	modified := false
