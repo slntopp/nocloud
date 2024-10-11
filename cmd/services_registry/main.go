@@ -205,7 +205,8 @@ func main() {
 		sCtrl := graph.NewServicesController(log.Named("Main"), db, rbmq)
 		bpCtrl := graph.NewBillingPlansController(log.Named("Main"), db)
 		addCtrl := graph.NewAddonsController(log.Named("Main"), db)
-		graph.MigrateInstancesToNewAddons(log, *iCtrl, sCtrl, bpCtrl, *addCtrl)
+		descCtrl := graph.NewDescriptionsController(log.Named("Main"), db)
+		graph.MigrateInstancesToNewAddons(log, *iCtrl, sCtrl, bpCtrl, *addCtrl, *descCtrl)
 	} else {
 		log.Debug("Need MIGRATE_TO_V2 set to 'true' to start instances migration to V2")
 	}
