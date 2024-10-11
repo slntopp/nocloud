@@ -206,10 +206,8 @@ func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsCon
 		}
 		if !slices.Contains(resToBp[i].GetAddons(), newAddon.GetUuid()) {
 			resToBp[i].Addons = append(resToBp[i].GetAddons(), newAddon.GetUuid())
-			if ubp, err := bpCtrl.Update(context.Background(), resToBp[i].Plan); err != nil {
+			if _, err := bpCtrl.Update(context.Background(), resToBp[i].Plan); err != nil {
 				return fmt.Errorf("failed to update billing plan: %w", err)
-			} else {
-				resToBp[i] = ubp
 			}
 		}
 	}
