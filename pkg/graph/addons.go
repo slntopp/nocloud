@@ -190,7 +190,10 @@ func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 			if key == "title" {
 				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else if key == "system" {
-				query += fmt.Sprintf(` FILTER a.system == %t`, value.GetBoolValue())
+				// TODO: make it easier to read
+				query += fmt.Sprintf(` FILTER (%t && a.system == true) || (!%t && (!a.system || a.system == false))`, value.GetBoolValue(), value.GetBoolValue())
+			} else if key == "search_param" {
+				query += fmt.Sprintf(` FILTER LOWER(a.title) LIKE LOWER("%s") || LOWER(a.group) LIKE LOWER("%s") || a._key LIKE "%s"`, "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
