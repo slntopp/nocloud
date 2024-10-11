@@ -240,6 +240,20 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
+	// Check title unique
+	plans, err := s.plans.List(ctx, "")
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error creating plan: %v", err))
+	}
+	for _, p := range plans {
+		if p.Status == statuspb.NoCloudStatus_DEL {
+			continue
+		}
+		if plan.Title == p.Title {
+			return nil, status.Error(codes.AlreadyExists, "plan with the same title already exists")
+		}
+	}
+
 	res, err := s.plans.Create(ctx, plan)
 	var event = &elpb.Event{
 		Entity:    schema.BILLING_PLANS_COL,
@@ -287,6 +301,23 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 
 	if pbStatus == statuspb.NoCloudStatus_DEL {
 		return nil, status.Error(codes.Canceled, "Billing plan deleted")
+	}
+
+	// Check title unique
+	plans, err := s.plans.List(ctx, "")
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("error creating plan: %v", err))
+	}
+	for _, p := range plans {
+		if p.GetUuid() == plan.GetUuid() {
+			continue
+		}
+		if p.Status == statuspb.NoCloudStatus_DEL {
+			continue
+		}
+		if plan.Title == p.Title {
+			return nil, status.Error(codes.AlreadyExists, "plan with the same title already exists")
+		}
 	}
 
 	res, err := s.plans.Update(ctx, plan)
