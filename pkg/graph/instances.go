@@ -198,6 +198,7 @@ func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsCon
 			Periods: map[int64]float64{
 				res.GetPeriod(): res.GetPrice(),
 			},
+			Created: time.Now().Unix(),
 		}
 		if _, err := addCtrl.Create(context.Background(), addon); err != nil {
 			return fmt.Errorf("failed to create addon: %w", err)
