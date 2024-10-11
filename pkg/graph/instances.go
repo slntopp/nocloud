@@ -167,11 +167,16 @@ func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsCon
 	}
 
 	for i, res := range resources {
+		isSkip := false
 		for _, addon := range addons {
 			if addon.Group == resToBp[i].GetUuid() && addon.GetMeta()["key"].GetStringValue() == res.GetKey() {
 				log.Debug("Found existing addon", zap.String("key", res.GetKey()), zap.String("group", resToBp[i].GetUuid()))
-				continue
+				isSkip = true
+				break
 			}
+		}
+		if isSkip {
+			continue
 		}
 
 		var descrId string
