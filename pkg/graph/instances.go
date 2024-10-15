@@ -23,6 +23,7 @@ import (
 	addonspb "github.com/slntopp/nocloud-proto/billing/addons"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
+	"github.com/slntopp/nocloud-proto/notes"
 	servicespb "github.com/slntopp/nocloud-proto/services"
 	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
@@ -693,6 +694,17 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 func (ctrl *InstancesController) UpdateNotes(ctx context.Context, inst *pb.Instance) error {
 	log := ctrl.log.Named("UpdateNotes")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
+
+	if len(inst.GetAdminNotes()) == 0 {
+		_, err := ctrl.col.UpdateDocument(ctx, inst.Uuid, map[string]interface{}{
+			"admin_notes": make([]*notes.AdminNote, 0),
+		})
+		if err != nil {
+			log.Error("Failed to update Instance", zap.Error(err))
+			return err
+		}
+		return nil
+	}
 
 	_, err := ctrl.col.UpdateDocument(ctx, inst.Uuid, inst)
 	if err != nil {
