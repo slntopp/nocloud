@@ -754,7 +754,7 @@ export default {
   mounted() {
     this.refreshApiPlans();
 
-    this.planAddons = [...this.template.addons];
+    this.planAddons = [...(this.template?.addons || [])];
   },
   async created() {
     this.$emit("changeFee", this.template.fee);
@@ -770,7 +770,7 @@ export default {
 
       const tariffAddons = addons
         .filter((a) => {
-          if (product.addons.includes(a.uuid)) {
+          if (product.addons?.includes(a.uuid)) {
             return true;
           }
           return false;
@@ -787,13 +787,14 @@ export default {
             apiName: addon.meta.apiName,
             title: addon.title,
             price: addon.periods[this.getPeriod(duration)],
-            public: addon.public,
             uuid: addon.uuid,
+            public: addon.public,
           };
         });
 
       return {
         ...product,
+        public: product.public,
         duration,
         planCode,
         cpu: product.meta.cpu,
