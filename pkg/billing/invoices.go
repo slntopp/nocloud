@@ -164,7 +164,7 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) && requestor != req.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
@@ -282,7 +282,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
-	if !ok {
+	if !ok && t.Account != requestor {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
@@ -1044,6 +1044,39 @@ func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb
 	return connect.NewResponse(&pb.PayResponse{PaymentLink: uri}), nil
 }
 
+func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _req *connect.Request[pb.CreateTopUpBalanceInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
+	log := s.log.Named("CreateTopUpBalanceInvoice")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := _req.Msg
+	log.Debug("Request received")
+
+	if req.GetSum() <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "Sum must be greater than 0")
+	}
+
+	ivnToCreate := &pb.Invoice{
+		Deadline: time.Now().Add(72 * time.Hour).Unix(),
+		Status:   pb.BillingStatus_UNPAID,
+		Account:  requester,
+		Total:    req.GetSum(),
+		Type:     pb.ActionType_BALANCE,
+	}
+
+	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, requester)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+	if acc.Currency != nil {
+		ivnToCreate.Currency = acc.Currency
+	}
+
+	return s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
+		IsSendEmail: true,
+		Invoice:     ivnToCreate,
+	}))
+}
+
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
 	tr, err := s.invoices.Get(ctx, uuid)
 	if err != nil {
@@ -1051,7 +1084,7 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 	}
 
 	if ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
-		if ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN); !ok {
+		if ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN); !ok && acc != tr.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 	}
