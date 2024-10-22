@@ -121,6 +121,9 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		return err
 	}
 	meta := invoice.GetMeta()
+	if meta == nil {
+		meta = make(map[string]*structpb.Value)
+	}
 	meta[invoiceIdField] = structpb.NewNumberValue(float64(invResp.InvoiceId))
 	invoice.Meta = meta
 	if _, err := g.invMan.InvoicesController().Update(ctx, invoice); err != nil {
