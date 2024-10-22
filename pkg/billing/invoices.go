@@ -821,7 +821,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		Currency: invCurrency,
 	}))
 	if err != nil {
-		log.Error("Failed to create transaction", zap.Error(err))
+		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
 	}
 
