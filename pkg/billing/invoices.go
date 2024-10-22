@@ -801,7 +801,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
-	_, err = s.UpdateInvoiceStatus(ctx, connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
+	_, err = s.UpdateInvoiceStatus(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 		Uuid:   inv.GetUuid(),
 		Status: pb.BillingStatus_PAID,
 		Params: &pb.UpdateInvoiceStatusRequest_Params{
