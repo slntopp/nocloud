@@ -16,16 +16,18 @@ import (
 )
 
 type Currency struct {
-	Id    int32  `json:"id"`
-	Title string `json:"title"`
+	Id     int32  `json:"id"`
+	Title  string `json:"title"`
+	Public bool   `json:"public"`
 	driver.DocumentMeta
 }
 
 func CurrencyFromPb(currency *pb.Currency) Currency {
 	key := fmt.Sprintf("%d", currency.GetId())
 	return Currency{
-		Id:    currency.GetId(),
-		Title: currency.GetTitle(),
+		Id:     currency.GetId(),
+		Title:  currency.GetTitle(),
+		Public: currency.GetPublic(),
 		DocumentMeta: driver.DocumentMeta{
 			Key: key,
 			ID:  driver.NewDocumentID(schema.CUR_COL, key),
@@ -84,7 +86,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 const migrateToDynamicVertex = `
 	FOR el IN @@collection
 		FILTER el.id == null || el.title == null || el.title == ""
-		UPDATE el WITH { id: TO_NUMBER(el._key), title: @names[el._key], name: null } IN @@collection
+		UPDATE el WITH { id: TO_NUMBER(el._key), title: @names[el._key], name: null, public: true } IN @@collection
         OPTIONS { keepNull: false }
 `
 const migrateToDynamicEdges = `
@@ -245,7 +247,7 @@ func (c *CurrencyController) Convert(ctx context.Context, from *pb.Currency, to 
 	return amount * rate, nil
 }
 
-func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency, error) {
+func (c *CurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error) {
 	currencies := []*pb.Currency{}
 
 	cursor, err := c.db.Query(ctx, getCurrenciesQuery, map[string]interface{}{
@@ -259,7 +261,8 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 	for cursor.HasMore() {
 		doc := struct {
 			driver.DocumentMeta
-			Title string `json:"title"`
+			Title  string `json:"title"`
+			Public bool   `json:"public"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
@@ -272,9 +275,15 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 			return currencies, err
 		}
 
+		// Ignore private currency
+		if !isAdmin && !doc.Public {
+			continue
+		}
+
 		currencies = append(currencies, &pb.Currency{
-			Id:    int32(id),
-			Title: doc.Title,
+			Id:     int32(id),
+			Title:  doc.Title,
+			Public: doc.Public,
 		})
 	}
 

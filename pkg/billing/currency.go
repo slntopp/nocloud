@@ -37,6 +37,11 @@ func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.R
 	log := s.log.Named("CreateCurrency")
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+
 	if req.Currency == nil {
 		return nil, status.Error(codes.InvalidArgument, "no currency provided")
 	}
@@ -65,8 +70,8 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *conne
 	log := s.log.Named("CreateExchangeRate")
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
@@ -94,8 +99,8 @@ func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, r *conne
 	log := s.log.Named("UpdateExchangeRate")
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
@@ -110,8 +115,8 @@ func (s *CurrencyServiceServer) DeleteExchangeRate(ctx context.Context, r *conne
 	log := s.log.Named("DeleteExchangeRate")
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
@@ -133,7 +138,10 @@ func (s *CurrencyServiceServer) Convert(ctx context.Context, r *connect.Request[
 }
 
 func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Request[pb.GetCurrenciesRequest]) (*connect.Response[pb.GetCurrenciesResponse], error) {
-	currencies, err := s.ctrl.GetCurrencies(ctx)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	isAdmin := graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+
+	currencies, err := s.ctrl.GetCurrencies(ctx, isAdmin)
 	if err != nil {
 		return nil, err
 	}
