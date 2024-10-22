@@ -171,7 +171,8 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		vars["acc"] = acc
 	} else {
 		if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
-			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+			query += ` FILTER t.account == @acc`
+			vars["acc"] = acc
 		}
 	}
 
