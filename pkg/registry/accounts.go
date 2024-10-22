@@ -362,7 +362,8 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 			return nil, status.Error(codes.Unauthenticated, "Wrong credentials")
 		}
 
-		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*5)
+		// TODO: MAKE IT 5 MINUTES AGAIN
+		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*60*24)
 	} else {
 		if request.GetAuth() == nil {
 			return nil, status.Error(codes.InvalidArgument, "Auth data was not presented")
