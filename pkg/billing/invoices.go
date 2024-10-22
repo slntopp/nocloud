@@ -751,6 +751,83 @@ quit:
 	return resp, nil
 }
 
+func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Request[pb.PayWithBalanceRequest]) (*connect.Response[pb.PayWithBalanceResponse], error) {
+	log := s.log.Named("PayWithBalance")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requester))
+
+	inv, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
+	if err != nil {
+		log.Warn("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Invoice not found")
+	}
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requester, ns, access.Level_ROOT)
+	if !ok && inv.GetAccount() != requester {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	if inv.GetType() == pb.ActionType_BALANCE {
+		return nil, status.Error(codes.InvalidArgument, "Can't pay top-up balance invoice with balance")
+	}
+
+	acc, err := s.accounts.Get(ctx, inv.GetAccount())
+	if err != nil {
+		log.Warn("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Account not found")
+	}
+	currConf := MakeCurrencyConf(ctx, log)
+
+	balance := acc.GetBalance()
+	accCurrency := acc.Currency
+	if accCurrency == nil {
+		accCurrency = currConf.Currency
+	}
+	invCurrency := inv.Currency
+	if invCurrency == nil {
+		invCurrency = currConf.Currency
+	}
+
+	if accCurrency != invCurrency {
+		balance, err = s.currencies.Convert(ctx, accCurrency, invCurrency, balance)
+		if err != nil {
+			log.Error("Failed to convert balance", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to convert balance")
+		}
+	}
+
+	if balance < inv.GetTotal() {
+		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
+	}
+
+	_, err = s.UpdateInvoiceStatus(ctx, connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
+		Uuid:   inv.GetUuid(),
+		Status: pb.BillingStatus_PAID,
+		Params: &pb.UpdateInvoiceStatusRequest_Params{
+			IsSendEmail: true,
+		},
+	}))
+	if err != nil {
+		log.Error("Failed to update invoice status", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
+	}
+
+	_, err = s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
+		Exec:     time.Now().Unix(),
+		Priority: pb.Priority_URGENT,
+		Account:  inv.GetAccount(),
+		Total:    inv.GetTotal(),
+		Currency: invCurrency,
+	}))
+	if err != nil {
+		log.Error("Failed to create transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	}
+
+	return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
+}
+
 func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.Request[pb.GetInvoicesCountRequest]) (*connect.Response[pb.GetInvoicesCountResponse], error) {
 	log := s.log.Named("GetInvoicesCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
