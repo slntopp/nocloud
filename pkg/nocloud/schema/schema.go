@@ -64,6 +64,7 @@ const (
 	TRANSACTIONS_COL  = "Transactions"
 	INVOICES_COL      = "Invoices"
 	RECORDS_COL       = "Records"
+	PROMOCODES_COL    = "Promocodes"
 )
 
 type NoCloudGraphSchema struct {
