@@ -26,6 +26,10 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+func ctxWithRoot(ctx context.Context) context.Context {
+	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
+}
+
 type pair[T any] struct {
 	f T
 	s T
@@ -341,7 +345,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
 		}
 
-		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+		newTr, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
 			Priority: pb.Priority_NORMAL,
 			Account:  acc.GetUuid(),
 			Currency: defCurr,
