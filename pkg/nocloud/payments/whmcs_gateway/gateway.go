@@ -299,11 +299,7 @@ func (g *WhmcsGateway) AddClient(params types.CreateUserParams) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to create client: %w", err)
 	}
-
-	id, err := strconv.Atoi(clientResp.ClientID)
-	if err != nil {
-		return 0, fmt.Errorf("client is created but failed to convert client id to int: %w", err)
-	}
+	id := clientResp.ClientID
 
 	// Updating payment method for company client and individual clients. See whmcs module
 	var vals url.Values
