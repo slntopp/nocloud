@@ -403,9 +403,9 @@ func (g *WhmcsGateway) fetchCurrencies() ([]Currency, error) {
 		return nil, fmt.Errorf("failed to fetch currencies: %w", err)
 	}
 
-	if resp.Currencies == nil {
+	if resp.Currencies.Currencies == nil {
 		return nil, fmt.Errorf("currencies is empty or nil")
 	}
 
-	return resp.Currencies, nil
+	return resp.Currencies.Currencies, nil
 }
