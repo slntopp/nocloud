@@ -283,14 +283,14 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		inv.Payment = t.Unix()
 		inv.Processed = inv.Payment
 	}
-	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
+	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") && inv.Deadline == 0 {
 		t, err := time.Parse("2006-01-02", whmcsInv.DueDate)
 		if err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 		inv.Deadline = t.Unix()
 	}
-	if !strings.Contains(whmcsInv.Date, "0000-00-00") {
+	if !strings.Contains(whmcsInv.Date, "0000-00-00") && inv.Created == 0 {
 		t, err := time.Parse("2006-01-02", whmcsInv.Date)
 		if err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
@@ -299,15 +299,16 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	}
 	inv.Total = float64(whmcsInv.Total)
 	// TODO: sync invoice number too. Have to refactor number logic in invoice controller
-	inv.Items = []*pb.Item{}
-	for _, item := range whmcsInv.Items.Items {
-		inv.Items = append(inv.Items, &pb.Item{
-			Description: item.Description,
-			Amount:      1,
-			Price:       float64(item.Amount),
-			Unit:        "Pcs",
-		})
-	}
+	// TODO: Update items too or refactor
+	//inv.Items = []*pb.Item{}
+	//for _, item := range whmcsInv.Items.Items {
+	//	inv.Items = append(inv.Items, &pb.Item{
+	//		Description: item.Description,
+	//		Amount:      1,
+	//		Price:       float64(item.Amount),
+	//		Unit:        "Pcs",
+	//	})
+	//}
 	meta := inv.GetMeta()
 	meta["note"] = structpb.NewStringValue(whmcsInv.Notes)
 	inv.Meta = meta
