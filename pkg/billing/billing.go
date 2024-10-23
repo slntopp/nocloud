@@ -57,8 +57,9 @@ type Routine struct {
 type BillingServiceServer struct {
 	log *zap.Logger
 
-	rbmq           *amqp.Connection
-	ConsumerStatus *healthpb.RoutineStatus
+	rbmq                    *amqp.Connection
+	ConsumerStatus          *healthpb.RoutineStatus
+	InstancesConsumerStatus *healthpb.RoutineStatus
 
 	nss          graph.NamespacesController
 	plans        graph.BillingPlansController
@@ -127,6 +128,13 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 
 		ConsumerStatus: &healthpb.RoutineStatus{
 			Routine: "Billing Consumer",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status:  healthpb.Status_STOPPED,
+			},
+		},
+		InstancesConsumerStatus: &healthpb.RoutineStatus{
+			Routine: "Billing Consumer Created Instances",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,
