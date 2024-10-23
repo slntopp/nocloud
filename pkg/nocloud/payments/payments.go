@@ -43,7 +43,7 @@ func RegisterGateways(whmcs whmcs_gateway.WhmcsData,
 }
 
 func GetPaymentGateway(t string) PaymentGateway {
-	if _registered {
+	if !_registered {
 		panic("payment gateways are not registered")
 	}
 	switch t {
