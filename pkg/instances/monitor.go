@@ -18,7 +18,6 @@ package instances
 import (
 	"context"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
-	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"time"
 
 	stpb "github.com/slntopp/nocloud-proto/statuses"
@@ -151,9 +150,9 @@ start:
 			go func(sp *graph.ServicesProvider) {
 				log := log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
 				log.Debug("Starting MonitoringRoutine")
-				syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), 5)
-				defer syncer.Open()
-				_ = syncer.WaitUntilOpenedAndCloseAfter()
+				//syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), 5)
+				//defer syncer.Open()
+				//_ = syncer.WaitUntilOpenedAndCloseAfter()
 				//log.Debug("Locking mutex")
 				//m := s.spSyncers[sp.GetUuid()]
 				//if m == nil {
