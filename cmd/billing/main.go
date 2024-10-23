@@ -182,6 +182,8 @@ func main() {
 	records := billing.NewRecordsServiceServer(log, conn, db)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
+	log.Info("Starting Instances Creation Consumer")
+	go server.ConsumeCreatedInstances(ctx)
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
