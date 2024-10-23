@@ -18,6 +18,9 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
 	"time"
 
@@ -90,6 +93,16 @@ func NewAccountsServer(log *zap.Logger, db driver.Database, rdb *redis.Client) *
 		),
 		rdb: rdb,
 	}
+}
+
+func castString(val any) string {
+	if val == nil {
+		return ""
+	}
+	if str, ok := val.(string); ok {
+		return str
+	}
+	return ""
 }
 
 func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.SettingsServiceClient, internal_token string) {
@@ -605,6 +618,45 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 	} else if access_lvl < access.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
+
+	if request.Data == nil {
+		val, err := structpb.NewStruct(map[string]interface{}{})
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		request.Data = val
+	}
+
+	// Create whmcs account
+	if len(request.GetAuth().Data) != 2 {
+		return nil, status.Error(codes.InvalidArgument, "Auth data must contain password")
+	}
+	data := request.GetData().AsMap()
+	gw := payments.GetPaymentGateway("whmcs")
+	id, err := gw.AddClient(whmcs_gateway.CreateUserParams{
+		Email:           castString(data["email"]),
+		Firstname:       castString(data["firstname"]),
+		Lastname:        castString(data["lastname"]),
+		Language:        castString(data["language"]),
+		Country:         castString(data["country"]),
+		PhoneNumber:     castString(data["phonenumber"]),
+		Password:        request.GetAuth().Data[1],
+		Currency:        request.GetCurrency(),
+		CompanyName:     castString(data["companyname"]),
+		City:            castString(data["city"]),
+		Postcode:        castString(data["postcode"]),
+		Address:         castString(data["address1"]),
+		NoEmail:         false,
+		AccountNumber:   castString(data["account_number"]),
+		BankName:        castString(data["bankname"]),
+		BIC:             castString(data["bic"]),
+		CheckingAccount: castString(data["checking_account"]),
+		TaxID:           castString(data["tax_id"]),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Failed to create account via gateway. Error: "+err.Error())
+	}
+	data["whmcs_id"] = id
 
 	cred, err := credentials.MakeCredentials(request.Auth, log)
 	if err != nil {

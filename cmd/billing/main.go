@@ -23,6 +23,7 @@ import (
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
 	"golang.org/x/net/http2"
@@ -116,8 +117,8 @@ func main() {
 		})
 	})
 
+	// Register payments handlers
 	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
-	// Handle whmcs hooks
 	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
 	if err != nil {
 		log.Fatal("Can't get whmcs credentials", zap.Error(err))
@@ -125,6 +126,9 @@ func main() {
 	accounts := graph.NewAccountsController(log, db)
 	invoices := graph.NewInvoicesController(log, db)
 	manager := invoices_manager.NewInvoicesManager(bClient, &invoices, authInterceptor)
+	payments.RegisterGateways(whmcsData, accounts, *manager)
+
+	// Register WHMCS hooks handler
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, &accounts, manager)
 	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
 	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
@@ -136,7 +140,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	server := billing.NewBillingServiceServer(log, db, conn, rdb, *manager)
+	server := billing.NewBillingServiceServer(log, db, conn, rdb)
 	currencies := billing.NewCurrencyServiceServer(log, db)
 	log.Info("Starting Currencies Service")
 
