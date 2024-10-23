@@ -22,6 +22,7 @@ import (
 	"fmt"
 	addonspb "github.com/slntopp/nocloud-proto/billing/addons"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
+	epb "github.com/slntopp/nocloud-proto/events"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud-proto/notes"
 	servicespb "github.com/slntopp/nocloud-proto/services"
@@ -319,7 +320,19 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.C
 		false,
 		nil,
 	)
+	if err != nil {
+		log.Fatal("Failed to init exchange", zap.Error(err))
+	}
 
+	err = channel.ExchangeDeclare(
+		"instances",
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
 	if err != nil {
 		log.Fatal("Failed to init exchange", zap.Error(err))
 	}
@@ -488,6 +501,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		return "", err
 	}
 
+	// Send for ansible hooks
 	c := pb.Context{
 		Instance: i.GetUuid(),
 		Sp:       sp,
@@ -501,6 +515,23 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 			Body:         body,
 		})
 
+		if err != nil {
+			log.Error("Failed to publish", zap.Error(err))
+		}
+	} else {
+		log.Error("Failed to parse", zap.Error(err))
+	}
+	// Send for invoice creation
+	e := epb.Event{
+		Uuid: i.GetUuid(),
+	}
+	body, err = proto.Marshal(&e)
+	if err == nil {
+		err = ctrl.channel.PublishWithContext(ctx, "instances", "created_instance", false, false, amqp091.Publishing{
+			ContentType:  "text/plain",
+			DeliveryMode: amqp091.Persistent,
+			Body:         body,
+		})
 		if err != nil {
 			log.Error("Failed to publish", zap.Error(err))
 		}

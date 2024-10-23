@@ -15,8 +15,8 @@ import (
 	"time"
 )
 
-func (s *BillingServiceServer) ProcessInstanceCreation(ctx context.Context, event *epb.Event, currencyConf CurrencyConf, now int64) error {
-	log := s.log.Named("ProcessInstanceCreation")
+func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx context.Context, event *epb.Event, currencyConf CurrencyConf, now int64) error {
+	log = s.log.Named("ProcessInstanceCreation")
 
 	instance, err := s.instances.Get(ctx, event.Uuid)
 	if err != nil {
@@ -117,7 +117,7 @@ init:
 	}
 
 	queue, _ := ch.QueueDeclare(
-		"created_instances",
+		"created_instance",
 		true, false, false, true, nil,
 	)
 
@@ -143,7 +143,7 @@ init:
 			}
 			continue
 		}
-		err := s.ProcessInstanceCreation(ctx, &event, currencyConf, time.Now().Unix())
+		err := s.ProcessInstanceCreation(log, ctx, &event, currencyConf, time.Now().Unix())
 		if err != nil {
 			log.Error("Failed to process event", zap.Error(err))
 		}

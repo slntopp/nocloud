@@ -20,11 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
 	"time"
-
-	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
@@ -408,85 +405,6 @@ func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[p
 			continue
 		}
 		log.Debug("Created Group", zap.Any("group", group))
-	}
-
-	// Create invoice for newly created instances
-	// TODO: You must take account according to namespace in request. Not from requester
-	log.Warn("Invalid account logic in invoice creation for instance start")
-	acc, err := s.acc_ctrl.GetAccountOrOwnerAccountIfPresent(ctx, requestor)
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get account")
-	}
-	var accCurrency = &bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME}
-	if acc.Currency != nil {
-		accCurrency = acc.Currency
-	}
-	rate, _, err := s.cur_ctrl.GetExchangeRate(ctx,
-		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID},
-		accCurrency)
-	if err != nil {
-		log.Error("Failed to get exchange rate", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-	}
-
-	srv, err := s.ctrl.Get(ctx, requestor, doc.Uuid)
-	if err != nil {
-		log.Error("Error getting service", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error getting service")
-	}
-	log.Debug("Got service", zap.Any("service", srv))
-	for _, group := range srv.GetInstancesGroups() {
-		for _, instance := range group.GetInstances() {
-
-			cost, err := s.instances.CalculateInstanceEstimatePrice(instance, true)
-			if err != nil {
-				log.Error("Failed to calculate instance cost", zap.Error(err))
-				return nil, status.Error(codes.Internal, "Failed to calculate instance cost. "+err.Error())
-			}
-			cost *= rate // Convert NCU cost to account's currency
-
-			inv := &bpb.Invoice{
-				Status: bpb.BillingStatus_UNPAID,
-				Items: []*bpb.Item{
-					{
-						Description: fmt.Sprintf("Instance '%s' start payment", instance.GetUuid()),
-						Amount:      1,
-						Unit:        "Instance",
-						Price:       cost,
-						Instance:    instance.GetUuid(),
-					},
-				},
-				Meta: map[string]*structpb.Value{
-					"auto_created": structpb.NewBoolValue(true),
-					"creator":      structpb.NewStringValue("nocloud.services.CreateService"),
-				},
-				Total:    cost,
-				Type:     bpb.ActionType_INSTANCE_START,
-				Created:  time.Now().Unix(),
-				Deadline: time.Now().Add(24 * time.Hour).Unix(), // Until when invoice should be paid
-				Account:  acc.GetUuid(),
-				Currency: accCurrency,
-			}
-			token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
-			if err != nil {
-				log.Error("Failed to create token", zap.Error(err))
-				return nil, status.Error(codes.Internal, "Couldn't create invoice")
-			}
-			ctx2 := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
-			ctx2 = metadata.AppendToOutgoingContext(ctx2, string(nocloud.NoCloudAccount), schema.ROOT_ACCOUNT_KEY)
-			ctx2 = metadata.AppendToOutgoingContext(ctx2, "authorization", "Bearer "+token)
-			_, err = s.billing.CreateInvoice(ctx2, &bpb.CreateInvoiceRequest{
-				Invoice:     inv,
-				IsSendEmail: true,
-			})
-			if err != nil {
-				log.Error("Failed to create invoice", zap.Error(err), zap.String("instance", instance.GetUuid()), zap.Any("invoice", inv))
-				return nil, status.Error(codes.Internal, "Failed to create invoice")
-			}
-
-			log.Debug("Successfully created invoice", zap.Any("instance", instance.GetUuid()))
-		}
 	}
 
 	return connect.NewResponse(service), nil
