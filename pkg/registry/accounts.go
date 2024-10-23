@@ -657,7 +657,7 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Failed to create account via gateway. Error: "+err.Error())
 	}
-	data["whmcs_id"] = id
+	request.Data.Fields["whmcs_id"] = structpb.NewNumberValue(float64(id))
 
 	cred, err := credentials.MakeCredentials(request.Auth, log)
 	if err != nil {
