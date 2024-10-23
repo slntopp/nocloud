@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-querystring/query"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
@@ -256,7 +257,7 @@ func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invo
 	return invResp, nil
 }
 
-func (g *WhmcsGateway) AddClient(params CreateUserParams) (int, error) {
+func (g *WhmcsGateway) AddClient(params types.CreateUserParams) (int, error) {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return 0, err
