@@ -52,7 +52,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	}
 	log.Debug("Instance owner found", zap.String("account", acc.GetUuid()))
 
-	acc, err = s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, acc.GetUuid())
+	acc, err = s.accounts.GetAccountOrOwnerAccountIfPresent(ctxWithRoot(ctx), acc.GetUuid())
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
 		return fmt.Errorf("failed to get account: %w", err)
