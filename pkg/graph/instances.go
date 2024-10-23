@@ -522,6 +522,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		log.Error("Failed to parse", zap.Error(err))
 	}
 	// Send for invoice creation
+	log.Info("Publishing creation event", zap.Any("instance", i.GetUuid()))
 	e := epb.Event{
 		Uuid: i.GetUuid(),
 	}
