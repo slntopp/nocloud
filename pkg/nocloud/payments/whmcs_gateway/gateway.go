@@ -53,6 +53,7 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 		return result, err
 	}
 
+	fmt.Println("Sending url from whmcs gateway: " + url)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return result, err
