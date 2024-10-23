@@ -121,6 +121,12 @@ init:
 		true, false, false, true, nil,
 	)
 
+	if err = ch.QueueBind("created_instance", "created_instance", "instances", false, nil); err != nil {
+		log.Error("Failed to bind queue", zap.Error(err))
+		time.Sleep(time.Second)
+		goto init
+	}
+
 	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
 	if err != nil {
 		log.Error("Failed to register a consumer", zap.Error(err))
