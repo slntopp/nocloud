@@ -8,7 +8,7 @@ type CreateUserParams struct {
 	Email           string       `json:"email" validate:"required,email"`
 	Language        string       `json:"language"`
 	Country         string       `json:"country" validate:"omitempty,iso3166_1_alpha2"`
-	PhoneNumber     string       `json:"phonenumber" validate:"required,e164"`
+	PhoneNumber     string       `json:"phonenumber" validate:"required"`
 	Password        string       `json:"password2" validate:"required"`
 	Currency        *pb.Currency `json:"currency"`
 	CompanyName     string       `json:"companyname"`
