@@ -632,7 +632,6 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.InvalidArgument, "Auth data must contain password")
 	}
 	data := request.GetData().AsMap()
-	fmt.Printf("Account data as map: %+v\n", data)
 	gw := payments.GetPaymentGateway("whmcs")
 	id, err := gw.AddClient(types.CreateUserParams{
 		Email:           castString(data["email"]),
