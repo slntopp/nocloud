@@ -170,21 +170,21 @@ type AddClientQuery struct {
 	Username     string `url:"username"`
 	Password     string `url:"password"` // md5 hash
 
-	Firstname    string `url:"firstname"`
-	Lastname     string `url:"lastname"`
-	Email        string `url:"email"`
-	Language     string `url:"language"`
-	Country      string `url:"country"`
-	PhoneNumber  string `url:"phonenumber"`
-	Password2    string `url:"password2"`
-	Currency     int    `url:"currency"`
-	CompanyName  string `url:"companyname"`
-	City         string `url:"city"`
-	Postcode     string `url:"postcode"`
-	Address      string `url:"address1"`
-	CustomFields string `url:"customfields"` // base64encode of serialized account_number,checking_account,bankname and bic
-	NoEmail      bool   `url:"noemail"`
-	TaxID        string `url:"tax_id"`
+	Firstname    string `json:"firstname"`
+	Lastname     string `json:"lastname"`
+	Email        string `json:"email"`
+	Language     string `json:"language"`
+	Country      string `json:"country"`
+	PhoneNumber  string `json:"phonenumber"`
+	Password2    string `json:"password2"`
+	Currency     int    `json:"currency"`
+	CompanyName  string `json:"companyname"`
+	City         string `json:"city"`
+	Postcode     string `json:"postcode"`
+	Address      string `json:"address1"`
+	CustomFields string `json:"customfields"` // base64encode of serialized account_number,checking_account,bankname and bic
+	NoEmail      bool   `json:"noemail"`
+	TaxID        string `json:"tax_id"`
 }
 
 type UpdateClientPaymentMethodQuery struct {
