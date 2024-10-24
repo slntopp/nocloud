@@ -18,14 +18,7 @@ package main
 import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
-	cc "github.com/slntopp/nocloud-proto/billing/billingconnect"
-	"github.com/slntopp/nocloud/pkg/graph"
-	cauth "github.com/slntopp/nocloud/pkg/nocloud/connect_auth"
-	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"net"
-	"net/http"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -126,17 +119,6 @@ func main() {
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
-
-	// Register payments handlers
-	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
-	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
-	if err != nil {
-		log.Fatal("Can't get whmcs credentials", zap.Error(err))
-	}
-	accounts := graph.NewAccountsController(log, db)
-	invoices := graph.NewInvoicesController(log, db)
-	manager := invoices_manager.NewInvoicesManager(bClient, &invoices, cauth.NewInterceptor(log, rdb, SIGNING_KEY))
-	payments.RegisterGateways(whmcsData, accounts, *manager)
 
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {

@@ -378,7 +378,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
 	if !gatewayCallback {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
+		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
 		}
 	}
@@ -741,7 +741,7 @@ quit:
 	}
 	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
 	if err == nil && !gatewayCallback {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
+		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
@@ -1036,7 +1036,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
 	if !gatewayCallback {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
+		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
@@ -1117,7 +1117,7 @@ func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb
 		return nil, status.Error(codes.NotFound, "Internal error")
 	}
 
-	uri, err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).PaymentURI(ctx, inv.Invoice)
+	uri, err := s.GetPaymentGateway(acc.GetPaymentsGateway()).PaymentURI(ctx, inv.Invoice)
 	if err != nil {
 		log.Error("Error getting payment uri", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
