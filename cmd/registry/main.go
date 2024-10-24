@@ -137,7 +137,6 @@ func main() {
 	invoices := graph.NewInvoicesController(log, db)
 	manager := invoices_manager.NewInvoicesManager(bClient, &invoices, cauth.NewInterceptor(log, rdb, SIGNING_KEY))
 	payments.RegisterGateways(whmcsData, accounts, *manager)
-	log.Info("Payment gateways were registered")
 
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
