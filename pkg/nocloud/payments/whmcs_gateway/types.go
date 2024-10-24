@@ -164,39 +164,6 @@ type UpdateInvoiceQuery struct {
 	PublishAndSendEmail *bool                 `url:"publishandsendemail,omitempty"`
 }
 
-type AddClientQuery struct {
-	Action       string `url:"action"`
-	ResponseType string `url:"responsetype"`
-	Username     string `url:"username"`
-	Password     string `url:"password"` // md5 hash
-
-	Firstname    string `json:"firstname"`
-	Lastname     string `json:"lastname"`
-	Email        string `json:"email"`
-	Language     string `json:"language"`
-	Country      string `json:"country"`
-	PhoneNumber  string `json:"phonenumber"`
-	Password2    string `json:"password2"`
-	Currency     int    `json:"currency"`
-	CompanyName  string `json:"companyname"`
-	City         string `json:"city"`
-	Postcode     string `json:"postcode"`
-	Address      string `json:"address1"`
-	CustomFields string `json:"customfields"` // base64encode of serialized account_number,checking_account,bankname and bic
-	NoEmail      bool   `json:"noemail"`
-	TaxID        string `json:"tax_id"`
-}
-
-type UpdateClientPaymentMethodQuery struct {
-	Action       string `url:"action"`
-	ClientId     int    `url:"clientid"`
-	ResponseType string `url:"responsetype"`
-	Username     string `url:"username"`
-	Password     string `url:"password"` // md5 hash
-
-	PaymentMethod string `json:"paymentmethod"`
-}
-
 type PaymentURIQuery struct {
 	Action       string `url:"action"`
 	Username     string `url:"username"`
@@ -238,36 +205,4 @@ type InvoiceCreated struct {
 	InvoiceId int    `json:"invoiceid"`
 	Source    string `json:"source"`
 	Status    string `json:"status"`
-}
-
-type AddClientResponse struct {
-	Status   string `json:"status"`
-	ClientID string `json:"clientid"`
-	Result   string `json:"result"`
-	Message  string `json:"message"`
-}
-
-type GetCurrenciesRequest struct {
-	Action       string `url:"action"`
-	ResponseType string `url:"responsetype"`
-	Username     string `url:"username"`
-	Password     string `url:"password"`
-}
-
-type Currency struct {
-	Id     int           `json:"id"`
-	Code   string        `json:"code"`
-	Prefix string        `json:"prefix"`
-	Suffix string        `json:"suffix"`
-	Format int           `json:"format"`
-	Rate   floatAsString `json:"rate"`
-}
-
-type GetCurrenciesResponse struct {
-	Status  string `json:"status"`
-	Result  string `json:"result"`
-	Message string `json:"message"`
-
-	Total      int        `json:"totalresults"`
-	Currencies []Currency `json:"currencies"`
 }

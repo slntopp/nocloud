@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	validator "github.com/go-playground/validator/v10"
 	"github.com/google/go-querystring/query"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -256,71 +255,6 @@ func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invo
 	return invResp, nil
 }
 
-func (g *WhmcsGateway) AddClient(params CreateUserParams) (int, error) {
-	reqUrl, err := url.Parse(g.baseUrl)
-	if err != nil {
-		return 0, err
-	}
-
-	// Validate with validator
-	if err = validator.New().Struct(params); err != nil {
-		return 0, fmt.Errorf("validation error: %w", err)
-	}
-	// Other validation
-	if params.Currency == nil {
-		return 0, fmt.Errorf("failed to validate currency: currency is required")
-	}
-	var currencyCode int
-	currencies, err := g.fetchCurrencies()
-	if err != nil {
-		return 0, fmt.Errorf("failed to validate currency: %w", err)
-	}
-	var found bool
-	for _, c := range currencies {
-		if c.Code == params.Currency.Title {
-			found = true
-			currencyCode = c.Id
-			break
-		}
-	}
-	if !found {
-		return 0, fmt.Errorf("failed to validate currency: can't syncronize currency. Not found")
-	}
-
-	// User creation
-	q, err := g.buildCreateUserQueryBase(params, currencyCode)
-	if err != nil {
-		return 0, err
-	}
-
-	clientResp, err := sendRequestToWhmcs[AddClientResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
-	if err != nil {
-		return 0, fmt.Errorf("failed to create client: %w", err)
-	}
-
-	id, err := strconv.Atoi(clientResp.ClientID)
-	if err != nil {
-		return 0, fmt.Errorf("client is created but failed to convert client id to int: %w", err)
-	}
-
-	// Updating payment method for company client and individual clients. See whmcs module
-	var vals url.Values
-	if params.CompanyName != "" {
-		vals, err = g.buildUpdateClientPaymentMethodQueryBase(id, "schetfacturagate")
-	} else {
-		vals, err = g.buildUpdateClientPaymentMethodQueryBase(id, "begateway")
-	}
-	if err != nil {
-		return id, err
-	}
-	_, err = sendRequestToWhmcs[struct{}](http.MethodPost, reqUrl.String()+"?"+vals.Encode(), nil)
-	if err != nil {
-		return id, fmt.Errorf("failed to update client payment method: %w", err)
-	}
-
-	return id, nil
-}
-
 func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {
 	return g.syncWhmcsInvoice(ctx, invoiceId)
 }
@@ -385,26 +319,4 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
 	return nil
-}
-
-func (g *WhmcsGateway) fetchCurrencies() ([]Currency, error) {
-	reqUrl, err := url.Parse(g.baseUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	q, err := g.buildGetCurrenciesQueryBase()
-	if err != nil {
-		return nil, err
-	}
-	resp, err := sendRequestToWhmcs[GetCurrenciesResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch currencies: %w", err)
-	}
-
-	if resp.Currencies == nil {
-		return nil, fmt.Errorf("currencies is empty or nil")
-	}
-
-	return resp.Currencies, nil
 }
