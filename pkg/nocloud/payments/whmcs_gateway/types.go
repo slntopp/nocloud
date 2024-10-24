@@ -242,7 +242,7 @@ type InvoiceCreated struct {
 
 type AddClientResponse struct {
 	Status   string `json:"status"`
-	ClientID int    `json:"clientid"`
+	ClientID string `json:"clientid"`
 	Result   string `json:"result"`
 	Message  string `json:"message"`
 }
