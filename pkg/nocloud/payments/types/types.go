@@ -12,9 +12,9 @@ type CreateUserParams struct {
 	Password        string       `json:"password2" validate:"required"`
 	Currency        *pb.Currency `json:"currency"`
 	CompanyName     string       `json:"companyname"`
-	City            string       `json:"city"`
-	Postcode        string       `json:"postcode"`
-	Address         string       `json:"address1"`
+	City            string       `json:"city" validate:"required"`
+	Postcode        string       `json:"postcode" validate:"required"`
+	Address         string       `json:"address1" validate:"required"`
 	NoEmail         bool         `json:"noemail"`
 	AccountNumber   string       `json:"account_number"`
 	BankName        string       `json:"bankname"`
