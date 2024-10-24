@@ -263,15 +263,11 @@ type Currency struct {
 	Rate   floatAsString `json:"rate"`
 }
 
-type CurrencyHolder struct {
-	Currencies []Currency `json:"currency"`
-}
-
 type GetCurrenciesResponse struct {
 	Status  string `json:"status"`
 	Result  string `json:"result"`
 	Message string `json:"message"`
 
-	Total      int            `json:"totalresults"`
-	Currencies CurrencyHolder `json:"currencies"`
+	Total      int        `json:"totalresults"`
+	Currencies []Currency `json:"currencies"`
 }
