@@ -19,7 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
 	"time"
@@ -633,7 +633,7 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 	}
 	data := request.GetData().AsMap()
 	gw := payments.GetPaymentGateway("whmcs")
-	id, err := gw.AddClient(types.CreateUserParams{
+	id, err := gw.AddClient(whmcs_gateway.CreateUserParams{
 		Email:           castString(data["email"]),
 		Firstname:       castString(data["firstname"]),
 		Lastname:        castString(data["lastname"]),

@@ -6,7 +6,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 )
 
@@ -14,7 +13,7 @@ type PaymentGateway interface {
 	CreateInvoice(context.Context, *pb.Invoice) error
 	UpdateInvoice(context.Context, *pb.Invoice, *pb.Invoice) error
 	PaymentURI(context.Context, *pb.Invoice) (string, error)
-	AddClient(types.CreateUserParams) (int, error)
+	AddClient(whmcs_gateway.CreateUserParams) (int, error)
 }
 
 type ContextKey string
