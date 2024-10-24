@@ -135,10 +135,10 @@ func main() {
 	accounts_server.SIGNING_KEY = SIGNING_KEY
 	credentials.SetupSettingsClient(log.Named("Credentials"), sc, token)
 	accounts_server.SetupSettingsClient(sc, token)
-	err = accounts_server.EnsureRootExists(nocloudRootPass)
-	if err != nil {
-		log.Fatal("Couldn't ensure root Account(and Namespace) exist", zap.Error(err))
-	}
+	//err = accounts_server.EnsureRootExists(nocloudRootPass)
+	//if err != nil {
+	//	log.Fatal("Couldn't ensure root Account(and Namespace) exist", zap.Error(err))
+	//}
 	pb.RegisterAccountsServiceServer(s, accounts_server)
 
 	namespaces_server := accounting.NewNamespacesServer(log, db)
