@@ -18,6 +18,7 @@ package instances
 import (
 	"context"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
+	"github.com/slntopp/nocloud-proto/health"
 	"time"
 
 	stpb "github.com/slntopp/nocloud-proto/statuses"
@@ -83,8 +84,10 @@ func MakeConf(ctx context.Context, log *zap.Logger, upd chan bool) (conf Monitor
 	return conf
 }
 
-func (s *InstancesServer) MonitoringRoutineState() Routine {
-	return s.monitoring
+func (s *InstancesServer) RoutinesState() []*health.RoutineStatus {
+	return []*health.RoutineStatus{
+		s.monitoring,
+	}
 }
 
 const getAccsBalance = `
@@ -127,7 +130,7 @@ start:
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
 	tick := time.Now()
 	for {
-		s.monitoring.Running = true
+		s.monitoring.Status.Status = health.Status_RUNNING
 
 		sp_pool, err := s.sp_ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
 		if err != nil {
@@ -242,7 +245,7 @@ start:
 			}(sp)
 		}
 
-		s.monitoring.LastExec = tick.Format("2006-01-02T15:04:05Z07:00")
+		s.monitoring.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
 		case tick = <-ticker.C:
 			continue
