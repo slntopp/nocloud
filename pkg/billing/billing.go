@@ -501,7 +501,7 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 	if req.GetAnonymously() {
 		query += ` FILTER p.public == true`
 		query += ` FILTER COUNT(
-    FOR sp, edge IN 1 INBOUND p GRAPH Billing
+    FOR sp, edge2 IN 1 INBOUND p GRAPH Billing
         FILTER IS_SAME_COLLECTION(@@services_providers, sp)
         RETURN 1
 ) > 0`
