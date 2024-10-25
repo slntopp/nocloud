@@ -199,7 +199,7 @@ func main() {
 	path, handler = grpchealth.NewHandler(checker)
 	router.PathPrefix(path).Handler(handler)
 
-	health := NewHealthServer(log, server)
+	health := NewHealthServer(log, server, iserver)
 	log.Info("Registering health server")
 	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
 	router.PathPrefix(path).Handler(handler)

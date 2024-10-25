@@ -34,9 +34,9 @@ type HealthServer struct {
 	isrv *instances.InstancesServer
 }
 
-func NewHealthServer(log *zap.Logger, srv *services.ServicesServer) *HealthServer {
+func NewHealthServer(log *zap.Logger, srv *services.ServicesServer, isrv *instances.InstancesServer) *HealthServer {
 	return &HealthServer{
-		log: log, srv: srv,
+		log: log, srv: srv, isrv: isrv,
 	}
 }
 
