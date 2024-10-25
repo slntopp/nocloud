@@ -169,7 +169,7 @@ func (s *AddonsServer) Get(ctx context.Context, r *connect.Request[pb.Addon]) (*
 func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddonsRequest]) (*connect.Response[pb.ListAddonsResponse], error) {
 	log := s.log.Named("List")
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestor, _ := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	req := r.Msg
 
