@@ -84,8 +84,6 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			if probe.GetAnonymously() {
 				return next(ctx, req)
 			}
-		case "/nocloud.billing.CurrencyService/GetCurrencies":
-			return next(ctx, req)
 		case "/nocloud.billing.CurrencyService/GetExchangeRates":
 			return next(ctx, req)
 		}
