@@ -23,6 +23,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/slntopp/nocloud-proto/health/healthconnect"
 	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -196,6 +197,11 @@ func main() {
 
 	checker := grpchealth.NewStaticChecker()
 	path, handler = grpchealth.NewHandler(checker)
+	router.PathPrefix(path).Handler(handler)
+
+	health := NewHealthServer(log, server)
+	log.Info("Registering health server")
+	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
 	router.PathPrefix(path).Handler(handler)
 
 	// Migrate

@@ -84,8 +84,6 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			if probe.GetAnonymously() {
 				return next(ctx, req)
 			}
-		case "/nocloud.billing.CurrencyService/GetCurrencies":
-			return next(ctx, req)
 		case "/nocloud.billing.CurrencyService/GetExchangeRates":
 			return next(ctx, req)
 		}
@@ -100,8 +98,11 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		}
 
 		ctx, err := i.jwtAuthMiddleware(ctx, segments[1])
-		if req.Spec().Procedure != "/nocloud.registry.AccountsService/Token" && err != nil {
-			return nil, err
+		if req.Spec().Procedure != "/nocloud.registry.AccountsService/Token" &&
+			req.Spec().Procedure != "/nocloud.billing.CurrencyService/GetCurrencies" {
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		go i.handleLogActivity(ctx)

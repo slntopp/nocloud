@@ -82,9 +82,9 @@ func init() {
 	eventsClient = epb.NewEventsServiceClient(eventsConn)
 }
 
-func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatus {
+func (s *BillingServiceServer) RoutinesState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
-		s.gen, s.proc,
+		s.gen, s.proc, s.sus, s.inv,
 	}
 }
 
@@ -407,10 +407,13 @@ start:
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
 	for {
+		s.inv.Status.Status = hpb.Status_RUNNING
+		s.inv.Status.Error = nil
+
 		log.Info("Entering new Iteration", zap.Time("ts", tick))
 		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf, iPub)
 
-		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+		s.inv.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
 		case tick = <-ticker.C:
 			continue

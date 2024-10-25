@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"slices"
 	go_sync "sync"
@@ -60,15 +61,9 @@ type InstancesServer struct {
 
 	rdb *redis.Client
 
-	monitoring Routine
+	monitoring *health.RoutineStatus
 
 	spSyncers map[string]*go_sync.Mutex
-}
-
-type Routine struct {
-	Name     string
-	LastExec string
-	Running  bool
 }
 
 func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *InstancesServer {
@@ -110,9 +105,12 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 		sp_ctrl: &sp_ctrl,
 		drivers: make(map[string]driverpb.DriverServiceClient),
 		rdb:     rdb,
-		monitoring: Routine{
-			Name:    "Monitoring",
-			Running: false,
+		monitoring: &health.RoutineStatus{
+			Routine: "Monitoring",
+			Status: &health.ServingStatus{
+				Service: "Services Registry",
+				Status:  health.Status_STOPPED,
+			},
 		},
 		spSyncers: make(map[string]*go_sync.Mutex),
 	}
