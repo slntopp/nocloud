@@ -16,6 +16,7 @@ limitations under the License.
 package main
 
 import (
+	"connectrpc.com/connect"
 	"context"
 
 	pb "github.com/slntopp/nocloud-proto/health"
@@ -39,16 +40,16 @@ func NewHealthServer(log *zap.Logger, srv *billing.BillingServiceServer, rec *bi
 	}
 }
 
-func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.ServingStatus, error) {
-	return &pb.ServingStatus{
+func (s *HealthServer) Service(_ context.Context, _ *connect.Request[pb.ProbeRequest]) (*connect.Response[pb.ServingStatus], error) {
+	return connect.NewResponse(&pb.ServingStatus{
 		Service: SERVICE,
 		Status:  pb.Status_SERVING,
-	}, nil
+	}), nil
 }
 
-func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
-	routines := append(s.srv.GenTransactionsRoutineState(), s.rec.ConsumerStatus, s.srv.SuspendAccountsRoutineState())
-	return &pb.RoutinesStatus{
+func (s *HealthServer) Routine(_ context.Context, _ *connect.Request[pb.ProbeRequest]) (*connect.Response[pb.RoutinesStatus], error) {
+	routines := append(s.srv.RoutinesState(), s.rec.ConsumerStatus, s.srv.SuspendAccountsRoutineState(), s.srv.InstancesConsumerStatus)
+	return connect.NewResponse(&pb.RoutinesStatus{
 		Routines: routines,
-	}, nil
+	}), nil
 }

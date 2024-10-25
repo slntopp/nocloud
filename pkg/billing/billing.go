@@ -80,6 +80,7 @@ type BillingServiceServer struct {
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
 	sus  *healthpb.RoutineStatus
+	inv  *healthpb.RoutineStatus
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -126,16 +127,22 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 				Status:  healthpb.Status_STOPPED,
 			},
 		},
-
+		inv: &healthpb.RoutineStatus{
+			Routine: "Invoices Issuer Routine",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status:  healthpb.Status_STOPPED,
+			},
+		},
 		ConsumerStatus: &healthpb.RoutineStatus{
-			Routine: "Billing Consumer",
+			Routine: "Billing Records Consumer",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,
 			},
 		},
 		InstancesConsumerStatus: &healthpb.RoutineStatus{
-			Routine: "Billing Consumer Created Instances",
+			Routine: "Invoices Issuer Consumer",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,

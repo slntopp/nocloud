@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/rs/cors"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	"github.com/slntopp/nocloud-proto/health/healthconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
@@ -198,6 +199,11 @@ func main() {
 	path, handler = grpchealth.NewHandler(checker)
 	router.PathPrefix(path).Handler(handler)
 
+	health := NewHealthServer(log, server, records, currencies)
+	log.Info("Registering health server")
+	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
+	router.PathPrefix(path).Handler(handler)
+
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 
 	handler = cors.New(cors.Options{
@@ -213,5 +219,4 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to start server", zap.Error(err))
 	}
-
 }
