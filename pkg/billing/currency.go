@@ -138,14 +138,18 @@ func (s *CurrencyServiceServer) Convert(ctx context.Context, r *connect.Request[
 }
 
 func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Request[pb.GetCurrenciesRequest]) (*connect.Response[pb.GetCurrenciesResponse], error) {
+	log := s.log.Named("GetCurrencies")
+	log.Debug("Request received")
+
 	var isAdmin bool
 	requester, ok := ctx.Value(nocloud.NoCloudAccount).(string)
 	if ok {
-		isAdmin = graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+		isAdmin = graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	}
 
 	currencies, err := s.ctrl.GetCurrencies(ctx, isAdmin)
 	if err != nil {
+		log.Error("Error getting Currencies", zap.Error(err))
 		return nil, err
 	}
 
