@@ -43,3 +43,7 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 		Status:  pb.Status_SERVING,
 	}, nil
 }
+
+func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
+	return &pb.RoutinesStatus{}, nil
+}
