@@ -277,7 +277,7 @@
         <plans-resources-table
           v-else-if="tab === 'Resources'"
           :rules="rules"
-          :resources="resources.filter((v) => v.virtual === false)"
+          :resources="resources"
           :default-virtual="false"
           :type="type"
           @change:resource="changeResource(false, $event)"
