@@ -93,10 +93,6 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			segments = []string{"", ""}
 		}
 
-		if strings.ToLower(segments[0]) != "bearer" {
-			return nil, errors.New("wrong auth type")
-		}
-
 		ctx, err := i.jwtAuthMiddleware(ctx, segments[1])
 		if req.Spec().Procedure != "/nocloud.registry.AccountsService/Token" &&
 			req.Spec().Procedure != "/nocloud.billing.CurrencyService/GetCurrencies" &&
