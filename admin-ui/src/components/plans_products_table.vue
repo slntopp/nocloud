@@ -206,7 +206,7 @@
                   :rules="rules"
                   :resources="item.meta.resources ?? []"
                   @update:resource="
-                    changeMeta($event, item.id, item.meta.resources)
+                    changeMeta($event, item.id, item.meta?.resources)
                   "
                 />
               </template>
@@ -220,7 +220,9 @@
               </template>
               <v-row>
                 <v-col>
-                  <v-subheader class="px-0 pt-4">Installation price:</v-subheader>
+                  <v-subheader class="px-0 pt-4"
+                    >Installation price:</v-subheader
+                  >
                   <v-text-field
                     dense
                     type="number"
@@ -228,7 +230,8 @@
                     :value="item.installationFee"
                     :suffix="defaultCurrency"
                     @input="
-                      (value) => changeProduct('installationFee', +value, item.id)
+                      (value) =>
+                        changeProduct('installationFee', +value, item.id)
                     "
                   />
                 </v-col>
@@ -240,7 +243,12 @@
                     style="width: 150px"
                     :value="item.meta.minDiskSize"
                     @input="
-                      (value) => changeProduct('meta', { ...item.meta, minDiskSize: +value }, item.id)
+                      (value) =>
+                        changeProduct(
+                          'meta',
+                          { ...item.meta, minDiskSize: +value },
+                          item.id
+                        )
                     "
                   />
                 </v-col>
@@ -252,7 +260,12 @@
                     style="width: 150px"
                     :value="item.meta.maxDiskSize"
                     @input="
-                      (value) => changeProduct('meta', { ...item.meta, maxDiskSize: +value }, item.id)
+                      (value) =>
+                        changeProduct(
+                          'meta',
+                          { ...item.meta, maxDiskSize: +value },
+                          item.id
+                        )
                     "
                   />
                 </v-col>
@@ -410,13 +423,17 @@ function changeProductAddons(item, value) {
 }
 
 function isOneTime(item) {
-  return item.meta.oneTime;
+  return item.meta?.oneTime;
 }
 
 const setProductsArray = () => {
-  productsArray.value = Object.keys(products.value).map(
-    (key) => ({ ...products.value[key], key })
-  );
+  productsArray.value = Object.keys(products.value).map((key) => {
+    return {
+      meta: {},
+      ...products.value[key],
+      key,
+    };
+  });
 };
 
 const setDefaultGroups = () => {
@@ -468,10 +485,14 @@ const setGroup = (group, id) => {
 const copyProducts = () => {
   setProductsArray();
   const copiedProducts = [
-    ...selected.value.map((p) => JSON.parse(JSON.stringify({
-      ...p,
-      id: Math.random().toString(16).slice(2),
-    }))),
+    ...selected.value.map((p) =>
+      JSON.parse(
+        JSON.stringify({
+          ...p,
+          id: Math.random().toString(16).slice(2),
+        })
+      )
+    ),
   ];
 
   const newProducts = {};

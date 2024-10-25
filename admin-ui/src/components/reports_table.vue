@@ -310,10 +310,10 @@ const getAccount = (value) => accounts.value[value];
 const getInstance = (value) => store.getters["instances/cached"].get(value);
 
 const getStatus = (item) => {
-  if (item.meta.status) {
-    return item.meta.status;
+  if (item.meta?.status) {
+    return item.meta?.status;
   }
-  return item.meta.payment_date ? "Paid" : "Unpaid";
+  return item.meta?.payment_date ? "Paid" : "Unpaid";
 };
 
 const getStatusColor = (item) => {

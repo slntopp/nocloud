@@ -138,7 +138,7 @@ export default {
     },
   },
   mounted() {
-    this.meta = this.template.meta;
+    this.meta = this.template.meta || {};
     if (!this.meta.minDiskSize) {
       this.meta.minDiskSize = {}
     }
