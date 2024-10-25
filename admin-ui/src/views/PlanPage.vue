@@ -139,7 +139,7 @@ export default {
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      event: this.fetchPlan(),
+      event: this.fetchPlan,
     });
 
     this.fetchPlan();
