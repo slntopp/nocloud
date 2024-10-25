@@ -280,7 +280,7 @@
           :resources="resources"
           :default-virtual="false"
           :type="type"
-          @change:resource="changeResource(false, $event)"
+          @change:resource="changeResource($event)"
         />
 
         <plan-addons-table
@@ -381,12 +381,9 @@ function changeProduct(key, value, id) {
   emits("change:product", { key, value, id });
 }
 
-function changeResource(virtual, data) {
+function changeResource(data) {
   if (data.key === "resources") {
-    data.value = [
-      ...resources.value.filter((r) => r.virtual !== virtual),
-      ...data.value,
-    ];
+    data.value = [...data.value];
   }
   emits("change:resource", data);
 }
