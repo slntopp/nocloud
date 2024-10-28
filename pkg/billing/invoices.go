@@ -306,14 +306,14 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Deadline != 0 && t.Deadline < time.Now().Unix() {
 		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
 	}
+	sum := 0.0
 	if len(t.GetItems()) > 0 {
-		sum := 0.0
 		for _, item := range t.GetItems() {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
-		if sum != t.GetTotal() {
-			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-		}
+	}
+	if sum != t.GetTotal() {
+		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 	}
 	if t.Currency == nil {
 		t.Currency = defCurr
@@ -987,14 +987,14 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
+	sum := 0.0
 	if len(t.GetItems()) > 0 {
-		sum := 0.0
 		for _, item := range t.Items {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
-		if sum != t.Total {
-			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-		}
+	}
+	if sum != t.Total {
+		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 	}
 
 	//if t.Type == pb.ActionType_BALANCE {
