@@ -125,6 +125,11 @@ func (c *CurrencyController) CreateCurrency(ctx context.Context, currency *pb.Cu
 	return err
 }
 
+func (c *CurrencyController) UpdateCurrency(ctx context.Context, currency *pb.Currency) error {
+	_, err := c.col.ReplaceDocument(ctx, fmt.Sprintf("%d", currency.GetId()), CurrencyFromPb(currency))
+	return err
+}
+
 const getCurrenciesQuery = `
 FOR CURRENCY in @@currencies
 	return CURRENCY

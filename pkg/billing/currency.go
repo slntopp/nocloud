@@ -57,6 +57,27 @@ func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.R
 	return connect.NewResponse(&pb.CreateCurrencyResponse{}), nil
 }
 
+func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.Request[pb.UpdateCurrencyRequest]) (*connect.Response[pb.UpdateCurrencyResponse], error) {
+	log := s.log.Named("UpdateCurrency")
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+	if req.Currency == nil {
+		return nil, status.Error(codes.InvalidArgument, "no currency provided")
+	}
+
+	err := s.ctrl.UpdateCurrency(ctx, req.Currency)
+	if err != nil {
+		log.Error("Error updating Currency", zap.Error(err))
+		return nil, err
+	}
+
+	return connect.NewResponse(&pb.UpdateCurrencyResponse{}), nil
+}
+
 func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *connect.Request[pb.GetExchangeRateRequest]) (*connect.Response[pb.GetExchangeRateResponse], error) {
 	rate, commission, err := s.ctrl.GetExchangeRate(ctx, req.Msg.GetFrom(), req.Msg.GetTo())
 	if err != nil {
