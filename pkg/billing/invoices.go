@@ -1142,6 +1142,14 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		Account:  requester,
 		Total:    req.GetSum(),
 		Type:     pb.ActionType_BALANCE,
+		Items: []*pb.Item{
+			{
+				Amount:      1,
+				Unit:        "Pcs",
+				Price:       req.GetSum(),
+				Description: "Пополнение баланса",
+			},
+		},
 	}
 
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, requester)
