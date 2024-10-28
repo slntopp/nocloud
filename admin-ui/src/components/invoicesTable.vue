@@ -45,6 +45,10 @@
       {{ formatSecondsToDate(item.processed, true) }}
     </template>
 
+    <template v-slot:[`item.payment_invoice_id`]="{ item }">
+      {{ item.meta.whmcs_invoice_id }}
+    </template>
+
     <template v-slot:[`item.type`]="{ value }">
       {{ value?.replaceAll("_", " ") }}
     </template>
@@ -114,6 +118,7 @@ const headers = ref([
   { text: "Account ", value: "account" },
   { text: "Amount ", value: "total" },
   { text: "Type ", value: "type" },
+  { text: "Payment invoice id", value: "payment_invoice_id" },
   { text: "Created date ", value: "created" },
   { text: "Deadline date", value: "deadline" },
   { text: "Payment date", value: "payment" },
@@ -177,6 +182,7 @@ const searchFields = computed(() => [
     component: AccountsAutocomplete,
   },
   { title: "Amount", key: "total", type: "number-range" },
+  { title: "Payment invoice id", key: "payment_invoice_id", type: "input" },
   { title: "Deadline date", key: "deadline", type: "date" },
   { title: "Created date", key: "created", type: "date" },
   { title: "Payment date", key: "payment", type: "date" },
