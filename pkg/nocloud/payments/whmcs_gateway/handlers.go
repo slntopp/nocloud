@@ -61,12 +61,12 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		}
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceModified":
-		data, err := unmarshal[InvoiceModified](body)
+		_, err := unmarshal[InvoiceModified](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceCancelled":
 		data, err := unmarshal[InvoiceCancelled](body)
 		if err != nil {
@@ -89,26 +89,26 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		}
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "UpdateInvoiceTotal":
-		data, err := unmarshal[UpdateInvoiceTotal](body)
+		_, err := unmarshal[UpdateInvoiceTotal](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceCreated":
-		data, err := unmarshal[InvoiceCreated](body)
+		_, err := unmarshal[InvoiceCreated](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		innerErr = g.invoiceCreatedHandler(ctx, log, data)
+		//innerErr = g.invoiceCreatedHandler(ctx, log, data)
 	case "InvoiceDeleted":
-		data, err := unmarshal[InvoiceDeleted](body)
+		_, err := unmarshal[InvoiceDeleted](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		innerErr = g.invoiceDeletedHandler(ctx, log, data)
+		//innerErr = g.invoiceDeletedHandler(ctx, log, data)
 	default:
 		log.Error("Unknown event", zap.String("event", resp.Event))
 		return

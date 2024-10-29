@@ -501,6 +501,13 @@ func ListAccounts[T Accessible](
 			} else if split[1] == "whmcs_id" {
 				insert += fmt.Sprintf(` FILTER node.data["%s"] == %d`, split[1], int(val.GetNumberValue()))
 			}
+		} else if key == "uuid" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER node._key in @uuids`
+			bindVars["uuids"] = values
 		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
