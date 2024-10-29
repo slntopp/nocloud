@@ -19,6 +19,7 @@ var currencies []pb.Currency = []pb.Currency{
 	pb.Currency_EUR,
 	pb.Currency_BYN,
 	pb.Currency_PLN,
+	pb.Currency_RUB,
 }
 
 type CurrencyController struct {
