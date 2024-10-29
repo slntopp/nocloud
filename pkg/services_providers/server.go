@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
@@ -56,7 +56,7 @@ type ServicesProviderServer struct {
 	rdb *redis.Client
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb *redis.Client) *ServicesProviderServer {
 	s := s.NewStatesPubSub(log, &db, rbmq)
 	p := p.NewPublicDataPubSub(log, &db, rbmq)
 	statesCh := s.Channel()

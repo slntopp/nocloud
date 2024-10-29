@@ -18,13 +18,13 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -55,7 +55,7 @@ type RecordsController interface {
 
 type RecordsServiceServer struct {
 	log       *zap.Logger
-	rbmq      *amqp.Connection
+	rbmq      rabbitmq.Connection
 	records   RecordsController
 	plans     graph.BillingPlansController
 	instances graph.InstancesController
@@ -66,7 +66,7 @@ type RecordsServiceServer struct {
 	ConsumerStatus *healthpb.RoutineStatus
 }
 
-func NewRecordsServiceServer(logger *zap.Logger, conn *amqp.Connection, db driver.Database) *RecordsServiceServer {
+func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db driver.Database) *RecordsServiceServer {
 	log := logger.Named("RecordsService")
 
 	records := graph.NewRecordsController(log, db)

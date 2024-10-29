@@ -2,13 +2,13 @@ package eventbus
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/spf13/viper"
 	"google.golang.org/protobuf/proto"
 	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/google/uuid"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -34,13 +34,13 @@ type EventBusServer struct {
 	log  *zap.Logger
 	bus  *EventBus
 	db   driver.Database
-	rbmq *amqp.Connection
+	rbmq rabbitmq.Connection
 
 	ctrl    graph.AccountsController
 	ns_ctrl graph.NamespacesController
 }
 
-func NewServer(logger *zap.Logger, conn *amqp.Connection, db driver.Database) *EventBusServer {
+func NewServer(logger *zap.Logger, conn rabbitmq.Connection, db driver.Database) *EventBusServer {
 
 	log := logger.Named("EventBusServer")
 

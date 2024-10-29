@@ -2,6 +2,7 @@ package eventbus
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
 	"github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/events"
@@ -10,11 +11,11 @@ import (
 
 // Connection wraps amqp connection to handle reconnects
 type Connection struct {
-	ch   *amqp091.Channel
-	conn *amqp091.Connection
+	ch   rabbitmq.Channel
+	conn rabbitmq.Connection
 }
 
-func NewConnection(conn *amqp091.Connection) (*Connection, error) {
+func NewConnection(conn rabbitmq.Connection) (*Connection, error) {
 
 	c := &Connection{conn: conn}
 
@@ -29,7 +30,7 @@ func NewConnection(conn *amqp091.Connection) (*Connection, error) {
 }
 
 // Get existing channel if open. Otherwise open new channel
-func (c *Connection) Channel() *amqp091.Channel {
+func (c *Connection) Channel() rabbitmq.Channel {
 	if c.ch.IsClosed() {
 
 		ch, err := c.newChannel()
@@ -44,7 +45,7 @@ func (c *Connection) Channel() *amqp091.Channel {
 	return c.ch
 }
 
-func (c *Connection) newChannel() (*amqp091.Channel, error) {
+func (c *Connection) newChannel() (rabbitmq.Channel, error) {
 
 	channel, err := c.conn.Channel()
 	if err != nil {

@@ -18,6 +18,7 @@ package main
 import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"net"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -89,7 +90,7 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	server := edge.NewEdgeServiceServer(log, rbmq)
+	server := edge.NewEdgeServiceServer(log, rabbitmq.NewRabbitMQConnection(rbmq))
 	pb.RegisterEdgeServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))

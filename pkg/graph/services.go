@@ -18,9 +18,9 @@ package graph
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
 	"github.com/arangodb/go-driver"
-	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	hasher "github.com/slntopp/nocloud-proto/hasher"
 	spb "github.com/slntopp/nocloud-proto/services"
@@ -55,7 +55,7 @@ type ServicesController struct {
 	db driver.Database
 }
 
-func NewServicesController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) ServicesController {
+func NewServicesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) ServicesController {
 	log.Debug("New Services Controller creating")
 	ctx := context.TODO()
 

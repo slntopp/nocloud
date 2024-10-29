@@ -20,12 +20,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
 	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
-	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -65,7 +65,7 @@ type ServicesServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, conn *amqp091.Connection) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, conn rabbitmq.Connection) *ServicesServer {
 	log := _log.Named("ServicesServer")
 	log.Debug("New Services Server Creating")
 

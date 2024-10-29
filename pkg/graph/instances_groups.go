@@ -17,10 +17,10 @@ package graph
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
 
 	"github.com/arangodb/go-driver"
-	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
@@ -54,7 +54,7 @@ type InstancesGroupsController struct {
 	ig2sp   driver.Collection
 }
 
-func NewInstancesGroupsController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) *InstancesGroupsController {
+func NewInstancesGroupsController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) *InstancesGroupsController {
 	log.Debug("New InstancesGroups Controller Creating")
 
 	ctx := context.TODO()

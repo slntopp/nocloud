@@ -26,6 +26,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -141,7 +142,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	server := billing.NewBillingServiceServer(log, db, conn, rdb)
+	server := billing.NewBillingServiceServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
 	currencies := billing.NewCurrencyServiceServer(log, db)
 	log.Info("Starting Currencies Service")
 
@@ -179,7 +180,7 @@ func main() {
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	records := billing.NewRecordsServiceServer(log, conn, db)
+	records := billing.NewRecordsServiceServer(log, rabbitmq.NewRabbitMQConnection(conn), db)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
 	log.Info("Starting Instances Creation Consumer")

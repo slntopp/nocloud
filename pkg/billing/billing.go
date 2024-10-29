@@ -21,6 +21,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"slices"
 	"strings"
 
@@ -30,7 +31,6 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/arangodb/go-driver"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
@@ -57,7 +57,7 @@ type Routine struct {
 type BillingServiceServer struct {
 	log *zap.Logger
 
-	rbmq                    *amqp.Connection
+	rbmq                    rabbitmq.Connection
 	ConsumerStatus          *healthpb.RoutineStatus
 	InstancesConsumerStatus *healthpb.RoutineStatus
 
@@ -88,7 +88,7 @@ type BillingServiceServer struct {
 	invoicesManager invoices_manager.InvoicesManager
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb *redis.Client) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:         conn,

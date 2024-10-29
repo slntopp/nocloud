@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud-proto/health"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"slices"
 	go_sync "sync"
@@ -30,7 +31,6 @@ import (
 	"github.com/slntopp/nocloud-proto/notes"
 
 	"github.com/arangodb/go-driver"
-	amqp "github.com/rabbitmq/amqp091-go"
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
@@ -66,7 +66,7 @@ type InstancesServer struct {
 	spSyncers map[string]*go_sync.Mutex
 }
 
-func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *InstancesServer {
+func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb *redis.Client) *InstancesServer {
 	log := logger.Named("instances")
 	log.Debug("New Instances Server Creating")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)

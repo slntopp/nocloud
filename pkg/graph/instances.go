@@ -26,6 +26,7 @@ import (
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud-proto/notes"
 	servicespb "github.com/slntopp/nocloud-proto/services"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
 	"slices"
@@ -73,7 +74,7 @@ type InstancesController struct {
 	acc     AccountsController
 	cur     CurrencyController
 	addons  AddonsController
-	channel *amqp091.Channel
+	channel rabbitmq.Channel
 
 	bp_ctrl *BillingPlansController
 }
@@ -299,7 +300,7 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 
 //
 
-func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) *InstancesController {
+func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) *InstancesController {
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)

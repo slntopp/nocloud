@@ -17,6 +17,7 @@ package instances
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"log"
 	"time"
 
@@ -34,10 +35,10 @@ var (
 type PubSub struct {
 	log  *zap.Logger
 	db   *driver.Database
-	rbmq *amqp.Connection
+	rbmq rabbitmq.Connection
 }
 
-func NewPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *PubSub {
+func NewPubSub(log *zap.Logger, db *driver.Database, rbmq rabbitmq.Connection) *PubSub {
 	ps := &PubSub{
 		log: log.Named("PubSub"), rbmq: rbmq,
 	}
@@ -47,7 +48,7 @@ func NewPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *Pub
 	return ps
 }
 
-func (s *PubSub) Channel() *amqp.Channel {
+func (s *PubSub) Channel() rabbitmq.Channel {
 	log := s.log.Named("Channel")
 
 	ch, err := s.rbmq.Channel()
@@ -57,7 +58,7 @@ func (s *PubSub) Channel() *amqp.Channel {
 	return ch
 }
 
-func (s *PubSub) TopicExchange(ch *amqp.Channel, name string) {
+func (s *PubSub) TopicExchange(ch rabbitmq.Channel, name string) {
 	err := ch.ExchangeDeclare(
 		name, "topic", true, false, false, false, nil,
 	)
@@ -66,7 +67,7 @@ func (s *PubSub) TopicExchange(ch *amqp.Channel, name string) {
 	}
 }
 
-func (s *PubSub) ConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
+func (s *PubSub) ConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col string) {
 	if s.db == nil {
 		log.Fatal("Failed to initialize data consumer, database is not set")
 	}
@@ -130,7 +131,7 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 
 type Pub func(msg *pb.ObjectData) (int, error)
 
-func (s *PubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
+func (s *PubSub) Publisher(ch rabbitmq.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectData) (int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
