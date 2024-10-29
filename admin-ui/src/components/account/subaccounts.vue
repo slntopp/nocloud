@@ -76,6 +76,7 @@
     </div>
 
     <accounts-table
+      v-if="account.subaccounts.length"
       table-name="account-subaccounts"
       no-search
       :custom-filter="customFilter"
@@ -126,10 +127,10 @@ const setDefaultAccount = () => {
       type: "standard",
       data: ["", ""],
     },
-    namespace: namespace.value.uuid,
-    access: Level[account.value.access.level],
-    currency: account.value.currency,
-    accountOwner: account.value.uuid,
+    namespace: namespace.value?.uuid,
+    access: Level[account.value?.access.level],
+    currency: account.value?.currency,
+    accountOwner: account.value?.uuid,
     data: {
       email: "",
     },
