@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"slices"
 	"strings"
@@ -75,7 +74,8 @@ type BillingServiceServer struct {
 	sp           graph.ServicesProvidersController
 	addons       graph.AddonsController
 
-	db driver.Database
+	db  driver.Database
+	rdb *redis.Client
 
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
@@ -88,7 +88,7 @@ type BillingServiceServer struct {
 	invoicesManager invoices_manager.InvoicesManager
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client, invMng invoices_manager.InvoicesManager) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:         conn,
@@ -106,6 +106,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		sp:           graph.NewServicesProvidersController(log, db),
 		addons:       *graph.NewAddonsController(log, db),
 		db:           db,
+		rdb:          rdb,
 		drivers:      make(map[string]driverpb.DriverServiceClient),
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
@@ -150,27 +151,9 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		},
 	}
 
-	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
-	if err != nil {
-		log.Fatal("Can't get whmcs credentials", zap.Error(err))
-	}
-	s.whmcsData = whmcsData
-	s.invoicesManager = invMng
-
 	s.migrate()
 
 	return s
-}
-
-func (s *BillingServiceServer) GetPaymentGateway(t string) PaymentGateway {
-	switch t {
-	case "nocloud":
-		return nocloud_gateway.NewNoCloudGateway()
-	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoicesManager)
-	default:
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoicesManager)
-	}
 }
 
 func (s *BillingServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {

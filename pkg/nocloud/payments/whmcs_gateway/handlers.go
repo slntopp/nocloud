@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"go.uber.org/zap"
 )
+
+type ContextKey string
+
+const GatewayCallback = ContextKey("payment-gateway-callback")
 
 func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logger, data InvoiceCreated) error {
 	whmcsInv, err := g.GetInvoice(context.Background(), data.InvoiceId)
@@ -50,7 +53,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 	log.Info("Event received", zap.String("event", resp.Event))
 	log = log.With(zap.String("event", resp.Event))
 
-	ctx := context.WithValue(context.Background(), payments.GatewayCallback, true)
+	ctx := context.WithValue(context.Background(), GatewayCallback, true)
 	var innerErr error
 	switch resp.Event {
 	case "InvoicePaid":
