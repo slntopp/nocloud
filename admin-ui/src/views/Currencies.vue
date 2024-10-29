@@ -158,6 +158,21 @@
           </v-card>
         </td>
       </template>
+
+      <template v-slot:[`item.public`]="{ item }">
+        <div>
+          <v-switch
+            :loading="updatingCurrencyId === item.id"
+            dense
+            hide-details
+            :disabled="!!updatingCurrencyId"
+            :input-value="item.public"
+            @change="
+              updateCurrencyPublic(item, $event)
+            "
+          />
+        </div>
+      </template>
     </nocloud-table>
   </div>
 </template>
@@ -172,13 +187,17 @@ import {
   CreateCurrencyRequest,
   CreateExchangeRateRequest,
   DeleteExchangeRateRequest,
+  UpdateCurrencyRequest,
   UpdateExchangeRateRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import { watch } from "vue";
 
 const store = useStore();
 
-const currenciesHeaders = [{ text: "Name ", value: "title" }];
+const currenciesHeaders = [
+  { text: "Name ", value: "title" },
+  { text: "Public ", value: "public" },
+];
 const ratesHeaders = [
   { text: "To", value: "to" },
   { text: "Rate ", value: "rate" },
@@ -192,6 +211,7 @@ const expanded = ref([]);
 const isCreateCurrencyOpen = ref(false);
 const isCreateCurrencyLoading = ref(false);
 const newCurrency = ref({ title: "" });
+const updatingCurrencyId = ref("");
 
 const isCreateRateOpen = ref(false);
 const isCreateRateLoading = ref(false);
@@ -328,6 +348,26 @@ const deleteRate = async (item) => {
     store.commit("snackbar/showSnackbarError", { message: message });
   } finally {
     isDeleteRateLoading.value = false;
+  }
+};
+
+const updateCurrencyPublic = async (item, value) => {
+  try {
+    updatingCurrencyId.value = item.uuid;
+    console.log(value);
+    
+
+    await currenciesClient.value.updateCurrency(
+      UpdateCurrencyRequest.fromJson({
+        currency:{...item,
+          public: value},
+      })
+    );
+    item.public = value;
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    updatingCurrencyId.value = "";
   }
 };
 
