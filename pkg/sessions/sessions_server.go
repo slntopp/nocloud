@@ -5,12 +5,12 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/graph"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/go-redis/redis/v8"
 	sspb "github.com/slntopp/nocloud-proto/sessions"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
@@ -20,11 +20,11 @@ type SessionsServer struct {
 	sspb.UnimplementedSessionsServiceServer
 
 	log *zap.Logger
-	rdb *redis.Client
+	rdb redisdb.Client
 	db  driver.Database
 }
 
-func NewSessionsServer(log *zap.Logger, rdb *redis.Client, db driver.Database) *SessionsServer {
+func NewSessionsServer(log *zap.Logger, rdb redisdb.Client, db driver.Database) *SessionsServer {
 	return &SessionsServer{
 		log: log.Named("Sessions"),
 		rdb: rdb,

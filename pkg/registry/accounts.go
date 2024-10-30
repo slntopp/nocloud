@@ -18,6 +18,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"slices"
 	"time"
 
@@ -42,7 +43,6 @@ import (
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
-	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -76,10 +76,10 @@ type AccountsServiceServer struct {
 	log         *zap.Logger
 	SIGNING_KEY []byte
 
-	rdb *redis.Client
+	rdb redisdb.Client
 }
 
-func NewAccountsServer(log *zap.Logger, db driver.Database, rdb *redis.Client) *AccountsServiceServer {
+func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client) *AccountsServiceServer {
 	return &AccountsServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewAccountsController(

@@ -18,12 +18,12 @@ package auth
 import (
 	"context"
 	"errors"
-	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v4"
 	billpb "github.com/slntopp/nocloud-proto/billing"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"go.uber.org/zap"
 
@@ -37,11 +37,11 @@ import (
 
 var (
 	log         *zap.Logger
-	rdb         *redis.Client
+	rdb         redisdb.Client
 	SIGNING_KEY []byte
 )
 
-func SetContext(logger *zap.Logger, _rdb *redis.Client, key []byte) {
+func SetContext(logger *zap.Logger, _rdb redisdb.Client, key []byte) {
 	log = logger.Named("JWT")
 	rdb = _rdb
 	SIGNING_KEY = key

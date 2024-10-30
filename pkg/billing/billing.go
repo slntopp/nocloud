@@ -18,10 +18,10 @@ package billing
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"slices"
 	"strings"
 
@@ -75,7 +75,7 @@ type BillingServiceServer struct {
 	addons       graph.AddonsController
 
 	db  driver.Database
-	rdb *redis.Client
+	rdb redisdb.Client
 
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
@@ -88,7 +88,7 @@ type BillingServiceServer struct {
 	invoicesManager invoices_manager.InvoicesManager
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb *redis.Client) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:         conn,

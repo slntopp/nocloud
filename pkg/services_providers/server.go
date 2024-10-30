@@ -18,9 +18,9 @@ package services_providers
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
@@ -53,10 +53,10 @@ type ServicesProviderServer struct {
 
 	log *zap.Logger
 
-	rdb *redis.Client
+	rdb redisdb.Client
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb *redis.Client) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb redisdb.Client) *ServicesProviderServer {
 	s := s.NewStatesPubSub(log, &db, rbmq)
 	p := p.NewPublicDataPubSub(log, &db, rbmq)
 	statesCh := s.Channel()

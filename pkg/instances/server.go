@@ -19,9 +19,9 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"slices"
 	go_sync "sync"
@@ -59,14 +59,14 @@ type InstancesServer struct {
 
 	db driver.Database
 
-	rdb *redis.Client
+	rdb redisdb.Client
 
 	monitoring *health.RoutineStatus
 
 	spSyncers map[string]*go_sync.Mutex
 }
 
-func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb *redis.Client) *InstancesServer {
+func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb redisdb.Client) *InstancesServer {
 	log := logger.Named("instances")
 	log.Debug("New Instances Server Creating")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)

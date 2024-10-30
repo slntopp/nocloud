@@ -3,7 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"go.uber.org/zap"
 	"sync"
 	"time"
@@ -16,14 +16,14 @@ var mG = &sync.Mutex{}
 
 type DataSyncer struct {
 	log      *zap.Logger
-	rdb      *redis.Client
+	rdb      redisdb.Client
 	sp       string
 	retries  int
 	ctx      context.Context
 	interval time.Duration
 }
 
-func NewDataSyncer(log *zap.Logger, rdb *redis.Client, sp string, retries int, millisecondsInterval ...int) *DataSyncer {
+func NewDataSyncer(log *zap.Logger, rdb redisdb.Client, sp string, retries int, millisecondsInterval ...int) *DataSyncer {
 	var interval = time.Duration(1000) * time.Millisecond
 	if len(millisecondsInterval) > 0 {
 		interval = time.Duration(millisecondsInterval[0]) * time.Millisecond
