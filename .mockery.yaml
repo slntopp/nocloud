@@ -4,12 +4,18 @@ packages:
   github.com/slntopp/nocloud/pkg/billing:
     interfaces:
       RecordsController:
+  github.com/slntopp/nocloud/pkg/nocloud/redis:
+    interfaces:
+      Client:
+  github.com/slntopp/nocloud/pkg/nocloud/rabbitmq:
+    interfaces:
+      Connection:
+      Channel:
   # Foreign Packages
   github.com/go-redis/redis/v8:
     interfaces:
       UniversalClient:
       Cmdable:
-
   github.com/arangodb/go-driver:
     interfaces:
       Database:
