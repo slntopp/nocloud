@@ -338,18 +338,11 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		var transactionTotal = t.GetTotal()
 		transactionTotal *= -1
 
-		// Convert invoice's currency to default currency(according to how creating transaction works)
-		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
-		if err != nil {
-			log.Error("Failed to get exchange rate", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-		}
-
 		newTr, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
 			Priority: pb.Priority_NORMAL,
 			Account:  acc.GetUuid(),
-			Currency: defCurr,
-			Total:    transactionTotal * rate,
+			Currency: t.GetCurrency(),
+			Total:    transactionTotal,
 			Exec:     0,
 		}))
 		if err != nil {
