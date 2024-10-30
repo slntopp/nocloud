@@ -201,6 +201,7 @@ func newBillingServiceServerFixture(t *testing.T) *billingServiceServerFixture {
 }
 
 // Run this test to make sure all controller initialization actions runs as expected
+// If this test fails, you must fix it FIRSTLY
 func TestBillingServer_InitializationOfEverything(t *testing.T) {
 	_ = newBillingServiceServerFixture(t)
 }
