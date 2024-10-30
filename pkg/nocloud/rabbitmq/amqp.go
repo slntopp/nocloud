@@ -5,12 +5,14 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+// Connection is an interface wrapper for [amqp.Connection]
 type Connection interface {
 	Channel() (Channel, error)
 	IsClosed() bool
 	Close() error
 }
 
+// Channel is an interface wrapper for [amqp.Channel]
 type Channel interface {
 	ExchangeDeclare(name string, kind string, durable bool, autoDelete bool, internal bool, noWait bool, args amqp.Table) error
 	QueueDeclare(name string, durable, autoDelete, exclusive, noWait bool, args amqp.Table) (amqp.Queue, error)
