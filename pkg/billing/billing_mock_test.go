@@ -2,6 +2,7 @@ package billing_test
 
 import (
 	"context"
+	"fmt"
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
 	driver_mocks "github.com/slntopp/nocloud/mocks/github.com/arangodb/go-driver"
@@ -160,13 +161,15 @@ func newBillingServiceServerFixture(t *testing.T) *billingServiceServerFixture {
 		Unique: false, Sparse: true, InBackground: true, Name: "sp-type",
 	}).Return(nil, true, nil).Once()
 
-	// Creating default currencies 8 times(8 currencies)
-	f.mocks.curCol.On("DocumentExists", mock.Anything, mock.Anything).Return(true, nil).Times(8 * _currencyCalls)
+	// Creating default currencies
+	for _, cur := range migrations.LEGACY_CURRENCIES {
+		f.mocks.curCol.On("DocumentExists", mock.Anything, fmt.Sprintf("%d", cur.Id)).Return(true, nil).Times(1 * _currencyCalls)
+	}
 
 	// Updating old currencies to new. Cursor must not be used. Accounts, Invoices, Transactions, Records controllers
 	// Should be called but don't check exact number of calls due to bad code in controllers
-	f.mocks.db.On("Query", mock.Anything, migrations.NumericToObjectCurrency, mock.Anything).Return(driver.Cursor(nil), nil)
-	f.mocks.db.On("Query", mock.Anything, migrations.ObjectToObjectCurrency, mock.Anything).Return(driver.Cursor(nil), nil)
+	f.mocks.db.EXPECT().Query(mock.Anything, migrations.NumericToObjectCurrency, mock.Anything).Return(driver.Cursor(nil), nil)
+	f.mocks.db.EXPECT().Query(mock.Anything, migrations.ObjectToObjectCurrency, mock.Anything).Return(driver.Cursor(nil), nil)
 
 	// Migrating currencies to dynamic. Cursor must not be used
 	f.mocks.db.On("Query", mock.Anything, graph.MigrateToDynamicEdges, mock.Anything).Return(driver.Cursor(nil), nil).Times(1 * _currencyCalls)
@@ -205,20 +208,3 @@ func newBillingServiceServerFixture(t *testing.T) *billingServiceServerFixture {
 func TestBillingServer_InitializationOfEverything(t *testing.T) {
 	_ = newBillingServiceServerFixture(t)
 }
-
-//func TestBillingServer_Invoices_GetInvoices(t *testing.T) {
-//	f := newBillingServiceServerFixture(t)
-//
-//	cur := driver_mocks.NewMockCursor(t)
-//	f.mocks.db.EXPECT().Query(mock.Anything, "FOR t IN @@invoices RETURN merge(t, {uuid: t._key})", mock.Anything).Return(cur, nil).Once()
-//	cur.EXPECT().ReadDocument(mock.Anything, mock.Anything).Return(driver.DocumentMeta{Key: "12"}, nil).Once()
-//	cur.EXPECT().ReadDocument(mock.Anything, mock.Anything).Return(driver.DocumentMeta{}, driver.NoMoreDocumentsError{}).Once()
-//	cur.EXPECT().Close().Return(nil).Once()
-//
-//	res, err := f.srv.GetInvoices(f.data.rootCtx, connect.NewRequest(&pb.GetInvoicesRequest{}))
-//	assert.NoError(t, err)
-//	assert.NotNil(t, res)
-//	assert.Equal(t, 1, len(res.Msg.GetPool()))
-//	assert.Equal(t, "12", res.Msg.GetPool()[0].Uuid)
-//	assert.Equal(t, 1, 1)
-//}
