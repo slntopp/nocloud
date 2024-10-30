@@ -20,7 +20,7 @@ var LEGACY_CURRENCIES = []*pb.Currency{
 	{Id: 7, Title: "RUB"},
 }
 
-const numericToObjectCurrency = `
+const NumericToObjectCurrency = `
       FOR el IN @@collection
 		FILTER el.currency != null
 		FILTER IS_NUMBER(el.currency)
@@ -28,7 +28,7 @@ const numericToObjectCurrency = `
 		UPDATE el WITH { currency: newCurr } IN @@collection
 `
 
-const objectToObjectCurrency = `
+const ObjectToObjectCurrency = `
      FOR el IN @@collection
 		FILTER el.currency != null
 		FILTER (IS_DOCUMENT(el.currency) && el.currency.id != null) && (el.currency.title == null || el.currency.name != null)
@@ -43,14 +43,14 @@ func UpdateNumericCurrencyToDynamic(log *zap.Logger, col driver.Collection) {
 	for _, val := range LEGACY_CURRENCIES {
 		namesMap[fmt.Sprintf("%d", val.GetId())] = val.GetTitle()
 	}
-	_, err := col.Database().Query(context.TODO(), numericToObjectCurrency, map[string]interface{}{
+	_, err := col.Database().Query(context.TODO(), NumericToObjectCurrency, map[string]interface{}{
 		"@collection": colName,
 		"names":       namesMap,
 	})
 	if err != nil {
 		log.Fatal("Error migrating currency: numericToObject", zap.Error(err), zap.String("collection", colName))
 	}
-	_, err = col.Database().Query(context.TODO(), objectToObjectCurrency, map[string]interface{}{
+	_, err = col.Database().Query(context.TODO(), ObjectToObjectCurrency, map[string]interface{}{
 		"@collection": colName,
 		"names":       namesMap,
 	})

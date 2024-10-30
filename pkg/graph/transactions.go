@@ -29,6 +29,7 @@ import (
 var invoicesFile string
 
 func init() {
+	viper.SetDefault("INVOICES_MIGRATIONS_FILE", "./whmcs_invoices.csv")
 	invoicesFile = viper.GetString("INVOICES_MIGRATIONS_FILE")
 }
 

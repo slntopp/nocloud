@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var ensureCostAndTotal = `
+var EnsureCostAndTotal = `
 FOR el IN @@collection
 	FILTER !el.cost
 	UPDATE el WITH { total: 1, cost: el.total } IN @@collection
@@ -16,7 +16,7 @@ FOR el IN @@collection
 func UpdateTotalAndCostFields(log *zap.Logger, col driver.Collection) {
 	colName := col.Name()
 	log.Info("Migrating records to ensure cost and total fields: " + colName)
-	_, err := col.Database().Query(context.TODO(), ensureCostAndTotal, map[string]interface{}{
+	_, err := col.Database().Query(context.TODO(), EnsureCostAndTotal, map[string]interface{}{
 		"@collection": colName,
 	})
 	if err != nil {

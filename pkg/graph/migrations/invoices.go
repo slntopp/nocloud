@@ -78,6 +78,10 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	if err != nil {
 		log.Fatal("Unable to parse file as CSV for "+whmcsInvoicesFile, zap.Error(err))
 	}
+	if len(records) == 0 {
+		log.Warn("No records found in " + whmcsInvoicesFile)
+		return
+	}
 	const id, whmcsId = 1, 2
 	log.Debug("First record", zap.Any("record", records[0]))
 	for i := 1; i < len(records); i++ {

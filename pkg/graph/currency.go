@@ -83,13 +83,13 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	return ctrl
 }
 
-const migrateToDynamicVertex = `
+const MigrateToDynamicVertex = `
 	FOR el IN @@collection
 		FILTER el.id == null || el.title == null || el.title == ""
 		UPDATE el WITH { id: TO_NUMBER(el._key), title: @names[el._key], name: null, public: true } IN @@collection
         OPTIONS { keepNull: false }
 `
-const migrateToDynamicEdges = `
+const MigrateToDynamicEdges = `
 	FOR edge IN @@collection
 		LET from_doc = DOCUMENT(@@cur_collection, edge._from)
         LET to_doc = DOCUMENT(@@cur_collection, edge._to)
@@ -103,14 +103,14 @@ func (c *CurrencyController) migrateToDynamic() {
 	for _, val := range migrations.LEGACY_CURRENCIES {
 		namesMap[fmt.Sprintf("%d", val.GetId())] = val.GetTitle()
 	}
-	_, err := c.col.Database().Query(context.TODO(), migrateToDynamicVertex, map[string]interface{}{
+	_, err := c.col.Database().Query(context.TODO(), MigrateToDynamicVertex, map[string]interface{}{
 		"@collection": c.col.Name(),
 		"names":       namesMap,
 	})
 	if err != nil {
 		c.log.Fatal("Error migrating vertex currency", zap.Error(err), zap.String("collection", c.col.Name()))
 	}
-	_, err = c.col.Database().Query(context.TODO(), migrateToDynamicEdges, map[string]interface{}{
+	_, err = c.col.Database().Query(context.TODO(), MigrateToDynamicEdges, map[string]interface{}{
 		"@collection":     schema.CUR2CUR,
 		"@cur_collection": c.col.Name(),
 	})
