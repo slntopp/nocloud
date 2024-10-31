@@ -1,10 +1,13 @@
 package billing_test
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
 	driver_mocks "github.com/slntopp/nocloud/mocks/github.com/arangodb/go-driver"
 	rabbitmq_mocks "github.com/slntopp/nocloud/mocks/github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb_mocks "github.com/slntopp/nocloud/mocks/github.com/slntopp/nocloud/pkg/nocloud/redis"
@@ -13,6 +16,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -21,6 +25,8 @@ import (
 )
 
 type billingServiceServerFixture struct {
+	*testing.T
+
 	srv *billing.BillingServiceServer
 
 	mocks struct {
@@ -58,7 +64,7 @@ type billingServiceServerFixture struct {
 }
 
 func newBillingServiceServerFixture(t *testing.T) *billingServiceServerFixture {
-	f := &billingServiceServerFixture{}
+	f := &billingServiceServerFixture{T: t}
 
 	// Initializing mocks
 	f.mocks.db = driver_mocks.NewMockDatabase(t)
@@ -203,8 +209,78 @@ func newBillingServiceServerFixture(t *testing.T) *billingServiceServerFixture {
 	return f
 }
 
+func (f *billingServiceServerFixture) ensureRootAccessCheck(acc string, returnNoAccess ...bool) {
+	rootNsId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	accId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
+	query := fmt.Sprintf("FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level")
+	cur := driver_mocks.NewMockCursor(f.T)
+	f.mocks.db.EXPECT().Query(mock.Anything, query, map[string]interface{}{
+		"account":     accId.String(),
+		"node":        rootNsId,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+	}).Return(cur, nil).Times(1)
+
+	if len(returnNoAccess) <= 0 || !returnNoAccess[0] {
+		cur.EXPECT().ReadDocument(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, i interface{}) (driver.DocumentMeta, error) {
+			a := i.(*access.Level)
+			*a = access.Level_ROOT
+			return driver.DocumentMeta{}, nil
+		}).Once()
+	}
+	cur.EXPECT().ReadDocument(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, i interface{}) (driver.DocumentMeta, error) {
+		return driver.DocumentMeta{}, driver.NoMoreDocumentsError{}
+	}).Once()
+	cur.EXPECT().Close().Return(nil)
+}
+
+func (f *billingServiceServerFixture) ensureAccessCheck(acc string, node driver.DocumentID, returnNoAccess ...bool) {
+	accId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
+	query := fmt.Sprintf("FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level")
+	cur := driver_mocks.NewMockCursor(f.T)
+	f.mocks.db.EXPECT().Query(mock.Anything, query, map[string]interface{}{
+		"account":     accId.String(),
+		"node":        node,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+	}).Return(cur, nil).Times(1)
+
+	if len(returnNoAccess) <= 0 || !returnNoAccess[0] {
+		cur.EXPECT().ReadDocument(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, i interface{}) (driver.DocumentMeta, error) {
+			a := i.(*access.Level)
+			*a = access.Level_ROOT
+			return driver.DocumentMeta{}, nil
+		}).Once()
+	}
+	cur.EXPECT().ReadDocument(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, i interface{}) (driver.DocumentMeta, error) {
+		return driver.DocumentMeta{}, driver.NoMoreDocumentsError{}
+	}).Once()
+	cur.EXPECT().Close().Return(nil)
+}
+
 // Run this test to make sure all controller initialization actions runs as expected
 // If this test fails, you must fix it FIRSTLY
 func TestBillingServer_InitializationOfEverything(t *testing.T) {
 	_ = newBillingServiceServerFixture(t)
+}
+
+func TestBillingServer_GetInvoices_SingleInvoice(t *testing.T) {
+	f := newBillingServiceServerFixture(t)
+
+	uuid := "invoice_uuid"
+	request := &pb.GetInvoicesRequest{
+		Uuid: &uuid,
+	}
+
+	f.mocks.invCol.EXPECT().ReadDocument(mock.Anything, uuid, mock.Anything).RunAndReturn(func(ctx context.Context, s string, i interface{}) (driver.DocumentMeta, error) {
+		inv := i.(*map[string]interface{})
+		invVal := *inv
+		invVal["_key"] = uuid
+		invVal["account"] = "account_test_2"
+		return driver.DocumentMeta{Key: uuid}, nil
+	}).Once()
+	f.ensureRootAccessCheck("account_test", true)
+	f.ensureAccessCheck("account_test", driver.NewDocumentID(schema.ACCOUNTS_COL, "account_test_2"), true)
+
+	resp, err := f.srv.GetInvoices(f.data.ctx, connect.NewRequest(request))
+	assert.Nil(t, resp)
+	require.Error(t, err)
 }
