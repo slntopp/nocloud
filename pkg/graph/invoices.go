@@ -14,6 +14,16 @@ import (
 	"time"
 )
 
+type InvoicesController interface {
+	DecodeInvoice(source interface{}, dest *Invoice) error
+	ParseNumberIntoTemplate(template string, number int, date time.Time) string
+	Create(ctx context.Context, tx *Invoice) (*Invoice, error)
+	Get(ctx context.Context, uuid string) (*Invoice, error)
+	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
+	Patch(ctx context.Context, id string, patch map[string]interface{}) error
+	List(ctx context.Context) ([]*Invoice, error)
+}
+
 type InvoiceNumberMeta struct {
 	NumericNumber  int    `json:"numeric_number"`
 	NumberTemplate string `json:"number_template"`
@@ -25,7 +35,7 @@ type Invoice struct {
 	driver.DocumentMeta
 }
 
-type InvoicesController struct {
+type invoicesController struct {
 	col driver.Collection // Billing Plans collection
 
 	log *zap.Logger
@@ -38,12 +48,12 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
-	return InvoicesController{
+	return &invoicesController{
 		log: log, col: col,
 	}
 }
 
-func (ctrl *InvoicesController) DecodeInvoice(source interface{}, dest *Invoice) error {
+func (ctrl *invoicesController) DecodeInvoice(source interface{}, dest *Invoice) error {
 	bytes, err := json.Marshal(source)
 	if err != nil {
 		return err
@@ -58,7 +68,7 @@ func (ctrl *InvoicesController) DecodeInvoice(source interface{}, dest *Invoice)
 	return nil
 }
 
-func (ctrl *InvoicesController) ParseNumberIntoTemplate(template string, number int, date time.Time) string {
+func (ctrl *invoicesController) ParseNumberIntoTemplate(template string, number int, date time.Time) string {
 	year := date.Year()
 	month := int(date.Month())
 	day := date.Day()
@@ -69,7 +79,7 @@ func (ctrl *InvoicesController) ParseNumberIntoTemplate(template string, number 
 	return template
 }
 
-func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoice, error) {
+func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoice, error) {
 	if tx.GetAccount() == "" {
 		return nil, errors.New("account is required")
 	}
@@ -85,7 +95,7 @@ func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 	return tx, nil
 }
 
-func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
+func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
 	var tx = &Invoice{
 		Invoice:           &pb.Invoice{},
 		InvoiceNumberMeta: &InvoiceNumberMeta{},
@@ -105,7 +115,7 @@ func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 	return tx, err
 }
 
-func (ctrl *InvoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
+func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
 	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to update invoice", zap.Error(err))
@@ -114,12 +124,12 @@ func (ctrl *InvoicesController) Update(ctx context.Context, tx *Invoice) (*Invoi
 	return tx, nil
 }
 
-func (ctrl *InvoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
+func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
 	_, err := ctrl.col.UpdateDocument(ctx, id, patch)
 	return err
 }
 
-func (ctrl *InvoicesController) List(ctx context.Context) ([]*Invoice, error) {
+func (ctrl *invoicesController) List(ctx context.Context) ([]*Invoice, error) {
 	result := make([]*Invoice, 0)
 	cur, err := ctrl.col.Database().Query(ctx, "FOR doc IN "+ctrl.col.Name()+" RETURN MERGE(doc, {uuid: doc._key})", nil)
 	if err != nil {

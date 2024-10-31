@@ -1,5 +1,6 @@
 package graph
 
+import "C"
 import (
 	"context"
 	"fmt"
@@ -14,6 +15,20 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type CurrencyController interface {
+	migrateToDynamic()
+	CreateCurrency(ctx context.Context, currency *pb.Currency) error
+	UpdateCurrency(ctx context.Context, currency *pb.Currency) error
+	GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error)
+	GetExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error)
+	CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error
+	UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error
+	DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error
+	Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error)
+	GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error)
+	GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error)
+}
 
 type Currency struct {
 	Id     int32  `json:"id"`
@@ -35,7 +50,7 @@ func CurrencyFromPb(currency *pb.Currency) Currency {
 	}
 }
 
-type CurrencyController struct {
+type сurrencyController struct {
 	log   *zap.Logger
 	col   driver.Collection
 	edges driver.Collection
@@ -62,7 +77,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	}
 	log.Info("Default currencies ensured")
 
-	ctrl := CurrencyController{
+	ctrl := сurrencyController{
 		log:   log,
 		col:   col,
 		graph: graph,
@@ -80,7 +95,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	}
 
 	log.Info("Currency controller was created")
-	return ctrl
+	return &ctrl
 }
 
 const MigrateToDynamicVertex = `
@@ -97,7 +112,7 @@ const MigrateToDynamicEdges = `
 		UPDATE edge WITH { from: from_doc, to: to_doc } IN @@collection
 `
 
-func (c *CurrencyController) migrateToDynamic() {
+func (c *сurrencyController) migrateToDynamic() {
 	c.log.Info("Migrating currency to dynamic")
 	namesMap := map[string]string{}
 	for _, val := range migrations.LEGACY_CURRENCIES {
@@ -120,12 +135,12 @@ func (c *CurrencyController) migrateToDynamic() {
 	c.log.Info("Migrated currency successfully", zap.String("collection", c.col.Name()))
 }
 
-func (c *CurrencyController) CreateCurrency(ctx context.Context, currency *pb.Currency) error {
+func (c *сurrencyController) CreateCurrency(ctx context.Context, currency *pb.Currency) error {
 	_, err := c.col.CreateDocument(ctx, CurrencyFromPb(currency))
 	return err
 }
 
-func (c *CurrencyController) UpdateCurrency(ctx context.Context, currency *pb.Currency) error {
+func (c *сurrencyController) UpdateCurrency(ctx context.Context, currency *pb.Currency) error {
 	_, err := c.col.ReplaceDocument(ctx, fmt.Sprintf("%d", currency.GetId()), CurrencyFromPb(currency))
 	return err
 }
@@ -135,7 +150,7 @@ FOR CURRENCY in @@currencies
 	return CURRENCY
 `
 
-func (c *CurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error) {
+func (c *сurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error) {
 	edge := map[string]interface{}{}
 	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from.GetId(), to.GetId()), &edge)
 	if err != nil {
@@ -156,7 +171,7 @@ const getExchangeRateQuery = `
  FILTER edge
     RETURN {rate: edge.rate, commission: TO_NUMBER(edge.commission)}`
 
-func (c *CurrencyController) GetExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error) {
+func (c *сurrencyController) GetExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error) {
 	if from.Id == to.Id {
 		return 1, 0, nil
 	}
@@ -203,7 +218,7 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from *pb.Curre
 	return totalRate, totalCommission, nil
 }
 
-func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
+func (c *сurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
 	edge := map[string]interface{}{
 		"_key":       fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
 		"_from":      fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
@@ -218,7 +233,7 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cur
 	return err
 }
 
-func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
+func (c *сurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
 	key := fmt.Sprintf("%d-%d", from.GetId(), to.GetId())
 
 	edge := map[string]interface{}{
@@ -230,7 +245,7 @@ func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Cur
 	return err
 }
 
-func (c *CurrencyController) DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error {
+func (c *сurrencyController) DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error {
 	key := fmt.Sprintf("%d-%d", from.GetId(), to.GetId())
 
 	_, err := c.edges.RemoveDocument(ctx, key)
@@ -238,7 +253,7 @@ func (c *CurrencyController) DeleteExchangeRate(ctx context.Context, from *pb.Cu
 	return err
 }
 
-func (c *CurrencyController) Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error) {
+func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error) {
 
 	if from.GetId() == to.GetId() {
 		return amount, nil
@@ -252,7 +267,7 @@ func (c *CurrencyController) Convert(ctx context.Context, from *pb.Currency, to 
 	return amount * rate, nil
 }
 
-func (c *CurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error) {
+func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error) {
 	currencies := []*pb.Currency{}
 
 	cursor, err := c.db.Query(ctx, getCurrenciesQuery, map[string]interface{}{
@@ -300,7 +315,7 @@ FOR RATE in @@rates
 	return RATE
 `
 
-func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error) {
+func (c *сurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error) {
 	rates := []*pb.GetExchangeRateResponse{}
 
 	cursor, err := c.db.Query(ctx, getRatesQuery, map[string]interface{}{

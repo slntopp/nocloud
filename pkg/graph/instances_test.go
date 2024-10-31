@@ -107,7 +107,7 @@ func TestValidateBillingPlan(t *testing.T) {
 			err:    "",
 		},
 	}
-	ctrl := &InstancesController{log: zap.NewExample()}
+	ctrl := &instancesController{log: zap.NewExample()}
 
 	for _, test := range test_cases {
 		t.Logf("Running test %s", test.name)

@@ -9,28 +9,36 @@ import (
 	"go.uber.org/zap"
 )
 
-type ShowcasesController struct {
+type ShowcasesController interface {
+	Create(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error)
+	Update(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error)
+	List(ctx context.Context, requestor string, root bool) ([]*sppb.Showcase, error)
+	Get(ctx context.Context, uuid string) (*sppb.Showcase, error)
+	Delete(ctx context.Context, uuid string) error
+}
+
+type showcasesController struct {
 	log *zap.Logger
 	col driver.Collection
 
 	db driver.Database
 }
 
-func NewShowcasesController(logger *zap.Logger, db driver.Database) *ShowcasesController {
+func NewShowcasesController(logger *zap.Logger, db driver.Database) ShowcasesController {
 	ctx := context.Background()
 	log := logger.Named("ShowcasesController")
 	log.Debug("New Showcases Controller Creating")
 
 	col := GetEnsureCollection(log, ctx, db, schema.SHOWCASES_COL)
 
-	return &ShowcasesController{
+	return &showcasesController{
 		log: log,
 		col: col,
 		db:  db,
 	}
 }
 
-func (ctrl *ShowcasesController) Create(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error) {
+func (ctrl *showcasesController) Create(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error) {
 	ctrl.log.Debug("Creating Document for Showcase", zap.Any("config", showcase))
 
 	meta, err := ctrl.col.CreateDocument(ctx, showcase)
@@ -48,7 +56,7 @@ func (ctrl *ShowcasesController) Create(ctx context.Context, showcase *sppb.Show
 	return showcase, err
 }
 
-func (ctrl *ShowcasesController) Update(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error) {
+func (ctrl *showcasesController) Update(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error) {
 	ctrl.log.Debug("Updating ServicesProvider", zap.Any("sp", showcase))
 
 	meta, err := ctrl.col.ReplaceDocument(ctx, showcase.GetUuid(), showcase)
@@ -62,7 +70,7 @@ FOR s IN @@showcases
 	RETURN s
 `
 
-func (ctrl *ShowcasesController) List(ctx context.Context, requestor string, root bool) ([]*sppb.Showcase, error) {
+func (ctrl *showcasesController) List(ctx context.Context, requestor string, root bool) ([]*sppb.Showcase, error) {
 	ctrl.log.Debug("Getting Showcases")
 
 	params := map[string]interface{}{
@@ -106,7 +114,7 @@ func (ctrl *ShowcasesController) List(ctx context.Context, requestor string, roo
 	return r, nil
 }
 
-func (ctrl *ShowcasesController) Get(ctx context.Context, uuid string) (*sppb.Showcase, error) {
+func (ctrl *showcasesController) Get(ctx context.Context, uuid string) (*sppb.Showcase, error) {
 	ctrl.log.Debug("Getting Showcase", zap.Any("uuid", uuid))
 
 	var showcase sppb.Showcase
@@ -115,7 +123,7 @@ func (ctrl *ShowcasesController) Get(ctx context.Context, uuid string) (*sppb.Sh
 	return &showcase, err
 }
 
-func (ctrl *ShowcasesController) Delete(ctx context.Context, uuid string) error {
+func (ctrl *showcasesController) Delete(ctx context.Context, uuid string) error {
 	ctrl.log.Debug("Deleting Showcase", zap.Any("uuid", uuid))
 
 	meta, err := ctrl.col.RemoveDocument(ctx, uuid)

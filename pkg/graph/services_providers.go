@@ -30,12 +30,24 @@ import (
 	"go.uber.org/zap"
 )
 
+type ServicesProvidersController interface {
+	Create(ctx context.Context, sp *ServicesProvider) (err error)
+	Update(ctx context.Context, sp *pb.ServicesProvider) error
+	Delete(ctx context.Context, sp *pb.ServicesProvider) (err error)
+	DeleteEdges(ctx context.Context, id string) error
+	Get(ctx context.Context, id string) (r *ServicesProvider, err error)
+	List(ctx context.Context, requestor string, isRoot bool) ([]*ServicesProvider, error)
+	BindPlan(ctx context.Context, uuid, planUuid string) error
+	GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error)
+	GetServices(ctx context.Context, sp *ServicesProvider) ([]*spb.Service, error)
+}
+
 type ServicesProvider struct {
 	*pb.ServicesProvider
 	driver.DocumentMeta
 }
 
-type ServicesProvidersController struct {
+type servicesProvidersController struct {
 	col   driver.Collection // Services Providers Collection
 	ig2sp driver.Collection
 	sp2bp driver.Collection
@@ -56,10 +68,10 @@ func NewServicesProvidersController(logger *zap.Logger, db driver.Database) Serv
 	ig2sp := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
 	sp2pb := GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
 
-	return ServicesProvidersController{log: log, col: col, graph: graph, ig2sp: ig2sp, sp2bp: sp2pb}
+	return &servicesProvidersController{log: log, col: col, graph: graph, ig2sp: ig2sp, sp2bp: sp2pb}
 }
 
-func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *ServicesProvider) (err error) {
+func (ctrl *servicesProvidersController) Create(ctx context.Context, sp *ServicesProvider) (err error) {
 	ctrl.log.Debug("Creating Document for ServicesProvider", zap.Any("config", sp))
 	meta, err := ctrl.col.CreateDocument(ctx, *sp)
 	sp.Uuid = meta.Key
@@ -67,7 +79,7 @@ func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *Service
 }
 
 // Update ServicesProvider in DB
-func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.ServicesProvider) error {
+func (ctrl *servicesProvidersController) Update(ctx context.Context, sp *pb.ServicesProvider) error {
 	ctrl.log.Debug("Updating ServicesProvider", zap.Any("sp", sp))
 
 	meta, err := ctrl.col.ReplaceDocument(ctx, sp.GetUuid(), sp)
@@ -75,7 +87,7 @@ func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.Serv
 	return err
 }
 
-func (ctrl *ServicesProvidersController) Delete(ctx context.Context, sp *pb.ServicesProvider) (err error) {
+func (ctrl *servicesProvidersController) Delete(ctx context.Context, sp *pb.ServicesProvider) (err error) {
 	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", sp.GetUuid()))
 	sp.Status = stpb.NoCloudStatus_DEL
 	sp.State = &statepb.State{
@@ -91,7 +103,7 @@ FOR edge IN @@collection
     REMOVE edge._key IN @@collection
 `
 
-func (ctrl *ServicesProvidersController) DeleteEdges(ctx context.Context, id string) error {
+func (ctrl *servicesProvidersController) DeleteEdges(ctx context.Context, id string) error {
 	bindVars := map[string]interface{}{
 		"@collection": schema.SP2BP,
 		"id":          id,
@@ -112,7 +124,7 @@ func (ctrl *ServicesProvidersController) DeleteEdges(ctx context.Context, id str
 	return nil
 }
 
-func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
+func (ctrl *servicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
 	ctrl.log.Debug("Getting ServicesProvider", zap.Any("sp", id))
 	var sp pb.ServicesProvider
 	query := `RETURN DOCUMENT(@sp)`
@@ -132,7 +144,7 @@ func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r 
 }
 
 // List Services Providers in DB
-func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor string, isRoot bool) ([]*ServicesProvider, error) {
+func (ctrl *servicesProvidersController) List(ctx context.Context, requestor string, isRoot bool) ([]*ServicesProvider, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
 	var query string
@@ -175,7 +187,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	return r, nil
 }
 
-func (ctrl *ServicesProvidersController) BindPlan(ctx context.Context, uuid, planUuid string) error {
+func (ctrl *servicesProvidersController) BindPlan(ctx context.Context, uuid, planUuid string) error {
 	ctrl.log.Debug("Binding Plan")
 
 	exist, err := EdgeExist(ctx, ctrl.col.Database(), schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, uuid, planUuid)
@@ -248,7 +260,7 @@ FILTER IS_SAME_COLLECTION(@groups, group)
 			}))
     RETURN MERGE(group, { uuid: group._key, instances })`
 
-func (ctrl *ServicesProvidersController) GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
+func (ctrl *servicesProvidersController) GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
 		"groups":         schema.INSTANCES_GROUPS_COL,
 		"bps":            schema.BILLING_PLANS_COL,
@@ -283,7 +295,7 @@ func (ctrl *ServicesProvidersController) GetGroups(ctx context.Context, sp *Serv
 	return r, nil
 }
 
-func (ctrl *ServicesProvidersController) GetServices(ctx context.Context, sp *ServicesProvider) ([]*spb.Service, error) {
+func (ctrl *servicesProvidersController) GetServices(ctx context.Context, sp *ServicesProvider) ([]*spb.Service, error) {
 	bindVars := map[string]interface{}{
 		"services":    schema.SERVICES_COL,
 		"sp":          sp.DocumentMeta.ID,

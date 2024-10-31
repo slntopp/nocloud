@@ -9,21 +9,30 @@ import (
 	"go.uber.org/zap"
 )
 
-type DescriptionsController struct {
+type DescriptionsController interface {
+	Create(ctx context.Context, description *pb.Description) (*pb.Description, error)
+	Update(ctx context.Context, description *pb.Description) (*pb.Description, error)
+	Delete(ctx context.Context, uuid string) error
+	Get(ctx context.Context, uuid string) (*pb.Description, error)
+	List(ctx context.Context, req *pb.ListDescriptionsRequest) ([]*pb.Description, error)
+	Count(ctx context.Context) ([]*pb.Description, error)
+}
+
+type descriptionsController struct {
 	log *zap.Logger
 	col driver.Collection
 }
 
-func NewDescriptionsController(logger *zap.Logger, db driver.Database) *DescriptionsController {
+func NewDescriptionsController(logger *zap.Logger, db driver.Database) DescriptionsController {
 	ctx := context.TODO()
 	log := logger.Named("DescriptionsController")
 	descriptions := GetEnsureCollection(log, ctx, db, schema.DESCRIPTIONS_COL)
-	return &DescriptionsController{
+	return &descriptionsController{
 		log: log, col: descriptions,
 	}
 }
 
-func (c *DescriptionsController) Create(ctx context.Context, description *pb.Description) (*pb.Description, error) {
+func (c *descriptionsController) Create(ctx context.Context, description *pb.Description) (*pb.Description, error) {
 	log := c.log.Named("Create")
 
 	document, err := c.col.CreateDocument(ctx, description)
@@ -36,7 +45,7 @@ func (c *DescriptionsController) Create(ctx context.Context, description *pb.Des
 	return description, nil
 }
 
-func (c *DescriptionsController) Update(ctx context.Context, description *pb.Description) (*pb.Description, error) {
+func (c *descriptionsController) Update(ctx context.Context, description *pb.Description) (*pb.Description, error) {
 	log := c.log.Named("Update")
 
 	_, err := c.col.ReplaceDocument(ctx, description.GetUuid(), description)
@@ -48,7 +57,7 @@ func (c *DescriptionsController) Update(ctx context.Context, description *pb.Des
 	return description, nil
 }
 
-func (c *DescriptionsController) Delete(ctx context.Context, uuid string) error {
+func (c *descriptionsController) Delete(ctx context.Context, uuid string) error {
 	log := c.log.Named("Update")
 
 	_, err := c.col.RemoveDocument(ctx, uuid)
@@ -60,7 +69,7 @@ func (c *DescriptionsController) Delete(ctx context.Context, uuid string) error 
 	return nil
 }
 
-func (c *DescriptionsController) Get(ctx context.Context, uuid string) (*pb.Description, error) {
+func (c *descriptionsController) Get(ctx context.Context, uuid string) (*pb.Description, error) {
 	log := c.log.Named("Get")
 
 	var description pb.Description
@@ -76,7 +85,7 @@ func (c *DescriptionsController) Get(ctx context.Context, uuid string) (*pb.Desc
 	return &description, nil
 }
 
-func (c *DescriptionsController) List(ctx context.Context, req *pb.ListDescriptionsRequest) ([]*pb.Description, error) {
+func (c *descriptionsController) List(ctx context.Context, req *pb.ListDescriptionsRequest) ([]*pb.Description, error) {
 	log := c.log.Named("Get")
 
 	query := "LET descs = (FOR d in @@descriptions "
@@ -122,7 +131,7 @@ func (c *DescriptionsController) List(ctx context.Context, req *pb.ListDescripti
 	return descriptions, nil
 }
 
-func (c *DescriptionsController) Count(ctx context.Context) ([]*pb.Description, error) {
+func (c *descriptionsController) Count(ctx context.Context) ([]*pb.Description, error) {
 	log := c.log.Named("Get")
 
 	query := "LET descs = (FOR d in @@descriptions RETURN merge(d, {uuid: d._key})) RETURN descs"

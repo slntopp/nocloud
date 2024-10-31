@@ -26,6 +26,12 @@ import (
 	"go.uber.org/zap"
 )
 
+type TransactionsController interface {
+	Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error)
+	Get(ctx context.Context, uuid string) (*pb.Transaction, error)
+	Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error)
+}
+
 var invoicesFile string
 
 func init() {
@@ -38,7 +44,7 @@ type Transaction struct {
 	driver.DocumentMeta
 }
 
-type TransactionsController struct {
+type transactionsController struct {
 	col driver.Collection // Billing Plans collection
 
 	log *zap.Logger
@@ -54,12 +60,12 @@ func NewTransactionsController(logger *zap.Logger, db driver.Database) Transacti
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 	migrations.MigrateOldInvoicesToNew(log, GetEnsureCollection(log, ctx, db, schema.INVOICES_COL), col, invoicesFile)
 
-	return TransactionsController{
+	return &transactionsController{
 		log: log, col: col,
 	}
 }
 
-func (ctrl *TransactionsController) Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error) {
+func (ctrl *transactionsController) Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error) {
 	if tx.GetAccount() == "" {
 		return nil, errors.New("account is required")
 	}
@@ -75,7 +81,7 @@ func (ctrl *TransactionsController) Create(ctx context.Context, tx *pb.Transacti
 	return &Transaction{tx, meta}, nil
 }
 
-func (ctrl *TransactionsController) Get(ctx context.Context, uuid string) (*pb.Transaction, error) {
+func (ctrl *transactionsController) Get(ctx context.Context, uuid string) (*pb.Transaction, error) {
 	var tx pb.Transaction
 	_, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
 	if err != nil {
@@ -85,7 +91,7 @@ func (ctrl *TransactionsController) Get(ctx context.Context, uuid string) (*pb.T
 	return &tx, nil
 }
 
-func (ctrl *TransactionsController) Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error) {
+func (ctrl *transactionsController) Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error) {
 	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to update transaction", zap.Error(err))

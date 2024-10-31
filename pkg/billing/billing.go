@@ -68,8 +68,8 @@ type BillingServiceServer struct {
 	records      graph.RecordsController
 	currencies   graph.CurrencyController
 	accounts     graph.AccountsController
-	descriptions *graph.DescriptionsController
-	instances    *graph.InstancesController
+	descriptions graph.DescriptionsController
+	instances    graph.InstancesController
 	services     graph.ServicesController
 	sp           graph.ServicesProvidersController
 	addons       graph.AddonsController
@@ -104,7 +104,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		descriptions: graph.NewDescriptionsController(log, db),
 		instances:    graph.NewInstancesController(log, db, conn),
 		sp:           graph.NewServicesProvidersController(log, db),
-		addons:       *graph.NewAddonsController(log, db),
+		addons:       graph.NewAddonsController(log, db),
 		db:           db,
 		rdb:          rdb,
 		drivers:      make(map[string]driverpb.DriverServiceClient),
