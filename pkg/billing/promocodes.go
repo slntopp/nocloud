@@ -21,7 +21,7 @@ type PromocodesServer struct {
 
 	db driver.Database
 
-	promos *graph.PromocodesController
+	promos graph.PromocodesController
 	nss    graph.NamespacesController
 }
 

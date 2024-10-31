@@ -18,7 +18,7 @@ type ShowcasesServer struct {
 
 	sppb.UnimplementedShowcasesServiceServer
 
-	ctrl    *graph.ShowcasesController
+	ctrl    graph.ShowcasesController
 	ns_ctrl graph.NamespacesController
 	db      driver.Database
 }

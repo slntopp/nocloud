@@ -77,10 +77,10 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 	return &RecordsServiceServer{
 		log:       log,
 		rbmq:      conn,
-		records:   &records,
+		records:   records,
 		plans:     plans,
-		instances: *instances,
-		addons:    *addons,
+		instances: instances,
+		addons:    addons,
 
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{

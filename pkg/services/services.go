@@ -75,7 +75,7 @@ func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, 
 		ns_ctrl:   graph.NewNamespacesController(log, db),
 		acc_ctrl:  graph.NewAccountsController(log, db),
 		cur_ctrl:  graph.NewCurrencyController(log, db),
-		instances: *graph.NewInstancesController(log, db, conn),
+		instances: graph.NewInstancesController(log, db, conn),
 		drivers:   make(map[string]driverpb.DriverServiceClient),
 		ps:        ps,
 	}

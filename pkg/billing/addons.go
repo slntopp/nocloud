@@ -22,7 +22,7 @@ type AddonsServer struct {
 
 	db driver.Database
 
-	addons *graph.AddonsController
+	addons graph.AddonsController
 	nss    graph.NamespacesController
 }
 

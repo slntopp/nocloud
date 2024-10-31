@@ -19,7 +19,7 @@ import (
 type NoCloudInvoicesManager interface {
 	CreateInvoice(inv *pb.Invoice) error
 	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) error
-	InvoicesController() *graph.InvoicesController
+	InvoicesController() graph.InvoicesController
 }
 
 type WhmcsGateway struct {
@@ -28,11 +28,11 @@ type WhmcsGateway struct {
 	baseUrl     string
 	trustedIP   string
 
-	accounts *graph.AccountsController
+	accounts graph.AccountsController
 	invMan   NoCloudInvoicesManager
 }
 
-func NewWhmcsGateway(data WhmcsData, acc *graph.AccountsController, invMan NoCloudInvoicesManager) *WhmcsGateway {
+func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, invMan NoCloudInvoicesManager) *WhmcsGateway {
 	return &WhmcsGateway{
 		apiUsername: data.WhmcsUser,
 		apiPassword: data.WhmcsPassHash,

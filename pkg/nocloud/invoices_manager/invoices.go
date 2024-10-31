@@ -16,11 +16,11 @@ type tokenMaker interface {
 
 type InvoicesManager struct {
 	inv     billingconnect.BillingServiceClient
-	invCtrl *graph.InvoicesController
+	invCtrl graph.InvoicesController
 	tm      tokenMaker
 }
 
-func NewInvoicesManager(inv billingconnect.BillingServiceClient, invCtrl *graph.InvoicesController, tm tokenMaker) *InvoicesManager {
+func NewInvoicesManager(inv billingconnect.BillingServiceClient, invCtrl graph.InvoicesController, tm tokenMaker) *InvoicesManager {
 	return &InvoicesManager{inv: inv, invCtrl: invCtrl, tm: tm}
 }
 
@@ -52,6 +52,6 @@ func (i *InvoicesManager) UpdateInvoiceStatus(id string, newStatus pb.BillingSta
 	return err
 }
 
-func (i *InvoicesManager) InvoicesController() *graph.InvoicesController {
+func (i *InvoicesManager) InvoicesController() graph.InvoicesController {
 	return i.invCtrl
 }

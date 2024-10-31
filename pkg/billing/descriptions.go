@@ -19,7 +19,7 @@ type DescriptionsServer struct {
 
 	db driver.Database
 
-	descriptions *graph.DescriptionsController
+	descriptions graph.DescriptionsController
 	nss          graph.NamespacesController
 }
 

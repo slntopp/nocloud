@@ -51,9 +51,9 @@ type InstancesServer struct {
 	pb.UnimplementedInstancesServiceServer
 	log *zap.Logger
 
-	ctrl    *graph.InstancesController
-	ig_ctrl *graph.InstancesGroupsController
-	sp_ctrl *graph.ServicesProvidersController
+	ctrl    graph.InstancesController
+	ig_ctrl graph.InstancesGroupsController
+	sp_ctrl graph.ServicesProvidersController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -102,7 +102,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		db: db, log: log,
 		ctrl:    ig_ctrl.Instances(),
 		ig_ctrl: ig_ctrl,
-		sp_ctrl: &sp_ctrl,
+		sp_ctrl: sp_ctrl,
 		drivers: make(map[string]driverpb.DriverServiceClient),
 		rdb:     rdb,
 		monitoring: &health.RoutineStatus{
