@@ -17,7 +17,6 @@ import (
 )
 
 type CurrencyController interface {
-	migrateToDynamic()
 	CreateCurrency(ctx context.Context, currency *pb.Currency) error
 	UpdateCurrency(ctx context.Context, currency *pb.Currency) error
 	GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error)
