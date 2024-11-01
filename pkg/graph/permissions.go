@@ -33,6 +33,7 @@ type Access struct {
 }
 
 // account - Account Key, node - DocumentID
+// TODO: remove server dependency (make only graph dependency)
 func HasAccess(ctx context.Context, db driver.Database, account string, node driver.DocumentID, level access.Level) bool {
 	if (schema.ACCOUNTS_COL + "/" + account) == node.String() {
 		return true
@@ -42,6 +43,7 @@ func HasAccess(ctx context.Context, db driver.Database, account string, node dri
 }
 
 // account - Account Key, node - DocumentID
+// TODO: remove server dependency (make only graph dependency)
 func AccessLevel(ctx context.Context, db driver.Database, account string, node driver.DocumentID) (bool, access.Level) {
 	if driver.NewDocumentID(schema.ACCOUNTS_COL, account) == node {
 		return true, access.Level_ROOT

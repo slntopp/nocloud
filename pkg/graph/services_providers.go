@@ -18,7 +18,6 @@ package graph
 import (
 	"context"
 	"fmt"
-
 	statepb "github.com/slntopp/nocloud-proto/states"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 
@@ -38,6 +37,7 @@ type ServicesProvidersController interface {
 	Get(ctx context.Context, id string) (r *ServicesProvider, err error)
 	List(ctx context.Context, requestor string, isRoot bool) ([]*ServicesProvider, error)
 	BindPlan(ctx context.Context, uuid, planUuid string) error
+	UnbindPlan(ctx context.Context, sp string, plan string) error
 	GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error)
 	GetServices(ctx context.Context, sp *ServicesProvider) ([]*spb.Service, error)
 }
@@ -327,4 +327,8 @@ func (ctrl *servicesProvidersController) GetServices(ctx context.Context, sp *Se
 	}
 
 	return r, nil
+}
+
+func (ctrl *servicesProvidersController) UnbindPlan(ctx context.Context, sp string, plan string) error {
+	return DeleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, sp, plan)
 }

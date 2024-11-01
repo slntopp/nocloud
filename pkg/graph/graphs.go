@@ -226,6 +226,7 @@ GRAPH @permissions SORT path.edges[0].level
 	})
 `
 
+// TODO: remove server dependency (make only graph dependency)
 func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
 	var o T
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -255,6 +256,7 @@ func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id dri
 	return o, nil
 }
 
+// TODO: remove server dependency (make only graph dependency)
 func GetInstanceWithAccess(ctx context.Context, db driver.Database, id driver.DocumentID) (Instance, error) {
 	var o Instance
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -445,6 +447,7 @@ type ListQueryResult[T Accessible] struct {
 	Active int `json:"active"`
 }
 
+// TODO: remove server dependency (make only graph dependency)
 func ListAccounts[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,

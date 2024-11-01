@@ -481,7 +481,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	}
 
 	for _, plan := range req.GetPlans() {
-		err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, plan)
+		err = s.ctrl.UnbindPlan(ctx, req.Uuid, plan)
 		if err != nil {
 			return nil, err
 		}
