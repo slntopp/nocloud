@@ -395,7 +395,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Requestor: requestor,
 	})
 
-	resp := connect.NewResponse(r.Invoice)
+	inv, err := s.invoices.Get(ctx, r.GetUuid())
+	if err != nil {
+		log.Error("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get invoice")
+	}
+
+	resp := connect.NewResponse(inv.Invoice)
 	return resp, nil
 }
 
