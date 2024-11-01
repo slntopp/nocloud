@@ -1,6 +1,5 @@
 package graph
 
-import "C"
 import (
 	"context"
 	"fmt"
