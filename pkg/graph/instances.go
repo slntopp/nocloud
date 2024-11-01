@@ -360,9 +360,10 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 	addons := NewAddonsController(log, db)
 	acc := NewAccountsController(log, db)
 	inv := NewInvoicesController(log, db)
+	cur := NewCurrencyController(log, db)
 
 	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: bp_ctrl,
-		addons: addons, inv: inv, acc: acc, cur: NewCurrencyController(log, db)}
+		addons: addons, inv: inv, acc: acc, cur: cur}
 }
 
 // CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency

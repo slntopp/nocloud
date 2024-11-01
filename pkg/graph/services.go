@@ -79,7 +79,9 @@ func NewServicesController(log *zap.Logger, db driver.Database, conn rabbitmq.Co
 	})
 	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2SERV, schema.NAMESPACES_COL, schema.SERVICES_COL)
 
-	return &servicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db, conn), db: db}
+	ig := NewInstancesGroupsController(log, db, conn)
+
+	return &servicesController{log: log, col: col, ig_ctrl: ig, db: db}
 }
 
 func (ctrl *servicesController) IGController() InstancesGroupsController {

@@ -76,9 +76,10 @@ func NewInstancesGroupsController(log *zap.Logger, db driver.Database, conn rabb
 
 	serv2ig := GraphGetEdgeEnsure(log, ctx, graph, schema.SERV2IG, schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL)
 	ig2sp := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
+	inst := NewInstancesController(log, db, conn)
 
 	return &instancesGroupsController{
-		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db, conn),
+		log: log.Named("InstancesGroupsController"), inst_ctrl: inst,
 		col: col, graph: graph, db: db,
 		serv2ig: serv2ig,
 		ig2sp:   ig2sp,
