@@ -49,8 +49,8 @@ func GetPaymentGateway(t string) PaymentGateway {
 	case "nocloud":
 		return nocloud_gateway.NewNoCloudGateway()
 	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, &invoicesManager)
+		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, invoicesManager)
 	default:
-		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, &invoicesManager)
+		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, invoicesManager)
 	}
 }

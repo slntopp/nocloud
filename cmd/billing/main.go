@@ -128,7 +128,7 @@ func main() {
 	accounts := graph.NewAccountsController(log, db)
 	invoices := graph.NewInvoicesController(log, db)
 	manager := invoices_manager.NewInvoicesManager(bClient, invoices, authInterceptor)
-	payments.RegisterGateways(whmcsData, accounts, *manager)
+	payments.RegisterGateways(whmcsData, accounts, manager)
 
 	// Register WHMCS hooks handler (hooks for invoices status e.g.)
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accounts, manager)
