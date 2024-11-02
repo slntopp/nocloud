@@ -22,6 +22,8 @@ type SessionsServer struct {
 	log *zap.Logger
 	rdb redisdb.Client
 	db  driver.Database
+
+	ca graph.CommonActionsController
 }
 
 func NewSessionsServer(log *zap.Logger, rdb redisdb.Client, db driver.Database) *SessionsServer {
@@ -29,6 +31,7 @@ func NewSessionsServer(log *zap.Logger, rdb redisdb.Client, db driver.Database) 
 		log: log.Named("Sessions"),
 		rdb: rdb,
 		db:  db,
+		ca:  graph.NewCommonActionsController(log, db),
 	}
 }
 
@@ -40,12 +43,12 @@ func (c *SessionsServer) Get(ctx context.Context, req *sspb.GetSessions) (*sspb.
 	var user_id = "*"
 
 	if req.UserId == nil {
-		if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
+		if ok := c.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
 			user_id = requestor
 		}
 	} else {
 		uuid := req.GetUserId()
-		if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
+		if ok := c.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
 			return nil, status.Error(codes.PermissionDenied, "No access to account")
 		}
 		user_id = uuid
@@ -76,7 +79,7 @@ func (c *SessionsServer) GetActivity(ctx context.Context, req *sspb.GetActivityR
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	uuid := req.GetUuid()
-	if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
+	if ok := c.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
 		return nil, status.Error(codes.PermissionDenied, "No access to account")
 	}
 

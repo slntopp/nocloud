@@ -23,6 +23,7 @@ type PromocodesServer struct {
 
 	promos graph.PromocodesController
 	nss    graph.NamespacesController
+	ca     graph.CommonActionsController
 }
 
 func NewPromocodesServer(logger *zap.Logger, db driver.Database) *PromocodesServer {
@@ -32,6 +33,7 @@ func NewPromocodesServer(logger *zap.Logger, db driver.Database) *PromocodesServ
 		db:     db,
 		promos: graph.NewPromocodesController(log, db),
 		nss:    graph.NewNamespacesController(log.Named("PromocodesCtrl"), db),
+		ca:     graph.NewCommonActionsController(log, db),
 	}
 }
 
@@ -57,7 +59,7 @@ func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Pro
 	log := s.log.Named("Create")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 
@@ -74,7 +76,7 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 	log := s.log.Named("Update")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 
@@ -163,7 +165,7 @@ func (s *PromocodesServer) Delete(ctx context.Context, r *connect.Request[pb.Pro
 	log := s.log.Named("Delete")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 

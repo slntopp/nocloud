@@ -55,6 +55,7 @@ type ServicesServer struct {
 	acc_ctrl  graph.AccountsController
 	cur_ctrl  graph.CurrencyController
 	instances graph.InstancesController
+	ca        graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -76,6 +77,7 @@ func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, 
 		acc_ctrl:  graph.NewAccountsController(log, db),
 		cur_ctrl:  graph.NewCurrencyController(log, db),
 		instances: graph.NewInstancesController(log, db, conn),
+		ca:        graph.NewCommonActionsController(log, db),
 		drivers:   make(map[string]driverpb.DriverServiceClient),
 		ps:        ps,
 	}
@@ -311,7 +313,7 @@ func (s *ServicesServer) TestConfig(ctx context.Context, _request *connect.Reque
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -340,7 +342,7 @@ func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[p
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -427,8 +429,8 @@ func (s *ServicesServer) Update(ctx context.Context, _service *connect.Request[p
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
-	okAdmin := graph.HasAccess(ctx, s.db, requestor, docID, access.Level_ADMIN)
-	okRoot := graph.HasAccess(ctx, s.db, requestor, docID, access.Level_ROOT)
+	okAdmin := s.ca.HasAccess(ctx, requestor, docID, access.Level_ADMIN)
+	okRoot := s.ca.HasAccess(ctx, requestor, docID, access.Level_ROOT)
 
 	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)

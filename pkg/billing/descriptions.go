@@ -21,6 +21,7 @@ type DescriptionsServer struct {
 
 	descriptions graph.DescriptionsController
 	nss          graph.NamespacesController
+	ca           graph.CommonActionsController
 }
 
 func NewDescriptionsServer(logger *zap.Logger, db driver.Database) *DescriptionsServer {
@@ -30,6 +31,7 @@ func NewDescriptionsServer(logger *zap.Logger, db driver.Database) *Descriptions
 		db:           db,
 		descriptions: graph.NewDescriptionsController(log, db),
 		nss:          graph.NewNamespacesController(log.Named("DescriptionsCtrl"), db),
+		ca:           graph.NewCommonActionsController(log, db),
 	}
 }
 
@@ -37,7 +39,7 @@ func (s *DescriptionsServer) Create(ctx context.Context, r *connect.Request[pb.D
 	log := s.log.Named("Create")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 
@@ -54,7 +56,7 @@ func (s *DescriptionsServer) Update(ctx context.Context, r *connect.Request[pb.D
 	log := s.log.Named("Update")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 
@@ -107,7 +109,7 @@ func (s *DescriptionsServer) Delete(ctx context.Context, r *connect.Request[pb.D
 	log := s.log.Named("Create")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 

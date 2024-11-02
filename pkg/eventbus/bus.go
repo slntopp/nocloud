@@ -16,7 +16,6 @@ type EventBus struct {
 }
 
 func NewEventBus(conn rabbitmq.Connection, logger *zap.Logger) (*EventBus, error) {
-
 	log := logger.Named("EventBus")
 
 	log.Info("creating new EventBus instance")

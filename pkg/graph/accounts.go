@@ -39,6 +39,7 @@ import (
 
 type AccountsController interface {
 	Get(ctx context.Context, id string) (Account, error)
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Account, error)
 	List(ctx context.Context, requestor Account, req_depth int32) ([]Account, error)
 	ListImproved(ctx context.Context,
 		requester string,
@@ -100,13 +101,20 @@ func (ctrl *accountsController) Get(ctx context.Context, id string) (Account, er
 	if id == "me" {
 		id = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
+
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	account, err := getWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
 		ctrl.log.Error("Error getting account", zap.Error(err))
 		return Account{}, err
 	}
 	ctrl.log.Debug("Got document", zap.Any("account", account))
 	return account, err
+}
+
+func (ctrl *accountsController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Account, error) {
+	return getWithAccess[Account](ctx, ctrl.col.Database(), from, driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 }
 
 func (ctrl *accountsController) List(ctx context.Context, requestor Account, req_depth int32) ([]Account, error) {
@@ -116,7 +124,7 @@ func (ctrl *accountsController) List(ctx context.Context, requestor Account, req
 		req_depth = 2
 	}
 
-	r, err := ListWithAccess[Account](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.ACCOUNTS_COL, req_depth)
+	r, err := listWithAccess[Account](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.ACCOUNTS_COL, req_depth)
 	if err != nil {
 		return r, err
 	}
@@ -209,7 +217,7 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 func (acc *Account) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, acc.ID)
+	err := deleteRecursive(ctx, db, acc.ID)
 	if err != nil {
 		return err
 	}
@@ -278,13 +286,17 @@ func (ctrl *accountsController) UpdateCredentials(ctx context.Context, cred stri
 }
 
 func (ctrl *accountsController) GetAccountOrOwnerAccountIfPresent(ctx context.Context, id string) (Account, error) {
-	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	account, err := getWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester),
+		driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
 		ctrl.log.Error("Error getting account", zap.Error(err))
 		return Account{}, err
 	}
 	if account.GetAccountOwner() != "" {
-		account, err = GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, account.GetAccountOwner()))
+		account, err = getWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester),
+			driver.NewDocumentID(schema.ACCOUNTS_COL, account.GetAccountOwner()))
 		if err != nil {
 			ctrl.log.Error("Error getting account owner", zap.Error(err))
 			return Account{}, err
@@ -323,7 +335,7 @@ func (ctrl *accountsController) GetCredentials(ctx context.Context, edge_col dri
 }
 
 // Return Account authorisable by this Credentials
-func Authorisable(ctx context.Context, cred *credentials.Credentials, db driver.Database) (Account, bool) {
+func authorisable(ctx context.Context, cred *credentials.Credentials, db driver.Database) (Account, bool) {
 	query := `FOR account IN 1 INBOUND @credentials GRAPH @credentials_graph RETURN account`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"credentials":       cred,
@@ -352,7 +364,7 @@ func (ctrl *accountsController) Authorize(ctx context.Context, auth_type string,
 	}
 	log.Debug("Found credentials", zap.Any("credentials", credentials))
 
-	account, ok := Authorisable(ctx, &credentials, ctrl.col.Database())
+	account, ok := authorisable(ctx, &credentials, ctrl.col.Database())
 	ctrl.log.Debug("Authorized account", zap.Bool("result", ok), zap.Any("account", account))
 	return account, ok
 }

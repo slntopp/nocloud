@@ -64,11 +64,12 @@ func NewNamespacesController(logger *zap.Logger, db driver.Database) NamespacesC
 }
 
 func (ctrl *namespacesController) Get(ctx context.Context, id string) (Namespace, error) {
-	return GetWithAccess[Namespace](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.NAMESPACES_COL, id))
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+	return getWithAccess[Namespace](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester), driver.NewDocumentID(schema.NAMESPACES_COL, id))
 }
 
 func (ctrl *namespacesController) List(ctx context.Context, requestor Account, req_depth int32, offset, limit uint64, field, sort string, filters map[string]*structpb.Value) (*ListQueryResult[*Namespace], error) {
-	return ListNamespaces[*Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth, offset, limit, field, sort, filters)
+	return listNamespaces[*Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth, offset, limit, field, sort, filters)
 }
 
 func (ctrl *namespacesController) Create(ctx context.Context, title string) (Namespace, error) {
@@ -117,7 +118,7 @@ func (ctrl *namespacesController) Join(ctx context.Context, acc Account, ns Name
 }
 
 func (ns *Namespace) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, ns.ID)
+	err := deleteRecursive(ctx, db, ns.ID)
 	if err != nil {
 		return err
 	}

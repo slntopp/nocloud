@@ -30,7 +30,6 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -44,7 +43,7 @@ func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, 
 		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
 
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
@@ -76,7 +75,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
@@ -90,7 +89,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
@@ -177,7 +176,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -382,7 +381,7 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *conn
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
@@ -396,7 +395,7 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *conn
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
@@ -445,7 +444,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -650,7 +649,7 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	currencyConf := MakeCurrencyConf(ctx, log)
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}

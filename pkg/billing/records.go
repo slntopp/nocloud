@@ -60,6 +60,7 @@ type RecordsServiceServer struct {
 	plans     graph.BillingPlansController
 	instances graph.InstancesController
 	addons    graph.AddonsController
+	ca        graph.CommonActionsController
 
 	db driver.Database
 
@@ -73,6 +74,7 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 	plans := graph.NewBillingPlansController(log, db)
 	instances := graph.NewInstancesController(log, db, conn)
 	addons := graph.NewAddonsController(log, db)
+	ca := graph.NewCommonActionsController(log, db)
 
 	return &RecordsServiceServer{
 		log:       log,
@@ -81,6 +83,7 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 		plans:     plans,
 		instances: instances,
 		addons:    addons,
+		ca:        ca,
 
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{
@@ -456,7 +459,7 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, r *connect.Reques
 	}
 	log.Debug("Transaction found", zap.String("requestor", requestor), zap.Any("transaction", tr))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
@@ -478,7 +481,7 @@ func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, r *conne
 	log := s.log.Named("GetRecords")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
@@ -496,7 +499,7 @@ func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, r *conne
 func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, r *connect.Request[pb.GetInstancesReportsCountRequest]) (*connect.Response[pb.GetReportsCountResponse], error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
@@ -519,7 +522,7 @@ func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, r *connect
 		if req.Account != nil {
 			acc := *req.Account
 			node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-			if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+			if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 				return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 			}
 		}
@@ -527,13 +530,13 @@ func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, r *connect
 		if req.Service != nil {
 			srv := *req.Account
 			node := driver.NewDocumentID(schema.ACCOUNTS_COL, srv)
-			if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+			if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 				return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 			}
 		}
 	} else {
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-		if ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT); !ok {
+		if ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT); !ok {
 			return nil, status.Error(codes.PermissionDenied, "Permission denied")
 		}
 	}
@@ -548,7 +551,7 @@ func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, r *co
 		if req.Account != nil {
 			acc := *req.Account
 			node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-			if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+			if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 				return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 			}
 		}
@@ -556,13 +559,13 @@ func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, r *co
 		if req.Service != nil {
 			srv := *req.Account
 			node := driver.NewDocumentID(schema.ACCOUNTS_COL, srv)
-			if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+			if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 				return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 			}
 		}
 	} else {
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-		if ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT); !ok {
+		if ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT); !ok {
 			return nil, status.Error(codes.PermissionDenied, "Permission denied")
 		}
 	}

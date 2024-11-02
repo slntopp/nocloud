@@ -20,6 +20,7 @@ type ShowcasesServer struct {
 
 	ctrl    graph.ShowcasesController
 	ns_ctrl graph.NamespacesController
+	ca      graph.CommonActionsController
 	db      driver.Database
 }
 
@@ -28,6 +29,7 @@ func NewShowcasesServer(log *zap.Logger, db driver.Database) *ShowcasesServer {
 		log:     log.Named("ShowcasesServer"),
 		ctrl:    graph.NewShowcasesController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
+		ca:      graph.NewCommonActionsController(log, db),
 		db:      db,
 	}
 }
@@ -40,7 +42,7 @@ func (s *ShowcasesServer) Create(ctx context.Context, req *sppb.Showcase) (*sppb
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -58,7 +60,7 @@ func (s *ShowcasesServer) Update(ctx context.Context, req *sppb.Showcase) (*sppb
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -88,7 +90,7 @@ func (s *ShowcasesServer) List(ctx context.Context, req *sppb.ListRequest) (*spp
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	isRoot := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	isRoot := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 
 	showcases, err := s.ctrl.List(ctx, requestor, isRoot)
 
@@ -105,7 +107,7 @@ func (s *ShowcasesServer) Delete(ctx context.Context, req *sppb.DeleteRequest) (
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}

@@ -50,6 +50,7 @@ type ServicesProviderServer struct {
 	db                driver.Database
 	ctrl              graph.ServicesProvidersController
 	ns_ctrl           graph.NamespacesController
+	ca                graph.CommonActionsController
 
 	log *zap.Logger
 
@@ -69,6 +70,7 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq rabbitm
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl:           graph.NewNamespacesController(log, db),
+		ca:                graph.NewCommonActionsController(log, db),
 		drivers:           make(map[string]driverpb.DriverServiceClient),
 		extention_servers: make(map[string]sppb.ServicesProvidersExtentionsServiceClient),
 		rdb:               rdb,
@@ -227,7 +229,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -279,7 +281,7 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -389,7 +391,7 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	isRoot := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	isRoot := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 
 	r, err := s.ctrl.List(ctx, requestor, isRoot)
 	if err != nil {
@@ -418,7 +420,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -475,7 +477,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}

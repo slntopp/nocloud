@@ -38,6 +38,7 @@ type ServicesController interface {
 	Create(ctx context.Context, service *spb.Service) (*spb.Service, error)
 	Update(ctx context.Context, service *spb.Service, hash bool) error
 	Get(ctx context.Context, acc, key string) (*spb.Service, error)
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Service, error)
 	GetServiceInstancesUuids(key string) ([]string, error)
 	List(ctx context.Context, requestor string, request *spb.ListRequest) (*ServicesResult, error)
 	Join(ctx context.Context, service *spb.Service, ns *Namespace, access access.Level, role string) error
@@ -120,6 +121,10 @@ func (ctrl *servicesController) Create(ctx context.Context, service *spb.Service
 	}
 
 	return service, nil
+}
+
+func (ctrl *servicesController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Service, error) {
+	return getWithAccess[Service](ctx, ctrl.col.Database(), from, driver.NewDocumentID(schema.SERVICES_COL, id))
 }
 
 // Update Service and underlaying entities and store in DB

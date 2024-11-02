@@ -34,6 +34,7 @@ import (
 type InstancesGroupsController interface {
 	Instances() InstancesController
 	Create(ctx context.Context, service driver.DocumentID, g *pb.InstancesGroup) error
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (InstancesGroup, error)
 	Delete(ctx context.Context, service string, g *pb.InstancesGroup) error
 	Update(ctx context.Context, ig, oldIg *pb.InstancesGroup) error
 	TransferIG(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error
@@ -133,6 +134,10 @@ func (ctrl *instancesGroupsController) Create(ctx context.Context, service drive
 	return nil
 }
 
+func (ctrl *instancesGroupsController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (InstancesGroup, error) {
+	return getWithAccess[InstancesGroup](ctx, ctrl.col.Database(), from, driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, id))
+}
+
 func (ctrl *instancesGroupsController) Delete(ctx context.Context, service string, g *pb.InstancesGroup) error {
 	log := ctrl.log.Named("Delete")
 	log.Debug("Deleting InstancesGroup", zap.Any("group", g))
@@ -145,7 +150,7 @@ func (ctrl *instancesGroupsController) Delete(ctx context.Context, service strin
 
 	ctrl.log.Debug("Deleting Edge", zap.String("fromCollection", schema.SERVICES_COL), zap.String("toCollection",
 		schema.INSTANCES_GROUPS_COL), zap.String("fromKey", service), zap.String("toKey", g.GetUuid()))
-	err = DeleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, service, g.GetUuid())
+	err = deleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, service, g.GetUuid())
 	if err != nil {
 		log.Error("Failed to delete edge "+schema.SERVICES_COL+"2"+schema.INSTANCES_GROUPS_COL, zap.Error(err))
 		return err

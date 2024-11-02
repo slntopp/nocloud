@@ -73,6 +73,7 @@ type BillingServiceServer struct {
 	services     graph.ServicesController
 	sp           graph.ServicesProvidersController
 	addons       graph.AddonsController
+	ca           graph.CommonActionsController
 
 	db  driver.Database
 	rdb redisdb.Client
@@ -105,6 +106,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		instances:    graph.NewInstancesController(log, db, conn),
 		sp:           graph.NewServicesProvidersController(log, db),
 		addons:       graph.NewAddonsController(log, db),
+		ca:           graph.NewCommonActionsController(log, db),
 		db:           db,
 		rdb:          rdb,
 		drivers:      make(map[string]driverpb.DriverServiceClient),
@@ -233,7 +235,7 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -287,7 +289,7 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -364,7 +366,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -433,13 +435,13 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, req *connect.Request
 	}
 
 	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, namespaceId, access.Level_ROOT)
 
 	if ok {
 		return resp, nil
 	}
 
-	ok = graph.HasAccess(ctx, s.db, requestor, p.ID, access.Level_READ)
+	ok = s.ca.HasAccess(ctx, requestor, p.ID, access.Level_READ)
 
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
@@ -584,7 +586,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	if req.GetUuid() != "" {
 		return s._HandleGetSinglePlan(ctx, requestor, req.GetUuid(), req.GetAnonymously())
@@ -737,7 +739,7 @@ func (s *BillingServiceServer) PlansUnique(ctx context.Context, _req *connect.Re
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	type Response struct {
 		Total  int                    `json:"total"`
@@ -825,7 +827,7 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 	}
 
 	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, namespaceId, access.Level_ROOT)
 
 	result := make(map[string]*structpb.Value)
 
@@ -864,7 +866,7 @@ func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, acc, uu
 		return nil, status.Error(codes.NotFound, "Plan doesn't exist")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	if anonymously && p.Public {
 		resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})

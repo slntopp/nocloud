@@ -190,7 +190,7 @@ func (ctrl *servicesProvidersController) List(ctx context.Context, requestor str
 func (ctrl *servicesProvidersController) BindPlan(ctx context.Context, uuid, planUuid string) error {
 	ctrl.log.Debug("Binding Plan")
 
-	exist, err := EdgeExist(ctx, ctrl.col.Database(), schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, uuid, planUuid)
+	exist, err := edgeExist(ctx, ctrl.col.Database(), schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, uuid, planUuid)
 
 	if err != nil {
 		return err
@@ -330,5 +330,5 @@ func (ctrl *servicesProvidersController) GetServices(ctx context.Context, sp *Se
 }
 
 func (ctrl *servicesProvidersController) UnbindPlan(ctx context.Context, sp string, plan string) error {
-	return DeleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, sp, plan)
+	return deleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, sp, plan)
 }
