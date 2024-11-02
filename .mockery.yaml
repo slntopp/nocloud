@@ -1,9 +1,24 @@
 with-expecter: true
 outpkg: "{{.PackageName}}_mocks"
 packages:
-  github.com/slntopp/nocloud/pkg/billing:
+  github.com/slntopp/nocloud/pkg/graph:
     interfaces:
       RecordsController:
+      AccountsController:
+      AddonsController:
+      BillingPlansController:
+      CommonActionsController:
+      CurrencyController:
+      DescriptionsController:
+      InstancesController:
+      InvoicesController:
+      InstancesGroupsController:
+      NamespacesController:
+      PromocodesController:
+      ServicesController:
+      ServicesProvidersController:
+      ShowcasesController:
+      TransactionsController:
   github.com/slntopp/nocloud/pkg/nocloud/redis:
     interfaces:
       Client:
