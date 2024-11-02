@@ -42,21 +42,10 @@ var (
 	RabbitMQConn string
 )
 
-type RecordsController interface {
-	CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool)
-	Create(ctx context.Context, r *pb.Record) driver.DocumentID
-	Get(ctx context.Context, tr string) (res []*pb.Record, err error)
-	GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error)
-	GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error)
-	GetInstancesReportsCount(ctx context.Context) (int64, error)
-	GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error)
-	GetUnique(ctx context.Context) (map[string]interface{}, error)
-}
-
 type RecordsServiceServer struct {
 	log       *zap.Logger
 	rbmq      rabbitmq.Connection
-	records   RecordsController
+	records   graph.RecordsController
 	plans     graph.BillingPlansController
 	instances graph.InstancesController
 	addons    graph.AddonsController
