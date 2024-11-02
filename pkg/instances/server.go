@@ -159,9 +159,9 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	}
 
 	var instance graph.Instance
-	instance, err = graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
+	instance, err = s.ctrl.GetWithAccess(
+		ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		instance_id.Key(),
 	)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
@@ -540,11 +540,10 @@ func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[not
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
+	instance, err := s.ctrl.GetWithAccess(
+		ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		req.Uuid,
 	)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
@@ -579,11 +578,10 @@ func (s *InstancesServer) PatchNote(ctx context.Context, _req *connect.Request[n
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
+	instance, err := s.ctrl.GetWithAccess(
+		ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		req.Uuid,
 	)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
@@ -625,11 +623,10 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, _req *connect.Request[
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
+	instance, err := s.ctrl.GetWithAccess(
+		ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		req.Uuid,
 	)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud-proto/access"
 	addonspb "github.com/slntopp/nocloud-proto/billing/addons"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	epb "github.com/slntopp/nocloud-proto/events"
@@ -59,6 +60,7 @@ type InstancesController interface {
 	UpdateNotes(ctx context.Context, inst *pb.Instance) error
 	Delete(ctx context.Context, group string, i *pb.Instance) error
 	Get(ctx context.Context, uuid string) (*Instance, error)
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Instance, error)
 	GetGroup(ctx context.Context, i string) (*GroupWithSP, error)
 	CheckEdgeExist(ctx context.Context, spUuid string, i *pb.Instance) error
 	ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error
@@ -451,6 +453,32 @@ func (ctrl *instancesController) GetInstancePeriod(i *pb.Instance) (*int64, erro
 	//}
 
 	return nil, nil
+}
+
+func (ctrl *instancesController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Instance, error) {
+	var o Instance
+	vars := map[string]interface{}{
+		"account":     from,
+		"node":        driver.NewDocumentID(schema.INSTANCES_COL, id),
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"bps":         schema.BILLING_PLANS_COL,
+	}
+	c, err := ctrl.db.Query(ctx, getInstanceWithAccessLevel, vars)
+	if err != nil {
+		return o, err
+	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, &o)
+	if err != nil {
+		return o, err
+	}
+
+	if from.String() == meta.ID.String() {
+		o.GetAccess().Level = access.Level_ROOT
+	}
+
+	return o, nil
 }
 
 func (ctrl *instancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error) {
@@ -1105,3 +1133,26 @@ func (ctrl *instancesController) getSp(ctx context.Context, uuid string) (string
 
 	return sp, nil
 }
+
+const getInstanceWithAccessLevel = `
+FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
+GRAPH @permissions SORT path.edges[0].level
+	LET bp = DOCUMENT(CONCAT(@bps, "/", path.vertices[-1].billing_plan.uuid))
+    RETURN MERGE(path.vertices[-1], {
+        uuid: path.vertices[-1]._key,
+        billing_plan: {
+			uuid: bp._key,
+			title: bp.title,
+			type: bp.type,
+			kind: bp.kind,
+			resources: bp.resources,
+			products: {
+			    [path.vertices[-1].product]: bp.products[path.vertices[-1].product],
+            },
+			meta: bp.meta,
+			fee: bp.fee,
+			software: bp.software
+        },
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
+	})
+`
