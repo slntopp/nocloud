@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -39,6 +40,12 @@ import (
 type AccountsController interface {
 	Get(ctx context.Context, id string) (Account, error)
 	List(ctx context.Context, requestor Account, req_depth int32) ([]Account, error)
+	ListImproved(ctx context.Context,
+		requester string,
+		depth int32,
+		offset, limit uint64,
+		field, sort string,
+		filters map[string]*structpb.Value) (accounts []Account, count int64, active int64, err error)
 	Exists(ctx context.Context, id string) (bool, error)
 	Create(ctx context.Context, acc pb.Account) (Account, error)
 	Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error)
@@ -121,6 +128,26 @@ func (ctrl *accountsController) List(ctx context.Context, requestor Account, req
 	r = append(r, account)
 
 	return r, err
+}
+
+func (ctrl *accountsController) ListImproved(ctx context.Context,
+	requester string,
+	depth int32,
+	offset, limit uint64,
+	field, sort string,
+	filters map[string]*structpb.Value) ([]Account, int64, int64, error) {
+
+	pool, err := listAccounts[Account](ctx, ctrl.log, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester), schema.ACCOUNTS_COL, depth, offset, limit, field, sort, filters)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	result := make([]Account, 0)
+	for _, acc := range pool.Result {
+		result = append(result, acc)
+	}
+
+	return result, int64(pool.Count), int64(pool.Active), nil
 }
 
 func (ctrl *accountsController) Exists(ctx context.Context, id string) (bool, error) {

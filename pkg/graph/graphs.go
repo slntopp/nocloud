@@ -404,7 +404,7 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 	}
 `
 
-const listAccounts = `
+const listAccountsQuery = `
 LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 	GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
@@ -447,8 +447,8 @@ type ListQueryResult[T Accessible] struct {
 	Active int `json:"active"`
 }
 
-// TODO: remove server dependency (make only graph dependency)
-func ListAccounts[T Accessible](
+// ListAccounts deprecated for import
+func listAccounts[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,
@@ -540,7 +540,7 @@ func ListAccounts[T Accessible](
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
-	q := fmt.Sprintf(listAccounts, insert)
+	q := fmt.Sprintf(listAccountsQuery, insert)
 	log.Debug("Query", zap.String("q", q))
 	c, err := db.Query(ctx, q, bindVars)
 	if err != nil {

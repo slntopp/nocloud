@@ -311,15 +311,15 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	offset := (page - 1) * limit
 
-	pool, err := graph.ListAccounts[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
+	pool, count, active, err := s.ctrl.ListImproved(ctx, acc.GetUuid(), depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
-	result := make([]*accountspb.Account, len(pool.Result))
-	for i, acc := range pool.Result {
+	result := make([]*accountspb.Account, len(pool))
+	for i, acc := range pool {
 		if acc.Access.Level < access.Level_ROOT {
 			acc.Account.SuspendConf = nil
 		}
@@ -329,8 +329,8 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	return &accountspb.ListResponse{
 		Pool:   result,
-		Count:  int64(pool.Count),
-		Active: int64(pool.Active),
+		Count:  count,
+		Active: active,
 	}, nil
 }
 
