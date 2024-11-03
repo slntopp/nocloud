@@ -26,12 +26,12 @@ type CurrencyServiceServer struct {
 	db driver.Database
 }
 
-func NewCurrencyServiceServer(log *zap.Logger, db driver.Database) *CurrencyServiceServer {
+func NewCurrencyServiceServer(log *zap.Logger, db driver.Database, currencies graph.CurrencyController, ca graph.CommonActionsController) *CurrencyServiceServer {
 	return &CurrencyServiceServer{
 		log:  log.Named("CurrencyServer"),
 		db:   db,
-		ctrl: graph.NewCurrencyController(log, db),
-		ca:   graph.NewCommonActionsController(log, db),
+		ctrl: currencies,
+		ca:   ca,
 	}
 }
 

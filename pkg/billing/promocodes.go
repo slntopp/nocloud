@@ -26,14 +26,15 @@ type PromocodesServer struct {
 	ca     graph.CommonActionsController
 }
 
-func NewPromocodesServer(logger *zap.Logger, db driver.Database) *PromocodesServer {
+func NewPromocodesServer(logger *zap.Logger, db driver.Database,
+	promocodes graph.PromocodesController, nss graph.NamespacesController, ca graph.CommonActionsController) *PromocodesServer {
 	log := logger.Named("PromocodesServer")
 	return &PromocodesServer{
 		log:    log,
 		db:     db,
-		promos: graph.NewPromocodesController(log, db),
-		nss:    graph.NewNamespacesController(log.Named("PromocodesCtrl"), db),
-		ca:     graph.NewCommonActionsController(log, db),
+		promos: promocodes,
+		nss:    nss,
+		ca:     ca,
 	}
 }
 
