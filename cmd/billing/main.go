@@ -206,6 +206,12 @@ func main() {
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 
+	log.Info("Check settings server")
+	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
+		log.Fatal("Can't check settings connection", zap.Error(err))
+	}
+	log.Info("Settings server connection established")
+
 	log.Info("Starting Transaction Generator-Processor")
 	go server.GenTransactionsRoutine(ctx)
 
