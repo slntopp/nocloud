@@ -27,14 +27,15 @@ type AddonsServer struct {
 	ca     graph.CommonActionsController
 }
 
-func NewAddonsServer(logger *zap.Logger, db driver.Database) *AddonsServer {
+func NewAddonsServer(logger *zap.Logger, db driver.Database,
+	addons graph.AddonsController, nss graph.NamespacesController, ca graph.CommonActionsController) *AddonsServer {
 	log := logger.Named("AddonsServer")
 	return &AddonsServer{
 		log:    log,
 		db:     db,
-		addons: graph.NewAddonsController(log, db),
-		nss:    graph.NewNamespacesController(log.Named("NamespacesController"), db),
-		ca:     graph.NewCommonActionsController(log, db),
+		addons: addons,
+		nss:    nss,
+		ca:     ca,
 	}
 }
 

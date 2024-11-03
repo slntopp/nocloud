@@ -107,6 +107,31 @@ func main() {
 		log.Fatal("Failed to connect to Redis", zap.Error(res.Err()))
 	}
 
+	conn, err := amqp.Dial(RabbitMQConn)
+	if err != nil {
+		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer conn.Close()
+	rbmq := rabbitmq.NewRabbitMQConnection(conn)
+
+	// Initialize controllers
+	accountsCtrl := graph.NewAccountsController(log, db)
+	addonsCtrl := graph.NewAddonsController(log, db)
+	plansCtrl := graph.NewBillingPlansController(log, db)
+	caCtrl := graph.NewCommonActionsController(log, db)
+	currCtrl := graph.NewCurrencyController(log, db)
+	descCtrl := graph.NewDescriptionsController(log, db)
+	instCtrl := graph.NewInstancesController(log, db, rbmq)
+	_ = graph.NewInstancesGroupsController(log, db, rbmq)
+	invoicesCtrl := graph.NewInvoicesController(log, db)
+	nssCtrl := graph.NewNamespacesController(log, db)
+	promoCtrl := graph.NewPromocodesController(log, db)
+	recordsCtrl := graph.NewRecordsController(log, db)
+	srvCtrl := graph.NewServicesController(log, db, rbmq)
+	spCtrl := graph.NewServicesProvidersController(log, db)
+	_ = graph.NewShowcasesController(log, db)
+	transactCtrl := graph.NewTransactionsController(log, db)
+
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	restInterceptor := rest_auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
@@ -119,31 +144,26 @@ func main() {
 		})
 	})
 
-	// Register payments gateways (nocloud, whmcs)
-	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
-	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
-	if err != nil {
-		log.Fatal("Can't get whmcs credentials", zap.Error(err))
+	registeredDrivers := make(map[string]driverpb.DriverServiceClient)
+	for _, driver := range drivers {
+		log.Info("Registering Driver", zap.String("driver", driver))
+		dconn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
+		}
+		client := driverpb.NewDriverServiceClient(dconn)
+		driver_type, err := client.GetType(context.Background(), &driverpb.GetTypeRequest{})
+		if err != nil {
+			log.Fatal("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
+		}
+		registeredDrivers[driver_type.GetType()] = client
+		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
-	accounts := graph.NewAccountsController(log, db)
-	invoices := graph.NewInvoicesController(log, db)
-	manager := invoices_manager.NewInvoicesManager(bClient, invoices, authInterceptor)
-	payments.RegisterGateways(whmcsData, accounts, manager)
 
-	// Register WHMCS hooks handler (hooks for invoices status e.g.)
-	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accounts, manager)
-	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
-	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
-	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
-
-	conn, err := amqp.Dial(RabbitMQConn)
-	if err != nil {
-		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
-	}
-	defer conn.Close()
-
-	server := billing.NewBillingServiceServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
-	currencies := billing.NewCurrencyServiceServer(log, db)
+	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers,
+		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl)
+	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, caCtrl)
 	log.Info("Starting Currencies Service")
 
 	token, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
@@ -161,41 +181,27 @@ func main() {
 	log.Info("Starting Invoices Routine")
 	go server.IssueInvoicesRoutine(ctx)
 
-	for _, driver := range drivers {
-		log.Info("Registering Driver", zap.String("driver", driver))
-		dconn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
-		}
-		client := driverpb.NewDriverServiceClient(dconn)
-		driver_type, err := client.GetType(context.Background(), &driverpb.GetTypeRequest{})
-		if err != nil {
-			log.Fatal("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
-		}
-		server.RegisterDriver(driver_type.GetType(), client)
-		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
-	}
+	log.Info("Starting Instances Creation Consumer")
+	go server.ConsumeCreatedInstances(ctx)
 
 	log.Info("Registering BillingService Server")
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	records := billing.NewRecordsServiceServer(log, rabbitmq.NewRabbitMQConnection(conn), db)
+	records := billing.NewRecordsServiceServer(log, rbmq, db, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
-	log.Info("Starting Instances Creation Consumer")
-	go server.ConsumeCreatedInstances(ctx)
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	addons := billing.NewAddonsServer(log, db)
+	addons := billing.NewAddonsServer(log, db, addonsCtrl, nssCtrl, caCtrl)
 	log.Info("Registering AddonsService Server")
 	path, handler = cc.NewAddonsServiceHandler(addons, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	descriptions := billing.NewDescriptionsServer(log, db)
+	descriptions := billing.NewDescriptionsServer(log, db, descCtrl, nssCtrl, caCtrl)
 	log.Info("Registering descriptionsService Server")
 	path, handler = cc.NewDescriptionsServiceHandler(descriptions, interceptors)
 	router.PathPrefix(path).Handler(handler)
@@ -208,6 +214,23 @@ func main() {
 	log.Info("Registering health server")
 	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
 	router.PathPrefix(path).Handler(handler)
+
+	// Register payments gateways (nocloud, whmcs)
+	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
+	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
+	if err != nil {
+		log.Fatal("Can't get whmcs credentials", zap.Error(err))
+	}
+	accounts := graph.NewAccountsController(log, db)
+	invoices := graph.NewInvoicesController(log, db)
+	manager := invoices_manager.NewInvoicesManager(bClient, invoices, authInterceptor)
+	payments.RegisterGateways(whmcsData, accounts, manager)
+
+	// Register WHMCS hooks handler (hooks for invoices status e.g.)
+	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accounts, manager)
+	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
+	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
+	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 

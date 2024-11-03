@@ -18,8 +18,6 @@ package billing
 import (
 	"context"
 	"fmt"
-	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"slices"
@@ -48,12 +46,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type Routine struct {
-	Name     string
-	LastExec string
-	Running  bool
-}
-
 type BillingServiceServer struct {
 	log *zap.Logger
 
@@ -73,6 +65,7 @@ type BillingServiceServer struct {
 	services     graph.ServicesController
 	sp           graph.ServicesProvidersController
 	addons       graph.AddonsController
+	promocodes   graph.PromocodesController
 	ca           graph.CommonActionsController
 
 	db  driver.Database
@@ -84,32 +77,34 @@ type BillingServiceServer struct {
 	inv  *healthpb.RoutineStatus
 
 	drivers map[string]driverpb.DriverServiceClient
-
-	whmcsData       whmcs_gateway.WhmcsData
-	invoicesManager invoices_manager.InvoicesManager
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient,
+	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
+	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
+	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
+	ca graph.CommonActionsController, promocodes graph.PromocodesController) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:         conn,
 		log:          log,
-		nss:          graph.NewNamespacesController(log, db),
-		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
-		transactions: graph.NewTransactionsController(log.Named("TransactionsController"), db),
-		records:      graph.NewRecordsController(log.Named("RecordsController"), db),
-		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
-		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
-		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
-		services:     graph.NewServicesController(log.Named("ServicesController"), db, conn),
-		descriptions: graph.NewDescriptionsController(log, db),
-		instances:    graph.NewInstancesController(log, db, conn),
-		sp:           graph.NewServicesProvidersController(log, db),
-		addons:       graph.NewAddonsController(log, db),
-		ca:           graph.NewCommonActionsController(log, db),
+		nss:          nss,
+		plans:        plans,
+		transactions: transactions,
+		records:      records,
+		currencies:   currencies,
+		accounts:     accounts,
+		invoices:     invoices,
+		services:     services,
+		descriptions: descriptions,
+		instances:    instances,
+		sp:           sp,
+		addons:       addons,
+		promocodes:   promocodes,
+		ca:           ca,
 		db:           db,
 		rdb:          rdb,
-		drivers:      make(map[string]driverpb.DriverServiceClient),
+		drivers:      drivers,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
@@ -156,10 +151,6 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	s.migrate()
 
 	return s
-}
-
-func (s *BillingServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
-	s.drivers[type_key] = client
 }
 
 func (s *BillingServiceServer) migrate() {

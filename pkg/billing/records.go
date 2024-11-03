@@ -56,14 +56,10 @@ type RecordsServiceServer struct {
 	ConsumerStatus *healthpb.RoutineStatus
 }
 
-func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db driver.Database) *RecordsServiceServer {
+func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db driver.Database,
+	records graph.RecordsController, plans graph.BillingPlansController, instances graph.InstancesController, addons graph.AddonsController,
+	ca graph.CommonActionsController) *RecordsServiceServer {
 	log := logger.Named("RecordsService")
-
-	records := graph.NewRecordsController(log, db)
-	plans := graph.NewBillingPlansController(log, db)
-	instances := graph.NewInstancesController(log, db, conn)
-	addons := graph.NewAddonsController(log, db)
-	ca := graph.NewCommonActionsController(log, db)
 
 	return &RecordsServiceServer{
 		log:       log,
