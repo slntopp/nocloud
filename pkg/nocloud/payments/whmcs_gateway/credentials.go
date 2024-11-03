@@ -3,7 +3,7 @@ package whmcs_gateway
 import (
 	"context"
 	"encoding/json"
-	"github.com/go-redis/redis/v8"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 )
 
 const whmcsRedisKey = "_settings:whmcs"
@@ -16,7 +16,7 @@ type WhmcsData struct {
 	TrustedIP     string `json:"trusted_ip"`
 }
 
-func GetWhmcsCredentials(rdb *redis.Client) (WhmcsData, error) {
+func GetWhmcsCredentials(rdb redisdb.Client) (WhmcsData, error) {
 	var whmcsData WhmcsData
 	if keys, err := rdb.HGetAll(context.Background(), whmcsRedisKey).Result(); err == nil {
 		if err := json.Unmarshal([]byte(keys["value"]), &whmcsData); err != nil {

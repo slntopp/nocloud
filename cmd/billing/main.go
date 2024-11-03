@@ -221,13 +221,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Can't get whmcs credentials", zap.Error(err))
 	}
-	accounts := graph.NewAccountsController(log, db)
-	invoices := graph.NewInvoicesController(log, db)
-	manager := invoices_manager.NewInvoicesManager(bClient, invoices, authInterceptor)
-	payments.RegisterGateways(whmcsData, accounts, manager)
+	manager := invoices_manager.NewInvoicesManager(bClient, invoicesCtrl, authInterceptor)
+	payments.RegisterGateways(whmcsData, accountsCtrl, manager)
 
 	// Register WHMCS hooks handler (hooks for invoices status e.g.)
-	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accounts, manager)
+	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, manager)
 	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
 	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
 	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
