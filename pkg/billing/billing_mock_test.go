@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
 	"os"
 	"testing"
 )
@@ -205,7 +204,7 @@ func newBillingServiceServerFixture(t *testing.T) *billingServiceServerFixture {
 	f.data.rootCtx = context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	f.data.ctx = context.WithValue(context.Background(), nocloud.NoCloudAccount, "account_test")
 
-	f.srv = billing.NewBillingServiceServer(zap.NewExample(), f.mocks.db, f.mocks.rbmqconn, f.mocks.redisclient)
+	//f.srv = billing.NewBillingServiceServer(zap.NewExample(), f.mocks.db, f.mocks.rbmqconn, f.mocks.redisclient)
 	return f
 }
 

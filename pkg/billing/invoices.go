@@ -272,8 +272,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
-	invConf := MakeInvoicesConf(ctx, log)
-	defCurr := MakeCurrencyConf(ctx, log).Currency
+	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
+	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
 
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
@@ -377,7 +377,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	if req.Msg.GetIsSendEmail() {
-		_, _ = eventsClient.Publish(ctx, &epb.Event{
+		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
 			Uuid: t.GetAccount(),
 			Key:  "invoice_created",
@@ -462,7 +462,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	var resp *connect.Response[pb.Invoice]
 	var strNum string
 	var num int
-	invConf := MakeInvoicesConf(ctx, log)
+	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -588,7 +588,7 @@ payment:
 	newInv.Processed = nowAfterActions
 
 	if req.Msg.GetParams().GetIsSendEmail() {
-		_, _ = eventsClient.Publish(ctx, &epb.Event{
+		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
 			Uuid: newInv.GetAccount(),
 			Key:  "invoice_paid",
@@ -776,7 +776,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		log.Warn("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Account not found")
 	}
-	currConf := MakeCurrencyConf(ctx, log)
+	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	balance := acc.GetBalance()
 	accCurrency := acc.Currency
@@ -911,7 +911,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
-	defCurr := MakeCurrencyConf(ctx, log).Currency
+	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
@@ -956,7 +956,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Created = req.GetCreated()
 	}
 
-	invConf := MakeInvoicesConf(ctx, log)
+	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
 	if newStatus == pb.BillingStatus_PAID && oldStatus != pb.BillingStatus_PAID {
 		strNum, num, err := s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(t.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
 		if err != nil {
@@ -1041,7 +1041,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 
 	if r.Msg.GetIsSendEmail() {
-		_, _ = eventsClient.Publish(ctx, &epb.Event{
+		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
 			Uuid: t.GetAccount(),
 			Key:  "invoice_updated",

@@ -135,7 +135,7 @@ init:
 	}
 
 	s.InstancesConsumerStatus.Status.Status = healthpb.Status_RUNNING
-	currencyConf := MakeCurrencyConf(ctx, log)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	for msg := range records {
 		log.Debug("Received a message")

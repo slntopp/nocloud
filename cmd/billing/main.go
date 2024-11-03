@@ -21,7 +21,10 @@ import (
 	"fmt"
 	"github.com/rs/cors"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud-proto/health/healthconnect"
+	regpb "github.com/slntopp/nocloud-proto/registry"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
@@ -61,6 +64,10 @@ var (
 	arangodbName string
 	SIGNING_KEY  []byte
 	drivers      []string
+
+	settingsHost string
+	registryHost string
+	eventsHost   string
 )
 
 func init() {
@@ -77,6 +84,10 @@ func init() {
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
+	viper.SetDefault("SETTINGS_HOST", "settings:8000")
+	viper.SetDefault("REGISTRY_HOST", "registry:8000")
+	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
+
 	port = viper.GetString("PORT")
 
 	arangodbHost = viper.GetString("DB_HOST")
@@ -85,6 +96,10 @@ func init() {
 	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 	drivers = viper.GetStringSlice("DRIVERS")
+
+	settingsHost = viper.GetString("SETTINGS_HOST")
+	registryHost = viper.GetString("REGISTRY_HOST")
+	eventsHost = viper.GetString("EVENTS_HOST")
 
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
@@ -144,6 +159,24 @@ func main() {
 		})
 	})
 
+	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	settingsClient := settingspb.NewSettingsServiceClient(settingsConn)
+
+	accConn, err := grpc.Dial(registryHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	accClient := regpb.NewAccountsServiceClient(accConn)
+
+	eventsConn, err := grpc.Dial(eventsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	eventsClient := epb.NewEventsServiceClient(eventsConn)
+
 	registeredDrivers := make(map[string]driverpb.DriverServiceClient)
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -161,6 +194,7 @@ func main() {
 	}
 
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers,
+		settingsClient, accClient, eventsClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
 		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl)
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, caCtrl)
@@ -188,7 +222,7 @@ func main() {
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	records := billing.NewRecordsServiceServer(log, rbmq, db, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, caCtrl)
+	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
 

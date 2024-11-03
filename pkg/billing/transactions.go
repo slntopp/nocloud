@@ -260,7 +260,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
 
-	eventsClient.Publish(ctx, &epb.Event{
+	s.eventsClient.Publish(ctx, &epb.Event{
 		Type: "email",
 		Uuid: t.GetAccount(),
 		Key:  "transaction_created",
@@ -269,8 +269,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	if r.Transaction.Priority == pb.Priority_URGENT && r.Transaction.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -288,7 +288,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
+		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
 
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
@@ -327,13 +327,13 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		}
 
 		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
+			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
+			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -343,7 +343,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	} else {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
 			"@transactions":  schema.TRANSACTIONS_COL,
@@ -485,8 +485,8 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 	if t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -504,7 +504,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
+		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
 
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
@@ -543,13 +543,13 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		}
 
 		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
+			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
+			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -646,7 +646,7 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
-	currencyConf := MakeCurrencyConf(ctx, log)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)

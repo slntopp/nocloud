@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	spb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
@@ -136,8 +137,8 @@ var (
 	}
 )
 
-func MakeRoutineConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
-	sc.Setup(log, ctx, &settingsClient)
+func MakeRoutineConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf RoutineConf) {
+	sc.Setup(log, ctx, settingsClient)
 
 	if err := sc.Fetch(monFreqKey, &conf, routineSetting); err != nil {
 		conf = routineSetting.Value
@@ -146,8 +147,8 @@ func MakeRoutineConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
 	return conf
 }
 
-func MakeCurrencyConf(ctx context.Context, log *zap.Logger) (conf CurrencyConf) {
-	sc.Setup(log, ctx, &settingsClient)
+func MakeCurrencyConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf CurrencyConf) {
+	sc.Setup(log, ctx, settingsClient)
 
 	if err := sc.Fetch(currencyKey, &conf, currencySetting); err != nil {
 		conf = currencySetting.Value
@@ -164,8 +165,8 @@ func MakeCurrencyConf(ctx context.Context, log *zap.Logger) (conf CurrencyConf) 
 	return conf
 }
 
-func MakeRoundingConf(ctx context.Context, log *zap.Logger) (conf RoundingConf) {
-	sc.Setup(log, ctx, &settingsClient)
+func MakeRoundingConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf RoundingConf) {
+	sc.Setup(log, ctx, settingsClient)
 
 	if err := sc.Fetch(roundingKey, &conf, roundingSetting); err != nil {
 		conf = roundingSetting.Value
@@ -174,8 +175,8 @@ func MakeRoundingConf(ctx context.Context, log *zap.Logger) (conf RoundingConf) 
 	return conf
 }
 
-func MakeSuspendConf(ctx context.Context, log *zap.Logger) (conf SuspendConf) {
-	sc.Setup(log, ctx, &settingsClient)
+func MakeSuspendConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf SuspendConf) {
+	sc.Setup(log, ctx, settingsClient)
 
 	if err := sc.Fetch(suspKey, &conf, suspendedSetting); err != nil {
 		conf = suspendedSetting.Value
@@ -184,8 +185,8 @@ func MakeSuspendConf(ctx context.Context, log *zap.Logger) (conf SuspendConf) {
 	return conf
 }
 
-func MakeInvoicesConf(ctx context.Context, log *zap.Logger) (conf InvoicesConf) {
-	sc.Setup(log, ctx, &settingsClient)
+func MakeInvoicesConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf InvoicesConf) {
+	sc.Setup(log, ctx, settingsClient)
 
 	if err := sc.Fetch(invKey, &conf, invoicesSetting); err != nil {
 		conf = invoicesSetting.Value

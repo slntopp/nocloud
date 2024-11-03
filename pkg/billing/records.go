@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	spb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"time"
 
@@ -51,12 +52,14 @@ type RecordsServiceServer struct {
 	addons    graph.AddonsController
 	ca        graph.CommonActionsController
 
+	settingsClient spb.SettingsServiceClient
+
 	db driver.Database
 
 	ConsumerStatus *healthpb.RoutineStatus
 }
 
-func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db driver.Database,
+func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db driver.Database, settingsClient spb.SettingsServiceClient,
 	records graph.RecordsController, plans graph.BillingPlansController, instances graph.InstancesController, addons graph.AddonsController,
 	ca graph.CommonActionsController) *RecordsServiceServer {
 	log := logger.Named("RecordsService")
@@ -69,6 +72,8 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 		instances: instances,
 		addons:    addons,
 		ca:        ca,
+
+		settingsClient: settingsClient,
 
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{
@@ -104,7 +109,7 @@ init:
 	}
 
 	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
-	currencyConf := MakeCurrencyConf(ctx, log)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	for msg := range records {
 		log.Debug("Received a message")
