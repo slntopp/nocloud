@@ -242,8 +242,13 @@ func main() {
 	router.PathPrefix(path).Handler(handler)
 
 	descriptions := billing.NewDescriptionsServer(log, db, descCtrl, nssCtrl, caCtrl)
-	log.Info("Registering descriptionsService Server")
+	log.Info("Registering DescriptionsService Server")
 	path, handler = cc.NewDescriptionsServiceHandler(descriptions, interceptors)
+	router.PathPrefix(path).Handler(handler)
+
+	promocodes := billing.NewPromocodesServer(log, db, promoCtrl, nssCtrl, caCtrl)
+	log.Info("Registering PromocodesService Server")
+	path, handler = cc.NewPromocodesServiceHandler(promocodes, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
 	checker := grpchealth.NewStaticChecker()

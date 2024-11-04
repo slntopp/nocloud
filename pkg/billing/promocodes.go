@@ -61,7 +61,7 @@ func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Pro
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
 	promo, err := s.promos.Create(ctx, r.Msg)
@@ -78,7 +78,7 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
 	promo, err := s.promos.Update(ctx, r.Msg)
@@ -167,7 +167,7 @@ func (s *PromocodesServer) Delete(ctx context.Context, r *connect.Request[pb.Pro
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
 	err := s.promos.Delete(ctx, r.Msg.GetUuid())
