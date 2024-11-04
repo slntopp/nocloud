@@ -363,7 +363,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	t.Payment = 0
 	t.Processed = 0
 	t.Returned = 0
-	r, err := s.invoices.Create(ctx, &graph.Invoice{
+	r, err := s.invoices.Create(trCtx, &graph.Invoice{
 		Invoice: t,
 		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
 			NumericNumber:  num,
