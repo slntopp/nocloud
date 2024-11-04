@@ -352,7 +352,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Transactions = []string{newTr.Msg.Uuid}
 	}
 
-	if ctx, err = s.invoices.BeginTransaction(ctx); err != nil {
+	trCtx, err := s.invoices.BeginTransaction(ctx)
+	if err != nil {
 		log.Error("Failed to begin transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to begin transaction")
 	}
@@ -370,21 +371,21 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		},
 	})
 	if err != nil {
-		_ = s.invoices.AbortTransaction(ctx)
+		_ = s.invoices.AbortTransaction(trCtx)
 		log.Error("Failed to create invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
+	gatewayCallback, _ := trCtx.Value(payments.GatewayCallback).(bool)
 	if !gatewayCallback {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
-			_ = s.invoices.AbortTransaction(ctx)
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(trCtx, r.Invoice); err != nil {
+			_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
 		}
 	}
 
-	_ = s.invoices.CommitTransaction(ctx)
+	_ = s.invoices.CommitTransaction(trCtx)
 
 	if req.Msg.GetIsSendEmail() {
 		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
