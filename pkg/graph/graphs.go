@@ -29,6 +29,18 @@ import (
 	"go.uber.org/zap"
 )
 
+type ContextKey string
+
+const (
+	AQLTransactionContextKey ContextKey = "aql-transaction"
+)
+
+type TransactionsAPI interface {
+	BeginTransaction(ctx context.Context) (context.Context, error)
+	AbortTransaction(ctx context.Context) error
+	CommitTransaction(ctx context.Context) error
+}
+
 type Node struct {
 	Collection string `json:"collection"`
 	Key        string `json:"key"`

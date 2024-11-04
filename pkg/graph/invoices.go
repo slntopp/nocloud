@@ -15,6 +15,7 @@ import (
 )
 
 type InvoicesController interface {
+	TransactionsAPI
 	DecodeInvoice(source interface{}, dest *Invoice) error
 	ParseNumberIntoTemplate(template string, number int, date time.Time) string
 	Create(ctx context.Context, tx *Invoice) (*Invoice, error)
@@ -51,6 +52,40 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 	return &invoicesController{
 		log: log, col: col,
 	}
+}
+
+func (ctrl *invoicesController) BeginTransaction(ctx context.Context) (context.Context, error) {
+	cols := driver.TransactionCollections{
+		Write: []string{schema.INVOICES_COL},
+	}
+	if trID, ok := ctx.Value(AQLTransactionContextKey).(string); ok {
+		if status, err := ctrl.col.Database().TransactionStatus(ctx, driver.TransactionID(trID)); err == nil && status.Status == driver.TransactionRunning {
+			return ctx, errors.New("already processing another transaction")
+		}
+	}
+	trID, err := ctrl.col.Database().BeginTransaction(ctx, cols, &driver.BeginTransactionOptions{})
+	if err != nil {
+		return ctx, fmt.Errorf("error while starting transaction: %w", err)
+	}
+	return context.WithValue(ctx, AQLTransactionContextKey, trID), nil
+}
+
+func (ctrl *invoicesController) CommitTransaction(ctx context.Context) error {
+	trID := ctx.Value(AQLTransactionContextKey).(string)
+	err := ctrl.col.Database().CommitTransaction(ctx, driver.TransactionID(trID), &driver.CommitTransactionOptions{})
+	if err != nil {
+		ctrl.log.Error("Failed to commit transaction", zap.Error(err))
+	}
+	return err
+}
+
+func (ctrl *invoicesController) AbortTransaction(ctx context.Context) error {
+	trID := ctx.Value(AQLTransactionContextKey).(string)
+	err := ctrl.col.Database().AbortTransaction(ctx, driver.TransactionID(trID), &driver.AbortTransactionOptions{})
+	if err != nil {
+		ctrl.log.Error("Failed to abort transaction", zap.Error(err))
+	}
+	return err
 }
 
 func (ctrl *invoicesController) DecodeInvoice(source interface{}, dest *Invoice) error {
