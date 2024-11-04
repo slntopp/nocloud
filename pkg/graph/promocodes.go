@@ -236,7 +236,8 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 
 	db := c.col.Database()
 	trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
-		Write: []string{schema.PROMOCODES_COL},
+		Write:     []string{schema.PROMOCODES_COL},
+		Exclusive: []string{schema.PROMOCODES_COL},
 	}, &driver.BeginTransactionOptions{})
 	if err != nil {
 		log.Error("Failed to start transaction", zap.Error(err))
@@ -282,7 +283,8 @@ func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, ent
 
 	db := c.col.Database()
 	trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
-		Write: []string{schema.PROMOCODES_COL},
+		Write:     []string{schema.PROMOCODES_COL},
+		Exclusive: []string{schema.PROMOCODES_COL},
 	}, &driver.BeginTransactionOptions{})
 	if err != nil {
 		log.Error("Failed to start transaction", zap.Error(err))
