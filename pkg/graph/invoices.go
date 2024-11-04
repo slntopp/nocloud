@@ -67,6 +67,7 @@ func (ctrl *invoicesController) BeginTransaction(ctx context.Context) (context.C
 	if err != nil {
 		return ctx, fmt.Errorf("error while starting transaction: %w", err)
 	}
+	ctx = driver.WithTransactionID(ctx, trID)
 	return context.WithValue(ctx, AQLTransactionContextKey, string(trID)), nil
 }
 
