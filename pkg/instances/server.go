@@ -19,8 +19,9 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud-proto/health"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"slices"
 	go_sync "sync"
@@ -30,7 +31,6 @@ import (
 	"github.com/slntopp/nocloud-proto/notes"
 
 	"github.com/arangodb/go-driver"
-	amqp "github.com/rabbitmq/amqp091-go"
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
@@ -51,26 +51,30 @@ type InstancesServer struct {
 	pb.UnimplementedInstancesServiceServer
 	log *zap.Logger
 
-	ctrl    *graph.InstancesController
-	ig_ctrl *graph.InstancesGroupsController
-	sp_ctrl *graph.ServicesProvidersController
+	ctrl     graph.InstancesController
+	ig_ctrl  graph.InstancesGroupsController
+	sp_ctrl  graph.ServicesProvidersController
+	srv_ctrl graph.ServicesController
+	ca       graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
 
 	db driver.Database
 
-	rdb *redis.Client
+	rdb redisdb.Client
 
 	monitoring *health.RoutineStatus
 
 	spSyncers map[string]*go_sync.Mutex
 }
 
-func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *InstancesServer {
+func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb redisdb.Client) *InstancesServer {
 	log := logger.Named("instances")
 	log.Debug("New Instances Server Creating")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)
 	sp_ctrl := graph.NewServicesProvidersController(logger, db)
+	srv_ctrl := graph.NewServicesController(logger, db, rbmq)
+	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
 	s := s.NewStatesPubSub(log, &db, rbmq)
@@ -100,11 +104,13 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 
 	return &InstancesServer{
 		db: db, log: log,
-		ctrl:    ig_ctrl.Instances(),
-		ig_ctrl: ig_ctrl,
-		sp_ctrl: &sp_ctrl,
-		drivers: make(map[string]driverpb.DriverServiceClient),
-		rdb:     rdb,
+		ctrl:     ig_ctrl.Instances(),
+		ig_ctrl:  ig_ctrl,
+		sp_ctrl:  sp_ctrl,
+		srv_ctrl: srv_ctrl,
+		ca:       ca,
+		drivers:  make(map[string]driverpb.DriverServiceClient),
+		rdb:      rdb,
 		monitoring: &health.RoutineStatus{
 			Routine: "Monitoring",
 			Status: &health.ServingStatus{
@@ -130,6 +136,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	log := s.log.Named("invoke")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
@@ -159,10 +166,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	}
 
 	var instance graph.Instance
-	instance, err = graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
-	)
+	instance, err = s.ctrl.GetWithAccess(ctx, requestorId, instance_id.Key())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -219,14 +223,11 @@ func (s *InstancesServer) Delete(ctx context.Context, _req *connect.Request[pb.D
 	log := s.log.Named("delete")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetWithAccess[graph.Instance](
-		ctx, s.db,
-		instance_id,
-	)
+	instance, err := s.ctrl.GetWithAccess(ctx, requestorId, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -275,14 +276,12 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 	log := s.log.Named("Create")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
 	var ig graph.InstancesGroup
-	ig, err := graph.GetWithAccess[graph.InstancesGroup](
-		ctx, s.db,
-		igId,
-	)
+	ig, err := s.ig_ctrl.GetWithAccess(ctx, requestorId, igId.Key())
 	if err != nil {
 		log.Error("Failed to get instance group", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -310,14 +309,11 @@ func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.U
 	log := s.log.Named("Update")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	igId := driver.NewDocumentID(schema.INSTANCES_COL, req.GetInstance().GetUuid())
 	var instance graph.Instance
-	instance, err := graph.GetWithAccess[graph.Instance](
-		ctx, s.db,
-		igId,
-	)
+	instance, err := s.ctrl.GetWithAccess(ctx, requestorId, req.GetInstance().GetUuid())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -344,14 +340,11 @@ func (s *InstancesServer) Detach(ctx context.Context, _req *connect.Request[pb.D
 	log := s.log.Named("Detach")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetWithAccess[graph.Instance](
-		ctx, s.db,
-		instance_id,
-	)
+	instance, err := s.ctrl.GetWithAccess(ctx, requestorId, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -391,14 +384,11 @@ func (s *InstancesServer) Attach(ctx context.Context, _req *connect.Request[pb.D
 	log := s.log.Named("Attach")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetWithAccess[graph.Instance](
-		ctx, s.db,
-		instance_id,
-	)
+	instance, err := s.ctrl.GetWithAccess(ctx, requestorId, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -438,18 +428,18 @@ func (s *InstancesServer) TransferIG(ctx context.Context, _req *connect.Request[
 	log := s.log.Named("transfer")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetUuid())
 	newSrvId := driver.NewDocumentID(schema.SERVICES_COL, req.GetService())
-	ig, err := graph.GetWithAccess[graph.InstancesGroup](ctx, s.db, igId)
-
+	ig, err := s.ig_ctrl.GetWithAccess(ctx, requestorId, igId.Key())
 	if err != nil {
 		log.Error("Failed to get instances group", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	srv, err := graph.GetWithAccess[graph.Service](ctx, s.db, newSrvId)
+	srv, err := s.srv_ctrl.GetWithAccess(ctx, requestorId, newSrvId.Key())
 
 	if err != nil {
 		log.Error("Failed to get service", zap.Error(err))
@@ -488,18 +478,19 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 	log := s.log.Named("transfer")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
-	inst, err := graph.GetWithAccess[graph.Instance](ctx, s.db, instanceId)
+	inst, err := s.ctrl.GetWithAccess(ctx, requestorId, req.GetUuid())
 
 	if err != nil {
 		log.Error("Failed to get instances group", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	ig, err := graph.GetWithAccess[graph.InstancesGroup](ctx, s.db, newIGId)
+	ig, err := s.ig_ctrl.GetWithAccess(ctx, requestorId, newIGId.Key())
 
 	if err != nil {
 		log.Error("Failed to get service", zap.Error(err))
@@ -538,14 +529,11 @@ func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[not
 	log := s.log.Named("AddNote")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
-	)
+	instance, err := s.ctrl.GetWithAccess(ctx, requestorId, req.Uuid)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -577,14 +565,11 @@ func (s *InstancesServer) PatchNote(ctx context.Context, _req *connect.Request[n
 	log := s.log.Named("Patch")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
-	)
+	instance, err := s.ctrl.GetWithAccess(ctx, requestorId, req.Uuid)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -595,7 +580,7 @@ func (s *InstancesServer) PatchNote(ctx context.Context, _req *connect.Request[n
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
 
 	note := instance.GetAdminNotes()[req.GetIndex()]
 
@@ -623,14 +608,11 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, _req *connect.Request[
 	log := s.log.Named("Remove")
 	req := _req.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
-	)
+	instance, err := s.ctrl.GetWithAccess(ctx, requestorId, req.Uuid)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -641,7 +623,7 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, _req *connect.Request[
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
 
 	note := instance.GetAdminNotes()[req.GetIndex()]
 	log.Debug("Note", zap.Any("note", note))

@@ -17,6 +17,7 @@ package states
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"log"
 	"time"
 
@@ -34,10 +35,10 @@ var (
 type PublicDataPubSub struct {
 	log  *zap.Logger
 	db   *driver.Database
-	rbmq *amqp.Connection
+	rbmq rabbitmq.Connection
 }
 
-func NewPublicDataPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *PublicDataPubSub {
+func NewPublicDataPubSub(log *zap.Logger, db *driver.Database, rbmq rabbitmq.Connection) *PublicDataPubSub {
 	ps := &PublicDataPubSub{
 		log: log.Named("PublicDataServer"), rbmq: rbmq,
 	}
@@ -47,7 +48,7 @@ func NewPublicDataPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connec
 	return ps
 }
 
-func (s *PublicDataPubSub) Channel() *amqp.Channel {
+func (s *PublicDataPubSub) Channel() rabbitmq.Channel {
 	log := s.log.Named("Channel")
 
 	ch, err := s.rbmq.Channel()
@@ -57,7 +58,7 @@ func (s *PublicDataPubSub) Channel() *amqp.Channel {
 	return ch
 }
 
-func (s *PublicDataPubSub) TopicExchange(ch *amqp.Channel, name string) {
+func (s *PublicDataPubSub) TopicExchange(ch rabbitmq.Channel, name string) {
 	err := ch.ExchangeDeclare(
 		name, "topic", true, false, false, false, nil,
 	)
@@ -66,7 +67,7 @@ func (s *PublicDataPubSub) TopicExchange(ch *amqp.Channel, name string) {
 	}
 }
 
-func (s *PublicDataPubSub) PublicDataConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
+func (s *PublicDataPubSub) PublicDataConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col string) {
 	if s.db == nil {
 		log.Fatal("Failed to initialize states consumer, database is not set")
 	}
@@ -133,7 +134,7 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 
 type Pub func(msg *pb.ObjectPublicData) (int, error)
 
-func (s *PublicDataPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
+func (s *PublicDataPubSub) Publisher(ch rabbitmq.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectPublicData) (int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

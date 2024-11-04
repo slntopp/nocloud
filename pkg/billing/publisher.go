@@ -4,17 +4,18 @@ import (
 	"context"
 	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/instances"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"google.golang.org/protobuf/proto"
 	"time"
 )
 
-func NewInstanceDataPublisher(ch *amqp.Channel) Pub {
+func NewInstanceDataPublisher(ch rabbitmq.Channel) Pub {
 	return Publisher(ch, "datas", "instances")
 }
 
 type Pub func(msg *pb.ObjectData) (int, error)
 
-func Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
+func Publisher(ch rabbitmq.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectData) (int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -46,7 +46,7 @@ func TestConvert(t *testing.T) {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 
 	c := NewCurrencyController(log, db)
-	list, err := c.GetCurrencies(ctx)
+	list, err := c.GetCurrencies(ctx, true)
 	if err != nil {
 		t.Error(err)
 	}

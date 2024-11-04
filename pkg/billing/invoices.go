@@ -168,13 +168,13 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) && requestor != req.GetAccount() {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) && requestor != req.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
 	} else {
-		if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 			query += ` FILTER t.account == @acc`
 			vars["acc"] = acc
 		}
@@ -272,8 +272,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
-	invConf := MakeInvoicesConf(ctx, log)
-	defCurr := MakeCurrencyConf(ctx, log).Currency
+	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
+	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
 
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
@@ -286,7 +286,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok && t.Account != requestor {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -338,18 +338,11 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		var transactionTotal = t.GetTotal()
 		transactionTotal *= -1
 
-		// Convert invoice's currency to default currency(according to how creating transaction works)
-		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
-		if err != nil {
-			log.Error("Failed to get exchange rate", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-		}
-
 		newTr, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
 			Priority: pb.Priority_NORMAL,
 			Account:  acc.GetUuid(),
-			Currency: defCurr,
-			Total:    transactionTotal * rate,
+			Currency: t.GetCurrency(),
+			Total:    transactionTotal,
 			Exec:     0,
 		}))
 		if err != nil {
@@ -359,12 +352,18 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Transactions = []string{newTr.Msg.Uuid}
 	}
 
+	trCtx, err := s.invoices.BeginTransaction(ctx)
+	if err != nil {
+		log.Error("Failed to begin transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to begin transaction")
+	}
+
 	t.Number = strNum
 	t.Created = now.Unix()
 	t.Payment = 0
 	t.Processed = 0
 	t.Returned = 0
-	r, err := s.invoices.Create(ctx, &graph.Invoice{
+	r, err := s.invoices.Create(trCtx, &graph.Invoice{
 		Invoice: t,
 		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
 			NumericNumber:  num,
@@ -372,19 +371,24 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		},
 	})
 	if err != nil {
+		_ = s.invoices.AbortTransaction(trCtx)
 		log.Error("Failed to create invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
+	gatewayCallback, _ := trCtx.Value(payments.GatewayCallback).(bool)
 	if !gatewayCallback {
-		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(trCtx, r.Invoice); err != nil {
+			_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
 		}
 	}
 
+	_ = s.invoices.CommitTransaction(trCtx)
+
 	if req.Msg.GetIsSendEmail() {
-		_, _ = eventsClient.Publish(ctx, &epb.Event{
+		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
 			Uuid: t.GetAccount(),
 			Key:  "invoice_created",
@@ -402,7 +406,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Requestor: requestor,
 	})
 
-	resp := connect.NewResponse(r.Invoice)
+	inv, err := s.invoices.Get(ctx, r.GetUuid())
+	if err != nil {
+		log.Error("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get invoice")
+	}
+
+	resp := connect.NewResponse(inv.Invoice)
 	return resp, nil
 }
 
@@ -418,7 +428,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -463,7 +473,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	var resp *connect.Response[pb.Invoice]
 	var strNum string
 	var num int
-	invConf := MakeInvoicesConf(ctx, log)
+	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -589,7 +599,7 @@ payment:
 	newInv.Processed = nowAfterActions
 
 	if req.Msg.GetParams().GetIsSendEmail() {
-		_, _ = eventsClient.Publish(ctx, &epb.Event{
+		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
 			Uuid: newInv.GetAccount(),
 			Key:  "invoice_paid",
@@ -741,7 +751,7 @@ quit:
 	}
 	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
 	if err == nil && !gatewayCallback {
-		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
@@ -763,7 +773,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.NotFound, "Invoice not found")
 	}
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requester, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
 	if !ok && inv.GetAccount() != requester {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -777,7 +787,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		log.Warn("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Account not found")
 	}
-	currConf := MakeCurrencyConf(ctx, log)
+	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	balance := acc.GetBalance()
 	accCurrency := acc.Currency
@@ -844,13 +854,13 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
 	} else {
-		if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 	}
@@ -912,7 +922,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
-	defCurr := MakeCurrencyConf(ctx, log).Currency
+	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
@@ -922,7 +932,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -957,7 +967,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Created = req.GetCreated()
 	}
 
-	invConf := MakeInvoicesConf(ctx, log)
+	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
 	if newStatus == pb.BillingStatus_PAID && oldStatus != pb.BillingStatus_PAID {
 		strNum, num, err := s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(t.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
 		if err != nil {
@@ -1036,13 +1046,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
 	if !gatewayCallback {
-		if err := s.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
 
 	if r.Msg.GetIsSendEmail() {
-		_, _ = eventsClient.Publish(ctx, &epb.Event{
+		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
 			Uuid: t.GetAccount(),
 			Key:  "invoice_updated",
@@ -1059,7 +1069,7 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -1106,7 +1116,7 @@ func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb
 
 	if requester != inv.Account {
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-		if isRoot := graph.HasAccess(ctx, s.db, requester, ns, access.Level_ROOT); !isRoot {
+		if isRoot := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT); !isRoot {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 	}
@@ -1117,7 +1127,7 @@ func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb
 		return nil, status.Error(codes.NotFound, "Internal error")
 	}
 
-	uri, err := s.GetPaymentGateway(acc.GetPaymentsGateway()).PaymentURI(ctx, inv.Invoice)
+	uri, err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).PaymentURI(ctx, inv.Invoice)
 	if err != nil {
 		log.Error("Error getting payment uri", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Internal error")
@@ -1173,8 +1183,8 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 		return nil, status.Error(codes.NotFound, "Invoice doesn't exist")
 	}
 
-	if ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
-		if ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN); !ok && acc != tr.GetAccount() {
+	if ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
+		if ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN); !ok && acc != tr.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 	}

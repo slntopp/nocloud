@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/showcases"
 	"net"
@@ -120,7 +121,7 @@ func main() {
 	defer rbmq.Close()
 	log.Info("RabbitMQ connection established")
 
-	server := sp.NewServicesProviderServer(log, db, rbmq, rdb)
+	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq), rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))

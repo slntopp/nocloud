@@ -28,12 +28,22 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+type NamespacesController interface {
+	Get(ctx context.Context, id string) (Namespace, error)
+	List(ctx context.Context, requestor Account, req_depth int32, offset, limit uint64, field, sort string, filters map[string]*structpb.Value) (*ListQueryResult[*Namespace], error)
+	Create(ctx context.Context, title string) (Namespace, error)
+	Patch(ctx context.Context, uuid, title string) error
+	Link(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error
+	Join(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error
+	Delete(ctx context.Context, id string) error
+}
+
 type Namespace struct {
 	*namespaces.Namespace
 	driver.DocumentMeta
 }
 
-type NamespacesController struct {
+type namespacesController struct {
 	col driver.Collection
 	log *zap.Logger
 }
@@ -50,18 +60,19 @@ func NewNamespacesController(logger *zap.Logger, db driver.Database) NamespacesC
 	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2ACC, schema.NAMESPACES_COL, schema.ACCOUNTS_COL)
 	GraphGetEdgeEnsure(log, ctx, graph, schema.ACC2NS, schema.ACCOUNTS_COL, schema.NAMESPACES_COL)
 
-	return NamespacesController{log: log, col: col}
+	return &namespacesController{log: log, col: col}
 }
 
-func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace, error) {
-	return GetWithAccess[Namespace](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.NAMESPACES_COL, id))
+func (ctrl *namespacesController) Get(ctx context.Context, id string) (Namespace, error) {
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+	return getWithAccess[Namespace](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester), driver.NewDocumentID(schema.NAMESPACES_COL, id))
 }
 
-func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, req_depth int32, offset, limit uint64, field, sort string, filters map[string]*structpb.Value) (*ListQueryResult[*Namespace], error) {
-	return ListNamespaces[*Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth, offset, limit, field, sort, filters)
+func (ctrl *namespacesController) List(ctx context.Context, requestor Account, req_depth int32, offset, limit uint64, field, sort string, filters map[string]*structpb.Value) (*ListQueryResult[*Namespace], error) {
+	return listNamespaces[*Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth, offset, limit, field, sort, filters)
 }
 
-func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Namespace, error) {
+func (ctrl *namespacesController) Create(ctx context.Context, title string) (Namespace, error) {
 	ns := Namespace{
 		Namespace: &namespaces.Namespace{Title: title},
 	}
@@ -83,7 +94,7 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 	return ns, ctrl.Link(ctx, acc, ns, access.Level_ADMIN, roles.OWNER)
 }
 
-func (ctrl *NamespacesController) Patch(ctx context.Context, uuid, title string) error {
+func (ctrl *namespacesController) Patch(ctx context.Context, uuid, title string) error {
 	ns := Namespace{
 		Namespace: &namespaces.Namespace{Title: title},
 	}
@@ -96,18 +107,18 @@ func (ctrl *NamespacesController) Patch(ctx context.Context, uuid, title string)
 	return nil
 }
 
-func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error {
+func (ctrl *namespacesController) Link(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error {
 	edge, _ := ctrl.col.Database().Collection(ctx, schema.ACC2NS)
 	return acc.LinkNamespace(ctx, edge, ns, access, role)
 }
 
-func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error {
+func (ctrl *namespacesController) Join(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error {
 	edge, _ := ctrl.col.Database().Collection(ctx, schema.NS2ACC)
 	return acc.JoinNamespace(ctx, edge, ns, access, role)
 }
 
 func (ns *Namespace) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, ns.ID)
+	err := deleteRecursive(ctx, db, ns.ID)
 	if err != nil {
 		return err
 	}
@@ -115,7 +126,7 @@ func (ns *Namespace) Delete(ctx context.Context, db driver.Database) error {
 	return nil
 }
 
-func (ctrl *NamespacesController) Delete(ctx context.Context, id string) error {
+func (ctrl *namespacesController) Delete(ctx context.Context, id string) error {
 	ns, err := ctrl.Get(ctx, id)
 	if err != nil {
 		return err

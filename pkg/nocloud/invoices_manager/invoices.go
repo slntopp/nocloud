@@ -10,21 +10,27 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
+type InvoicesManager interface {
+	CreateInvoice(inv *pb.Invoice) error
+	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) error
+	InvoicesController() graph.InvoicesController
+}
+
 type tokenMaker interface {
 	MakeToken(string) (string, error)
 }
 
-type InvoicesManager struct {
+type invoicesManager struct {
 	inv     billingconnect.BillingServiceClient
-	invCtrl *graph.InvoicesController
+	invCtrl graph.InvoicesController
 	tm      tokenMaker
 }
 
-func NewInvoicesManager(inv billingconnect.BillingServiceClient, invCtrl *graph.InvoicesController, tm tokenMaker) *InvoicesManager {
-	return &InvoicesManager{inv: inv, invCtrl: invCtrl, tm: tm}
+func NewInvoicesManager(inv billingconnect.BillingServiceClient, invCtrl graph.InvoicesController, tm tokenMaker) InvoicesManager {
+	return &invoicesManager{inv: inv, invCtrl: invCtrl, tm: tm}
 }
 
-func (i *InvoicesManager) CreateInvoice(inv *pb.Invoice) error {
+func (i *invoicesManager) CreateInvoice(inv *pb.Invoice) error {
 	req := connect.NewRequest(&pb.CreateInvoiceRequest{
 		Invoice:     inv,
 		IsSendEmail: true,
@@ -38,7 +44,7 @@ func (i *InvoicesManager) CreateInvoice(inv *pb.Invoice) error {
 	return err
 }
 
-func (i *InvoicesManager) UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) error {
+func (i *invoicesManager) UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) error {
 	req := connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 		Status: newStatus,
 		Uuid:   id,
@@ -52,6 +58,6 @@ func (i *InvoicesManager) UpdateInvoiceStatus(id string, newStatus pb.BillingSta
 	return err
 }
 
-func (i *InvoicesManager) InvoicesController() *graph.InvoicesController {
+func (i *invoicesManager) InvoicesController() graph.InvoicesController {
 	return i.invCtrl
 }

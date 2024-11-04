@@ -27,6 +27,7 @@ import (
 	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -140,8 +141,8 @@ func main() {
 	}
 	log.Info("Pub/Sub setted up")
 
-	server := services.NewServicesServer(log, db, ps, rbmq)
-	iserver := instances.NewInstancesServiceServer(log, db, rbmq, rdb)
+	server := services.NewServicesServer(log, db, ps, rabbitmq.NewRabbitMQConnection(rbmq))
+	iserver := instances.NewInstancesServiceServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq), rdb)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -207,12 +208,12 @@ func main() {
 	// Migrate
 	migrateToV2 := viper.GetBool("MIGRATE_TO_V2")
 	if migrateToV2 {
-		iCtrl := graph.NewInstancesController(log.Named("Main"), db, rbmq)
-		sCtrl := graph.NewServicesController(log.Named("Main"), db, rbmq)
+		iCtrl := graph.NewInstancesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(rbmq))
+		sCtrl := graph.NewServicesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(rbmq))
 		bpCtrl := graph.NewBillingPlansController(log.Named("Main"), db)
 		addCtrl := graph.NewAddonsController(log.Named("Main"), db)
 		descCtrl := graph.NewDescriptionsController(log.Named("Main"), db)
-		graph.MigrateInstancesToNewAddons(log, *iCtrl, sCtrl, bpCtrl, *addCtrl, *descCtrl)
+		graph.MigrateInstancesToNewAddons(log, iCtrl, sCtrl, bpCtrl, addCtrl, descCtrl)
 	} else {
 		log.Debug("Need MIGRATE_TO_V2 set to 'true' to start instances migration to V2")
 	}

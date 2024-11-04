@@ -25,10 +25,21 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
-	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
+
+type ContextKey string
+
+const (
+	AQLTransactionContextKey ContextKey = "aql-transaction"
+)
+
+type TransactionsAPI interface {
+	BeginTransaction(ctx context.Context) (context.Context, error)
+	AbortTransaction(ctx context.Context) error
+	CommitTransaction(ctx context.Context) error
+}
 
 type Node struct {
 	Collection string `json:"collection"`
@@ -39,7 +50,7 @@ type Accessible interface {
 	GetAccess() *access.Access
 }
 
-func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {
+func deleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {
 	col, err := db.Collection(ctx, id.Collection())
 	if err != nil {
 		return fmt.Errorf("error while extracting collection: %v, DocID: %s", err, id)
@@ -74,7 +85,7 @@ FILTER !edge || edge.role == "owner"
     RETURN MERGE({ node: node._id }, edge ? { edge: edge._id, parent: edge._from } : { edge: null, parent: null })
 `
 
-func ListOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID) (res *access.Nodes, err error) {
+func listOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID) (res *access.Nodes, err error) {
 	c, err := db.Query(ctx, listOwnedQuery, map[string]interface{}{
 		"from": id,
 	})
@@ -99,8 +110,8 @@ func ListOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID
 	return &access.Nodes{Nodes: nodes}, nil
 }
 
-func DeleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID) error {
-	nodes, err := ListOwnedDeep(ctx, db, id)
+func deleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID) error {
+	nodes, err := listOwnedDeep(ctx, db, id)
 	if err != nil {
 		return err
 	}
@@ -145,7 +156,7 @@ func handleDeleteNodeInRecursion(ctx context.Context, db driver.Database, node s
 		if id[1] == schema.ROOT_ACCOUNT_KEY {
 			return errors.New("ERR_ROOT_OBJECT_CANNOT_BE_DELETED")
 		}
-		nodes, err := ListCredentialsAndEdges(ctx, col.Database(), driver.DocumentID(node))
+		nodes, err := listCredentialsAndEdges(ctx, col.Database(), driver.DocumentID(node))
 		if err != nil {
 			return err
 		}
@@ -167,7 +178,7 @@ func handleDeleteNodeInRecursion(ctx context.Context, db driver.Database, node s
 	return err
 }
 
-func ListCredentialsAndEdges(ctx context.Context, db driver.Database, account driver.DocumentID) (nodes []string, err error) {
+func listCredentialsAndEdges(ctx context.Context, db driver.Database, account driver.DocumentID) (nodes []string, err error) {
 	c, err := db.Query(ctx, listCredentialsAndEdgesQuery, map[string]interface{}{
 		"account":     account,
 		"credentials": schema.CREDENTIALS_COL,
@@ -203,36 +214,11 @@ GRAPH @permissions SORT path.edges[0].level
 	})
 `
 
-const getInstanceWithAccessLevel = `
-FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
-GRAPH @permissions SORT path.edges[0].level
-	LET bp = DOCUMENT(CONCAT(@bps, "/", path.vertices[-1].billing_plan.uuid))
-    RETURN MERGE(path.vertices[-1], {
-        uuid: path.vertices[-1]._key,
-        billing_plan: {
-			uuid: bp._key,
-			title: bp.title,
-			type: bp.type,
-			kind: bp.kind,
-			resources: bp.resources,
-			products: {
-			    [path.vertices[-1].product]: bp.products[path.vertices[-1].product],
-            },
-			meta: bp.meta,
-			fee: bp.fee,
-			software: bp.software
-        },
-	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
-	})
-`
-
-func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
+func getWithAccess[T Accessible](ctx context.Context, db driver.Database, from driver.DocumentID, id driver.DocumentID) (T, error) {
 	var o T
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	requestor_id := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 
 	vars := map[string]interface{}{
-		"account":           requestor_id,
+		"account":           from,
 		"node":              id,
 		"permissions":       schema.PERMISSIONS_GRAPH.Name,
 		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
@@ -248,36 +234,7 @@ func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id dri
 		return o, err
 	}
 
-	if requestor_id.String() == meta.ID.String() {
-		o.GetAccess().Level = access.Level_ROOT
-	}
-
-	return o, nil
-}
-
-func GetInstanceWithAccess(ctx context.Context, db driver.Database, id driver.DocumentID) (Instance, error) {
-	var o Instance
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	requestor_id := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
-
-	vars := map[string]interface{}{
-		"account":     requestor_id,
-		"node":        id,
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"bps":         schema.BILLING_PLANS_COL,
-	}
-	c, err := db.Query(ctx, getInstanceWithAccessLevel, vars)
-	if err != nil {
-		return o, err
-	}
-	defer c.Close()
-
-	meta, err := c.ReadDocument(ctx, &o)
-	if err != nil {
-		return o, err
-	}
-
-	if requestor_id.String() == meta.ID.String() {
+	if from.String() == meta.ID.String() {
 		o.GetAccess().Level = access.Level_ROOT
 	}
 
@@ -290,7 +247,7 @@ FOR edge IN @@collection
     REMOVE edge._key IN @@collection
 `
 
-func DeleteEdge(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) error {
+func deleteEdge(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) error {
 	fromDocID := driver.NewDocumentID(fromCollection, fromKey)
 	toDocID := driver.NewDocumentID(toCollection, toKey)
 	collection := fromCollection + "2" + toCollection
@@ -315,7 +272,7 @@ FOR edge IN @@collection
     RETURN edge._key
 `
 
-func EdgeExist(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) (bool, error) {
+func edgeExist(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) (bool, error) {
 	fromDocID := driver.NewDocumentID(fromCollection, fromKey)
 	toDocID := driver.NewDocumentID(toCollection, toKey)
 	collection := fromCollection + "2" + toCollection
@@ -351,7 +308,7 @@ FILTER IS_SAME_COLLECTION(@@kind, node)
 	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 `
 
-func ListWithAccess[T Accessible](
+func listWithAccess[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,
@@ -402,7 +359,7 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 	}
 `
 
-const listAccounts = `
+const listAccountsQuery = `
 LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 	GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
@@ -445,7 +402,8 @@ type ListQueryResult[T Accessible] struct {
 	Active int `json:"active"`
 }
 
-func ListAccounts[T Accessible](
+// ListAccounts deprecated for import
+func listAccounts[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,
@@ -537,7 +495,7 @@ func ListAccounts[T Accessible](
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
-	q := fmt.Sprintf(listAccounts, insert)
+	q := fmt.Sprintf(listAccountsQuery, insert)
 	log.Debug("Query", zap.String("q", q))
 	c, err := db.Query(ctx, q, bindVars)
 	if err != nil {
@@ -552,7 +510,7 @@ func ListAccounts[T Accessible](
 	return &result, nil
 }
 
-func ListNamespaces[T Accessible](
+func listNamespaces[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,

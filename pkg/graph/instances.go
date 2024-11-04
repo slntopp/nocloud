@@ -20,12 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud-proto/access"
 	addonspb "github.com/slntopp/nocloud-proto/billing/addons"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	epb "github.com/slntopp/nocloud-proto/events"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud-proto/notes"
 	servicespb "github.com/slntopp/nocloud-proto/services"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
 	"slices"
@@ -50,6 +52,25 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
+type InstancesController interface {
+	CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error)
+	GetInstancePeriod(i *pb.Instance) (*int64, error)
+	Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error)
+	Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error
+	UpdateNotes(ctx context.Context, inst *pb.Instance) error
+	Delete(ctx context.Context, group string, i *pb.Instance) error
+	Get(ctx context.Context, uuid string) (*Instance, error)
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Instance, error)
+	GetGroup(ctx context.Context, i string) (*GroupWithSP, error)
+	CheckEdgeExist(ctx context.Context, spUuid string, i *pb.Instance) error
+	ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error
+	SetStatus(ctx context.Context, inst *pb.Instance, status spb.NoCloudStatus) (err error)
+	SetState(ctx context.Context, inst *pb.Instance, state stpb.NoCloudState) (err error)
+	TransferInst(ctx context.Context, oldIGEdge string, newIG driver.DocumentID, inst driver.DocumentID) error
+	GetEdge(ctx context.Context, inboundNode string, collection string) (string, error)
+	getSp(ctx context.Context, uuid string) (string, error)
+}
+
 const (
 	INSTANCES_COL = "Instances"
 )
@@ -59,7 +80,7 @@ type Instance struct {
 	driver.DocumentMeta
 }
 
-type InstancesController struct {
+type instancesController struct {
 	col   driver.Collection // Instances Collection
 	graph driver.Graph
 
@@ -73,9 +94,9 @@ type InstancesController struct {
 	acc     AccountsController
 	cur     CurrencyController
 	addons  AddonsController
-	channel *amqp091.Channel
+	channel rabbitmq.Channel
 
-	bp_ctrl *BillingPlansController
+	bp_ctrl BillingPlansController
 }
 
 // Migrations
@@ -299,7 +320,7 @@ func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesControll
 
 //
 
-func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) *InstancesController {
+func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) InstancesController {
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
@@ -341,13 +362,14 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.C
 	addons := NewAddonsController(log, db)
 	acc := NewAccountsController(log, db)
 	inv := NewInvoicesController(log, db)
+	cur := NewCurrencyController(log, db)
 
-	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: &bp_ctrl,
-		addons: *addons, inv: inv, acc: acc, cur: NewCurrencyController(log, db)}
+	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: bp_ctrl,
+		addons: addons, inv: inv, acc: acc, cur: cur}
 }
 
 // CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
-func (ctrl *InstancesController) CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error) {
+func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error) {
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
 		return 0, err
@@ -406,7 +428,7 @@ func (ctrl *InstancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 // GetInstancePeriod returns billing period for the whole instance
 //
 // Now it simply returns product's period or period of some random resource if product is not defined or it's period is 0
-func (ctrl *InstancesController) GetInstancePeriod(i *pb.Instance) (*int64, error) {
+func (ctrl *instancesController) GetInstancePeriod(i *pb.Instance) (*int64, error) {
 	zero := int64(0)
 
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
@@ -433,7 +455,33 @@ func (ctrl *InstancesController) GetInstancePeriod(i *pb.Instance) (*int64, erro
 	return nil, nil
 }
 
-func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error) {
+func (ctrl *instancesController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Instance, error) {
+	var o Instance
+	vars := map[string]interface{}{
+		"account":     from,
+		"node":        driver.NewDocumentID(schema.INSTANCES_COL, id),
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"bps":         schema.BILLING_PLANS_COL,
+	}
+	c, err := ctrl.db.Query(ctx, getInstanceWithAccessLevel, vars)
+	if err != nil {
+		return o, err
+	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, &o)
+	if err != nil {
+		return o, err
+	}
+
+	if from.String() == meta.ID.String() {
+		o.GetAccess().Level = access.Level_ROOT
+	}
+
+	return o, nil
+}
+
+func (ctrl *instancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error) {
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Instance", zap.Any("instance", i))
 
@@ -559,7 +607,7 @@ const updatePlanQuery = `
 UPDATE DOCUMENT(@key) WITH { billing_plan: @billingPlan } IN @@collection
 `
 
-func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
+func (ctrl *instancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
@@ -723,7 +771,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	return nil
 }
 
-func (ctrl *InstancesController) UpdateNotes(ctx context.Context, inst *pb.Instance) error {
+func (ctrl *instancesController) UpdateNotes(ctx context.Context, inst *pb.Instance) error {
 	log := ctrl.log.Named("UpdateNotes")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
@@ -747,7 +795,7 @@ func (ctrl *InstancesController) UpdateNotes(ctx context.Context, inst *pb.Insta
 	return nil
 }
 
-func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb.Instance) error {
+func (ctrl *instancesController) Delete(ctx context.Context, group string, i *pb.Instance) error {
 	log := ctrl.log.Named("Delete")
 	log.Debug("Deleting Instance", zap.Any("instance", i))
 
@@ -759,7 +807,7 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 
 	ctrl.log.Debug("Deleting Edge", zap.String("fromCollection", schema.INSTANCES_GROUPS_COL), zap.String("toCollection",
 		schema.INSTANCES_COL), zap.String("fromKey", group), zap.String("toKey", i.GetUuid()))
-	err = DeleteEdge(ctx, ctrl.col.Database(), schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL, group, i.GetUuid())
+	err = deleteEdge(ctx, ctrl.col.Database(), schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL, group, i.GetUuid())
 	if err != nil {
 		log.Error("Failed to delete edge "+schema.INSTANCES_GROUPS_COL+"2"+schema.INSTANCES_COL, zap.Error(err))
 		return err
@@ -793,7 +841,7 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 	return nil
 }
 
-func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instance, error) {
+func (ctrl *instancesController) Get(ctx context.Context, uuid string) (*Instance, error) {
 	ctrl.log.Debug("Getting Instance", zap.Any("sp", uuid))
 	var inst *pb.Instance
 	query := `RETURN DOCUMENT(@inst)`
@@ -849,7 +897,7 @@ type GroupWithSP struct {
 	SP    *sppb.ServicesProvider `json:"sp"`
 }
 
-func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*GroupWithSP, error) {
+func (ctrl *instancesController) GetGroup(ctx context.Context, i string) (*GroupWithSP, error) {
 	log := ctrl.log.Named("GetGroup")
 	log.Debug("Getting Instance Group", zap.String("instance", i))
 	c, err := ctrl.db.Query(ctx, getGroupWithSPQuery, map[string]interface{}{
@@ -873,14 +921,14 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 	return &r, nil
 }
 
-func (ctrl *InstancesController) CheckEdgeExist(ctx context.Context, spUuid string, i *pb.Instance) error {
+func (ctrl *instancesController) CheckEdgeExist(ctx context.Context, spUuid string, i *pb.Instance) error {
 	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
 	if i.BillingPlan == nil {
 		log.Debug("Billing plan is not provided, skipping")
 		return nil
 	}
 
-	ok, err := EdgeExist(ctx, ctrl.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, spUuid, i.BillingPlan.Uuid)
+	ok, err := edgeExist(ctx, ctrl.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, spUuid, i.BillingPlan.Uuid)
 	if err != nil {
 		return err
 	}
@@ -892,7 +940,7 @@ func (ctrl *InstancesController) CheckEdgeExist(ctx context.Context, spUuid stri
 	return nil
 }
 
-func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
+func (ctrl *instancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
 	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
 	if i.BillingPlan == nil {
 		log.Debug("Billing plan is not provided, skipping")
@@ -945,7 +993,7 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 	return nil
 }
 
-func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status spb.NoCloudStatus) (err error) {
+func (ctrl *instancesController) SetStatus(ctx context.Context, inst *pb.Instance, status spb.NoCloudStatus) (err error) {
 	log := ctrl.log.Named("SetStatus")
 
 	mask := &pb.Instance{
@@ -989,7 +1037,7 @@ func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instanc
 	return nil
 }
 
-func (ctrl *InstancesController) SetState(ctx context.Context, inst *pb.Instance, state stpb.NoCloudState) (err error) {
+func (ctrl *instancesController) SetState(ctx context.Context, inst *pb.Instance, state stpb.NoCloudState) (err error) {
 	mask := &pb.Instance{
 		State: &stpb.State{
 			State: state,
@@ -999,7 +1047,7 @@ func (ctrl *InstancesController) SetState(ctx context.Context, inst *pb.Instance
 	return err
 }
 
-func (ctrl *InstancesController) TransferInst(ctx context.Context, oldIGEdge string, newIG driver.DocumentID, inst driver.DocumentID) error {
+func (ctrl *instancesController) TransferInst(ctx context.Context, oldIGEdge string, newIG driver.DocumentID, inst driver.DocumentID) error {
 	log := ctrl.log.Named("Transfer")
 	log.Debug("Transfer InstancesGroup", zap.String("group", inst.String()), zap.String("srvEdge", oldIGEdge), zap.String("to", newIG.String()))
 
@@ -1018,7 +1066,7 @@ func (ctrl *InstancesController) TransferInst(ctx context.Context, oldIGEdge str
 	return nil
 }
 
-func (ctrl *InstancesController) GetEdge(ctx context.Context, inboundNode string, collection string) (string, error) {
+func (ctrl *instancesController) GetEdge(ctx context.Context, inboundNode string, collection string) (string, error) {
 	log := ctrl.log.Named("GetEdge")
 	log.Debug("Getting edge", zap.String("nodeId", inboundNode))
 	c, err := ctrl.db.Query(ctx, getEdge, map[string]interface{}{
@@ -1062,7 +1110,7 @@ LET sp = LAST(
 return sp._key
 `
 
-func (ctrl *InstancesController) getSp(ctx context.Context, uuid string) (string, error) {
+func (ctrl *instancesController) getSp(ctx context.Context, uuid string) (string, error) {
 	log := ctrl.log.Named("GetSp")
 	c, err := ctrl.db.Query(ctx, getSp, map[string]interface{}{
 		"node":        driver.NewDocumentID(schema.INSTANCES_COL, uuid),
@@ -1085,3 +1133,26 @@ func (ctrl *InstancesController) getSp(ctx context.Context, uuid string) (string
 
 	return sp, nil
 }
+
+const getInstanceWithAccessLevel = `
+FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
+GRAPH @permissions SORT path.edges[0].level
+	LET bp = DOCUMENT(CONCAT(@bps, "/", path.vertices[-1].billing_plan.uuid))
+    RETURN MERGE(path.vertices[-1], {
+        uuid: path.vertices[-1]._key,
+        billing_plan: {
+			uuid: bp._key,
+			title: bp.title,
+			type: bp.type,
+			kind: bp.kind,
+			resources: bp.resources,
+			products: {
+			    [path.vertices[-1].product]: bp.products[path.vertices[-1].product],
+            },
+			meta: bp.meta,
+			fee: bp.fee,
+			software: bp.software
+        },
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
+	})
+`

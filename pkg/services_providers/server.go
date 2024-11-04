@@ -18,15 +18,15 @@ package services_providers
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
@@ -50,13 +50,14 @@ type ServicesProviderServer struct {
 	db                driver.Database
 	ctrl              graph.ServicesProvidersController
 	ns_ctrl           graph.NamespacesController
+	ca                graph.CommonActionsController
 
 	log *zap.Logger
 
-	rdb *redis.Client
+	rdb redisdb.Client
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection, rdb *redis.Client) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq rabbitmq.Connection, rdb redisdb.Client) *ServicesProviderServer {
 	s := s.NewStatesPubSub(log, &db, rbmq)
 	p := p.NewPublicDataPubSub(log, &db, rbmq)
 	statesCh := s.Channel()
@@ -69,6 +70,7 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.C
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl:           graph.NewNamespacesController(log, db),
+		ca:                graph.NewCommonActionsController(log, db),
 		drivers:           make(map[string]driverpb.DriverServiceClient),
 		extention_servers: make(map[string]sppb.ServicesProvidersExtentionsServiceClient),
 		rdb:               rdb,
@@ -227,7 +229,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -279,7 +281,7 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -389,7 +391,7 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	isRoot := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	isRoot := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 
 	r, err := s.ctrl.List(ctx, requestor, isRoot)
 	if err != nil {
@@ -418,7 +420,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -475,13 +477,13 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
 	for _, plan := range req.GetPlans() {
-		err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, plan)
+		err = s.ctrl.UnbindPlan(ctx, req.Uuid, plan)
 		if err != nil {
 			return nil, err
 		}

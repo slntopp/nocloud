@@ -10,21 +10,33 @@ import (
 	"go.uber.org/zap"
 )
 
-type AddonsController struct {
+type AddonsController interface {
+	Create(ctx context.Context, addon *pb.Addon) (*pb.Addon, error)
+	Update(ctx context.Context, addon *pb.Addon) (*pb.Addon, error)
+	CreateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error)
+	UpdateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error)
+	Delete(ctx context.Context, uuid string) error
+	Get(ctx context.Context, uuid string) (*pb.Addon, error)
+	List(ctx context.Context, req *pb.ListAddonsRequest) ([]*pb.Addon, error)
+	Count(ctx context.Context, req *pb.CountAddonsRequest) ([]*pb.Addon, error)
+	GetUnique(ctx context.Context) (map[string]any, error)
+}
+
+type addonsController struct {
 	log *zap.Logger
 	col driver.Collection
 }
 
-func NewAddonsController(logger *zap.Logger, db driver.Database) *AddonsController {
+func NewAddonsController(logger *zap.Logger, db driver.Database) AddonsController {
 	ctx := context.TODO()
 	log := logger.Named("AddonsController")
 	addons := GetEnsureCollection(log, ctx, db, schema.ADDONS_COL)
-	return &AddonsController{
+	return &addonsController{
 		log: log, col: addons,
 	}
 }
 
-func (c *AddonsController) Create(ctx context.Context, addon *pb.Addon) (*pb.Addon, error) {
+func (c *addonsController) Create(ctx context.Context, addon *pb.Addon) (*pb.Addon, error) {
 	log := c.log.Named("Create")
 
 	document, err := c.col.CreateDocument(ctx, addon)
@@ -37,7 +49,7 @@ func (c *AddonsController) Create(ctx context.Context, addon *pb.Addon) (*pb.Add
 	return addon, nil
 }
 
-func (c *AddonsController) Update(ctx context.Context, addon *pb.Addon) (*pb.Addon, error) {
+func (c *addonsController) Update(ctx context.Context, addon *pb.Addon) (*pb.Addon, error) {
 	log := c.log.Named("Update")
 
 	_, err := c.col.ReplaceDocument(ctx, addon.GetUuid(), addon)
@@ -49,7 +61,7 @@ func (c *AddonsController) Update(ctx context.Context, addon *pb.Addon) (*pb.Add
 	return addon, nil
 }
 
-func (c *AddonsController) CreateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error) {
+func (c *addonsController) CreateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error) {
 	log := c.log.Named("Create")
 
 	meta_slice, _, err := c.col.CreateDocuments(ctx, addons)
@@ -65,7 +77,7 @@ func (c *AddonsController) CreateBulk(ctx context.Context, addons []*pb.Addon) (
 	return addons, nil
 }
 
-func (c *AddonsController) UpdateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error) {
+func (c *addonsController) UpdateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error) {
 	log := c.log.Named("Update")
 
 	var keys = make([]string, len(addons))
@@ -83,7 +95,7 @@ func (c *AddonsController) UpdateBulk(ctx context.Context, addons []*pb.Addon) (
 	return addons, nil
 }
 
-func (c *AddonsController) Delete(ctx context.Context, uuid string) error {
+func (c *addonsController) Delete(ctx context.Context, uuid string) error {
 	log := c.log.Named("Update")
 
 	_, err := c.col.RemoveDocument(ctx, uuid)
@@ -95,7 +107,7 @@ func (c *AddonsController) Delete(ctx context.Context, uuid string) error {
 	return nil
 }
 
-func (c *AddonsController) Get(ctx context.Context, uuid string) (*pb.Addon, error) {
+func (c *addonsController) Get(ctx context.Context, uuid string) (*pb.Addon, error) {
 	log := c.log.Named("Get")
 
 	var addon pb.Addon
@@ -111,7 +123,7 @@ func (c *AddonsController) Get(ctx context.Context, uuid string) (*pb.Addon, err
 	return &addon, nil
 }
 
-func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) ([]*pb.Addon, error) {
+func (c *addonsController) List(ctx context.Context, req *pb.ListAddonsRequest) ([]*pb.Addon, error) {
 	log := c.log.Named("Get")
 
 	query := "LET adds = (FOR a in @@addons "
@@ -177,7 +189,7 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 	return addons, nil
 }
 
-func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest) ([]*pb.Addon, error) {
+func (c *addonsController) Count(ctx context.Context, req *pb.CountAddonsRequest) ([]*pb.Addon, error) {
 	log := c.log.Named("Get")
 
 	query := "LET adds = (FOR a in @@addons "
@@ -236,7 +248,7 @@ RETURN {
 }
 `
 
-func (c *AddonsController) GetUnique(ctx context.Context) (map[string]any, error) {
+func (c *addonsController) GetUnique(ctx context.Context) (map[string]any, error) {
 	cur, err := c.col.Database().Query(ctx, uniqueAddonQuery, map[string]interface{}{
 		"@addons": schema.ADDONS_COL,
 	})

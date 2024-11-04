@@ -18,10 +18,11 @@ package billing
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
-	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	epb "github.com/slntopp/nocloud-proto/events"
+	registrypb "github.com/slntopp/nocloud-proto/registry"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"slices"
 	"strings"
 
@@ -31,7 +32,6 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/arangodb/go-driver"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
@@ -49,16 +49,10 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-type Routine struct {
-	Name     string
-	LastExec string
-	Running  bool
-}
-
 type BillingServiceServer struct {
 	log *zap.Logger
 
-	rbmq                    *amqp.Connection
+	rbmq                    rabbitmq.Connection
 	ConsumerStatus          *healthpb.RoutineStatus
 	InstancesConsumerStatus *healthpb.RoutineStatus
 
@@ -69,13 +63,20 @@ type BillingServiceServer struct {
 	records      graph.RecordsController
 	currencies   graph.CurrencyController
 	accounts     graph.AccountsController
-	descriptions *graph.DescriptionsController
-	instances    *graph.InstancesController
+	descriptions graph.DescriptionsController
+	instances    graph.InstancesController
 	services     graph.ServicesController
 	sp           graph.ServicesProvidersController
 	addons       graph.AddonsController
+	promocodes   graph.PromocodesController
+	ca           graph.CommonActionsController
 
-	db driver.Database
+	db  driver.Database
+	rdb redisdb.Client
+
+	settingsClient settingspb.SettingsServiceClient
+	accClient      registrypb.AccountsServiceClient
+	eventsClient   epb.EventsServiceClient
 
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
@@ -83,30 +84,38 @@ type BillingServiceServer struct {
 	inv  *healthpb.RoutineStatus
 
 	drivers map[string]driverpb.DriverServiceClient
-
-	whmcsData       whmcs_gateway.WhmcsData
-	invoicesManager invoices_manager.InvoicesManager
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection, rdb *redis.Client, invMng invoices_manager.InvoicesManager) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient,
+	settingsClient settingspb.SettingsServiceClient, accClient registrypb.AccountsServiceClient, eventsClient epb.EventsServiceClient,
+	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
+	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
+	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
+	ca graph.CommonActionsController, promocodes graph.PromocodesController) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
-		rbmq:         conn,
-		log:          log,
-		nss:          graph.NewNamespacesController(log, db),
-		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
-		transactions: graph.NewTransactionsController(log.Named("TransactionsController"), db),
-		records:      graph.NewRecordsController(log.Named("RecordsController"), db),
-		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
-		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
-		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
-		services:     graph.NewServicesController(log.Named("ServicesController"), db, conn),
-		descriptions: graph.NewDescriptionsController(log, db),
-		instances:    graph.NewInstancesController(log, db, conn),
-		sp:           graph.NewServicesProvidersController(log, db),
-		addons:       *graph.NewAddonsController(log, db),
-		db:           db,
-		drivers:      make(map[string]driverpb.DriverServiceClient),
+		rbmq:           conn,
+		log:            log,
+		nss:            nss,
+		plans:          plans,
+		transactions:   transactions,
+		records:        records,
+		currencies:     currencies,
+		accounts:       accounts,
+		invoices:       invoices,
+		services:       services,
+		descriptions:   descriptions,
+		instances:      instances,
+		sp:             sp,
+		addons:         addons,
+		promocodes:     promocodes,
+		ca:             ca,
+		db:             db,
+		rdb:            rdb,
+		drivers:        drivers,
+		settingsClient: settingsClient,
+		accClient:      accClient,
+		eventsClient:   eventsClient,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
@@ -150,31 +159,9 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		},
 	}
 
-	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
-	if err != nil {
-		log.Fatal("Can't get whmcs credentials", zap.Error(err))
-	}
-	s.whmcsData = whmcsData
-	s.invoicesManager = invMng
-
 	s.migrate()
 
 	return s
-}
-
-func (s *BillingServiceServer) GetPaymentGateway(t string) PaymentGateway {
-	switch t {
-	case "nocloud":
-		return nocloud_gateway.NewNoCloudGateway()
-	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoicesManager)
-	default:
-		return whmcs_gateway.NewWhmcsGateway(s.whmcsData, &s.accounts, &s.invoicesManager)
-	}
-}
-
-func (s *BillingServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
-	s.drivers[type_key] = client
 }
 
 func (s *BillingServiceServer) migrate() {
@@ -250,7 +237,7 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -304,7 +291,7 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -381,7 +368,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -450,13 +437,13 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, req *connect.Request
 	}
 
 	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, namespaceId, access.Level_ROOT)
 
 	if ok {
 		return resp, nil
 	}
 
-	ok = graph.HasAccess(ctx, s.db, requestor, p.ID, access.Level_READ)
+	ok = s.ca.HasAccess(ctx, requestor, p.ID, access.Level_READ)
 
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
@@ -601,7 +588,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	if req.GetUuid() != "" {
 		return s._HandleGetSinglePlan(ctx, requestor, req.GetUuid(), req.GetAnonymously())
@@ -754,7 +741,7 @@ func (s *BillingServiceServer) PlansUnique(ctx context.Context, _req *connect.Re
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	type Response struct {
 		Total  int                    `json:"total"`
@@ -842,7 +829,7 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 	}
 
 	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, namespaceId, access.Level_ROOT)
 
 	result := make(map[string]*structpb.Value)
 
@@ -881,7 +868,7 @@ func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, acc, uu
 		return nil, status.Error(codes.NotFound, "Plan doesn't exist")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	if anonymously && p.Public {
 		resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})

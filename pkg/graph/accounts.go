@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -36,12 +37,35 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type AccountsController interface {
+	Get(ctx context.Context, id string) (Account, error)
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Account, error)
+	List(ctx context.Context, requestor Account, req_depth int32) ([]Account, error)
+	ListImproved(ctx context.Context,
+		requester string,
+		depth int32,
+		offset, limit uint64,
+		field, sort string,
+		filters map[string]*structpb.Value) (accounts []Account, count int64, active int64, err error)
+	Exists(ctx context.Context, id string) (bool, error)
+	Create(ctx context.Context, acc pb.Account) (Account, error)
+	Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error)
+	Delete(ctx context.Context, id string) error
+	GetNamespace(ctx context.Context, a Account) (Namespace, error)
+	SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials, role string) error
+	UpdateCredentials(ctx context.Context, cred string, c credentials.Credentials) (err error)
+	GetAccountOrOwnerAccountIfPresent(ctx context.Context, id string) (Account, error)
+	GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool)
+	Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool)
+	EnsureRootExists(passwd string) (err error)
+}
+
 type Account struct {
 	*pb.Account
 	driver.DocumentMeta
 }
 
-type AccountsController struct {
+type accountsController struct {
 	col     driver.Collection // Accounts Collection
 	cred    driver.Collection // Credentials Collection
 	ns_ctrl NamespacesController
@@ -70,14 +94,17 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
-	return AccountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
+	return &accountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
 }
 
-func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, error) {
+func (ctrl *accountsController) Get(ctx context.Context, id string) (Account, error) {
 	if id == "me" {
 		id = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
+
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	account, err := getWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
 		ctrl.log.Error("Error getting account", zap.Error(err))
 		return Account{}, err
@@ -86,14 +113,18 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 	return account, err
 }
 
-func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req_depth int32) ([]Account, error) {
+func (ctrl *accountsController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Account, error) {
+	return getWithAccess[Account](ctx, ctrl.col.Database(), from, driver.NewDocumentID(schema.ACCOUNTS_COL, id))
+}
+
+func (ctrl *accountsController) List(ctx context.Context, requestor Account, req_depth int32) ([]Account, error) {
 	me := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if req_depth < 2 {
 		req_depth = 2
 	}
 
-	r, err := ListWithAccess[Account](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.ACCOUNTS_COL, req_depth)
+	r, err := listWithAccess[Account](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.ACCOUNTS_COL, req_depth)
 	if err != nil {
 		return r, err
 	}
@@ -107,11 +138,31 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 	return r, err
 }
 
-func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, error) {
+func (ctrl *accountsController) ListImproved(ctx context.Context,
+	requester string,
+	depth int32,
+	offset, limit uint64,
+	field, sort string,
+	filters map[string]*structpb.Value) ([]Account, int64, int64, error) {
+
+	pool, err := listAccounts[Account](ctx, ctrl.log, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester), schema.ACCOUNTS_COL, depth, offset, limit, field, sort, filters)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	result := make([]Account, 0)
+	for _, acc := range pool.Result {
+		result = append(result, acc)
+	}
+
+	return result, int64(pool.Count), int64(pool.Active), nil
+}
+
+func (ctrl *accountsController) Exists(ctx context.Context, id string) (bool, error) {
 	return ctrl.col.DocumentExists(context.TODO(), id)
 }
 
-func (ctrl *AccountsController) Create(ctx context.Context, acc pb.Account) (Account, error) {
+func (ctrl *accountsController) Create(ctx context.Context, acc pb.Account) (Account, error) {
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
 	if err != nil {
 		return Account{}, err
@@ -120,7 +171,7 @@ func (ctrl *AccountsController) Create(ctx context.Context, acc pb.Account) (Acc
 	return Account{&acc, meta}, err
 }
 
-func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error) {
+func (ctrl *accountsController) Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error) {
 	_, err = ctrl.col.UpdateDocument(ctx, acc.Key, patch)
 	return err
 }
@@ -166,14 +217,14 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 func (acc *Account) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, acc.ID)
+	err := deleteRecursive(ctx, db, acc.ID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ctrl *AccountsController) Delete(ctx context.Context, id string) error {
+func (ctrl *accountsController) Delete(ctx context.Context, id string) error {
 	acc, err := ctrl.Get(ctx, id)
 	if err != nil {
 		return err
@@ -190,7 +241,7 @@ FILTER IS_SAME_COLLECTION(@@kind, node)
     RETURN MERGE(doc, { uuid: node._key })
 `
 
-func (ctrl *AccountsController) GetNamespace(ctx context.Context, a Account) (Namespace, error) {
+func (ctrl *accountsController) GetNamespace(ctx context.Context, a Account) (Namespace, error) {
 	c, err := ctrl.col.Database().Query(ctx, GetAccountNamespace, map[string]interface{}{
 		"@kind": schema.NAMESPACES_COL,
 		"from":  driver.NewDocumentID(schema.ACCOUNTS_COL, a.GetUuid()),
@@ -209,7 +260,7 @@ func (ctrl *AccountsController) GetNamespace(ctx context.Context, a Account) (Na
 }
 
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
-func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials, role string) error {
+func (ctrl *accountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials, role string) error {
 	cred, err := ctrl.cred.CreateDocument(ctx, c)
 	if err != nil {
 		return status.Error(codes.Internal, "Couldn't create credentials")
@@ -229,19 +280,23 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	return nil
 }
 
-func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred string, c credentials.Credentials) (err error) {
+func (ctrl *accountsController) UpdateCredentials(ctx context.Context, cred string, c credentials.Credentials) (err error) {
 	_, err = ctrl.cred.UpdateDocument(ctx, cred, c)
 	return err
 }
 
-func (ctrl *AccountsController) GetAccountOrOwnerAccountIfPresent(ctx context.Context, id string) (Account, error) {
-	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
+func (ctrl *accountsController) GetAccountOrOwnerAccountIfPresent(ctx context.Context, id string) (Account, error) {
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	account, err := getWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester),
+		driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
 		ctrl.log.Error("Error getting account", zap.Error(err))
 		return Account{}, err
 	}
 	if account.GetAccountOwner() != "" {
-		account, err = GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, account.GetAccountOwner()))
+		account, err = getWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, requester),
+			driver.NewDocumentID(schema.ACCOUNTS_COL, account.GetAccountOwner()))
 		if err != nil {
 			ctrl.log.Error("Error getting account owner", zap.Error(err))
 			return Account{}, err
@@ -253,7 +308,7 @@ func (ctrl *AccountsController) GetAccountOrOwnerAccountIfPresent(ctx context.Co
 	return account, nil
 }
 
-func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool) {
+func (ctrl *accountsController) GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool) {
 	cred_edge := auth_type + "-" + acc.Key
 	ctrl.log.Debug("Looking for Credentials Edge(Link)", zap.String("key", cred_edge))
 	var edge credentials.Link
@@ -280,7 +335,7 @@ func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col dri
 }
 
 // Return Account authorisable by this Credentials
-func Authorisable(ctx context.Context, cred *credentials.Credentials, db driver.Database) (Account, bool) {
+func authorisable(ctx context.Context, cred *credentials.Credentials, db driver.Database) (Account, bool) {
 	query := `FOR account IN 1 INBOUND @credentials GRAPH @credentials_graph RETURN account`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"credentials":       cred,
@@ -296,7 +351,7 @@ func Authorisable(ctx context.Context, cred *credentials.Credentials, db driver.
 	return r, err == nil
 }
 
-func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool) {
+func (ctrl *accountsController) Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool) {
 	log := ctrl.log.Named("Authorize")
 
 	log.Debug("Request received", zap.String("type", auth_type))
@@ -309,12 +364,12 @@ func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string,
 	}
 	log.Debug("Found credentials", zap.Any("credentials", credentials))
 
-	account, ok := Authorisable(ctx, &credentials, ctrl.col.Database())
+	account, ok := authorisable(ctx, &credentials, ctrl.col.Database())
 	ctrl.log.Debug("Authorized account", zap.Bool("result", ok), zap.Any("account", account))
 	return account, ok
 }
 
-func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
+func (ctrl *accountsController) EnsureRootExists(passwd string) (err error) {
 	exists, err := ctrl.col.DocumentExists(context.TODO(), schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		return err

@@ -21,15 +21,17 @@ type CurrencyServiceServer struct {
 	log *zap.Logger
 
 	ctrl graph.CurrencyController
+	ca   graph.CommonActionsController
 
 	db driver.Database
 }
 
-func NewCurrencyServiceServer(log *zap.Logger, db driver.Database) *CurrencyServiceServer {
+func NewCurrencyServiceServer(log *zap.Logger, db driver.Database, currencies graph.CurrencyController, ca graph.CommonActionsController) *CurrencyServiceServer {
 	return &CurrencyServiceServer{
 		log:  log.Named("CurrencyServer"),
 		db:   db,
-		ctrl: graph.NewCurrencyController(log, db),
+		ctrl: currencies,
+		ca:   ca,
 	}
 }
 
@@ -38,7 +40,7 @@ func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.R
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
@@ -62,7 +64,7 @@ func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.R
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 	if req.Currency == nil {
@@ -92,7 +94,7 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *conne
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
@@ -121,7 +123,7 @@ func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, r *conne
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
@@ -137,7 +139,7 @@ func (s *CurrencyServiceServer) DeleteExchangeRate(ctx context.Context, r *conne
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req))
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
@@ -165,7 +167,7 @@ func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Re
 	var isAdmin bool
 	requester, ok := ctx.Value(nocloud.NoCloudAccount).(string)
 	if ok {
-		isAdmin = graph.HasAccess(ctx, s.db, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
+		isAdmin = s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	}
 
 	currencies, err := s.ctrl.GetCurrencies(ctx, isAdmin)

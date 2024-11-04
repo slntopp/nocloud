@@ -1,15 +1,36 @@
 with-expecter: true
 outpkg: "{{.PackageName}}_mocks"
 packages:
-  github.com/slntopp/nocloud/pkg/billing:
+  github.com/slntopp/nocloud/pkg/graph:
     interfaces:
       RecordsController:
+      AccountsController:
+      AddonsController:
+      BillingPlansController:
+      CommonActionsController:
+      CurrencyController:
+      DescriptionsController:
+      InstancesController:
+      InvoicesController:
+      InstancesGroupsController:
+      NamespacesController:
+      PromocodesController:
+      ServicesController:
+      ServicesProvidersController:
+      ShowcasesController:
+      TransactionsController:
+  github.com/slntopp/nocloud/pkg/nocloud/redis:
+    interfaces:
+      Client:
+  github.com/slntopp/nocloud/pkg/nocloud/rabbitmq:
+    interfaces:
+      Connection:
+      Channel:
   # Foreign Packages
   github.com/go-redis/redis/v8:
     interfaces:
       UniversalClient:
       Cmdable:
-
   github.com/arangodb/go-driver:
     interfaces:
       Database:

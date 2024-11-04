@@ -9,7 +9,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.uber.org/zap"
 	"testing"
 	"time"
 )
@@ -33,7 +32,8 @@ func TestConsumeMock(t *testing.T) {
 	currMigrationMock(t, db, col)
 	db.On("CollectionExists", ctx, "Records").Return(true, nil)
 	db.On("Collection", ctx, "Records").Return(col, nil)
-	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+	//ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+	ctrl := RecordsServiceServer{}
 
 	now := time.Now().Unix()
 
@@ -74,7 +74,8 @@ func TestConsumeMock_NotNormal(t *testing.T) {
 	currMigrationMock(t, db, col)
 	db.On("CollectionExists", ctx, "Records").Return(true, nil)
 	db.On("Collection", ctx, "Records").Return(col, nil)
-	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+	//ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+	ctrl := RecordsServiceServer{}
 
 	now := time.Now().Unix()
 
@@ -139,7 +140,8 @@ func TestConsumeMock_ZeroTotal(t *testing.T) {
 	currMigrationMock(t, db, col)
 	db.On("CollectionExists", ctx, "Records").Return(true, nil)
 	db.On("Collection", ctx, "Records").Return(col, nil)
-	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+	//ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+	ctrl := RecordsServiceServer{}
 
 	now := time.Now().Unix()
 

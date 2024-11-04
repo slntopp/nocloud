@@ -18,9 +18,9 @@ package graph
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
 	"github.com/arangodb/go-driver"
-	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	hasher "github.com/slntopp/nocloud-proto/hasher"
 	spb "github.com/slntopp/nocloud-proto/services"
@@ -32,6 +32,19 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
+
+type ServicesController interface {
+	IGController() InstancesGroupsController
+	Create(ctx context.Context, service *spb.Service) (*spb.Service, error)
+	Update(ctx context.Context, service *spb.Service, hash bool) error
+	Get(ctx context.Context, acc, key string) (*spb.Service, error)
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Service, error)
+	GetServiceInstancesUuids(key string) ([]string, error)
+	List(ctx context.Context, requestor string, request *spb.ListRequest) (*ServicesResult, error)
+	Join(ctx context.Context, service *spb.Service, ns *Namespace, access access.Level, role string) error
+	Delete(ctx context.Context, s *spb.Service) (err error)
+	SetStatus(ctx context.Context, s *spb.Service, status stpb.NoCloudStatus) (err error)
+}
 
 type Service struct {
 	driver.DocumentMeta
@@ -46,16 +59,16 @@ type Provision struct {
 	driver.DocumentMeta
 }
 
-type ServicesController struct {
+type servicesController struct {
 	log *zap.Logger
 
 	col     driver.Collection // Services Collection
-	ig_ctrl *InstancesGroupsController
+	ig_ctrl InstancesGroupsController
 
 	db driver.Database
 }
 
-func NewServicesController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) ServicesController {
+func NewServicesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) ServicesController {
 	log.Debug("New Services Controller creating")
 	ctx := context.TODO()
 
@@ -67,15 +80,17 @@ func NewServicesController(log *zap.Logger, db driver.Database, conn *amqp091.Co
 	})
 	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2SERV, schema.NAMESPACES_COL, schema.SERVICES_COL)
 
-	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db, conn), db: db}
+	ig := NewInstancesGroupsController(log, db, conn)
+
+	return &servicesController{log: log, col: col, ig_ctrl: ig, db: db}
 }
 
-func (ctrl *ServicesController) IGController() *InstancesGroupsController {
+func (ctrl *servicesController) IGController() InstancesGroupsController {
 	return ctrl.ig_ctrl
 }
 
 // Create Service and underlaying entities and store in DB
-func (ctrl *ServicesController) Create(ctx context.Context, service *spb.Service) (*spb.Service, error) {
+func (ctrl *servicesController) Create(ctx context.Context, service *spb.Service) (*spb.Service, error) {
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Service", zap.Any("service", service))
 
@@ -108,8 +123,12 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *spb.Service
 	return service, nil
 }
 
+func (ctrl *servicesController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Service, error) {
+	return getWithAccess[Service](ctx, ctrl.col.Database(), from, driver.NewDocumentID(schema.SERVICES_COL, id))
+}
+
 // Update Service and underlaying entities and store in DB
-func (ctrl *ServicesController) Update(ctx context.Context, service *spb.Service, hash bool) error {
+func (ctrl *servicesController) Update(ctx context.Context, service *spb.Service, hash bool) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Service", zap.Any("service", service))
 
@@ -242,7 +261,7 @@ LET instances_groups = (
 RETURN MERGE(service, { uuid: service._key, instances_groups })
 `
 
-func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*spb.Service, error) {
+func (ctrl *servicesController) Get(ctx context.Context, acc, key string) (*spb.Service, error) {
 	ctrl.log.Debug("Getting Service", zap.String("key", key))
 
 	requestor := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
@@ -278,7 +297,7 @@ FOR group IN 1 OUTBOUND @service GRAPH @permissions
     	RETURN i._key
 `
 
-func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, error) {
+func (ctrl *servicesController) GetServiceInstancesUuids(key string) ([]string, error) {
 	ctrl.log.Debug("Getting Service", zap.String("key", key))
 
 	id := driver.NewDocumentID(schema.SERVICES_COL, key)
@@ -360,7 +379,7 @@ type ServicesResult struct {
 }
 
 // List Services in DB
-func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *spb.ListRequest) (*ServicesResult, error) {
+func (ctrl *servicesController) List(ctx context.Context, requestor string, request *spb.ListRequest) (*ServicesResult, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
 	depth := request.GetDepth()
@@ -446,7 +465,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 }
 
 // Join Service into Namespace
-func (ctrl *ServicesController) Join(ctx context.Context, service *spb.Service, ns *Namespace, access access.Level, role string) error {
+func (ctrl *servicesController) Join(ctx context.Context, service *spb.Service, ns *Namespace, access access.Level, role string) error {
 	ctrl.log.Debug("Joining service to namespace")
 	edge, _ := ctrl.db.Collection(ctx, schema.NS2SERV)
 	_, err := edge.CreateDocument(ctx, Access{
@@ -458,7 +477,7 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *spb.Service, 
 	return err
 }
 
-func (ctrl *ServicesController) Delete(ctx context.Context, s *spb.Service) (err error) {
+func (ctrl *servicesController) Delete(ctx context.Context, s *spb.Service) (err error) {
 	log := ctrl.log.Named("Service.Delete")
 	log.Debug("Deleting Service", zap.String("status", s.GetStatus().String()))
 	if s.GetStatus() != stpb.NoCloudStatus_INIT && s.GetStatus() != stpb.NoCloudStatus_DOWN {
@@ -468,7 +487,7 @@ func (ctrl *ServicesController) Delete(ctx context.Context, s *spb.Service) (err
 	return ctrl.SetStatus(ctx, s, stpb.NoCloudStatus_DEL)
 }
 
-func (ctrl *ServicesController) SetStatus(ctx context.Context, s *spb.Service, status stpb.NoCloudStatus) (err error) {
+func (ctrl *servicesController) SetStatus(ctx context.Context, s *spb.Service, status stpb.NoCloudStatus) (err error) {
 	mask := &spb.Service{
 		Status: status,
 	}

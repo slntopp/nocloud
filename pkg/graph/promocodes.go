@@ -10,21 +10,32 @@ import (
 	"time"
 )
 
-type PromocodesController struct {
+type PromocodesController interface {
+	Create(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error)
+	Update(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error)
+	Delete(ctx context.Context, uuid string) error
+	Get(ctx context.Context, uuid string) (*pb.Promocode, error)
+	GetByCode(ctx context.Context, code string) (*pb.Promocode, error)
+	List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error)
+	Count(ctx context.Context) ([]*pb.Promocode, error)
+	AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
+}
+
+type promocodesController struct {
 	log *zap.Logger
 	col driver.Collection
 }
 
-func NewPromocodesController(logger *zap.Logger, db driver.Database) *PromocodesController {
+func NewPromocodesController(logger *zap.Logger, db driver.Database) PromocodesController {
 	ctx := context.TODO()
 	log := logger.Named("PromocodesController")
 	promos := GetEnsureCollection(log, ctx, db, schema.PROMOCODES_COL)
-	return &PromocodesController{
+	return &promocodesController{
 		log: log, col: promos,
 	}
 }
 
-func (c *PromocodesController) Create(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error) {
+func (c *promocodesController) Create(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error) {
 	log := c.log.Named("Create")
 
 	document, err := c.col.CreateDocument(ctx, promo)
@@ -37,7 +48,7 @@ func (c *PromocodesController) Create(ctx context.Context, promo *pb.Promocode) 
 	return promo, nil
 }
 
-func (c *PromocodesController) Update(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error) {
+func (c *promocodesController) Update(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error) {
 	log := c.log.Named("Update")
 
 	_, err := c.col.ReplaceDocument(ctx, promo.GetUuid(), promo)
@@ -49,7 +60,7 @@ func (c *PromocodesController) Update(ctx context.Context, promo *pb.Promocode) 
 	return promo, nil
 }
 
-func (c *PromocodesController) Delete(ctx context.Context, uuid string) error {
+func (c *promocodesController) Delete(ctx context.Context, uuid string) error {
 	log := c.log.Named("Delete")
 
 	_, err := c.col.RemoveDocument(ctx, uuid)
@@ -61,7 +72,7 @@ func (c *PromocodesController) Delete(ctx context.Context, uuid string) error {
 	return nil
 }
 
-func (c *PromocodesController) Get(ctx context.Context, uuid string) (*pb.Promocode, error) {
+func (c *promocodesController) Get(ctx context.Context, uuid string) (*pb.Promocode, error) {
 	log := c.log.Named("Get")
 
 	var promo pb.Promocode
@@ -78,7 +89,7 @@ func (c *PromocodesController) Get(ctx context.Context, uuid string) (*pb.Promoc
 
 const getByCodeQuery = `FOR p IN @@promocodes FILTER p.code == @code RETURN p`
 
-func (c *PromocodesController) GetByCode(ctx context.Context, code string) (*pb.Promocode, error) {
+func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.Promocode, error) {
 	log := c.log.Named("GetByCode")
 
 	cur, err := c.col.Database().Query(ctx, getByCodeQuery, map[string]interface{}{
@@ -103,7 +114,7 @@ func (c *PromocodesController) GetByCode(ctx context.Context, code string) (*pb.
 	return &promo, nil
 }
 
-func (c *PromocodesController) List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error) {
+func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error) {
 	log := c.log.Named("List")
 
 	query := "LET promo = (FOR p in @@promocodes "
@@ -165,7 +176,7 @@ func (c *PromocodesController) List(ctx context.Context, req *pb.ListPromocodesR
 	return promo, nil
 }
 
-func (c *PromocodesController) Count(ctx context.Context) ([]*pb.Promocode, error) {
+func (c *promocodesController) Count(ctx context.Context) ([]*pb.Promocode, error) {
 	log := c.log.Named("Count")
 
 	query := "LET promo = (FOR p in @@promocodes RETURN merge(p, {uuid: p._key})) RETURN promo"
@@ -189,7 +200,7 @@ func (c *PromocodesController) Count(ctx context.Context) ([]*pb.Promocode, erro
 	return promo, nil
 }
 
-func (c *PromocodesController) AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error {
+func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error {
 	log := c.log.Named("AddEntry")
 
 	if err := validateEntry(entry); err != nil {

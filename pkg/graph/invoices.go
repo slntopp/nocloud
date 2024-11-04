@@ -14,6 +14,17 @@ import (
 	"time"
 )
 
+type InvoicesController interface {
+	TransactionsAPI
+	DecodeInvoice(source interface{}, dest *Invoice) error
+	ParseNumberIntoTemplate(template string, number int, date time.Time) string
+	Create(ctx context.Context, tx *Invoice) (*Invoice, error)
+	Get(ctx context.Context, uuid string) (*Invoice, error)
+	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
+	Patch(ctx context.Context, id string, patch map[string]interface{}) error
+	List(ctx context.Context) ([]*Invoice, error)
+}
+
 type InvoiceNumberMeta struct {
 	NumericNumber  int    `json:"numeric_number"`
 	NumberTemplate string `json:"number_template"`
@@ -25,7 +36,7 @@ type Invoice struct {
 	driver.DocumentMeta
 }
 
-type InvoicesController struct {
+type invoicesController struct {
 	col driver.Collection // Billing Plans collection
 
 	log *zap.Logger
@@ -38,12 +49,47 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
-	return InvoicesController{
+	return &invoicesController{
 		log: log, col: col,
 	}
 }
 
-func (ctrl *InvoicesController) DecodeInvoice(source interface{}, dest *Invoice) error {
+func (ctrl *invoicesController) BeginTransaction(ctx context.Context) (context.Context, error) {
+	cols := driver.TransactionCollections{
+		Write: []string{schema.INVOICES_COL},
+	}
+	if trID, ok := ctx.Value(AQLTransactionContextKey).(string); ok {
+		if status, err := ctrl.col.Database().TransactionStatus(ctx, driver.TransactionID(trID)); err == nil && status.Status == driver.TransactionRunning {
+			return ctx, errors.New("already processing another transaction")
+		}
+	}
+	trID, err := ctrl.col.Database().BeginTransaction(ctx, cols, &driver.BeginTransactionOptions{})
+	if err != nil {
+		return ctx, fmt.Errorf("error while starting transaction: %w", err)
+	}
+	ctx = driver.WithTransactionID(ctx, trID)
+	return context.WithValue(ctx, AQLTransactionContextKey, string(trID)), nil
+}
+
+func (ctrl *invoicesController) CommitTransaction(ctx context.Context) error {
+	trID, _ := ctx.Value(AQLTransactionContextKey).(string)
+	err := ctrl.col.Database().CommitTransaction(ctx, driver.TransactionID(trID), &driver.CommitTransactionOptions{})
+	if err != nil {
+		ctrl.log.Error("Failed to commit transaction", zap.Error(err))
+	}
+	return err
+}
+
+func (ctrl *invoicesController) AbortTransaction(ctx context.Context) error {
+	trID, _ := ctx.Value(AQLTransactionContextKey).(string)
+	err := ctrl.col.Database().AbortTransaction(ctx, driver.TransactionID(trID), &driver.AbortTransactionOptions{})
+	if err != nil {
+		ctrl.log.Error("Failed to abort transaction", zap.Error(err))
+	}
+	return err
+}
+
+func (ctrl *invoicesController) DecodeInvoice(source interface{}, dest *Invoice) error {
 	bytes, err := json.Marshal(source)
 	if err != nil {
 		return err
@@ -58,7 +104,7 @@ func (ctrl *InvoicesController) DecodeInvoice(source interface{}, dest *Invoice)
 	return nil
 }
 
-func (ctrl *InvoicesController) ParseNumberIntoTemplate(template string, number int, date time.Time) string {
+func (ctrl *invoicesController) ParseNumberIntoTemplate(template string, number int, date time.Time) string {
 	year := date.Year()
 	month := int(date.Month())
 	day := date.Day()
@@ -69,14 +115,14 @@ func (ctrl *InvoicesController) ParseNumberIntoTemplate(template string, number 
 	return template
 }
 
-func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoice, error) {
+func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoice, error) {
 	if tx.GetAccount() == "" {
 		return nil, errors.New("account is required")
 	}
 	if tx.Total == 0 {
 		return nil, errors.New("total is required")
 	}
-	meta, err := ctrl.col.CreateDocument(ctx, tx)
+	meta, err := ctrl.col.CreateDocument(driver.WithWaitForSync(ctx, true), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to create transaction", zap.Error(err))
 		return nil, err
@@ -85,7 +131,7 @@ func (ctrl *InvoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 	return tx, nil
 }
 
-func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
+func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
 	var tx = &Invoice{
 		Invoice:           &pb.Invoice{},
 		InvoiceNumberMeta: &InvoiceNumberMeta{},
@@ -105,8 +151,8 @@ func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 	return tx, err
 }
 
-func (ctrl *InvoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
-	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
+func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
+	_, err := ctrl.col.UpdateDocument(driver.WithWaitForSync(ctx, true), tx.GetUuid(), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to update invoice", zap.Error(err))
 		return nil, err
@@ -114,12 +160,12 @@ func (ctrl *InvoicesController) Update(ctx context.Context, tx *Invoice) (*Invoi
 	return tx, nil
 }
 
-func (ctrl *InvoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
-	_, err := ctrl.col.UpdateDocument(ctx, id, patch)
+func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
+	_, err := ctrl.col.UpdateDocument(driver.WithWaitForSync(ctx, true), id, patch)
 	return err
 }
 
-func (ctrl *InvoicesController) List(ctx context.Context) ([]*Invoice, error) {
+func (ctrl *invoicesController) List(ctx context.Context) ([]*Invoice, error) {
 	result := make([]*Invoice, 0)
 	cur, err := ctrl.col.Database().Query(ctx, "FOR doc IN "+ctrl.col.Name()+" RETURN MERGE(doc, {uuid: doc._key})", nil)
 	if err != nil {

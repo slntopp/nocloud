@@ -3,11 +3,11 @@ package sessions
 import (
 	"context"
 	"fmt"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud-proto/sessions"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -30,7 +30,7 @@ func New(_exp int64, user string) *sessions.Session {
 	}
 }
 
-func Store(rdb *redis.Client, user string, session *sessions.Session) error {
+func Store(rdb redisdb.Client, user string, session *sessions.Session) error {
 	data, err := proto.Marshal(session)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func Store(rdb *redis.Client, user string, session *sessions.Session) error {
 	return rdb.Set(context.Background(), key, data, ret).Err()
 }
 
-func Check(rdb *redis.Client, user, sid string) error {
+func Check(rdb redisdb.Client, user, sid string) error {
 	key := fmt.Sprintf("sessions:%s:%s", user, sid)
 
 	cmd := rdb.Get(context.Background(), key)
@@ -72,11 +72,11 @@ func Check(rdb *redis.Client, user, sid string) error {
 	return nil
 }
 
-func LogActivity(rdb *redis.Client, user, sid string, exp int64) error {
+func LogActivity(rdb redisdb.Client, user, sid string, exp int64) error {
 	return rdb.Set(context.Background(), fmt.Sprintf("sessions-activity:%s:%s", user, sid), time.Now().Unix(), time.Until(time.Unix(exp, 0))).Err()
 }
 
-func GetActivity(rdb *redis.Client, user string) (map[string]*timestamppb.Timestamp, error) {
+func GetActivity(rdb redisdb.Client, user string) (map[string]*timestamppb.Timestamp, error) {
 	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions-activity:%s:*", user)).Result()
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func GetActivity(rdb *redis.Client, user string) (map[string]*timestamppb.Timest
 	return result, nil
 }
 
-func Get(rdb *redis.Client, user string) ([]*sessions.Session, error) {
+func Get(rdb redisdb.Client, user string) ([]*sessions.Session, error) {
 	fmt.Println(user)
 	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions:%s:*", user)).Result()
 	if err != nil {
@@ -137,7 +137,7 @@ func Get(rdb *redis.Client, user string) ([]*sessions.Session, error) {
 	return result, nil
 }
 
-func Revoke(rdb *redis.Client, user, sid string) error {
+func Revoke(rdb redisdb.Client, user, sid string) error {
 	key := fmt.Sprintf("sessions:%s:%s", user, sid)
 	return rdb.Del(context.Background(), key).Err()
 }

@@ -22,17 +22,20 @@ type AddonsServer struct {
 
 	db driver.Database
 
-	addons *graph.AddonsController
+	addons graph.AddonsController
 	nss    graph.NamespacesController
+	ca     graph.CommonActionsController
 }
 
-func NewAddonsServer(logger *zap.Logger, db driver.Database) *AddonsServer {
+func NewAddonsServer(logger *zap.Logger, db driver.Database,
+	addons graph.AddonsController, nss graph.NamespacesController, ca graph.CommonActionsController) *AddonsServer {
 	log := logger.Named("AddonsServer")
 	return &AddonsServer{
 		log:    log,
 		db:     db,
-		addons: graph.NewAddonsController(log, db),
-		nss:    graph.NewNamespacesController(log.Named("NamespacesController"), db),
+		addons: addons,
+		nss:    nss,
+		ca:     ca,
 	}
 }
 
@@ -46,7 +49,7 @@ func (s *AddonsServer) Create(ctx context.Context, r *connect.Request[pb.Addon])
 		return nil, status.Error(codes.InvalidArgument, "kind is required")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -73,7 +76,7 @@ func (s *AddonsServer) Update(ctx context.Context, r *connect.Request[pb.Addon])
 		return nil, status.Error(codes.InvalidArgument, "kind is required")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -94,7 +97,7 @@ func (s *AddonsServer) CreateBulk(ctx context.Context, r *connect.Request[pb.Bul
 
 	req := r.Msg
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -123,7 +126,7 @@ func (s *AddonsServer) UpdateBulk(ctx context.Context, r *connect.Request[pb.Bul
 
 	req := r.Msg
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -157,7 +160,7 @@ func (s *AddonsServer) Get(ctx context.Context, r *connect.Request[pb.Addon]) (*
 		return nil, err
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) && !addon.GetPublic() {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) && !addon.GetPublic() {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -178,7 +181,7 @@ func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddon
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
-	if graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: addons})
 		return resp, nil
 	}
@@ -217,7 +220,7 @@ func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAdd
 		return nil, err
 	}
 
-	if graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(addons)), Unique: value})
 		return resp, nil
 	}
@@ -240,7 +243,7 @@ func (s *AddonsServer) Delete(ctx context.Context, r *connect.Request[pb.Addon])
 
 	req := r.Msg
 
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 

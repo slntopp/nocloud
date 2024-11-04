@@ -30,7 +30,6 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -44,7 +43,7 @@ func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, 
 		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
 
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
@@ -76,7 +75,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
@@ -90,7 +89,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
@@ -177,7 +176,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -261,7 +260,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
 
-	eventsClient.Publish(ctx, &epb.Event{
+	s.eventsClient.Publish(ctx, &epb.Event{
 		Type: "email",
 		Uuid: t.GetAccount(),
 		Key:  "transaction_created",
@@ -270,8 +269,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	if r.Transaction.Priority == pb.Priority_URGENT && r.Transaction.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -289,7 +288,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
+		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
 
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
@@ -328,13 +327,13 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		}
 
 		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
+			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
+			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -344,7 +343,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	} else {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
 			"@transactions":  schema.TRANSACTIONS_COL,
@@ -382,7 +381,7 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *conn
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
@@ -396,7 +395,7 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *conn
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
@@ -445,7 +444,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -486,8 +485,8 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 	if t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -505,7 +504,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
+		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
 
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
@@ -544,13 +543,13 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		}
 
 		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
+			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
+			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -647,10 +646,10 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
-	currencyConf := MakeCurrencyConf(ctx, log)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}

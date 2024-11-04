@@ -17,10 +17,10 @@ package graph
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
 
 	"github.com/arangodb/go-driver"
-	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
@@ -31,20 +31,28 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
-const (
-	INSTANCES_GROUPS_COL = "InstancesGroups"
-)
+type InstancesGroupsController interface {
+	Instances() InstancesController
+	Create(ctx context.Context, service driver.DocumentID, g *pb.InstancesGroup) error
+	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (InstancesGroup, error)
+	Delete(ctx context.Context, service string, g *pb.InstancesGroup) error
+	Update(ctx context.Context, ig, oldIg *pb.InstancesGroup) error
+	TransferIG(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error
+	Provide(ctx context.Context, group, sp string) error
+	SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error)
+	GetEdge(ctx context.Context, inboundNode string, collection string) (string, error)
+}
 
 type InstancesGroup struct {
 	driver.DocumentMeta
 	*pb.InstancesGroup
 }
 
-type InstancesGroupsController struct {
+type instancesGroupsController struct {
 	col   driver.Collection // Instances Groups Collection
 	graph driver.Graph
 
-	inst_ctrl *InstancesController
+	inst_ctrl InstancesController
 
 	log *zap.Logger
 
@@ -54,7 +62,7 @@ type InstancesGroupsController struct {
 	ig2sp   driver.Collection
 }
 
-func NewInstancesGroupsController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) *InstancesGroupsController {
+func NewInstancesGroupsController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) InstancesGroupsController {
 	log.Debug("New InstancesGroups Controller Creating")
 
 	ctx := context.TODO()
@@ -69,20 +77,21 @@ func NewInstancesGroupsController(log *zap.Logger, db driver.Database, conn *amq
 
 	serv2ig := GraphGetEdgeEnsure(log, ctx, graph, schema.SERV2IG, schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL)
 	ig2sp := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
+	inst := NewInstancesController(log, db, conn)
 
-	return &InstancesGroupsController{
-		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db, conn),
+	return &instancesGroupsController{
+		log: log.Named("InstancesGroupsController"), inst_ctrl: inst,
 		col: col, graph: graph, db: db,
 		serv2ig: serv2ig,
 		ig2sp:   ig2sp,
 	}
 }
 
-func (ctrl *InstancesGroupsController) Instances() *InstancesController {
+func (ctrl *instancesGroupsController) Instances() InstancesController {
 	return ctrl.inst_ctrl
 }
 
-func (ctrl *InstancesGroupsController) Create(ctx context.Context, service driver.DocumentID, g *pb.InstancesGroup) error {
+func (ctrl *instancesGroupsController) Create(ctx context.Context, service driver.DocumentID, g *pb.InstancesGroup) error {
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating InstancesGroup", zap.Any("group", g))
 
@@ -125,7 +134,11 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	return nil
 }
 
-func (ctrl *InstancesGroupsController) Delete(ctx context.Context, service string, g *pb.InstancesGroup) error {
+func (ctrl *instancesGroupsController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (InstancesGroup, error) {
+	return getWithAccess[InstancesGroup](ctx, ctrl.col.Database(), from, driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, id))
+}
+
+func (ctrl *instancesGroupsController) Delete(ctx context.Context, service string, g *pb.InstancesGroup) error {
 	log := ctrl.log.Named("Delete")
 	log.Debug("Deleting InstancesGroup", zap.Any("group", g))
 
@@ -137,7 +150,7 @@ func (ctrl *InstancesGroupsController) Delete(ctx context.Context, service strin
 
 	ctrl.log.Debug("Deleting Edge", zap.String("fromCollection", schema.SERVICES_COL), zap.String("toCollection",
 		schema.INSTANCES_GROUPS_COL), zap.String("fromKey", service), zap.String("toKey", g.GetUuid()))
-	err = DeleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, service, g.GetUuid())
+	err = deleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, service, g.GetUuid())
 	if err != nil {
 		log.Error("Failed to delete edge "+schema.SERVICES_COL+"2"+schema.INSTANCES_GROUPS_COL, zap.Error(err))
 		return err
@@ -154,7 +167,7 @@ func (ctrl *InstancesGroupsController) Delete(ctx context.Context, service strin
 	return nil
 }
 
-func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb.InstancesGroup) error {
+func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb.InstancesGroup) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating InstancesGroup", zap.Any("group", ig))
 
@@ -233,7 +246,7 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 	return nil
 }
 
-func (ctrl *InstancesGroupsController) TransferIG(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error {
+func (ctrl *instancesGroupsController) TransferIG(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error {
 	log := ctrl.log.Named("Transfer")
 	log.Debug("Transfer InstancesGroup", zap.String("group", ig.String()), zap.String("srvEdge", oldSrvEdge), zap.String("to", newSrv.String()))
 
@@ -252,7 +265,7 @@ func (ctrl *InstancesGroupsController) TransferIG(ctx context.Context, oldSrvEdg
 	return nil
 }
 
-func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp string) error {
+func (ctrl *instancesGroupsController) Provide(ctx context.Context, group, sp string) error {
 	_, err := ctrl.ig2sp.CreateDocument(ctx, Access{
 		From: driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
 		To:   driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp),
@@ -260,7 +273,7 @@ func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp st
 	return err
 }
 
-func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error) {
+func (ctrl *instancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error) {
 	mask := &pb.InstancesGroup{
 		Status: status,
 	}
@@ -268,7 +281,7 @@ func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.Ins
 	return err
 }
 
-func (ctrl *InstancesGroupsController) GetEdge(ctx context.Context, inboundNode string, collection string) (string, error) {
+func (ctrl *instancesGroupsController) GetEdge(ctx context.Context, inboundNode string, collection string) (string, error) {
 	log := ctrl.log.Named("GetEdge")
 	log.Debug("Getting edge", zap.String("nodeId", inboundNode))
 	c, err := ctrl.db.Query(ctx, getEdge, map[string]interface{}{

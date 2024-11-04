@@ -26,12 +26,23 @@ import (
 	"go.uber.org/zap"
 )
 
+type RecordsController interface {
+	CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool)
+	Create(ctx context.Context, r *pb.Record) driver.DocumentID
+	Get(ctx context.Context, tr string) (res []*pb.Record, err error)
+	GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error)
+	GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error)
+	GetInstancesReportsCount(ctx context.Context) (int64, error)
+	GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error)
+	GetUnique(ctx context.Context) (map[string]interface{}, error)
+}
+
 type Record struct {
 	*pb.Record
 	driver.DocumentMeta
 }
 
-type RecordsController struct {
+type recordsController struct {
 	col driver.Collection // Billing Plans collection
 	db  driver.Database
 	log *zap.Logger
@@ -47,7 +58,7 @@ func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsControl
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 	migrations.UpdateTotalAndCostFields(log, col)
 
-	return RecordsController{
+	return &recordsController{
 		log: log, col: col, db: db,
 	}
 }
@@ -61,7 +72,7 @@ FILTER (n.start < r.end && n.start >= r.start) || (n.start <= r.start && r.start
     RETURN r) == 0
 `
 
-func (ctrl *RecordsController) CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool) {
+func (ctrl *recordsController) CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool) {
 	c, err := ctrl.db.Query(ctx, checkOverlappingQuery, map[string]interface{}{
 		"record":   r,
 		"@records": schema.RECORDS_COL,
@@ -80,7 +91,7 @@ func (ctrl *RecordsController) CheckOverlapping(ctx context.Context, r *pb.Recor
 	return ok
 }
 
-func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) driver.DocumentID {
+func (ctrl *recordsController) Create(ctx context.Context, r *pb.Record) driver.DocumentID {
 	if r.Priority != pb.Priority_ADDITIONAL {
 		ok := ctrl.CheckOverlapping(ctx, r)
 		ctrl.log.Debug("Pre-flight checks", zap.Bool("overlapping", ok))
@@ -105,7 +116,7 @@ FOR rec IN recs
   
 `
 
-func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
+func (ctrl *recordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
 	c, err := ctrl.db.Query(ctx, getRecordsQuery, map[string]interface{}{
 		"transaction": driver.NewDocumentID(schema.TRANSACTIONS_COL, tr).String(),
 		"records":     schema.RECORDS_COL,
@@ -131,7 +142,7 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 	return res, nil
 }
 
-func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
+func (ctrl *recordsController) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
 	query := "LET reports = (FOR i in @@instances LET records = ( FOR record in @@records  FILTER record.processed FILTER record.instance == i._key"
 	params := map[string]interface{}{
 		"@records":   schema.RECORDS_COL,
@@ -192,7 +203,7 @@ func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.
 	return res, nil
 }
 
-func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error) {
+func (ctrl *recordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error) {
 	query := "LET records = ( FOR record in @@records FILTER record.processed"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
@@ -289,7 +300,7 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 
 const reportsCountQuery = `RETURN LENGTH(@@instances)`
 
-func (ctrl *RecordsController) GetInstancesReportsCount(ctx context.Context) (int64, error) {
+func (ctrl *recordsController) GetInstancesReportsCount(ctx context.Context) (int64, error) {
 	cur, err := ctrl.db.Query(ctx, reportsCountQuery, map[string]interface{}{
 		"@instances": schema.INSTANCES_COL,
 	})
@@ -306,7 +317,7 @@ func (ctrl *RecordsController) GetInstancesReportsCount(ctx context.Context) (in
 	return result, nil
 }
 
-func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error) {
+func (ctrl *recordsController) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error) {
 	query := "LET records = ( FOR record in @@records FILTER record.processed"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
@@ -409,7 +420,7 @@ RETURN {
 }
 `
 
-func (ctrl *RecordsController) GetUnique(ctx context.Context) (map[string]interface{}, error) {
+func (ctrl *recordsController) GetUnique(ctx context.Context) (map[string]interface{}, error) {
 
 	cur, err := ctrl.db.Query(ctx, uniqueQuery, map[string]interface{}{
 		"@records": schema.RECORDS_COL,

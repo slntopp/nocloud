@@ -5,12 +5,12 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/graph"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/go-redis/redis/v8"
 	sspb "github.com/slntopp/nocloud-proto/sessions"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
@@ -20,15 +20,18 @@ type SessionsServer struct {
 	sspb.UnimplementedSessionsServiceServer
 
 	log *zap.Logger
-	rdb *redis.Client
+	rdb redisdb.Client
 	db  driver.Database
+
+	ca graph.CommonActionsController
 }
 
-func NewSessionsServer(log *zap.Logger, rdb *redis.Client, db driver.Database) *SessionsServer {
+func NewSessionsServer(log *zap.Logger, rdb redisdb.Client, db driver.Database) *SessionsServer {
 	return &SessionsServer{
 		log: log.Named("Sessions"),
 		rdb: rdb,
 		db:  db,
+		ca:  graph.NewCommonActionsController(log, db),
 	}
 }
 
@@ -40,12 +43,12 @@ func (c *SessionsServer) Get(ctx context.Context, req *sspb.GetSessions) (*sspb.
 	var user_id = "*"
 
 	if req.UserId == nil {
-		if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
+		if ok := c.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
 			user_id = requestor
 		}
 	} else {
 		uuid := req.GetUserId()
-		if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
+		if ok := c.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
 			return nil, status.Error(codes.PermissionDenied, "No access to account")
 		}
 		user_id = uuid
@@ -76,7 +79,7 @@ func (c *SessionsServer) GetActivity(ctx context.Context, req *sspb.GetActivityR
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	uuid := req.GetUuid()
-	if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
+	if ok := c.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
 		return nil, status.Error(codes.PermissionDenied, "No access to account")
 	}
 

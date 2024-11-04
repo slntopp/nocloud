@@ -34,53 +34,13 @@ import (
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
 	dpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
-	epb "github.com/slntopp/nocloud-proto/events"
 	hpb "github.com/slntopp/nocloud-proto/health"
-	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
-	settingspb "github.com/slntopp/nocloud-proto/settings"
 	stpb "github.com/slntopp/nocloud-proto/states"
 	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
-
-var (
-	settingsClient settingspb.SettingsServiceClient
-	accClient      regpb.AccountsServiceClient
-	eventsClient   epb.EventsServiceClient
-)
-
-func init() {
-	viper.AutomaticEnv()
-	viper.SetDefault("SETTINGS_HOST", "settings:8000")
-	viper.SetDefault("REGISTRY_HOST", "registry:8000")
-	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
-	settingsHost := viper.GetString("SETTINGS_HOST")
-	registryHost := viper.GetString("REGISTRY_HOST")
-	eventsHost := viper.GetString("EVENTS_HOST")
-
-	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	settingsClient = settingspb.NewSettingsServiceClient(settingsConn)
-
-	accConn, err := grpc.Dial(registryHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	accClient = regpb.NewAccountsServiceClient(accConn)
-
-	eventsConn, err := grpc.Dial(eventsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	eventsClient = epb.NewEventsServiceClient(eventsConn)
-}
 
 func (s *BillingServiceServer) RoutinesState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
@@ -99,7 +59,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 	}
 
 	log.Debug("Got list of services", zap.Any("count", len(list.Result)))
-	invConf := MakeInvoicesConf(ctx, log)
+	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
 
 	var expiringPercentage = 0.9
 	if invConf.IssueRenewalInvoiceAfter > 0 && invConf.IssueRenewalInvoiceAfter <= 1 {
@@ -390,9 +350,9 @@ func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
 
 start:
 
-	routineConf := MakeRoutineConf(ctx, log)
-	roundingConf := MakeRoundingConf(ctx, log)
-	currencyConf := MakeCurrencyConf(ctx, log)
+	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
+	roundingConf := MakeRoundingConf(ctx, log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 	currencyConf.Currency = &pb.Currency{
 		Id:    0,
 		Title: "NCU",
@@ -482,8 +442,8 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 	log := s.log.Named("AccountSuspendRoutine")
 
 start:
-	suspConf := MakeSuspendConf(ctx, log)
-	routineConf := MakeRoutineConf(ctx, log)
+	suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
+	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{monFreqKey}, upd)
@@ -520,7 +480,7 @@ start:
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
-			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+			if _, err := s.accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Suspending Account", zap.Error(err))
 			}
 		}
@@ -546,7 +506,7 @@ start:
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
-			if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+			if _, err := s.accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Unsuspending Account", zap.Error(err))
 			}
 		}
@@ -567,9 +527,9 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 start:
 
-	routineConf := MakeRoutineConf(ctx, log)
-	roundingConf := MakeRoundingConf(ctx, log)
-	currencyConf := MakeCurrencyConf(ctx, log)
+	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
+	roundingConf := MakeRoundingConf(ctx, log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{monFreqKey, currencyKey}, upd)

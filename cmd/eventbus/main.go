@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"net"
 
@@ -103,7 +104,7 @@ func main() {
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 
-	server := eventbus.NewServer(log, conn, db)
+	server := eventbus.NewServer(log, rabbitmq.NewRabbitMQConnection(conn), db)
 	go server.ListenBusQueue(ctx)
 	pb.RegisterEventsServiceServer(s, server)
 

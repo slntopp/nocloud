@@ -3,9 +3,9 @@ package rest_auth
 import (
 	"context"
 	"errors"
-	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -17,11 +17,11 @@ import (
 
 type interceptor struct {
 	log         *zap.Logger
-	rdb         *redis.Client
+	rdb         redisdb.Client
 	signing_key []byte
 }
 
-func NewInterceptor(logger *zap.Logger, rdb *redis.Client, key []byte) *interceptor {
+func NewInterceptor(logger *zap.Logger, rdb redisdb.Client, key []byte) *interceptor {
 	return &interceptor{
 		log:         logger.Named("RestJWT"),
 		rdb:         rdb,

@@ -18,9 +18,9 @@ package dns
 import (
 	"context"
 	"encoding/json"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"strings"
 
-	redis "github.com/go-redis/redis/v8"
 	pb "github.com/slntopp/nocloud-proto/dns"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
@@ -34,10 +34,10 @@ type DNSServer struct {
 	pb.UnimplementedDNSServer
 
 	log *zap.Logger
-	rdb *redis.Client
+	rdb redisdb.Client
 }
 
-func NewDNSServer(log *zap.Logger, rdb *redis.Client) *DNSServer {
+func NewDNSServer(log *zap.Logger, rdb redisdb.Client) *DNSServer {
 	return &DNSServer{
 		log: log.Named("DNSServer"), rdb: rdb,
 	}
