@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"strings"
+	"time"
 )
 
 type PromocodesServer struct {
@@ -64,6 +65,8 @@ func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Pro
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
+	r.Msg.Created = time.Now().Unix()
+	r.Msg.Uses = make([]*pb.EntryResource, 0)
 	promo, err := s.promos.Create(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to create promocode", zap.Error(err))
@@ -81,6 +84,7 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
+	r.Msg.Uses = nil
 	promo, err := s.promos.Update(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to update promocode", zap.Error(err))
@@ -138,6 +142,31 @@ func (s *PromocodesServer) Apply(ctx context.Context, r *connect.Request[pb.Appl
 	return connect.NewResponse(&pb.ApplyPromocodeResponse{Success: true}), nil
 }
 
+func (s *PromocodesServer) Detach(ctx context.Context, r *connect.Request[pb.DetachPromocodeRequest]) (*connect.Response[pb.DetachPromocodeResponse], error) {
+	log := s.log.Named("Detach")
+	req := r.Msg
+
+	promo, err := s.promos.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Failed to get promocode", zap.Error(err))
+		return nil, err
+	}
+
+	entry, err := parseEntryResource(req.GetResource())
+	if err != nil {
+		log.Error("Failed to parse promocode resource", zap.Error(err))
+		return nil, err
+	}
+
+	err = s.promos.RemoveEntry(ctx, promo.GetUuid(), entry)
+	if err != nil {
+		log.Error("Failed to detach promocode", zap.Error(err))
+		return nil, err
+	}
+
+	return connect.NewResponse(&pb.DetachPromocodeResponse{Success: true}), nil
+}
+
 func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListPromocodesRequest]) (*connect.Response[pb.ListPromocodesResponse], error) {
 	log := s.log.Named("List")
 
@@ -153,7 +182,7 @@ func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListP
 func (s *PromocodesServer) Count(ctx context.Context, r *connect.Request[pb.CountPromocodesRequest]) (*connect.Response[pb.CountPromocodesResponse], error) {
 	log := s.log.Named("Count")
 
-	promocodes, err := s.promos.Count(ctx)
+	promocodes, err := s.promos.Count(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to count promocodes", zap.Error(err))
 		return nil, err
