@@ -86,7 +86,7 @@ func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 	if tx.Total == 0 {
 		return nil, errors.New("total is required")
 	}
-	meta, err := ctrl.col.CreateDocument(ctx, tx)
+	meta, err := ctrl.col.CreateDocument(driver.WithWaitForSync(ctx, true), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to create transaction", zap.Error(err))
 		return nil, err
@@ -116,7 +116,7 @@ func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 }
 
 func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
-	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
+	_, err := ctrl.col.UpdateDocument(driver.WithWaitForSync(ctx, true), tx.GetUuid(), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to update invoice", zap.Error(err))
 		return nil, err
@@ -125,7 +125,7 @@ func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoi
 }
 
 func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
-	_, err := ctrl.col.UpdateDocument(ctx, id, patch)
+	_, err := ctrl.col.UpdateDocument(driver.WithWaitForSync(ctx, true), id, patch)
 	return err
 }
 
