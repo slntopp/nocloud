@@ -46,7 +46,7 @@
     </template>
 
     <template v-slot:[`item.payment_invoice_id`]="{ item }">
-      {{ item.meta.whmcs_invoice_id }}
+      {{ item?.meta?.whmcs_invoice_id }}
     </template>
 
     <template v-slot:[`item.type`]="{ value }">
