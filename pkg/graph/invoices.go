@@ -67,11 +67,11 @@ func (ctrl *invoicesController) BeginTransaction(ctx context.Context) (context.C
 	if err != nil {
 		return ctx, fmt.Errorf("error while starting transaction: %w", err)
 	}
-	return context.WithValue(ctx, AQLTransactionContextKey, trID), nil
+	return context.WithValue(ctx, AQLTransactionContextKey, string(trID)), nil
 }
 
 func (ctrl *invoicesController) CommitTransaction(ctx context.Context) error {
-	trID := ctx.Value(AQLTransactionContextKey).(string)
+	trID, _ := ctx.Value(AQLTransactionContextKey).(string)
 	err := ctrl.col.Database().CommitTransaction(ctx, driver.TransactionID(trID), &driver.CommitTransactionOptions{})
 	if err != nil {
 		ctrl.log.Error("Failed to commit transaction", zap.Error(err))
@@ -80,7 +80,7 @@ func (ctrl *invoicesController) CommitTransaction(ctx context.Context) error {
 }
 
 func (ctrl *invoicesController) AbortTransaction(ctx context.Context) error {
-	trID := ctx.Value(AQLTransactionContextKey).(string)
+	trID, _ := ctx.Value(AQLTransactionContextKey).(string)
 	err := ctrl.col.Database().AbortTransaction(ctx, driver.TransactionID(trID), &driver.AbortTransactionOptions{})
 	if err != nil {
 		ctrl.log.Error("Failed to abort transaction", zap.Error(err))
