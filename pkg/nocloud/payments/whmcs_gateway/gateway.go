@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/arangodb/go-driver"
 	"github.com/google/go-querystring/query"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
@@ -116,9 +118,16 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	// Set whmcs invoice id to invoice meta
-	invoice, err := g.invMan.InvoicesController().Get(ctx, inv.GetUuid())
-	if err != nil {
-		return err
+	//invoice, err := g.invMan.InvoicesController().Get(ctx, inv.GetUuid())
+	//if err != nil {
+	//	return err
+	//}
+	invoice := &graph.Invoice{
+		Invoice: inv,
+		DocumentMeta: driver.DocumentMeta{
+			Key: inv.GetUuid(),
+			ID:  driver.NewDocumentID(schema.INVOICES_COL, inv.GetUuid()),
+		},
 	}
 	meta := invoice.GetMeta()
 	if meta == nil {
