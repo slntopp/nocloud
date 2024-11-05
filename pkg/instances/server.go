@@ -32,6 +32,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	accesspb "github.com/slntopp/nocloud-proto/access"
+	ppb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	stpb "github.com/slntopp/nocloud-proto/states"
@@ -51,11 +52,12 @@ type InstancesServer struct {
 	pb.UnimplementedInstancesServiceServer
 	log *zap.Logger
 
-	ctrl     graph.InstancesController
-	ig_ctrl  graph.InstancesGroupsController
-	sp_ctrl  graph.ServicesProvidersController
-	srv_ctrl graph.ServicesController
-	ca       graph.CommonActionsController
+	ctrl       graph.InstancesController
+	ig_ctrl    graph.InstancesGroupsController
+	sp_ctrl    graph.ServicesProvidersController
+	srv_ctrl   graph.ServicesController
+	promo_ctrl graph.PromocodesController
+	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -74,6 +76,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)
 	sp_ctrl := graph.NewServicesProvidersController(logger, db)
 	srv_ctrl := graph.NewServicesController(logger, db, rbmq)
+	promo_ctrl := graph.NewPromocodesController(logger, db, rbmq)
 	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
@@ -104,13 +107,14 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 
 	return &InstancesServer{
 		db: db, log: log,
-		ctrl:     ig_ctrl.Instances(),
-		ig_ctrl:  ig_ctrl,
-		sp_ctrl:  sp_ctrl,
-		srv_ctrl: srv_ctrl,
-		ca:       ca,
-		drivers:  make(map[string]driverpb.DriverServiceClient),
-		rdb:      rdb,
+		ctrl:       ig_ctrl.Instances(),
+		ig_ctrl:    ig_ctrl,
+		sp_ctrl:    sp_ctrl,
+		srv_ctrl:   srv_ctrl,
+		promo_ctrl: promo_ctrl,
+		ca:         ca,
+		drivers:    make(map[string]driverpb.DriverServiceClient),
+		rdb:        rdb,
 		monitoring: &health.RoutineStatus{
 			Routine: "Monitoring",
 			Status: &health.ServingStatus{
@@ -297,6 +301,15 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if req.Promocode != nil && req.GetPromocode() != "" {
+		if err = s.promo_ctrl.AddEntry(ctx, req.GetPromocode(), &ppb.EntryResource{
+			Instance: &newId,
+		}); err != nil {
+			log.Error("Failed to add promocode entry to newly created instance", zap.Error(err))
+			return nil, status.Error(codes.OK, "Instance created successfully but promocode entry was not added: "+err.Error()+". Please contact support.")
+		}
 	}
 
 	return connect.NewResponse(&pb.CreateResponse{
