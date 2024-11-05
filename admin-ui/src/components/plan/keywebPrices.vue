@@ -269,6 +269,10 @@ onMounted(async () => {
       Object.keys(addonsAnnotations).forEach((key) => {
         const metaKey = addonsAnnotations[key];
         p.configOptions[metaKey]?.configurableSubOptions.forEach((c) => {
+          if(!p.pricing?.configOptions?.[metaKey]?.[c.optionname]){
+            return;
+          }
+
           const basePriceYearly = convertFrom(
             +p.pricing.configOptions[metaKey][c.optionname].annually,
             { title: "EUR" }
