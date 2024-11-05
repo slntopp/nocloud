@@ -1177,11 +1177,11 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 	}))
 }
 
-// TODO: END THIS METHOD
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateRenewalInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := _req.Msg
+	log = log.With(zap.String("instance", req.GetInstance()), zap.String("requester", requester))
 	log.Debug("Request received")
 
 	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
@@ -1197,16 +1197,55 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		return nil, status.Error(codes.Internal, "Failed to get instance")
 	}
 
+	res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, inst.GetUuid()).String())
+	if err != nil || res.Group == nil || res.SP == nil {
+		log.Error("Error getting instance group or sp", zap.Error(err), zap.Any("group", res.Group), zap.Any("sp", res.SP))
+		return nil, status.Error(codes.Internal, "Error getting instance group or sp")
+	}
+
+	log = log.With(zap.String("driver", res.SP.GetType()))
+
+	client, ok := s.drivers[res.SP.GetType()]
+	if !ok {
+		log.Error("Error getting driver. Driver not registered")
+		return nil, status.Error(codes.Internal, "Error getting driver. Driver not registered")
+	}
+
+	resp, err := client.GetExpiration(ctx, &driverpb.GetExpirationRequest{
+		Instance:         inst.Instance,
+		ServicesProvider: res.SP,
+	})
+	if err != nil {
+		log.Error("Error getting expiration", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting expiration")
+	}
+	records := resp.GetRecords()
+	log.Info("Got expiration records", zap.Any("records", records))
+
+	periods := make([]int64, 0)
+	expirings := make([]int64, 0)
+	_processed := 0
+	_expiring := 0
+	for _, r := range records {
+		log := log.With(zap.Any("record", r))
+		if r.Product == "" {
+			log.Info("Ignoring non product record")
+			continue
+		}
+		periods = append(periods, r.Period)
+		expirings = append(expirings, r.Expires)
+		_expiring++
+		_processed++
+	}
+
+	if _processed > _expiring {
+		log.Warn("WARN. Instance gonna be renewed asynchronously. Product, resources or addons has different periods")
+	}
+
 	cost, err := s.instances.CalculateInstanceEstimatePrice(inst.Instance, false)
 	if err != nil {
 		log.Error("Error calculating instance estimate price", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error calculating instance estimate price")
-	}
-
-	period, err := s.instances.GetInstancePeriod(inst.Instance)
-	if err != nil {
-		log.Error("Error getting instance period", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error getting instance period")
 	}
 
 	acc, err := s.instances.GetInstanceOwner(ctx, req.GetInstance())
@@ -1231,30 +1270,29 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 
 	now := time.Now().Unix()
 	cost *= rate // Convert from NCU to  account's currency
-
-	//var descr string
-	if period != nil && *period > 0 {
-
-	}
-	//expireDate := time.Unix(expire, 0)
-	//untilDate := expireDate.Add(time.Duration(period) * time.Second)
+	slices.Sort(periods)
+	slices.Sort(expirings)
+	period := periods[len(periods)-1]
+	expire := expirings[0]
+	expireDate := time.Unix(expire, 0)
+	untilDate := expireDate.Add(time.Duration(period) * time.Second)
 
 	inv := &pb.Invoice{
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
 			{
-				//Description: fmt.Sprintf("Instance '%s' renewal: %d:%d - %d:%d",
-				//inst.GetTitle(), expireDate.Day(), expireDate.Month(), untilDate.Day(), untilDate.Month()),
+				Description: fmt.Sprintf("Instance '%s' renewal: %d:%d - %d:%d",
+					inst.GetTitle(), expireDate.Day(), expireDate.Month(), untilDate.Day(), untilDate.Month()),
 				Amount:   1,
 				Unit:     "Pcs",
 				Price:    cost,
 				Instance: inst.GetUuid(),
 			},
 		},
-		Total:   cost,
-		Type:    pb.ActionType_INSTANCE_RENEWAL,
-		Created: now,
-		//Deadline: time.Unix(now, 0).Add(time.Duration(period) * time.Second).Unix(), // Until when invoice should be paid
+		Total:    cost,
+		Type:     pb.ActionType_INSTANCE_RENEWAL,
+		Created:  now,
+		Deadline: time.Unix(now, 0).Add(time.Duration(period) * time.Second).Unix(), // Until when invoice should be paid
 		Account:  acc.GetUuid(),
 		Currency: acc.Currency,
 		Meta: map[string]*structpb.Value{
