@@ -386,22 +386,13 @@ func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, ent
 // GetDiscountPriceByInstance returns instance estimate price (see graph.InstancesController) with applied discounts from linked promocodes
 // Returning cost with default platform currency.
 func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool) (float64, error) {
+	ctx := context.Background()
 	cost, err := c.instances.CalculateInstanceEstimatePrice(i, includeOneTimePayments)
 	if err != nil {
 		return 0, fmt.Errorf("failed to calculate instance estimate price: %w", err)
 	}
 
-	ctx := context.Background()
-	// Get all associated with instance promocodes
-	promos, err := c.List(ctx, &pb.ListPromocodesRequest{
-		Filters: map[string]*structpb.Value{
-			"resources": structpb.NewListValue(&structpb.ListValue{
-				Values: []*structpb.Value{
-					structpb.NewStringValue("instances/" + i.GetUuid()),
-				},
-			}),
-		},
-	})
+	promos, err := c.listAssociated("instances/" + i.GetUuid())
 	if err != nil {
 		return cost, fmt.Errorf("failed to get promocodes: %w", err)
 	}
@@ -471,21 +462,12 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 
 // GetDiscountPriceByResource returns resource discounted price. It returns cost with initCurrency which you pass as parameter.
 func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, error) {
+	ctx := context.Background()
 	if resType != "addon" && resType != "product" && resType != "resource" {
 		return initCost, fmt.Errorf("invalid resource type")
 	}
 
-	ctx := context.Background()
-	// Get all associated with instance promocodes
-	promos, err := c.List(ctx, &pb.ListPromocodesRequest{
-		Filters: map[string]*structpb.Value{
-			"resources": structpb.NewListValue(&structpb.ListValue{
-				Values: []*structpb.Value{
-					structpb.NewStringValue("instances/" + i.GetUuid()),
-				},
-			}),
-		},
-	})
+	promos, err := c.listAssociated("instances/" + i.GetUuid())
 	if err != nil {
 		return initCost, fmt.Errorf("failed to get promocodes: %w", err)
 	}
@@ -558,6 +540,18 @@ func calculateResourceDiscount(promos []*pb.Promocode, planId string, resType st
 		}
 	}
 	return maxDiscount
+}
+
+func (c *promocodesController) listAssociated(res string) ([]*pb.Promocode, error) {
+	return c.List(context.Background(), &pb.ListPromocodesRequest{
+		Filters: map[string]*structpb.Value{
+			"resources": structpb.NewListValue(&structpb.ListValue{
+				Values: []*structpb.Value{
+					structpb.NewStringValue(res),
+				},
+			}),
+		},
+	})
 }
 
 func validateEntry(entry *pb.EntryResource) error {
