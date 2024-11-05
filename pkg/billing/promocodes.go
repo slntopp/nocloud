@@ -121,11 +121,11 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode())
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, status.Error(codes.NotFound, "Internal error. Promocode not found")
+		return nil, fmt.Errorf("internal error. Promocode not found")
 	}
 
 	if promo.Status == pb.PromocodeStatus_DELETED && !isAdmin {
-		return nil, status.Error(codes.NotFound, "Promocode not found")
+		return nil, fmt.Errorf("promocode not found")
 	}
 
 	if !isAdmin {
@@ -144,24 +144,24 @@ func (s *PromocodesServer) Apply(ctx context.Context, r *connect.Request[pb.Appl
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode())
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, status.Error(codes.NotFound, "Cannot apply promocode. Promocode not found")
+		return nil, fmt.Errorf("cannot apply promocode. Promocode not found")
 	}
 
 	if promo.Status == pb.PromocodeStatus_DELETED || promo.Status == pb.PromocodeStatus_SUSPENDED {
-		return nil, status.Error(codes.NotFound, "Cannot apply promocode. Promocode is not exists or currently inactive")
+		return nil, fmt.Errorf("cannot apply promocode. Promocode is not exists or currently inactive")
 	}
 
 	entry, err := parseEntryResource(r.Msg.GetResource())
 	if err != nil {
 		log.Error("Failed to parse promocode resource", zap.Error(err))
-		return nil, status.Error(codes.InvalidArgument, "Cannot apply promocode. Invalid request body")
+		return nil, fmt.Errorf("cannot apply promocode. Invalid request body")
 	}
 
 	entry.Account = ""
 	err = s.promos.AddEntry(ctx, promo.GetUuid(), entry)
 	if err != nil {
 		log.Error("Failed to apply promocode", zap.Error(err))
-		return nil, status.Error(codes.Internal, fmt.Sprintf("Cannot apply promocode. %s", err.Error()))
+		return nil, fmt.Errorf("cannot apply promocode. %s", err.Error())
 	}
 
 	return connect.NewResponse(&pb.ApplyPromocodeResponse{Success: true}), nil
