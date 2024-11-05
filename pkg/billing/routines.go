@@ -21,13 +21,11 @@ import (
 	"github.com/arangodb/go-driver"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"google.golang.org/protobuf/proto"
-	"slices"
 	"time"
 
 	"connectrpc.com/connect"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/services"
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -77,21 +75,14 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 		for _, ig := range srv.GetInstancesGroups() {
 			for _, i := range ig.GetInstances() {
 				log := log.With(zap.String("instance", i.GetUuid()))
-				//log.Info("Checking instance")
 
 				if i.GetStatus() == spb.NoCloudStatus_DEL ||
 					i.GetState().GetState() == stpb.NoCloudState_PENDING ||
-					i.GetStatus() == spb.NoCloudStatus_SUS ||
-					i.GetState().GetState() == stpb.NoCloudState_SUSPENDED ||
 					i.GetState().GetState() == stpb.NoCloudState_DELETED ||
-					i.GetState().GetState() == stpb.NoCloudState_STOPPED ||
-					i.GetState().GetState() == stpb.NoCloudState_FAILURE ||
 					i.GetStatus() == spb.NoCloudStatus_INIT {
-					//log.Info("Instance has been deleted or PENDING or SUSPENDED or INIT state. Skipping")
 					continue
 				}
 
-				cost := 0.0
 				now := time.Now().Unix()
 
 				if i.Config == nil {
@@ -138,73 +129,14 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				records := resp.GetRecords()
 				log.Info("Got expiration records", zap.Any("records", records))
 
-				// CODE BELOW CALCULATING FOR INDIVIDUAL RECORD
-				//for _, r := range records {
-				//	log = log.With(zap.Any("record", r))
-				//	if expiringTime(r.Expires, r.Period) > now {
-				//		log.Info("Not expiring yet")
-				//		continue
-				//	}
-				//
-				//	if r.Product != "" {
-				//		product, ok := plan.GetProducts()[r.Product]
-				//		if !ok {
-				//			log.Error("No product in billing plan")
-				//			continue
-				//		}
-				//		cost += product.GetPrice()
-				//	}
-				//
-				//	if r.Resource != "" {
-				//		for _, res := range plan.GetResources() {
-				//			if res.Key == r.Resource {
-				//				value, ok := i.GetResources()[res.Key]
-				//				if !ok {
-				//					log.Error("No value for resource in instance")
-				//					continue
-				//				}
-				//				if res.Key == "ram" {
-				//					cost += (value.GetNumberValue() / 1024) * res.GetPrice()
-				//				} else if strings.Contains(res.GetKey(), "drive") {
-				//					driveType := i.GetResources()["drive_type"].GetStringValue()
-				//					if res.GetKey() != "drive_"+strings.ToLower(driveType) {
-				//						continue
-				//					}
-				//					count := i.GetResources()["drive_size"].GetNumberValue() / 1024
-				//					cost += res.GetPrice() * count
-				//				} else {
-				//					cost += value.GetNumberValue() * res.GetPrice()
-				//				}
-				//			}
-				//		}
-				//	}
-				//
-				//	if r.Addon != "" {
-				//		addon, err := s.addons.Get(ctx, r.Addon)
-				//		if err != nil {
-				//			log.Error("Error getting addon", zap.Error(err))
-				//			continue
-				//		}
-				//		price, ok := addon.GetPeriods()[r.Period]
-				//		if !ok {
-				//			log.Error("No price for period for addon", zap.Int64("period", r.Period))
-				//			continue
-				//		}
-				//		cost += price
-				//	}
-				//}
-
 				// If got expiring records calculate renewal for all instance billing resources
 				var expiring = false
 				periods := make([]int64, 0)
 				expirings := make([]int64, 0)
-				_processed := 0
-				_expiring := 0
 				for _, r := range records {
 					log := log.With(zap.Any("record", r))
 					if expiringTime(r.Expires, r.Period) > now {
 						log.Info("Not expiring yet")
-						_processed++
 						continue
 					}
 					if r.Product == "" {
@@ -214,8 +146,6 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					expiring = true
 					periods = append(periods, r.Period)
 					expirings = append(expirings, r.Expires)
-					_expiring++
-					_processed++
 				}
 
 				if !expiring {
@@ -223,101 +153,16 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					continue
 				}
 
-				if _processed > _expiring {
-					log.Warn("WARN. Instance gonna be renewed asynchronously. Product, resources or addons has different periods")
-				}
-
-				cost, err = s.instances.CalculateInstanceEstimatePrice(i, false)
-				if err != nil {
-					log.Error("Error calculating instance estimate price", zap.Error(err))
-					continue
-				}
-
-				log.Debug("Proceeding to invoice creation")
-
-				// Find owner account
-				cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
-					"instance":    i.GetUuid(),
-					"permissions": schema.PERMISSIONS_GRAPH.Name,
-					"@instances":  schema.INSTANCES_COL,
-					"@accounts":   schema.ACCOUNTS_COL,
-				})
-				if err != nil {
-					log.Error("Error getting instance owner", zap.Error(err))
-					continue
-				}
-				var acc graph.Account
-				_, err = cur.ReadDocument(ctx, &acc)
-				if err != nil {
-					log.Error("Error getting instance owner", zap.Error(err))
-					continue
-				}
-				acc.Uuid = acc.Key
-				if acc.GetUuid() == "" {
-					log.Error("Instance owner not found")
-					continue
-				}
-				log.Debug("Instance owner found", zap.String("account", acc.GetUuid()))
-				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.GetUuid())
-				acc, err = s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, acc.GetUuid())
-				if err != nil {
-					log.Error("Error getting instance owner", zap.Error(err))
-					continue
-				}
-				log.Debug("Instance owner after subaccount logic", zap.String("account", acc.GetUuid()))
-
-				if acc.Currency == nil {
-					acc.Currency = currencyConf.Currency
-				}
-				rate, _, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
-				if err != nil {
-					log.Error("Error getting exchange rate", zap.Error(err))
-					continue
-				}
-
-				cost *= rate // Convert from NCU to  account's currency
-				slices.Sort(periods)
-				slices.Sort(expirings)
-				period := periods[len(periods)-1]
-				expire := expirings[0]
-				expireDate := time.Unix(expire, 0)
-				untilDate := expireDate.Add(time.Duration(period) * time.Second)
-
-				inv := &pb.Invoice{
-					Status: pb.BillingStatus_UNPAID,
-					Items: []*pb.Item{
-						{
-							Description: fmt.Sprintf("Instance '%s' renewal: %d:%d - %d:%d",
-								i.GetTitle(), expireDate.Day(), expireDate.Month(), untilDate.Day(), untilDate.Month()),
-							Amount:   1,
-							Unit:     "Pcs",
-							Price:    cost,
-							Instance: i.GetUuid(),
-						},
-					},
-					Total:    cost,
-					Type:     pb.ActionType_INSTANCE_RENEWAL,
-					Created:  now,
-					Deadline: time.Unix(now, 0).Add(time.Duration(period) * time.Second).Unix(), // Until when invoice should be paid
-					Account:  acc.GetUuid(),
-					Currency: acc.Currency,
-					Meta: map[string]*structpb.Value{
-						"auto_created": structpb.NewBoolValue(true),
-						"creator":      structpb.NewStringValue("nocloud.billing.IssueInvoicesRoutine"),
-					},
-				}
-
 				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
-				invResp, err := s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
-					Invoice:     inv,
-					IsSendEmail: true,
+				invResp, err := s.CreateRenewalInvoice(ctx, connect.NewRequest(&pb.CreateRenewalInvoiceRequest{
+					Instance: i.GetUuid(),
 				}))
 				if err != nil {
 					log.Error("Failed to create invoice", zap.Error(err))
 					continue
 				}
 
-				log.Debug("Invoice created", zap.String("invoice", inv.Uuid))
+				log.Debug("Invoice created", zap.String("invoice", invResp.Msg.GetUuid()))
 
 				log.Debug("Updating instance")
 				i.Config["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
@@ -353,10 +198,6 @@ start:
 	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
 	roundingConf := MakeRoundingConf(ctx, log, &s.settingsClient)
 	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
-	currencyConf.Currency = &pb.Currency{
-		Id:    0,
-		Title: "NCU",
-	}
 	iPub := NewInstanceDataPublisher(ch)
 
 	upd := make(chan bool, 1)
@@ -672,6 +513,7 @@ FOR service IN @@services // Iterate over Services
         LET addon = DOCUMENT(@@addons, record.addon)
         LET product_period = bp.products[instance.product].period
         LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
+        LET final_price = record.cost > 0 ? record.cost : item_price
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND
@@ -681,7 +523,7 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET cost = record.total * rate * item_price
+        LET cost = record.total * rate * final_price
             UPDATE record._key WITH { 
 				processed: true, 
 				cost: cost,

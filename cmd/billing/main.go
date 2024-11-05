@@ -140,7 +140,7 @@ func main() {
 	_ = graph.NewInstancesGroupsController(log, db, rbmq)
 	invoicesCtrl := graph.NewInvoicesController(log, db)
 	nssCtrl := graph.NewNamespacesController(log, db)
-	promoCtrl := graph.NewPromocodesController(log, db)
+	promoCtrl := graph.NewPromocodesController(log, db, rbmq)
 	recordsCtrl := graph.NewRecordsController(log, db)
 	srvCtrl := graph.NewServicesController(log, db, rbmq)
 	spCtrl := graph.NewServicesProvidersController(log, db)
@@ -228,7 +228,7 @@ func main() {
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, caCtrl)
+	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, promoCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
 
@@ -242,8 +242,13 @@ func main() {
 	router.PathPrefix(path).Handler(handler)
 
 	descriptions := billing.NewDescriptionsServer(log, db, descCtrl, nssCtrl, caCtrl)
-	log.Info("Registering descriptionsService Server")
+	log.Info("Registering DescriptionsService Server")
 	path, handler = cc.NewDescriptionsServiceHandler(descriptions, interceptors)
+	router.PathPrefix(path).Handler(handler)
+
+	promocodes := billing.NewPromocodesServer(log, db, promoCtrl, nssCtrl, caCtrl)
+	log.Info("Registering PromocodesService Server")
+	path, handler = cc.NewPromocodesServiceHandler(promocodes, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
 	checker := grpchealth.NewStaticChecker()

@@ -1177,6 +1177,137 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 	}))
 }
 
+func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
+	log := s.log.Named("CreateRenewalInvoice")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := _req.Msg
+	log = log.With(zap.String("instance", req.GetInstance()), zap.String("requester", requester))
+	log.Debug("Request received")
+
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.INSTANCES_COL, req.GetInstance()), access.Level_ADMIN) {
+		log.Warn("Not enough access rights")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	inst, err := s.instances.Get(ctx, req.GetInstance())
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get instance")
+	}
+
+	res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, inst.GetUuid()).String())
+	if err != nil || res.Group == nil || res.SP == nil {
+		log.Error("Error getting instance group or sp", zap.Error(err), zap.Any("group", res.Group), zap.Any("sp", res.SP))
+		return nil, status.Error(codes.Internal, "Error getting instance group or sp")
+	}
+
+	log = log.With(zap.String("driver", res.SP.GetType()))
+
+	client, ok := s.drivers[res.SP.GetType()]
+	if !ok {
+		log.Error("Error getting driver. Driver not registered")
+		return nil, status.Error(codes.Internal, "Error getting driver. Driver not registered")
+	}
+
+	resp, err := client.GetExpiration(ctx, &driverpb.GetExpirationRequest{
+		Instance:         inst.Instance,
+		ServicesProvider: res.SP,
+	})
+	if err != nil {
+		log.Error("Error getting expiration", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting expiration")
+	}
+	records := resp.GetRecords()
+	log.Info("Got expiration records", zap.Any("records", records))
+
+	periods := make([]int64, 0)
+	expirings := make([]int64, 0)
+	_processed := 0
+	_expiring := 0
+	for _, r := range records {
+		log := log.With(zap.Any("record", r))
+		if r.Product == "" {
+			log.Info("Ignoring non product record")
+			continue
+		}
+		periods = append(periods, r.Period)
+		expirings = append(expirings, r.Expires)
+		_expiring++
+		_processed++
+	}
+
+	if _processed > _expiring {
+		log.Warn("WARN. Instance gonna be renewed asynchronously. Product, resources or addons has different periods")
+	}
+
+	initCost, _ := s.instances.CalculateInstanceEstimatePrice(inst.Instance, false)
+	cost, err := s.promocodes.GetDiscountPriceByInstance(inst.Instance, false)
+	if err != nil {
+		log.Error("Error calculating instance estimate price", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error calculating instance estimate price")
+	}
+
+	acc, err := s.instances.GetInstanceOwner(ctx, req.GetInstance())
+	if err != nil {
+		log.Error("Error getting instance owner", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting instance owner")
+	}
+	acc, err = s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, acc.GetUuid())
+	if err != nil {
+		log.Error("Error getting instance owner when getting subaccount", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting instance owner")
+	}
+
+	if acc.Currency == nil {
+		acc.Currency = currencyConf.Currency
+	}
+	rate, _, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
+	if err != nil {
+		log.Error("Error getting exchange rate", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting exchange rate")
+	}
+
+	now := time.Now().Unix()
+	cost *= rate // Convert from NCU to  account's currency
+	slices.Sort(periods)
+	slices.Sort(expirings)
+	period := periods[len(periods)-1]
+	expire := expirings[0]
+	expireDate := time.Unix(expire, 0)
+	untilDate := expireDate.Add(time.Duration(period) * time.Second)
+
+	inv := &pb.Invoice{
+		Status: pb.BillingStatus_UNPAID,
+		Items: []*pb.Item{
+			{
+				Description: fmt.Sprintf("Instance '%s' renewal: %d:%d - %d:%d",
+					inst.GetTitle(), expireDate.Day(), expireDate.Month(), untilDate.Day(), untilDate.Month()),
+				Amount:   1,
+				Unit:     "Pcs",
+				Price:    cost,
+				Instance: inst.GetUuid(),
+			},
+		},
+		Total:    cost,
+		Type:     pb.ActionType_INSTANCE_RENEWAL,
+		Created:  now,
+		Deadline: time.Unix(now, 0).Add(time.Duration(period) * time.Second).Unix(), // Until when invoice should be paid
+		Account:  acc.GetUuid(),
+		Currency: acc.Currency,
+		Meta: map[string]*structpb.Value{
+			"creator":           structpb.NewStringValue(requester),
+			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%f %s", initCost, currencyConf.Currency.Title)),
+		},
+	}
+
+	return s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
+		IsSendEmail: true,
+		Invoice:     inv,
+	}))
+}
+
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
 	tr, err := s.invoices.Get(ctx, uuid)
 	if err != nil {

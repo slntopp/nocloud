@@ -61,7 +61,8 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	if acc.Currency != nil {
 		accCurrency = acc.Currency
 	}
-	cost, err := s.instances.CalculateInstanceEstimatePrice(instance.Instance, true)
+	initCost, _ := s.instances.CalculateInstanceEstimatePrice(instance.Instance, true)
+	cost, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)
 	if err != nil {
 		log.Error("Failed to calculate instance cost", zap.Error(err))
 		return fmt.Errorf("failed to calculate instance cost: %w", err)
@@ -84,8 +85,8 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			},
 		},
 		Meta: map[string]*structpb.Value{
-			"auto_created": structpb.NewBoolValue(true),
-			"creator":      structpb.NewStringValue("nocloud.billing.ProcessInstanceCreation"),
+			"creator":           structpb.NewStringValue("nocloud.billing.ProcessInstanceCreation"),
+			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%f %s", initCost, currencyConf.Currency.Title)),
 		},
 		Total:    cost,
 		Type:     bpb.ActionType_INSTANCE_START,
