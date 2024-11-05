@@ -422,7 +422,7 @@ FOR service IN @@services // Iterate over Services
         service: service._key,
         records: records[*]._key,
         total: SUM(records[*].cost),
-		meta: {type: "transaction"},
+		meta: {type: "transaction", no_discount_price: SUM(records[*].meta["no_discount_price"])},
     } IN @@transactions RETURN NEW
 `
 
