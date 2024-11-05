@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"github.com/arangodb/go-driver"
+	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
+	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
+	"math"
 	"slices"
 	"time"
 )
@@ -26,10 +29,12 @@ type PromocodesController interface {
 }
 
 type promocodesController struct {
-	log       *zap.Logger
-	col       driver.Collection
-	instances InstancesController
-	invoices  InvoicesController
+	log        *zap.Logger
+	col        driver.Collection
+	instances  InstancesController
+	invoices   InvoicesController
+	currencies CurrencyController
+	plans      BillingPlansController
 }
 
 func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection) PromocodesController {
@@ -46,10 +51,14 @@ func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbit
 
 	instances := NewInstancesController(log, db, conn)
 	invoices := NewInvoicesController(log, db)
+	currencies := NewCurrencyController(log, db)
+	plans := NewBillingPlansController(log, db)
 
 	return &promocodesController{
 		log: log, col: promos,
 		instances: instances, invoices: invoices,
+		currencies: currencies,
+		plans:      plans,
 	}
 }
 
@@ -365,6 +374,86 @@ func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, ent
 	}
 
 	return db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{})
+}
+
+func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, error) {
+	if resType != "addon" && resType != "product" && resType != "resource" {
+		return initCost, fmt.Errorf("invalid resource type")
+	}
+
+	ctx := context.Background()
+	// Get all associated with instance promocodes
+	promos, err := c.List(ctx, &pb.ListPromocodesRequest{
+		Filters: map[string]*structpb.Value{
+			"resources": structpb.NewListValue(&structpb.ListValue{
+				Values: []*structpb.Value{
+					structpb.NewStringValue("instances/" + i.GetUuid()),
+				},
+			}),
+		},
+	})
+	if err != nil {
+		return initCost, fmt.Errorf("failed to get promocodes: %w", err)
+	}
+	if len(promos) == 0 {
+		return initCost, nil
+	}
+
+	cost := initCost
+	if defCurrency.GetId() != initCurrency.GetId() {
+		if cost, err = c.currencies.Convert(ctx, initCurrency, defCurrency, initCost); err != nil {
+			return initCost, fmt.Errorf("failed to convert initial cost: %w", err)
+		}
+	}
+
+	maxDiscount := float64(0)
+	for _, promo := range promos {
+		for _, item := range promo.GetPromoItems() {
+			if item.GetPlanPromo().GetBillingPlan() != i.GetBillingPlan().GetUuid() &&
+				(item.AddonPromo != nil || item.PlanPromo != nil) {
+				continue
+			}
+			var applyToAll = item.GetPlanPromo().Addon == nil &&
+				item.GetPlanPromo().Product == nil &&
+				item.GetPlanPromo().Resource == nil
+			if !applyToAll && resType == "addon" && item.GetPlanPromo().GetAddon() != resource {
+				continue
+			}
+			if !applyToAll && resType == "product" && item.GetPlanPromo().GetProduct() != resource {
+				continue
+			}
+			if !applyToAll && resType == "resource" && item.GetPlanPromo().GetResource() != resource {
+				continue
+			}
+
+			discount := float64(0)
+			sch := item.GetSchema()
+			if sch.DiscountPercent != nil {
+				discount = cost - cost*sch.GetDiscountPercent()
+			} else if sch.DiscountAmount != nil {
+				discount = math.Min(cost, float64(sch.GetDiscountAmount()))
+			} else if sch.FixedPrice != nil {
+				discount = cost - float64(sch.GetFixedPrice())
+			}
+
+			if discount > maxDiscount {
+				maxDiscount = discount
+			}
+		}
+	}
+
+	if maxDiscount == 0 {
+		return initCost, nil
+	}
+
+	cost = cost - maxDiscount
+	if defCurrency.GetId() != initCurrency.GetId() {
+		if cost, err = c.currencies.Convert(ctx, defCurrency, initCurrency, cost); err != nil {
+			return initCost, fmt.Errorf("failed to convert final cost: %w", err)
+		}
+	}
+
+	return cost, nil
 }
 
 func validateEntry(entry *pb.EntryResource) error {
