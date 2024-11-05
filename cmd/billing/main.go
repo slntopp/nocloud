@@ -140,7 +140,7 @@ func main() {
 	_ = graph.NewInstancesGroupsController(log, db, rbmq)
 	invoicesCtrl := graph.NewInvoicesController(log, db)
 	nssCtrl := graph.NewNamespacesController(log, db)
-	promoCtrl := graph.NewPromocodesController(log, db)
+	promoCtrl := graph.NewPromocodesController(log, db, rbmq)
 	recordsCtrl := graph.NewRecordsController(log, db)
 	srvCtrl := graph.NewServicesController(log, db, rbmq)
 	spCtrl := graph.NewServicesProvidersController(log, db)

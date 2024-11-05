@@ -59,9 +59,9 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 
 func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Promocode]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("Create")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
@@ -78,9 +78,9 @@ func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Pro
 
 func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Promocode]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("Update")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
@@ -96,6 +96,11 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 
 func (s *PromocodesServer) Get(ctx context.Context, r *connect.Request[pb.Promocode]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("Get")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	}
 
 	promo, err := s.promos.Get(ctx, r.Msg.GetUuid())
 	if err != nil {
@@ -108,11 +113,25 @@ func (s *PromocodesServer) Get(ctx context.Context, r *connect.Request[pb.Promoc
 
 func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.GetPromocodeByCodeRequest]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("GetByCode")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode())
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, err
+		return nil, status.Error(codes.NotFound, "Internal error. Promocode not found")
+	}
+
+	if promo.Status == pb.PromocodeStatus_DELETED && !isAdmin {
+		return nil, status.Error(codes.NotFound, "Promocode not found")
+	}
+
+	if !isAdmin {
+		promo.Uses = nil
+		promo.Limit = 0
+		promo.Created = 0
+		promo.UsesPerUser = 0
 	}
 
 	return connect.NewResponse(promo), nil
@@ -124,19 +143,24 @@ func (s *PromocodesServer) Apply(ctx context.Context, r *connect.Request[pb.Appl
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode())
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, err
+		return nil, status.Error(codes.NotFound, "Cannot apply promocode. Promocode not found")
+	}
+
+	if promo.Status == pb.PromocodeStatus_DELETED || promo.Status == pb.PromocodeStatus_SUSPENDED {
+		return nil, status.Error(codes.NotFound, "Cannot apply promocode. Promocode is not exists or currently inactive")
 	}
 
 	entry, err := parseEntryResource(r.Msg.GetResource())
 	if err != nil {
 		log.Error("Failed to parse promocode resource", zap.Error(err))
-		return nil, err
+		return nil, status.Error(codes.InvalidArgument, "Cannot apply promocode. Invalid request body")
 	}
 
+	entry.Account = ""
 	err = s.promos.AddEntry(ctx, promo.GetUuid(), entry)
 	if err != nil {
 		log.Error("Failed to apply promocode", zap.Error(err))
-		return nil, err
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Cannot apply promocode. %s", err.Error()))
 	}
 
 	return connect.NewResponse(&pb.ApplyPromocodeResponse{Success: true}), nil
@@ -145,6 +169,11 @@ func (s *PromocodesServer) Apply(ctx context.Context, r *connect.Request[pb.Appl
 func (s *PromocodesServer) Detach(ctx context.Context, r *connect.Request[pb.DetachPromocodeRequest]) (*connect.Response[pb.DetachPromocodeResponse], error) {
 	log := s.log.Named("Detach")
 	req := r.Msg
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	}
 
 	promo, err := s.promos.Get(ctx, req.GetUuid())
 	if err != nil {
@@ -169,6 +198,11 @@ func (s *PromocodesServer) Detach(ctx context.Context, r *connect.Request[pb.Det
 
 func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListPromocodesRequest]) (*connect.Response[pb.ListPromocodesResponse], error) {
 	log := s.log.Named("List")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	}
 
 	promocodes, err := s.promos.List(ctx, r.Msg)
 	if err != nil {
@@ -181,21 +215,26 @@ func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListP
 
 func (s *PromocodesServer) Count(ctx context.Context, r *connect.Request[pb.CountPromocodesRequest]) (*connect.Response[pb.CountPromocodesResponse], error) {
 	log := s.log.Named("Count")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	promocodes, err := s.promos.Count(ctx, r.Msg)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	}
+
+	count, err := s.promos.Count(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to count promocodes", zap.Error(err))
 		return nil, err
 	}
 
-	return connect.NewResponse(&pb.CountPromocodesResponse{Total: int64(len(promocodes))}), nil
+	return connect.NewResponse(&pb.CountPromocodesResponse{Total: count}), nil
 }
 
 func (s *PromocodesServer) Delete(ctx context.Context, r *connect.Request[pb.Promocode]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("Delete")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -19,17 +20,19 @@ type PromocodesController interface {
 	Get(ctx context.Context, uuid string) (*pb.Promocode, error)
 	GetByCode(ctx context.Context, code string) (*pb.Promocode, error)
 	List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error)
-	Count(ctx context.Context, req *pb.CountPromocodesRequest) ([]*pb.Promocode, error)
+	Count(ctx context.Context, req *pb.CountPromocodesRequest) (int64, error)
 	AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
 	RemoveEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
 }
 
 type promocodesController struct {
-	log *zap.Logger
-	col driver.Collection
+	log       *zap.Logger
+	col       driver.Collection
+	instances InstancesController
+	invoices  InvoicesController
 }
 
-func NewPromocodesController(logger *zap.Logger, db driver.Database) PromocodesController {
+func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection) PromocodesController {
 	ctx := context.TODO()
 	log := logger.Named("PromocodesController")
 	promos := GetEnsureCollection(log, ctx, db, schema.PROMOCODES_COL)
@@ -41,8 +44,12 @@ func NewPromocodesController(logger *zap.Logger, db driver.Database) PromocodesC
 		panic(err)
 	}
 
+	instances := NewInstancesController(log, db, conn)
+	invoices := NewInvoicesController(log, db)
+
 	return &promocodesController{
 		log: log, col: promos,
+		instances: instances, invoices: invoices,
 	}
 }
 
@@ -83,7 +90,7 @@ func (c *promocodesController) Create(ctx context.Context, promo *pb.Promocode) 
 	}
 
 	promo.Uuid = document.Key
-	return promo, nil
+	return applyCurrentState(promo), nil
 }
 
 func (c *promocodesController) Update(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error) {
@@ -95,13 +102,22 @@ func (c *promocodesController) Update(ctx context.Context, promo *pb.Promocode) 
 		return nil, err
 	}
 
-	return promo, nil
+	return applyCurrentState(promo), nil
 }
 
 func (c *promocodesController) Delete(ctx context.Context, uuid string) error {
 	log := c.log.Named("Delete")
 
-	_, err := c.col.RemoveDocument(ctx, uuid)
+	var promo pb.Promocode
+	meta, err := c.col.ReadDocument(ctx, uuid, &promo)
+	if err != nil {
+		log.Error("Failed to get document", zap.Error(err))
+		return err
+	}
+	promo.Uuid = meta.Key
+
+	promo.Status = pb.PromocodeStatus_DELETED
+	_, err = c.col.UpdateDocument(ctx, promo.GetUuid(), &promo)
 	if err != nil {
 		log.Error("Failed to update document", zap.Error(err))
 		return err
@@ -122,7 +138,7 @@ func (c *promocodesController) Get(ctx context.Context, uuid string) (*pb.Promoc
 	}
 
 	promo.Uuid = meta.Key
-	return &promo, nil
+	return applyCurrentState(&promo), nil
 }
 
 const getByCodeQuery = `FOR p IN @@promocodes FILTER p.code == @code RETURN p`
@@ -149,7 +165,7 @@ func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.
 	}
 
 	promo.Uuid = meta.Key
-	return &promo, nil
+	return applyCurrentState(&promo), nil
 }
 
 func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error) {
@@ -195,10 +211,14 @@ func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesR
 		return nil, err
 	}
 
+	for _, p := range promo {
+		p = applyCurrentState(p)
+	}
+
 	return promo, nil
 }
 
-func (c *promocodesController) Count(ctx context.Context, req *pb.CountPromocodesRequest) ([]*pb.Promocode, error) {
+func (c *promocodesController) Count(ctx context.Context, req *pb.CountPromocodesRequest) (int64, error) {
 	log := c.log.Named("Count")
 
 	query := "LET promo = (FOR p in @@promocodes "
@@ -213,17 +233,17 @@ func (c *promocodesController) Count(ctx context.Context, req *pb.CountPromocode
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))
-		return nil, err
+		return 0, err
 	}
 
 	var promo []*pb.Promocode
 	_, err = cur.ReadDocument(ctx, &promo)
 	if err != nil {
 		log.Error("Failed to read documents", zap.Error(err))
-		return nil, err
+		return 0, err
 	}
 
-	return promo, nil
+	return int64(len(promo)), nil
 }
 
 func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error {
@@ -234,6 +254,15 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 		return err
 	}
 
+	if entry.Account == "" {
+		accId, err := findEntryAccount(entry, c.instances, c.invoices)
+		if err != nil {
+			log.Error("Couldn't find resource owner account for entry", zap.Error(err))
+			return fmt.Errorf("invalid entry: resource owner not found")
+		}
+		entry.Account = accId
+	}
+
 	db := c.col.Database()
 	trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
 		Write:     []string{schema.PROMOCODES_COL},
@@ -241,7 +270,7 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 	}, &driver.BeginTransactionOptions{})
 	if err != nil {
 		log.Error("Failed to start transaction", zap.Error(err))
-		return err
+		return fmt.Errorf("internal error: start transaction. Try again later")
 	}
 	ctx = driver.WithTransactionID(ctx, trID)
 
@@ -250,14 +279,24 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 	if err != nil {
 		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 		log.Error("Failed to get document", zap.Error(err))
-		return err
+		return fmt.Errorf("internal error: reading promocode. Try again later")
 	}
 	promo.Uuid = meta.Key
+
+	if err = invalidStatusError(promo.Status); err != nil {
+		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
+		return err
+	}
+	promo = *applyCurrentStateWithUsed(&promo, entry)
+	if err = invalidStateError(promo.State); err != nil {
+		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
+		return err
+	}
 
 	_, ok := findEntry(promo.Uses, entry)
 	if ok {
 		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
-		return fmt.Errorf("promocode already used on this given resource")
+		return fmt.Errorf("promocode already used on given resource")
 	}
 
 	entry.Exec = time.Now().Unix()
@@ -267,14 +306,17 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 	if err != nil {
 		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 		log.Error("Failed to update document", zap.Error(err))
-		return err
+		return fmt.Errorf("internal error: applying promocode. Try again later")
 	}
 
-	return db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{})
+	if err = db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+		return fmt.Errorf("internal error: commiting changes. Try again later")
+	}
+	return nil
 }
 
 func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error {
-	log := c.log.Named("AddEntry")
+	log := c.log.Named("RemoveEntry")
 
 	if err := validateEntry(entry); err != nil {
 		log.Error("Failed to validate entry", zap.Error(err))
@@ -300,6 +342,11 @@ func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, ent
 		return err
 	}
 	promo.Uuid = meta.Key
+
+	if err = invalidStatusError(promo.Status); err != nil {
+		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
+		return err
+	}
 
 	ind, ok := findEntry(promo.Uses, entry)
 	if !ok {
@@ -322,13 +369,13 @@ func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, ent
 
 func validateEntry(entry *pb.EntryResource) error {
 	if entry == nil {
-		return fmt.Errorf("entry cannot be nil")
+		return fmt.Errorf("invalid entry: entry cannot be nil")
 	}
 	if entry.Instance == nil && entry.Invoice == nil {
-		return fmt.Errorf("one of the entry fields must be not nil")
+		return fmt.Errorf("invalid entry: one of the entry fields must be set")
 	}
 	if entry.Instance != nil && entry.Invoice != nil {
-		return fmt.Errorf("only one of the entry fields must be not nil")
+		return fmt.Errorf("invalid entry: only one of the entry fields must be set")
 	}
 	return nil
 }
@@ -343,4 +390,81 @@ func findEntry(uses []*pb.EntryResource, entry *pb.EntryResource) (int, bool) {
 		}
 	}
 	return -1, false
+}
+
+func applyCurrentState(promo *pb.Promocode) *pb.Promocode {
+	expired := time.Now().Unix() >= promo.GetDueDate()
+	taken := int64(len(promo.GetUses())) >= promo.GetLimit()
+
+	if taken {
+		promo.State = pb.PromocodeState_ALL_TAKEN
+	}
+	if expired {
+		promo.State = pb.PromocodeState_EXPIRED
+	}
+
+	if !taken && !expired {
+		promo.State = pb.PromocodeState_USABLE
+	}
+
+	return promo
+}
+
+func applyCurrentStateWithUsed(promo *pb.Promocode, newEntry *pb.EntryResource) *pb.Promocode {
+	promo = applyCurrentState(promo)
+	newEntryAccount := newEntry.Account
+	maxUsesPerUser := promo.GetUsesPerUser()
+
+	current := int64(0)
+	for _, use := range promo.GetUses() {
+		if use.GetAccount() == newEntryAccount {
+			current++
+			if current == maxUsesPerUser {
+				promo.State = pb.PromocodeState_USED
+				break
+			}
+		}
+	}
+
+	return promo
+}
+
+func invalidStateError(state pb.PromocodeState) error {
+	switch state {
+	case pb.PromocodeState_EXPIRED:
+		return fmt.Errorf("promocode is expired")
+	case pb.PromocodeState_ALL_TAKEN:
+		return fmt.Errorf("no promocodes left")
+	case pb.PromocodeState_USED:
+		return fmt.Errorf("already got maximum uses of this promocode")
+	}
+	return nil
+}
+
+func invalidStatusError(status pb.PromocodeStatus) error {
+	switch status {
+	case pb.PromocodeStatus_DELETED:
+		return fmt.Errorf("promocode is deleted")
+	case pb.PromocodeStatus_SUSPENDED:
+		return fmt.Errorf("promocode is inactive")
+	}
+	return nil
+}
+
+func findEntryAccount(entry *pb.EntryResource, instances InstancesController, invoices InvoicesController) (string, error) {
+	if entry.Instance != nil {
+		acc, err := instances.GetInstanceOwner(context.Background(), entry.GetInstance())
+		if err != nil {
+			return "", err
+		}
+		return acc.GetUuid(), nil
+	}
+	if entry.Invoice != nil {
+		inv, err := invoices.Get(context.Background(), entry.GetInvoice())
+		if err != nil {
+			return "", err
+		}
+		return inv.GetAccount(), nil
+	}
+	return "", fmt.Errorf("fatal: entry resource is not set")
 }

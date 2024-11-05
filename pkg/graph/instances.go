@@ -68,6 +68,7 @@ type InstancesController interface {
 	SetState(ctx context.Context, inst *pb.Instance, state stpb.NoCloudState) (err error)
 	TransferInst(ctx context.Context, oldIGEdge string, newIG driver.DocumentID, inst driver.DocumentID) error
 	GetEdge(ctx context.Context, inboundNode string, collection string) (string, error)
+	GetInstanceOwner(ctx context.Context, uuid string) (Account, error)
 	getSp(ctx context.Context, uuid string) (string, error)
 }
 
@@ -453,6 +454,44 @@ func (ctrl *instancesController) GetInstancePeriod(i *pb.Instance) (*int64, erro
 	//}
 
 	return nil, nil
+}
+
+const instanceOwner = `
+LET account = LAST( // Find Instance owner Account
+    FOR node, edge, path IN 4
+    INBOUND DOCUMENT(@@instances, @instance)
+    GRAPH @permissions
+    FILTER path.edges[*].role == ["owner","owner","owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, @@accounts)
+        RETURN node
+    )
+RETURN account`
+
+func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid string) (Account, error) {
+	log := ctrl.log.Named("GetInstanceOwner")
+
+	cur, err := ctrl.db.Query(ctx, instanceOwner, map[string]interface{}{
+		"instance":    uuid,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"@instances":  schema.INSTANCES_COL,
+		"@accounts":   schema.ACCOUNTS_COL,
+	})
+	if err != nil {
+		log.Error("Error getting instance owner. Failed to execute query", zap.Error(err))
+		return Account{}, fmt.Errorf("error getting instance owner: %w", err)
+	}
+	var acc Account
+	_, err = cur.ReadDocument(ctx, &acc)
+	if err != nil {
+		log.Error("Error getting instance owner. Failed to read from cursor", zap.Error(err))
+		return Account{}, fmt.Errorf("failed to get instance owner: %w", err)
+	}
+	acc.Uuid = acc.Key
+	if acc.GetUuid() == "" {
+		log.Error("Instance owner not found. Uuid is empty")
+		return Account{}, fmt.Errorf("instance owner not found. Uuid is empty")
+	}
+	return acc, nil
 }
 
 func (ctrl *instancesController) GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (Instance, error) {
