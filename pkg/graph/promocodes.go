@@ -192,7 +192,7 @@ func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesR
 	}
 
 	if req.Field != nil && req.Sort != nil {
-		subQuery := ` SORT a.%s %s`
+		subQuery := ` SORT p.%s %s`
 		field, sort := req.GetField(), req.GetSort()
 
 		query += fmt.Sprintf(subQuery, field, sort)
