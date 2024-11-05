@@ -1242,7 +1242,8 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		log.Warn("WARN. Instance gonna be renewed asynchronously. Product, resources or addons has different periods")
 	}
 
-	cost, err := s.instances.CalculateInstanceEstimatePrice(inst.Instance, false)
+	initCost, _ := s.instances.CalculateInstanceEstimatePrice(inst.Instance, false)
+	cost, err := s.promocodes.GetDiscountPriceByInstance(inst.Instance, false)
 	if err != nil {
 		log.Error("Error calculating instance estimate price", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error calculating instance estimate price")
@@ -1296,7 +1297,8 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Account:  acc.GetUuid(),
 		Currency: acc.Currency,
 		Meta: map[string]*structpb.Value{
-			"creator": structpb.NewStringValue(requester),
+			"creator":           structpb.NewStringValue(requester),
+			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%f %s", initCost, currencyConf.Currency.Title)),
 		},
 	}
 
