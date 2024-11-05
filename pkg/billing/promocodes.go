@@ -121,7 +121,7 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode())
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, fmt.Errorf("internal error. Promocode not found")
+		return nil, fmt.Errorf("promocode not found")
 	}
 
 	if promo.Status == pb.PromocodeStatus_DELETED && !isAdmin {
