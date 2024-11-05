@@ -400,6 +400,28 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 		return cost, nil
 	}
 
+	// Filter inactive promocodes
+	now := time.Now().Unix()
+	var promosFiltered []*pb.Promocode
+	for _, promo := range promos {
+		var entry *pb.EntryResource
+		for _, e := range promo.GetUses() {
+			if e.Instance != nil && *e.Instance == i.GetUuid() {
+				entry = e
+				break
+			}
+		}
+		if entry == nil {
+			c.log.Error("Got no entry after listAssociated. Logic error")
+			continue
+		}
+		if entry.Exec+promo.GetActiveTime() < now {
+			continue
+		}
+		promosFiltered = append(promosFiltered, promo)
+	}
+	promos = promosFiltered
+
 	bp, err := c.plans.Get(ctx, i.GetBillingPlan())
 	if err != nil {
 		return cost, fmt.Errorf("failed to get billing plan: %w", err)
@@ -474,6 +496,28 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 	if len(promos) == 0 {
 		return initCost, nil
 	}
+
+	// Filter inactive promocodes
+	now := time.Now().Unix()
+	var promosFiltered []*pb.Promocode
+	for _, promo := range promos {
+		var entry *pb.EntryResource
+		for _, e := range promo.GetUses() {
+			if e.Instance != nil && *e.Instance == i.GetUuid() {
+				entry = e
+				break
+			}
+		}
+		if entry == nil {
+			c.log.Error("Got no entry after listAssociated. Logic error")
+			continue
+		}
+		if entry.Exec+promo.GetActiveTime() < now {
+			continue
+		}
+		promosFiltered = append(promosFiltered, promo)
+	}
+	promos = promosFiltered
 
 	cost := initCost
 	if defCurrency.GetId() != initCurrency.GetId() {
