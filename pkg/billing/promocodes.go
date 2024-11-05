@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"slices"
 	"strings"
 	"time"
 )
@@ -200,14 +201,63 @@ func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListP
 	log := s.log.Named("List")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	// TODO: maybe refactor somehow
+	entryRes := make([]*pb.EntryResource, 0)
+	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
+	if !isAdmin {
+		for _, res := range r.Msg.GetFilters()["resources"].GetListValue().AsSlice() {
+			resStr, ok := res.(string)
+			if !ok {
+				log.Error("Failed to parse promocode resource. Not a string")
+				return nil, status.Error(codes.InvalidArgument, "Failed to parse promocode resource. Not a string")
+			}
+			entry, err := parseEntryResource(resStr)
+			if err != nil {
+				log.Error("Failed to parse promocode resource", zap.Error(err))
+				return nil, err
+			}
+			if entry.Invoice != nil {
+				if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.INVOICES_COL, entry.GetInvoice()), access.Level_ADMIN) {
+					return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to get by requested resource")
+				}
+			}
+			if entry.Instance != nil {
+				if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.INSTANCES_COL, entry.GetInstance()), access.Level_ADMIN) {
+					return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to get by requested resource")
+				}
+			}
+			entryRes = append(entryRes, entry)
+		}
 	}
 
 	promocodes, err := s.promos.List(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to list promocodes", zap.Error(err))
 		return nil, err
+	}
+
+	if !isAdmin {
+		for _, promo := range promocodes {
+			filtetedUses := make([]*pb.EntryResource, 0)
+			promo.Limit = 0
+			promo.Created = 0
+			promo.UsesPerUser = 0
+			// Filter to show only uses associated by request user resources
+			for _, entry := range entryRes {
+				if slices.ContainsFunc(promo.Uses, func(e *pb.EntryResource) bool {
+					if e.Instance != nil && entry.Instance != nil && e.Instance == entry.Instance {
+						return true
+					}
+					if e.Invoice != nil && entry.Invoice != nil && e.Invoice == entry.Invoice {
+						return true
+					}
+					return false
+				}) {
+					filtetedUses = append(filtetedUses, entry)
+				}
+			}
+			promo.Uses = filtetedUses
+		}
 	}
 
 	return connect.NewResponse(&pb.ListPromocodesResponse{Promocodes: promocodes}), nil
@@ -217,8 +267,30 @@ func (s *PromocodesServer) Count(ctx context.Context, r *connect.Request[pb.Coun
 	log := s.log.Named("Count")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
+	if !isAdmin {
+		for _, res := range r.Msg.GetFilters()["resources"].GetListValue().AsSlice() {
+			resStr, ok := res.(string)
+			if !ok {
+				log.Error("Failed to parse promocode resource. Not a string")
+				return nil, status.Error(codes.InvalidArgument, "Failed to parse promocode resource. Not a string")
+			}
+			entry, err := parseEntryResource(resStr)
+			if err != nil {
+				log.Error("Failed to parse promocode resource", zap.Error(err))
+				return nil, err
+			}
+			if entry.Invoice != nil {
+				if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.INVOICES_COL, entry.GetInvoice()), access.Level_ADMIN) {
+					return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to get by requested resource")
+				}
+			}
+			if entry.Instance != nil {
+				if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.INSTANCES_COL, entry.GetInstance()), access.Level_ADMIN) {
+					return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to get by requested resource")
+				}
+			}
+		}
 	}
 
 	count, err := s.promos.Count(ctx, r.Msg)
