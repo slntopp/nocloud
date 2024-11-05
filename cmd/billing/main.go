@@ -228,7 +228,7 @@ func main() {
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, caCtrl)
+	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, promoCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
 

@@ -44,13 +44,14 @@ var (
 )
 
 type RecordsServiceServer struct {
-	log       *zap.Logger
-	rbmq      rabbitmq.Connection
-	records   graph.RecordsController
-	plans     graph.BillingPlansController
-	instances graph.InstancesController
-	addons    graph.AddonsController
-	ca        graph.CommonActionsController
+	log        *zap.Logger
+	rbmq       rabbitmq.Connection
+	records    graph.RecordsController
+	plans      graph.BillingPlansController
+	instances  graph.InstancesController
+	addons     graph.AddonsController
+	promocodes graph.PromocodesController
+	ca         graph.CommonActionsController
 
 	settingsClient spb.SettingsServiceClient
 
@@ -61,17 +62,18 @@ type RecordsServiceServer struct {
 
 func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db driver.Database, settingsClient spb.SettingsServiceClient,
 	records graph.RecordsController, plans graph.BillingPlansController, instances graph.InstancesController, addons graph.AddonsController,
-	ca graph.CommonActionsController) *RecordsServiceServer {
+	promocodes graph.PromocodesController, ca graph.CommonActionsController) *RecordsServiceServer {
 	log := logger.Named("RecordsService")
 
 	return &RecordsServiceServer{
-		log:       log,
-		rbmq:      conn,
-		records:   records,
-		plans:     plans,
-		instances: instances,
-		addons:    addons,
-		ca:        ca,
+		log:        log,
+		rbmq:       conn,
+		records:    records,
+		plans:      plans,
+		instances:  instances,
+		addons:     addons,
+		promocodes: promocodes,
+		ca:         ca,
 
 		settingsClient: settingsClient,
 
@@ -176,12 +178,19 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		return fmt.Errorf("invalid record. Addon record or product record, but no product in billing plan")
 	}
 
+	var (
+		resType, resource string
+	)
 	if record.Product != "" {
 		itemPrice = bp.Products[record.Product].Price
+		resType = "product"
+		resource = record.Product
 	} else if record.Resource != "" {
 		for _, res := range bp.Resources {
 			if res.Key == record.Resource {
 				itemPrice = res.Price
+				resType = "resource"
+				resource = record.Resource
 				break
 			}
 		}
@@ -197,13 +206,23 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			return err
 		}
 		itemPrice = addon.Periods[product.Period]
+		resType = "addon"
+		resource = record.Addon
 	} else {
 		log.Warn("Invalid record. Record has no item", zap.Any("record", &record))
 		return fmt.Errorf("invalid record. Record has no item")
 	}
 	log.Debug("Got item price", zap.Any("itemPrice", itemPrice))
+	record.Meta["no_discount_price"] = structpb.NewStringValue(fmt.Sprintf("%f %s", itemPrice, currencyConf.Currency))
+	if itemPrice, err = s.promocodes.GetDiscountPriceByResource(inst.Instance, currencyConf.Currency, itemPrice,
+		currencyConf.Currency, resType, resource); err != nil {
+		log.Error("Failed to get discount price", zap.Error(err))
+		return err
+	}
+	log.Debug("Item price after discount", zap.Any("itemPrice", itemPrice))
 
 	record.Meta["transactionType"] = structpb.NewStringValue("system")
+	record.Cost = itemPrice
 
 	recordId := s.records.Create(ctx, record)
 	log.Debug("Record created", zap.String("record_id", recordId.Key()))
@@ -380,8 +399,9 @@ FOR service IN @@services // Iterate over Services
         LET addon = DOCUMENT(@@addons, record.addon)
         LET product_period = bp.products[instance.product].period
         LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
+        LET final_price = record.cost > 0 ? record.cost : item_price // If already defined when was created, then use this value. If not, then use calculated value
 
-        LET cost = record.total * rate * item_price
+        LET cost = record.total * rate * final_price
             UPDATE record._key WITH { 
 				processed: true, 
 				cost: cost,

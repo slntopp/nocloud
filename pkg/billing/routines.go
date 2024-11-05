@@ -513,6 +513,7 @@ FOR service IN @@services // Iterate over Services
         LET addon = DOCUMENT(@@addons, record.addon)
         LET product_period = bp.products[instance.product].period
         LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
+        LET final_price = record.cost > 0 ? record.cost : item_price
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND
@@ -522,7 +523,7 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET cost = record.total * rate * item_price
+        LET cost = record.total * rate * final_price
             UPDATE record._key WITH { 
 				processed: true, 
 				cost: cost,
