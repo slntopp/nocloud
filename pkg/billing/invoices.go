@@ -1157,7 +1157,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       req.GetSum(),
-				Description: "Пополнение баланса",
+				Description: "Top up balance",
 			},
 		},
 	}
@@ -1238,6 +1238,11 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		_processed++
 	}
 
+	if len(periods) == 0 || len(expirings) == 0 {
+		log.Error("Error getting periods or expirings. No data")
+		return nil, status.Error(codes.Internal, "Error getting periods or expirings. No data")
+	}
+
 	if _processed > _expiring {
 		log.Warn("WARN. Instance gonna be renewed asynchronously. Product, resources or addons has different periods")
 	}
@@ -1278,12 +1283,19 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	expireDate := time.Unix(expire, 0)
 	untilDate := expireDate.Add(time.Duration(period) * time.Second)
 
+	fDateNum := func(d int) string {
+		if d < 10 {
+			return fmt.Sprintf("0%d", d)
+		}
+		return fmt.Sprintf("%d", d)
+	}
+
 	inv := &pb.Invoice{
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
 			{
-				Description: fmt.Sprintf("Instance '%s' renewal: %d:%d - %d:%d",
-					inst.GetTitle(), expireDate.Day(), expireDate.Month(), untilDate.Day(), untilDate.Month()),
+				Description: fmt.Sprintf("Instance «%s» renewal: %s:%s - %s:%s",
+					inst.GetTitle(), fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month()))),
 				Amount:   1,
 				Unit:     "Pcs",
 				Price:    cost,

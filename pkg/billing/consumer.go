@@ -77,7 +77,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		Status: bpb.BillingStatus_UNPAID,
 		Items: []*bpb.Item{
 			{
-				Description: fmt.Sprintf("Instance '%s' start payment", instance.GetUuid()),
+				Description: fmt.Sprintf("Instance «%s» start payment", instance.GetTitle()),
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       cost,
