@@ -42,7 +42,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	bpb "github.com/slntopp/nocloud-proto/billing"
-	ppb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
@@ -74,8 +73,7 @@ type InstancesController interface {
 }
 
 const (
-	INSTANCES_COL                     = "Instances"
-	InstanceApplyPromocode ContextKey = "InstanceApplyPromocode"
+	INSTANCES_COL = "Instances"
 )
 
 type Instance struct {
@@ -97,7 +95,6 @@ type instancesController struct {
 	acc     AccountsController
 	cur     CurrencyController
 	addons  AddonsController
-	promos  PromocodesController
 	channel rabbitmq.Channel
 
 	bp_ctrl BillingPlansController
@@ -367,10 +364,9 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 	acc := NewAccountsController(log, db)
 	inv := NewInvoicesController(log, db)
 	cur := NewCurrencyController(log, db)
-	promos := NewPromocodesController(log, db, conn)
 
 	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: bp_ctrl,
-		addons: addons, inv: inv, acc: acc, cur: cur, promos: promos}
+		addons: addons, inv: inv, acc: acc, cur: cur}
 }
 
 // CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
@@ -578,15 +574,6 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 	}
 
 	nocloud.Log(log, event)
-
-	// Creating promocode if requested
-	if promo, ok := ctx.Value(InstanceApplyPromocode).(string); ok {
-		if err = ctrl.promos.AddEntry(ctx, promo, &ppb.EntryResource{
-			Instance: &i.Uuid,
-		}); err != nil {
-			log.Error("Failed to add promocode entry to newly created instance", zap.Error(err))
-		}
-	}
 
 	// Attempt create edge
 	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{

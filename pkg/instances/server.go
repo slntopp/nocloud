@@ -32,6 +32,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	accesspb "github.com/slntopp/nocloud-proto/access"
+	ppb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	stpb "github.com/slntopp/nocloud-proto/states"
@@ -295,15 +296,20 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if req.Promocode != nil && req.GetPromocode() != "" {
-		ctx = context.WithValue(ctx, graph.InstanceApplyPromocode, req.GetPromocode())
-	}
-
 	// TODO: set sp here to log service prodiver
 	newId, err := s.ctrl.Create(ctx, igId, "", req.GetInstance())
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if req.Promocode != nil && req.GetPromocode() != "" {
+		if err = s.promo_ctrl.AddEntry(ctx, req.GetPromocode(), &ppb.EntryResource{
+			Instance: &newId,
+		}); err != nil {
+			log.Error("Failed to add promocode entry to newly created instance", zap.Error(err))
+			return nil, status.Error(codes.OK, "Instance created successfully but promocode entry was not added: "+err.Error()+". Please contact support.")
+		}
 	}
 
 	return connect.NewResponse(&pb.CreateResponse{
