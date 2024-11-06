@@ -195,10 +195,12 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 				}
 			} else if key == "number" {
 				query += fmt.Sprintf(` FILTER t["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
+			} else if key == "whmcs_invoice_id" {
+				query += fmt.Sprintf(` FILTER t.meta["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
-|| t._key LIKE "%s"`,
-					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+|| t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -213,6 +215,10 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT t.%s %s`
 		field, sort := req.GetField(), req.GetSort()
+
+		if field == "whmcs_invoice_id" {
+			field = `meta["whmcs_invoice_id"]`
+		}
 
 		if field == "total" {
 			if sort == "asc" {
@@ -880,10 +886,12 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 				}
 			} else if key == "number" {
 				query += fmt.Sprintf(` FILTER t["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
+			} else if key == "whmcs_invoice_id" {
+				query += fmt.Sprintf(` FILTER t.meta["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
-|| t._key LIKE "%s"`,
-					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+|| t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
