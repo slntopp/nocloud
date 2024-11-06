@@ -78,7 +78,7 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
 			}
 			query += fmt.Sprintf(` LET result = (
                        LET uses = p.uses == null ? [] : p.uses
-			           FOR use in p.uses
+			           FOR use in uses
                        LET bools = (
 				           FOR r in @resources
 				           LET parts = SPLIT(r, "/")
