@@ -86,7 +86,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		},
 		Meta: map[string]*structpb.Value{
 			"creator":           structpb.NewStringValue("nocloud.billing.ProcessInstanceCreation"),
-			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%f %s", initCost, currencyConf.Currency.Title)),
+			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%f %s", initCost, currencyConf.Currency.GetTitle())),
 		},
 		Total:    cost,
 		Type:     bpb.ActionType_INSTANCE_START,
