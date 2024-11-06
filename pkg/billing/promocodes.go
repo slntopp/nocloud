@@ -281,7 +281,7 @@ func (s *PromocodesServer) Count(ctx context.Context, r *connect.Request[pb.Coun
 		for _, res := range r.Msg.GetFilters()["resources"].GetListValue().AsSlice() {
 			resStr, ok := res.(string)
 			if !ok {
-				log.Error("Failed to parse promocode resource. Not a string")
+				log.Error("Failed to parse promocode resource. Resource is not a string")
 				return nil, status.Error(codes.InvalidArgument, "Failed to parse promocode resource. Not a string")
 			}
 			entry, err := parseEntryResource(resStr)
