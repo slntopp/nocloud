@@ -614,10 +614,10 @@ func validateEntry(entry *pb.EntryResource) error {
 
 func findEntry(uses []*pb.EntryResource, entry *pb.EntryResource) (int, bool) {
 	for i, u := range uses {
-		if u.Instance != nil && entry.Instance != nil && u.Instance == entry.Instance {
+		if u.Instance != nil && entry.Instance != nil && *u.Instance == *entry.Instance {
 			return i, true
 		}
-		if u.Invoice != nil && entry.Invoice != nil && u.Invoice == entry.Invoice {
+		if u.Invoice != nil && entry.Invoice != nil && *u.Invoice == *entry.Invoice {
 			return i, true
 		}
 	}
