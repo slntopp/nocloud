@@ -435,7 +435,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	oneTime := product.GetPeriod() == 0
 	if hasProduct && (!oneTime || includeOneTimePayments) {
 		_checkPrice += product.GetPrice()
-		discountPrice += calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "product", i.GetProduct(), product.GetPrice())
+		discountPrice += product.GetPrice() - calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "product", i.GetProduct(), product.GetPrice())
 	}
 	// Calculate addons
 	if hasProduct && (!oneTime || includeOneTimePayments) {
@@ -446,7 +446,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 			}
 			price := addon.GetPeriods()[product.GetPeriod()] // Assume this was checked by CalculateInstanceEstimatePrice
 			_checkPrice += price
-			discountPrice += calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "addon", addon.GetUuid(), price)
+			discountPrice += price - calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "addon", addon.GetUuid(), price)
 		}
 	}
 	// Calculate resources
@@ -470,9 +470,8 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 			count := i.GetResources()[res.GetKey()].GetNumberValue()
 			price = res.GetPrice() * count
 		}
-
 		_checkPrice += price
-		discountPrice += calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "resource", res.GetKey(), price)
+		discountPrice += price - calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "resource", res.GetKey(), price)
 	}
 
 	const EqualityThreshold = 0.001
@@ -572,7 +571,7 @@ func calculateResourceDiscount(promos []*pb.Promocode, planId string, resType st
 			discount := float64(0)
 			sch := item.GetSchema()
 			if sch.DiscountPercent != nil {
-				discount = cost - cost*sch.GetDiscountPercent()
+				discount = cost * sch.GetDiscountPercent()
 			} else if sch.DiscountAmount != nil {
 				discount = math.Min(cost, float64(sch.GetDiscountAmount()))
 			} else if sch.FixedPrice != nil {
