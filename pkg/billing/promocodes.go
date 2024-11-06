@@ -274,6 +274,10 @@ func (s *PromocodesServer) Count(ctx context.Context, r *connect.Request[pb.Coun
 
 	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	if !isAdmin {
+		resources := r.Msg.GetFilters()["resources"].GetListValue().AsSlice()
+		if len(resources) == 0 {
+			return connect.NewResponse(&pb.CountPromocodesResponse{Total: 0}), nil
+		}
 		for _, res := range r.Msg.GetFilters()["resources"].GetListValue().AsSlice() {
 			resStr, ok := res.(string)
 			if !ok {
