@@ -1180,6 +1180,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateRenewalInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
 	req := _req.Msg
 	log = log.With(zap.String("instance", req.GetInstance()), zap.String("requester", requester))
 	log.Debug("Request received")
@@ -1191,7 +1192,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
-	inst, err := s.instances.Get(ctx, req.GetInstance())
+	inst, err := s.instances.GetWithAccess(ctx, requesterId, req.GetInstance())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get instance")

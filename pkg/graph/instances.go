@@ -1193,7 +1193,8 @@ GRAPH @permissions SORT path.edges[0].level
             },
 			meta: bp.meta,
 			fee: bp.fee,
-			software: bp.software
+			software: bp.software,
+            addons: bp.addons
         },
 	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
 	})

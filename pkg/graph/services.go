@@ -247,7 +247,8 @@ LET instances_groups = (
                         },
 						meta: bp.meta,
 						fee: bp.fee,
-						software: bp.software
+						software: bp.software,
+                        addons: bp.addons
                     } 
                 }))
         LET sp = (
@@ -359,7 +360,8 @@ LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
 							},
 							meta: bp.meta,
 							fee: bp.fee,
-							software: bp.software
+							software: bp.software,
+                            addons: bp.addons
 						} 
 					}))
     		RETURN MERGE(group, { uuid: group._key, instances })
