@@ -77,12 +77,13 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
 				continue
 			}
 			query += fmt.Sprintf(` LET result = (
+                       LET uses = p.uses == null ? [] : p.uses
 			           FOR use in p.uses
                        LET bools = (
 				           FOR r in @resources
 				           LET parts = SPLIT(r, "/")
                            FILTER LENGTH(parts) == 2
-                           FILTER parts[1] == use.invoice or parts[1] == use.instance
+                           FILTER parts[1] == TO_STRING(use.invoice) or parts[1] == TO_STRING(use.instance)
                            RETURN true
                        )
                        FILTER LENGTH(bools) > 0
