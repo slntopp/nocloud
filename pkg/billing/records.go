@@ -213,7 +213,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		return fmt.Errorf("invalid record. Record has no item")
 	}
 	log.Debug("Got item price", zap.Any("itemPrice", itemPrice))
-	record.Meta["no_discount_price"] = structpb.NewStringValue(fmt.Sprintf("%f %s", itemPrice, currencyConf.Currency.GetTitle()))
+	record.Meta["no_discount_price"] = structpb.NewStringValue(fmt.Sprintf("%.2f %s", itemPrice, currencyConf.Currency.GetTitle()))
 	if itemPrice, err = s.promocodes.GetDiscountPriceByResource(inst.Instance, currencyConf.Currency, itemPrice,
 		currencyConf.Currency, resType, resource); err != nil {
 		log.Error("Failed to get discount price", zap.Error(err))
