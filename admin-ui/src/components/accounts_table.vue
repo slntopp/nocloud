@@ -178,6 +178,8 @@ const filter = computed(() => {
     }
   });
 
+  filter["status"] = filter["status"]?.map((val) => +val);
+
   return {
     ...filter,
     ...dates,
@@ -237,9 +239,9 @@ const searchFields = computed(() => [
     type: "select",
     item: { value: "uuid", title: "title" },
     items: [
-      { title: "ACTIVE", uuid: 0 },
-      { title: "LOCK", uuid: 1 },
-      { title: "PERMANENT_LOCK", uuid: 2 },
+      { title: "ACTIVE", uuid: "0" },
+      { title: "LOCK", uuid: "1" },
+      { title: "PERMANENT_LOCK", uuid: "2" },
     ],
   },
   { title: "Balance", key: "balance", type: "number-range" },
