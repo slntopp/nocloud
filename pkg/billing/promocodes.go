@@ -203,9 +203,14 @@ func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListP
 
 	// TODO: maybe refactor somehow
 	entryRes := make([]*pb.EntryResource, 0)
+
 	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	if !isAdmin {
-		for _, res := range r.Msg.GetFilters()["resources"].GetListValue().AsSlice() {
+		resources := r.Msg.GetFilters()["resources"].GetListValue().AsSlice()
+		if len(resources) == 0 {
+			return connect.NewResponse(&pb.ListPromocodesResponse{Promocodes: make([]*pb.Promocode, 0)}), nil
+		}
+		for _, res := range resources {
 			resStr, ok := res.(string)
 			if !ok {
 				log.Error("Failed to parse promocode resource. Not a string")
@@ -245,10 +250,10 @@ func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListP
 			// Filter to show only uses associated by request user resources
 			for _, entry := range entryRes {
 				if slices.ContainsFunc(promo.Uses, func(e *pb.EntryResource) bool {
-					if e.Instance != nil && entry.Instance != nil && e.Instance == entry.Instance {
+					if e.Instance != nil && entry.Instance != nil && *e.Instance == *entry.Instance {
 						return true
 					}
-					if e.Invoice != nil && entry.Invoice != nil && e.Invoice == entry.Invoice {
+					if e.Invoice != nil && entry.Invoice != nil && *e.Invoice == *entry.Invoice {
 						return true
 					}
 					return false
@@ -269,10 +274,14 @@ func (s *PromocodesServer) Count(ctx context.Context, r *connect.Request[pb.Coun
 
 	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	if !isAdmin {
+		resources := r.Msg.GetFilters()["resources"].GetListValue().AsSlice()
+		if len(resources) == 0 {
+			return connect.NewResponse(&pb.CountPromocodesResponse{Total: 0}), nil
+		}
 		for _, res := range r.Msg.GetFilters()["resources"].GetListValue().AsSlice() {
 			resStr, ok := res.(string)
 			if !ok {
-				log.Error("Failed to parse promocode resource. Not a string")
+				log.Error("Failed to parse promocode resource. Resource is not a string")
 				return nil, status.Error(codes.InvalidArgument, "Failed to parse promocode resource. Not a string")
 			}
 			entry, err := parseEntryResource(resStr)

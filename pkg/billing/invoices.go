@@ -195,10 +195,12 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 				}
 			} else if key == "number" {
 				query += fmt.Sprintf(` FILTER t["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
+			} else if key == "whmcs_invoice_id" {
+				query += fmt.Sprintf(` FILTER t.meta["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
-|| t._key LIKE "%s"`,
-					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+|| t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -213,6 +215,10 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT t.%s %s`
 		field, sort := req.GetField(), req.GetSort()
+
+		if field == "whmcs_invoice_id" {
+			field = `meta["whmcs_invoice_id"]`
+		}
 
 		if field == "total" {
 			if sort == "asc" {
@@ -880,10 +886,12 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 				}
 			} else if key == "number" {
 				query += fmt.Sprintf(` FILTER t["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
+			} else if key == "whmcs_invoice_id" {
+				query += fmt.Sprintf(` FILTER t.meta["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
-|| t._key LIKE "%s"`,
-					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+|| t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s"`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -1157,7 +1165,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       req.GetSum(),
-				Description: "Пополнение баланса",
+				Description: "Top up balance",
 			},
 		},
 	}
@@ -1180,6 +1188,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateRenewalInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
 	req := _req.Msg
 	log = log.With(zap.String("instance", req.GetInstance()), zap.String("requester", requester))
 	log.Debug("Request received")
@@ -1191,7 +1200,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
-	inst, err := s.instances.Get(ctx, req.GetInstance())
+	inst, err := s.instances.GetWithAccess(ctx, requesterId, req.GetInstance())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get instance")
@@ -1238,6 +1247,11 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		_processed++
 	}
 
+	if len(periods) == 0 || len(expirings) == 0 {
+		log.Error("Error getting periods or expirings. No data")
+		return nil, status.Error(codes.Internal, "Error getting periods or expirings. No data")
+	}
+
 	if _processed > _expiring {
 		log.Warn("WARN. Instance gonna be renewed asynchronously. Product, resources or addons has different periods")
 	}
@@ -1278,12 +1292,19 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	expireDate := time.Unix(expire, 0)
 	untilDate := expireDate.Add(time.Duration(period) * time.Second)
 
+	fDateNum := func(d int) string {
+		if d < 10 {
+			return fmt.Sprintf("0%d", d)
+		}
+		return fmt.Sprintf("%d", d)
+	}
+
 	inv := &pb.Invoice{
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
 			{
-				Description: fmt.Sprintf("Instance '%s' renewal: %d:%d - %d:%d",
-					inst.GetTitle(), expireDate.Day(), expireDate.Month(), untilDate.Day(), untilDate.Month()),
+				Description: fmt.Sprintf("Instance «%s» renewal: %s:%s - %s:%s",
+					inst.GetTitle(), fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month()))),
 				Amount:   1,
 				Unit:     "Pcs",
 				Price:    cost,
@@ -1298,7 +1319,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Currency: acc.Currency,
 		Meta: map[string]*structpb.Value{
 			"creator":           structpb.NewStringValue(requester),
-			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%f %s", initCost, currencyConf.Currency.Title)),
+			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 		},
 	}
 

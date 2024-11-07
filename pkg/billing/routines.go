@@ -131,8 +131,6 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 				// If got expiring records calculate renewal for all instance billing resources
 				var expiring = false
-				periods := make([]int64, 0)
-				expirings := make([]int64, 0)
 				for _, r := range records {
 					log := log.With(zap.Any("record", r))
 					if expiringTime(r.Expires, r.Period) > now {
@@ -144,8 +142,6 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 						continue
 					}
 					expiring = true
-					periods = append(periods, r.Period)
-					expirings = append(expirings, r.Expires)
 				}
 
 				if !expiring {

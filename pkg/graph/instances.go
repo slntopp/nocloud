@@ -609,23 +609,26 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 		log.Error("Failed to parse", zap.Error(err))
 	}
 	// Send for invoice creation
-	log.Info("Publishing creation event", zap.Any("instance", i.GetUuid()))
-	e := epb.Event{
-		Uuid: i.GetUuid(),
-	}
-	body, err = proto.Marshal(&e)
-	if err == nil {
-		err = ctrl.channel.PublishWithContext(ctx, "instances", "created_instance", false, false, amqp091.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp091.Persistent,
-			Body:         body,
-		})
-		if err != nil {
-			log.Error("Failed to publish", zap.Error(err))
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		log.Info("Publishing creation event", zap.Any("instance", i.GetUuid()))
+		e := epb.Event{
+			Uuid: i.GetUuid(),
 		}
-	} else {
-		log.Error("Failed to parse", zap.Error(err))
-	}
+		body, err = proto.Marshal(&e)
+		if err == nil {
+			err = ctrl.channel.PublishWithContext(ctx, "instances", "created_instance", false, false, amqp091.Publishing{
+				ContentType:  "text/plain",
+				DeliveryMode: amqp091.Persistent,
+				Body:         body,
+			})
+			if err != nil {
+				log.Error("Failed to publish", zap.Error(err))
+			}
+		} else {
+			log.Error("Failed to parse", zap.Error(err))
+		}
+	}()
 
 	return meta.Key, nil
 }
@@ -1190,7 +1193,8 @@ GRAPH @permissions SORT path.edges[0].level
             },
 			meta: bp.meta,
 			fee: bp.fee,
-			software: bp.software
+			software: bp.software,
+            addons: bp.addons
         },
 	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
 	})

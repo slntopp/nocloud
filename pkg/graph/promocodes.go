@@ -14,6 +14,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,7 +28,7 @@ type PromocodesController interface {
 	Count(ctx context.Context, req *pb.CountPromocodesRequest) (int64, error)
 	AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
 	RemoveEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
-	GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool) (float64, error)
+	GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool, filterOneTime ...bool) (float64, error)
 	GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, error)
 }
 
@@ -39,6 +40,7 @@ type promocodesController struct {
 	currencies CurrencyController
 	plans      BillingPlansController
 	addons     AddonsController
+	showcases  ShowcasesController
 }
 
 func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection) PromocodesController {
@@ -77,12 +79,13 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
 				continue
 			}
 			query += fmt.Sprintf(` LET result = (
-			           FOR use in p.uses
+                       LET uses = p.uses == null ? [] : p.uses
+			           FOR use in uses
                        LET bools = (
 				           FOR r in @resources
 				           LET parts = SPLIT(r, "/")
                            FILTER LENGTH(parts) == 2
-                           FILTER parts[1] == use.invoice or parts[1] == use.instance
+                           FILTER parts[1] == TO_STRING(use.invoice) or parts[1] == TO_STRING(use.instance)
                            RETURN true
                        )
                        FILTER LENGTH(bools) > 0
@@ -385,7 +388,7 @@ func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, ent
 
 // GetDiscountPriceByInstance returns instance estimate price (see graph.InstancesController) with applied discounts from linked promocodes
 // Returning cost with default platform currency.
-func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool) (float64, error) {
+func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool, filterOneTime ...bool) (float64, error) {
 	ctx := context.Background()
 	cost, err := c.instances.CalculateInstanceEstimatePrice(i, includeOneTimePayments)
 	if err != nil {
@@ -399,28 +402,10 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	if len(promos) == 0 {
 		return cost, nil
 	}
-
-	// Filter inactive promocodes
-	now := time.Now().Unix()
-	var promosFiltered []*pb.Promocode
-	for _, promo := range promos {
-		var entry *pb.EntryResource
-		for _, e := range promo.GetUses() {
-			if e.Instance != nil && *e.Instance == i.GetUuid() {
-				entry = e
-				break
-			}
-		}
-		if entry == nil {
-			c.log.Error("Got no entry after listAssociated. Logic error")
-			continue
-		}
-		if entry.Exec+promo.GetActiveTime() < now {
-			continue
-		}
-		promosFiltered = append(promosFiltered, promo)
+	promos = filterInactivePromos(promos, i.GetUuid(), time.Now().Unix())
+	if len(filterOneTime) > 0 && filterOneTime[0] {
+		promos = filterOneTimePromos(promos)
 	}
-	promos = promosFiltered
 
 	bp, err := c.plans.Get(ctx, i.GetBillingPlan())
 	if err != nil {
@@ -434,7 +419,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	oneTime := product.GetPeriod() == 0
 	if hasProduct && (!oneTime || includeOneTimePayments) {
 		_checkPrice += product.GetPrice()
-		discountPrice += calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "product", i.GetProduct(), product.GetPrice())
+		discountPrice += product.GetPrice() - c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "product", i.GetProduct(), product.GetPrice())
 	}
 	// Calculate addons
 	if hasProduct && (!oneTime || includeOneTimePayments) {
@@ -445,7 +430,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 			}
 			price := addon.GetPeriods()[product.GetPeriod()] // Assume this was checked by CalculateInstanceEstimatePrice
 			_checkPrice += price
-			discountPrice += calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "addon", addon.GetUuid(), price)
+			discountPrice += price - c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "addon", addon.GetUuid(), price)
 		}
 	}
 	// Calculate resources
@@ -469,9 +454,8 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 			count := i.GetResources()[res.GetKey()].GetNumberValue()
 			price = res.GetPrice() * count
 		}
-
 		_checkPrice += price
-		discountPrice += calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "resource", res.GetKey(), price)
+		discountPrice += price - c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "resource", res.GetKey(), price)
 	}
 
 	const EqualityThreshold = 0.001
@@ -482,7 +466,8 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	return discountPrice, nil
 }
 
-// GetDiscountPriceByResource returns resource discounted price. It returns cost with initCurrency which you pass as parameter.
+// GetDiscountPriceByResource returns resource discounted price. It returns cost with initCurrency which you pass as parameter
+// Returning initial price if promocode is one time
 func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, error) {
 	ctx := context.Background()
 	if resType != "addon" && resType != "product" && resType != "resource" {
@@ -496,28 +481,8 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 	if len(promos) == 0 {
 		return initCost, nil
 	}
-
-	// Filter inactive promocodes
-	now := time.Now().Unix()
-	var promosFiltered []*pb.Promocode
-	for _, promo := range promos {
-		var entry *pb.EntryResource
-		for _, e := range promo.GetUses() {
-			if e.Instance != nil && *e.Instance == i.GetUuid() {
-				entry = e
-				break
-			}
-		}
-		if entry == nil {
-			c.log.Error("Got no entry after listAssociated. Logic error")
-			continue
-		}
-		if entry.Exec+promo.GetActiveTime() < now {
-			continue
-		}
-		promosFiltered = append(promosFiltered, promo)
-	}
-	promos = promosFiltered
+	promos = filterInactivePromos(promos, i.GetUuid(), time.Now().Unix())
+	promos = filterOneTimePromos(promos)
 
 	cost := initCost
 	if defCurrency.GetId() != initCurrency.GetId() {
@@ -526,7 +491,7 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 		}
 	}
 
-	discount := calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), resType, resource, cost)
+	discount := c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), resType, resource, cost)
 	if discount == 0 {
 		return initCost, nil
 	}
@@ -541,20 +506,41 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 	return cost, nil
 }
 
-func calculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) float64 {
+func (c *promocodesController) calculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) float64 {
+	showcasesPlans := c.getShowcasesPlansCached()
+
 	maxDiscount := float64(0)
 	for _, promo := range promos {
 		for _, item := range promo.GetPromoItems() {
-			var applyToAll = item.GetPlanPromo().Addon == nil &&
+			// If it has plan promo and no items specified, then apply to plan
+			var applyToAll = item.PlanPromo != nil &&
+				item.GetPlanPromo().Addon == nil &&
 				item.GetPlanPromo().Product == nil &&
 				item.GetPlanPromo().Resource == nil
 
+			// Apply to addon if specified
 			if resType == "addon" && item.AddonPromo != nil && item.GetAddonPromo().GetAddon() == resource {
 				goto proceed
 			}
 
+			// If showcase promo specified and current plan is in it then proceed
+			if item.ShowcasePromo != nil {
+				sc := item.GetShowcasePromo().GetShowcase()
+				m.Lock()
+				if _, ok := showcasesPlans[sc]; !ok {
+					m.Unlock()
+					continue
+				}
+				if _, ok := showcasesPlans[sc][planId]; !ok {
+					m.Unlock()
+					continue
+				}
+				m.Unlock()
+				goto proceed
+			}
+
 			if item.GetPlanPromo().GetBillingPlan() != planId &&
-				(item.AddonPromo != nil || item.PlanPromo != nil) {
+				(item.AddonPromo != nil || item.PlanPromo != nil || item.ShowcasePromo != nil) {
 				continue
 			}
 			if !applyToAll && resType == "addon" && item.GetPlanPromo().GetAddon() != resource {
@@ -571,7 +557,7 @@ func calculateResourceDiscount(promos []*pb.Promocode, planId string, resType st
 			discount := float64(0)
 			sch := item.GetSchema()
 			if sch.DiscountPercent != nil {
-				discount = cost - cost*sch.GetDiscountPercent()
+				discount = cost * sch.GetDiscountPercent()
 			} else if sch.DiscountAmount != nil {
 				discount = math.Min(cost, float64(sch.GetDiscountAmount()))
 			} else if sch.FixedPrice != nil {
@@ -584,6 +570,40 @@ func calculateResourceDiscount(promos []*pb.Promocode, planId string, resType st
 		}
 	}
 	return maxDiscount
+}
+
+var _showcasesPlans = map[string]map[string]struct{}{}
+
+const showcasesPlansCacheTTL = 60 * time.Minute
+
+var showcasesPlansLastUpdate = int64(0)
+
+var m = &sync.Mutex{}
+
+func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]struct{} {
+	now := time.Now().Unix()
+	if showcasesPlansLastUpdate+int64(showcasesPlansCacheTTL.Seconds()) < now {
+		return _showcasesPlans
+	}
+
+	scs, err := c.showcases.List(context.Background(), schema.ROOT_ACCOUNT_KEY, true)
+	if err != nil {
+		c.log.Named("getShowcasesPlansCached").Error("FATAL: failed to list showcases", zap.Error(err))
+		return _showcasesPlans
+	}
+
+	m.Lock()
+	_showcasesPlans = make(map[string]map[string]struct{})
+	for _, s := range scs {
+		_showcasesPlans[s.GetUuid()] = make(map[string]struct{})
+		for _, p := range s.GetItems() {
+			_showcasesPlans[s.GetUuid()][p.GetPlan()] = struct{}{}
+		}
+	}
+	m.Unlock()
+
+	showcasesPlansLastUpdate = now
+	return _showcasesPlans
 }
 
 func (c *promocodesController) listAssociated(res string) ([]*pb.Promocode, error) {
@@ -602,7 +622,8 @@ func validateEntry(entry *pb.EntryResource) error {
 	if entry == nil {
 		return fmt.Errorf("invalid entry: entry cannot be nil")
 	}
-	if entry.Instance == nil && entry.Invoice == nil {
+	if (entry.Instance == nil || entry.GetInstance() == "") &&
+		(entry.Invoice == nil || entry.GetInvoice() == "") {
 		return fmt.Errorf("invalid entry: one of the entry fields must be set")
 	}
 	if entry.Instance != nil && entry.Invoice != nil {
@@ -613,10 +634,10 @@ func validateEntry(entry *pb.EntryResource) error {
 
 func findEntry(uses []*pb.EntryResource, entry *pb.EntryResource) (int, bool) {
 	for i, u := range uses {
-		if u.Instance != nil && entry.Instance != nil && u.Instance == entry.Instance {
+		if u.Instance != nil && entry.Instance != nil && *u.Instance == *entry.Instance {
 			return i, true
 		}
-		if u.Invoice != nil && entry.Invoice != nil && u.Invoice == entry.Invoice {
+		if u.Invoice != nil && entry.Invoice != nil && *u.Invoice == *entry.Invoice {
 			return i, true
 		}
 	}
@@ -698,4 +719,39 @@ func findEntryAccount(entry *pb.EntryResource, instances InstancesController, in
 		return inv.GetAccount(), nil
 	}
 	return "", fmt.Errorf("fatal: entry resource is not set")
+}
+
+func filterInactivePromos(promos []*pb.Promocode, instance string, now int64) []*pb.Promocode {
+	var promosFiltered []*pb.Promocode
+	for _, promo := range promos {
+		if promo.GetActiveTime() == 0 {
+			promosFiltered = append(promosFiltered, promo)
+			continue
+		}
+		var entry *pb.EntryResource
+		for _, e := range promo.GetUses() {
+			if e.Instance != nil && *e.Instance == instance {
+				entry = e
+				break
+			}
+		}
+		if entry == nil {
+			continue
+		}
+		if entry.Exec+promo.GetActiveTime() < now {
+			continue
+		}
+		promosFiltered = append(promosFiltered, promo)
+	}
+	return promosFiltered
+}
+func filterOneTimePromos(promos []*pb.Promocode) []*pb.Promocode {
+	var promosFiltered []*pb.Promocode
+	for _, promo := range promos {
+		if promo.GetOneTime() {
+			continue
+		}
+		promosFiltered = append(promosFiltered, promo)
+	}
+	return promosFiltered
 }
