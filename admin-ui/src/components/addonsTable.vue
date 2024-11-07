@@ -21,7 +21,7 @@
     </template>
 
     <template v-slot:[`item.public`]="{ item }">
-      <div class="change_public">
+      <div>
         <v-switch
           :readonly="!editable"
           :loading="updatingAddonUuid === item.uuid"
@@ -166,9 +166,8 @@ const updateAddon = async (item, { key, value }) => {
       ...item,
       [key]: value,
     });
-    item.public = value;
+    item[key] = value;
   } catch (e) {
-    console.log(e);
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     updatingAddonUuid.value = "";

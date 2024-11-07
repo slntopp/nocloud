@@ -68,6 +68,8 @@ export default {
           ...this.$store.getters["plans/one"],
         };
 
+        console.log({ ...this.plan });
+
         this.planTitle = this.plan.title;
 
         document.title = `${this.planTitle} | NoCloud`;

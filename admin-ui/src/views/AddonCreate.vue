@@ -81,7 +81,6 @@ import NocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
-import { getFullDate, getTimestamp } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import { Addon } from "nocloud-proto/proto/es/billing/addons/addons_pb";
@@ -151,7 +150,7 @@ const saveAddon = async () => {
       title: newAddon.value.title,
       group: newAddon.value.group,
       periods: newAddon.value.periods.reduce((acc, a) => {
-        acc[getTimestamp(a.period)] = a.price;
+        acc[a.period] = a.price;
         return acc;
       }, {}),
       kind: "PREPAID",
@@ -183,7 +182,7 @@ const setAddon = (val) => {
   newAddon.value = {
     ...val,
     periods: Object.keys(val.periods).map((key, ind) => ({
-      period: getFullDate(key),
+      period: key,
       price: val.periods[key],
       id: ind,
     })),

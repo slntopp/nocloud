@@ -76,8 +76,10 @@
       <template v-slot:[`item.period`]="{ item }">
         <date-field
           v-if="!isOneTimePayment(item)"
-          :period="fullDates[item.id]"
+          :period="item.period"
+          :period-kind="item.periodKind"
           @changeDate="changeDate($event, item.id)"
+          @changePeriodKind="changePeriodKind($event, item.id)"
         />
       </template>
 
@@ -157,7 +159,6 @@ import { computed, ref, toRefs } from "vue";
 import nocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
 
@@ -171,7 +172,6 @@ const { resources, type, defaultVirtual } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
 
-const fullDates = ref({});
 const selected = ref([]);
 const expanded = ref([]);
 
@@ -210,9 +210,12 @@ const headers = computed(() => [
   { text: "Public", value: "public" },
 ]);
 
-function changeDate({ value }, id) {
-  fullDates.value[id] = value;
-  emits("change:resource", { key: "date", value, id });
+function changeDate(value , id) {
+  emits("change:resource", { key: "period", value, id });
+}
+
+function changePeriodKind(value, id) {
+  emits("change:resource", { key: "periodKind", value, id });
 }
 
 function changeMeta(key, value, item) {
@@ -265,8 +268,4 @@ function removeConfig() {
   );
   changeResource("resources", value);
 }
-
-resources.value.forEach(({ period, id }) => {
-  fullDates.value[id] = getFullDate(period);
-});
 </script>

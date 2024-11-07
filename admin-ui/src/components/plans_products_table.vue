@@ -107,8 +107,10 @@
           <template v-slot:[`item.period`]="{ item }">
             <date-field
               v-if="!isOneTime(item)"
-              :period="fullDate[item.id]"
+              :period="item.period"
+              :period-kind="item.periodKind"
               @changeDate="(value) => changeDate(value, item.id)"
+              @changePeriodKind="changePeriodKind($event, item.id)"
             />
           </template>
           <template v-slot:[`item.public`]="{ item }">
@@ -303,7 +305,6 @@ import plansEmptyTable from "@/components/plans_empty_table.vue";
 import planAddonsTable from "@/components/planAddonsTable.vue";
 import productAddonsDialog from "@/components/product_addons_dialog.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
 
@@ -326,7 +327,6 @@ const { defaultCurrency } = useCurrency();
 
 const productsArray = ref([]);
 const table = ref();
-const fullDate = ref({});
 const selected = ref([]);
 const expanded = ref([]);
 const tabsIndex = ref(0);
@@ -368,13 +368,15 @@ const newMeta = ref({ description: "" });
 
 onMounted(() => {
   setProductsArray();
-  setFullDates(products.value);
   setDefaultGroups();
 });
 
-function changeDate({ value }, id) {
-  fullDate.value[id] = value;
-  emits("change:product", { key: "date", value, id });
+function changeDate(value, id) {
+  emits("change:product", { key: "period", value, id });
+}
+
+function changePeriodKind(value, id) {
+  emits("change:product", { key: "periodKind", value, id });
 }
 
 function changeProduct(key, value, id) {
@@ -507,7 +509,6 @@ const copyProducts = () => {
   }
 
   changeProduct("products", newProducts);
-  setFullDates(newProducts);
   selected.value = [];
 };
 
@@ -531,7 +532,6 @@ const saveNewMeta = async () => {
   }
 
   changeProduct("products", newProducts);
-  setFullDates(newProducts);
 
   selected.value = [];
   isEditOpen.value = false;
@@ -572,12 +572,6 @@ function removeConfig() {
   });
   changeProduct("products", result);
 }
-
-const setFullDates = (products) => {
-  Object.values(products).forEach(({ period, id }) => {
-    fullDate.value[id] = getFullDate(period);
-  });
-};
 
 watch(table, (value) => {
   const { rows } = value[0].$el.children[1].children[0];

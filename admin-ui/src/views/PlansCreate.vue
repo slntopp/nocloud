@@ -245,7 +245,7 @@ import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { downloadPlanXlsx, getTimestamp } from "@/functions.js";
+import { downloadPlanXlsx } from "@/functions.js";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 import NocloudTable from "@/components/table.vue";
@@ -330,7 +330,7 @@ export default {
             return;
           }
           break;
-        case "date":
+        case "period":
           this.setPeriod(value, id);
           return;
         case "resources":
@@ -378,25 +378,6 @@ export default {
       this.savePlanAction = action;
 
       const id = this.$route.params?.planId;
-
-      //quick periodKind fix
-      const periodMap = {
-        2592000: "CALENDAR_MONTH",
-        31536000: "CALENDAR_YEAR",
-      };
-
-      Object.keys(this.plan.products || {}).forEach((key) => {
-        this.plan.products[key].periodKind = periodMap[
-          this.plan.products[key].period
-        ]
-          ? periodMap[this.plan.products[key].period]
-          : "DEFAULT";
-      });
-
-      this.plan.resources = this.resources.map((r) => {
-        r.periodKind = periodMap[r.period] ? periodMap[r.period] : "DEFAULT";
-        return r;
-      });
 
       try {
         //update or create descriptions
@@ -472,7 +453,7 @@ export default {
       };
     },
     setPeriod(date, id) {
-      const period = getTimestamp(date);
+      const period = date;
       const resource = this.resources.find((el) => el.id === id);
       const product = Object.values(this.plan.products).find(
         (el) => el.id === id

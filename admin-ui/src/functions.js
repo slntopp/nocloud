@@ -340,7 +340,11 @@ export function getTimestamp({ day, month, year, quarter, week, time }) {
   seconds += getSecondsByDays(7 * week);
   seconds += getSecondsByDays(365 * year);
   seconds += getSecondsByDays(day);
-  seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
+  seconds +=
+    new Date("1970-01-01T" + time + "Z").getTime() / 1000
+      ? new Date("1970-01-01T" + time + "Z").getTime() / 1000
+      : 0;
+
   return seconds;
 }
 
@@ -360,6 +364,7 @@ export function getOvhPrice(instance) {
 }
 
 export function getFullDate(period) {
+  period = +period;
   const dayEqualent = 86400;
   const result = {
     day: 0,

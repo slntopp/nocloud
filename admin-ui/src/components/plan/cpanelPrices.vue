@@ -76,6 +76,7 @@
               <date-field
                 :period="item.period"
                 @changeDate="item.period = $event"
+                @changePeriodKind="item.periodKind = $event"
               />
             </template>
           </nocloud-table>
@@ -105,10 +106,9 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import DateField from "@/components/date.vue";
-import { getMarginedValue, getTimestamp } from "@/functions";
+import { getMarginedValue } from "@/functions";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import { getFullDate } from "@/functions";
 import planAddonsTable from "@/components/planAddonsTable.vue";
 import productAddonsDialog from "@/components/product_addons_dialog.vue";
 
@@ -201,9 +201,6 @@ export default {
         price.addons = product?.addons || [];
         price.enabled = !!product;
 
-        price.period = getFullDate(price.period);
-
-        return price;
       });
       this.isPricesLoading = false;
     },
@@ -231,7 +228,7 @@ export default {
             title: item.name,
             kind: "PREPAID",
             price: item.price,
-            period: getTimestamp(item.period),
+            period: item.period,
             sorter: item.sorter,
             addons: item.addons,
             resources: {
