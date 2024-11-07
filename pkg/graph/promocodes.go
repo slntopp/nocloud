@@ -28,7 +28,7 @@ type PromocodesController interface {
 	Count(ctx context.Context, req *pb.CountPromocodesRequest) (int64, error)
 	AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
 	RemoveEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
-	GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool) (float64, error)
+	GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool, filterOneTime ...bool) (float64, error)
 	GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, error)
 }
 
@@ -388,7 +388,7 @@ func (c *promocodesController) RemoveEntry(ctx context.Context, uuid string, ent
 
 // GetDiscountPriceByInstance returns instance estimate price (see graph.InstancesController) with applied discounts from linked promocodes
 // Returning cost with default platform currency.
-func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool) (float64, error) {
+func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool, filterOneTime ...bool) (float64, error) {
 	ctx := context.Background()
 	cost, err := c.instances.CalculateInstanceEstimatePrice(i, includeOneTimePayments)
 	if err != nil {
@@ -403,6 +403,9 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 		return cost, nil
 	}
 	promos = filterInactivePromos(promos, i.GetUuid(), time.Now().Unix())
+	if len(filterOneTime) > 0 && filterOneTime[0] {
+		promos = filterOneTimePromos(promos)
+	}
 
 	bp, err := c.plans.Get(ctx, i.GetBillingPlan())
 	if err != nil {
@@ -463,7 +466,8 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	return discountPrice, nil
 }
 
-// GetDiscountPriceByResource returns resource discounted price. It returns cost with initCurrency which you pass as parameter.
+// GetDiscountPriceByResource returns resource discounted price. It returns cost with initCurrency which you pass as parameter
+// Returning initial price if promocode is one time
 func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, error) {
 	ctx := context.Background()
 	if resType != "addon" && resType != "product" && resType != "resource" {
@@ -478,6 +482,7 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 		return initCost, nil
 	}
 	promos = filterInactivePromos(promos, i.GetUuid(), time.Now().Unix())
+	promos = filterOneTimePromos(promos)
 
 	cost := initCost
 	if defCurrency.GetId() != initCurrency.GetId() {
@@ -734,6 +739,16 @@ func filterInactivePromos(promos []*pb.Promocode, instance string, now int64) []
 			continue
 		}
 		if entry.Exec+promo.GetActiveTime() < now {
+			continue
+		}
+		promosFiltered = append(promosFiltered, promo)
+	}
+	return promosFiltered
+}
+func filterOneTimePromos(promos []*pb.Promocode) []*pb.Promocode {
+	var promosFiltered []*pb.Promocode
+	for _, promo := range promos {
+		if promo.GetOneTime() {
 			continue
 		}
 		promosFiltered = append(promosFiltered, promo)

@@ -152,7 +152,7 @@ func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 }
 
 func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
-	_, err := ctrl.col.UpdateDocument(driver.WithWaitForSync(ctx, true), tx.GetUuid(), tx)
+	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to update invoice", zap.Error(err))
 		return nil, err
