@@ -14,6 +14,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -39,6 +40,7 @@ type promocodesController struct {
 	currencies CurrencyController
 	plans      BillingPlansController
 	addons     AddonsController
+	showcases  ShowcasesController
 }
 
 func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection) PromocodesController {
@@ -400,28 +402,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	if len(promos) == 0 {
 		return cost, nil
 	}
-
-	// Filter inactive promocodes
-	now := time.Now().Unix()
-	var promosFiltered []*pb.Promocode
-	for _, promo := range promos {
-		var entry *pb.EntryResource
-		for _, e := range promo.GetUses() {
-			if e.Instance != nil && *e.Instance == i.GetUuid() {
-				entry = e
-				break
-			}
-		}
-		if entry == nil {
-			c.log.Error("Got no entry after listAssociated. Logic error")
-			continue
-		}
-		if entry.Exec+promo.GetActiveTime() < now {
-			continue
-		}
-		promosFiltered = append(promosFiltered, promo)
-	}
-	promos = promosFiltered
+	promos = filterInactivePromos(promos, i.GetUuid(), time.Now().Unix())
 
 	bp, err := c.plans.Get(ctx, i.GetBillingPlan())
 	if err != nil {
@@ -435,7 +416,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	oneTime := product.GetPeriod() == 0
 	if hasProduct && (!oneTime || includeOneTimePayments) {
 		_checkPrice += product.GetPrice()
-		discountPrice += product.GetPrice() - calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "product", i.GetProduct(), product.GetPrice())
+		discountPrice += product.GetPrice() - c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "product", i.GetProduct(), product.GetPrice())
 	}
 	// Calculate addons
 	if hasProduct && (!oneTime || includeOneTimePayments) {
@@ -446,7 +427,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 			}
 			price := addon.GetPeriods()[product.GetPeriod()] // Assume this was checked by CalculateInstanceEstimatePrice
 			_checkPrice += price
-			discountPrice += price - calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "addon", addon.GetUuid(), price)
+			discountPrice += price - c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "addon", addon.GetUuid(), price)
 		}
 	}
 	// Calculate resources
@@ -471,7 +452,7 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 			price = res.GetPrice() * count
 		}
 		_checkPrice += price
-		discountPrice += price - calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "resource", res.GetKey(), price)
+		discountPrice += price - c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), "resource", res.GetKey(), price)
 	}
 
 	const EqualityThreshold = 0.001
@@ -496,28 +477,7 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 	if len(promos) == 0 {
 		return initCost, nil
 	}
-
-	// Filter inactive promocodes
-	now := time.Now().Unix()
-	var promosFiltered []*pb.Promocode
-	for _, promo := range promos {
-		var entry *pb.EntryResource
-		for _, e := range promo.GetUses() {
-			if e.Instance != nil && *e.Instance == i.GetUuid() {
-				entry = e
-				break
-			}
-		}
-		if entry == nil {
-			c.log.Error("Got no entry after listAssociated. Logic error")
-			continue
-		}
-		if entry.Exec+promo.GetActiveTime() < now {
-			continue
-		}
-		promosFiltered = append(promosFiltered, promo)
-	}
-	promos = promosFiltered
+	promos = filterInactivePromos(promos, i.GetUuid(), time.Now().Unix())
 
 	cost := initCost
 	if defCurrency.GetId() != initCurrency.GetId() {
@@ -526,7 +486,7 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 		}
 	}
 
-	discount := calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), resType, resource, cost)
+	discount := c.calculateResourceDiscount(promos, i.GetBillingPlan().GetUuid(), resType, resource, cost)
 	if discount == 0 {
 		return initCost, nil
 	}
@@ -541,20 +501,41 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 	return cost, nil
 }
 
-func calculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) float64 {
+func (c *promocodesController) calculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) float64 {
+	showcasesPlans := c.getShowcasesPlansCached()
+
 	maxDiscount := float64(0)
 	for _, promo := range promos {
 		for _, item := range promo.GetPromoItems() {
-			var applyToAll = item.GetPlanPromo().Addon == nil &&
+			// If it has plan promo and no items specified, then apply to plan
+			var applyToAll = item.PlanPromo != nil &&
+				item.GetPlanPromo().Addon == nil &&
 				item.GetPlanPromo().Product == nil &&
 				item.GetPlanPromo().Resource == nil
 
+			// Apply to addon if specified
 			if resType == "addon" && item.AddonPromo != nil && item.GetAddonPromo().GetAddon() == resource {
 				goto proceed
 			}
 
+			// If showcase promo specified and current plan is in it then proceed
+			if item.ShowcasePromo != nil {
+				sc := item.GetShowcasePromo().GetShowcase()
+				m.Lock()
+				if _, ok := showcasesPlans[sc]; !ok {
+					m.Unlock()
+					continue
+				}
+				if _, ok := showcasesPlans[sc][planId]; !ok {
+					m.Unlock()
+					continue
+				}
+				m.Unlock()
+				goto proceed
+			}
+
 			if item.GetPlanPromo().GetBillingPlan() != planId &&
-				(item.AddonPromo != nil || item.PlanPromo != nil) {
+				(item.AddonPromo != nil || item.PlanPromo != nil || item.ShowcasePromo != nil) {
 				continue
 			}
 			if !applyToAll && resType == "addon" && item.GetPlanPromo().GetAddon() != resource {
@@ -586,6 +567,40 @@ func calculateResourceDiscount(promos []*pb.Promocode, planId string, resType st
 	return maxDiscount
 }
 
+var _showcasesPlans = map[string]map[string]struct{}{}
+
+const showcasesPlansCacheTTL = 60 * time.Minute
+
+var showcasesPlansLastUpdate = int64(0)
+
+var m = &sync.Mutex{}
+
+func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]struct{} {
+	now := time.Now().Unix()
+	if showcasesPlansLastUpdate+int64(showcasesPlansCacheTTL.Seconds()) < now {
+		return _showcasesPlans
+	}
+
+	scs, err := c.showcases.List(context.Background(), schema.ROOT_ACCOUNT_KEY, true)
+	if err != nil {
+		c.log.Named("getShowcasesPlansCached").Error("FATAL: failed to list showcases", zap.Error(err))
+		return _showcasesPlans
+	}
+
+	m.Lock()
+	_showcasesPlans = make(map[string]map[string]struct{})
+	for _, s := range scs {
+		_showcasesPlans[s.GetUuid()] = make(map[string]struct{})
+		for _, p := range s.GetItems() {
+			_showcasesPlans[s.GetUuid()][p.GetPlan()] = struct{}{}
+		}
+	}
+	m.Unlock()
+
+	showcasesPlansLastUpdate = now
+	return _showcasesPlans
+}
+
 func (c *promocodesController) listAssociated(res string) ([]*pb.Promocode, error) {
 	return c.List(context.Background(), &pb.ListPromocodesRequest{
 		Filters: map[string]*structpb.Value{
@@ -602,7 +617,8 @@ func validateEntry(entry *pb.EntryResource) error {
 	if entry == nil {
 		return fmt.Errorf("invalid entry: entry cannot be nil")
 	}
-	if entry.Instance == nil && entry.Invoice == nil {
+	if (entry.Instance == nil || entry.GetInstance() == "") &&
+		(entry.Invoice == nil || entry.GetInvoice() == "") {
 		return fmt.Errorf("invalid entry: one of the entry fields must be set")
 	}
 	if entry.Instance != nil && entry.Invoice != nil {
@@ -698,4 +714,29 @@ func findEntryAccount(entry *pb.EntryResource, instances InstancesController, in
 		return inv.GetAccount(), nil
 	}
 	return "", fmt.Errorf("fatal: entry resource is not set")
+}
+
+func filterInactivePromos(promos []*pb.Promocode, instance string, now int64) []*pb.Promocode {
+	var promosFiltered []*pb.Promocode
+	for _, promo := range promos {
+		if promo.GetActiveTime() == 0 {
+			promosFiltered = append(promosFiltered, promo)
+			continue
+		}
+		var entry *pb.EntryResource
+		for _, e := range promo.GetUses() {
+			if e.Instance != nil && *e.Instance == instance {
+				entry = e
+				break
+			}
+		}
+		if entry == nil {
+			continue
+		}
+		if entry.Exec+promo.GetActiveTime() < now {
+			continue
+		}
+		promosFiltered = append(promosFiltered, promo)
+	}
+	return promosFiltered
 }
