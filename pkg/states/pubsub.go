@@ -129,7 +129,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		db := *s.db
 		ctx := context.Background()
 		trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
-			Write: []string{col},
+			Exclusive: []string{col},
 		}, &driver.BeginTransactionOptions{})
 		if err != nil {
 			log.Error("Failed to start transaction to update state", zap.Error(err))
