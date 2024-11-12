@@ -155,17 +155,6 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), 5)
 		defer syncer.Open()
 		_ = syncer.WaitUntilOpenedAndCloseAfter()
-		//log.Debug("Locking mutex")
-		//m := s.spSyncers[r.SP.GetUuid()]
-		//if m == nil {
-		//	m = &go_sync.Mutex{}
-		//	s.spSyncers[r.SP.GetUuid()] = m
-		//}
-		//m.Lock()
-		//defer func() {
-		//	log.Debug("Unlocking mutex")
-		//	m.Unlock()
-		//}()
 	}
 
 	var instance graph.Instance
