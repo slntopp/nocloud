@@ -153,6 +153,20 @@ start:
 			go func(sp *graph.ServicesProvider) {
 				log := log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
 				log.Debug("Starting MonitoringRoutine")
+				//syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), 5)
+				//defer syncer.Open()
+				//_ = syncer.WaitUntilOpenedAndCloseAfter()
+				//log.Debug("Locking mutex")
+				//m := s.spSyncers[sp.GetUuid()]
+				//if m == nil {
+				//	m = &go_sync.Mutex{}
+				//	s.spSyncers[sp.GetUuid()] = m
+				//}
+				//m.Lock()
+				//defer func() {
+				//	log.Debug("Unlocking mutex")
+				//	m.Unlock()
+				//}()
 
 				igroups, err := s.sp_ctrl.GetGroups(ctx, sp)
 				if err != nil {
