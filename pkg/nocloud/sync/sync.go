@@ -17,6 +17,8 @@ type DataSyncer interface {
 
 const DataUpdateKeyTemplate = "data.update.open.%s"
 
+var mm = newMutexMap()
+
 type dataSyncer struct {
 	log      *zap.Logger
 	rdb      redisdb.Client
@@ -24,6 +26,7 @@ type dataSyncer struct {
 	retries  int
 	ctx      context.Context
 	interval time.Duration
+	m        *mutexM
 }
 
 func NewDataSyncer(log *zap.Logger, rdb redisdb.Client, sp string, retries int, millisecondsInterval ...int) DataSyncer {
@@ -38,6 +41,7 @@ func NewDataSyncer(log *zap.Logger, rdb redisdb.Client, sp string, retries int, 
 		ctx:      context.Background(),
 		log:      log.Named(fmt.Sprintf("DataSyncer.%s", sp)),
 		interval: interval,
+		m:        mm,
 	}
 }
 
@@ -48,16 +52,22 @@ func (s *dataSyncer) WaitUntilOpenedAndCloseAfter() error {
 	}
 	currentRetries := 0
 	for {
+		s.m.Lock(s.sp)
 		if s.IsOpened() {
-			return s.Close()
+			err := s.Close()
+			s.m.Unlock(s.sp)
+			return err
 		}
 		currentRetries++
 		if currentRetries > s.retries && s.retries >= 0 {
 			s.log.Debug("Retries exceeded. Forced ending waiting loop", zap.Int("retries", s.retries))
-			return s.Close()
+			err := s.Close()
+			s.m.Unlock(s.sp)
+			return err
 		}
+		s.m.Unlock(s.sp)
 		time.Sleep(s.interval)
-		go s.log.Debug("Next retry", zap.String("retry", fmt.Sprintf("%d/%d", currentRetries, s.retries)))
+		s.log.Debug("Next retry", zap.String("retry", fmt.Sprintf("%d/%d", currentRetries, s.retries)))
 	}
 }
 
@@ -85,7 +95,6 @@ func (s *dataSyncer) IsOpened() bool {
 		s.log.Error("Failed to get redis key", zap.String("key", fmt.Sprintf(DataUpdateKeyTemplate, s.sp)), zap.Error(status.Err()))
 		return true
 	}
-	//s.log.Debug("Got redis key", zap.String("key", fmt.Sprintf(DataUpdateKeyTemplate, s.sp)), zap.String("val", status.Val()))
 	// Check for 'true' and empty string to check non-existence
 	if status.Val() == "true" || status.Val() == "" {
 		return true
