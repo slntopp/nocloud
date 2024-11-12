@@ -134,6 +134,8 @@ var (
 			// IsExtraEnabled: true,
 			// ExtraLimit: -100,
 		},
+		Description: "Suspend configuration",
+		Level:       access.Level_ADMIN,
 	}
 )
 
