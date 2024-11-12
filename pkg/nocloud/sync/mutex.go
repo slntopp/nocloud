@@ -16,18 +16,22 @@ func newMutexMap() *mutexM {
 
 func (m *mutexM) Lock(key string) {
 	m.m.Lock()
-	defer m.m.Unlock()
+	var spm *sync.Mutex
 	if m.mm[key] == nil {
 		m.mm[key] = &sync.Mutex{}
 	}
-	m.mm[key].Lock()
+	spm = m.mm[key]
+	m.m.Unlock()
+	spm.Lock()
 }
 
 func (m *mutexM) Unlock(key string) {
 	m.m.Lock()
-	defer m.m.Unlock()
+	var spm *sync.Mutex
 	if m.mm[key] == nil {
 		m.mm[key] = &sync.Mutex{}
 	}
-	m.mm[key].Unlock()
+	spm = m.mm[key]
+	m.m.Unlock()
+	spm.Unlock()
 }
