@@ -116,27 +116,46 @@ func (s *StatusesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		c, err := (*s.db).Query(context.TODO(), updateStatusQuery, map[string]interface{}{
+		db := *s.db
+		ctx := context.Background()
+		trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
+			Write: []string{col},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			log.Error("Failed to start transaction to update status", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while start transaction to update status", zap.Error(err))
+			}
+			continue
+		}
+		ctx = driver.WithTransactionID(ctx, trID)
+		c, err := (*s.db).Query(ctx, updateStatusQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
 			"status":      req.Status.GetStatus(),
 		})
-
 		if err != nil {
+			_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 			log.Error("Failed to update status", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
 				log.Warn("Failed to Negatively Acknowledge the delivery while Update db", zap.Error(err))
 			}
 			continue
 		}
-
-		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		if err := db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+			log.Error("Failed to commit transaction to update status", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while commit transaction to update status", zap.Error(err))
+			}
+			continue
 		}
 
-		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
+		log.Debug("Updated status", zap.String("type", col), zap.String("uuid", req.Uuid))
 		if err = c.Close(); err != nil {
 			log.Warn("Failed to close database cursor connection", zap.Error(err))
+		}
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 		}
 	}
 }
