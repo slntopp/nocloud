@@ -152,7 +152,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 
 	// Sync with driver's monitoring
 	if slices.Contains(methodsToSync, req.Method) {
-		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), 5)
+		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), 13)
 		defer syncer.Open()
 		_ = syncer.WaitUntilOpenedAndCloseAfter()
 	}
