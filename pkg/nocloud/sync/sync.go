@@ -19,6 +19,7 @@ const DataUpdateKeyTemplate = "data.update.open.%s"
 
 var mm = newMutexMap()
 
+// TODO: Maybe refactor to use Redis pub/sub
 type dataSyncer struct {
 	log      *zap.Logger
 	rdb      redisdb.Client
