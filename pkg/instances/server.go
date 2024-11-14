@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud-proto/health"
+	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
+	servicespb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
@@ -56,6 +58,7 @@ type InstancesServer struct {
 	sp_ctrl    graph.ServicesProvidersController
 	srv_ctrl   graph.ServicesController
 	promo_ctrl graph.PromocodesController
+	acc_ctrl   graph.AccountsController
 	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -470,54 +473,27 @@ func (s *InstancesServer) TransferIG(ctx context.Context, _req *connect.Request[
 }
 
 func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Request[pb.TransferInstanceRequest]) (*connect.Response[pb.TransferInstanceResponse], error) {
-	log := s.log.Named("transfer")
+	log := s.log.Named("TransferInstance")
 	req := _req.Msg
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
-	log.Debug("Requestor", zap.String("id", requestor))
+	log.Info("Request received", zap.Any("request", req))
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("account", req.GetAccount()), zap.String("ig", req.GetIg()), zap.String("requester", requester))
 
-	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
-	newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
-	inst, err := s.ctrl.GetWithAccess(ctx, requestorId, req.GetUuid())
-
-	if err != nil {
-		log.Error("Failed to get instances group", zap.Error(err))
-		return nil, status.Error(codes.Internal, err.Error())
+	if req.Account != nil && req.Ig != nil {
+		return nil, status.Error(codes.InvalidArgument, "account and ig cannot be set at the same time")
 	}
-
-	ig, err := s.ig_ctrl.GetWithAccess(ctx, requestorId, newIGId.Key())
-
-	if err != nil {
-		log.Error("Failed to get service", zap.Error(err))
-		return nil, status.Error(codes.Internal, err.Error())
+	if req.Account != nil {
+		if err := s.transferToAccount(ctx, log, req.GetUuid(), req.GetAccount()); err != nil {
+			log.Error("Failed to transfer to account", zap.Error(err))
+			return nil, status.Error(codes.Internal, fmt.Errorf("failed to transfer to account: %w", err).Error())
+		}
+	} else if req.Ig != nil {
+		if err := s.transferToIG(ctx, log, req.GetUuid(), req.GetIg()); err != nil {
+			log.Error("Failed to transfer to IG", zap.Error(err))
+			return nil, status.Error(codes.Internal, fmt.Errorf("failed to transfer to IG: %w", err).Error())
+		}
 	}
-
-	if inst.GetAccess().GetLevel() < accesspb.Level_ROOT {
-		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
-		return nil, status.Error(codes.PermissionDenied, "Access denied")
-	}
-
-	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
-		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
-		return nil, status.Error(codes.PermissionDenied, "Access denied")
-	}
-
-	igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
-
-	if err != nil {
-		log.Error("Failed to get Service", zap.Error(err))
-		return nil, err
-	}
-
-	err = s.ctrl.TransferInst(ctx, igEdge, newIGId, instanceId)
-	if err != nil {
-		return nil, err
-	}
-
-	return connect.NewResponse(&pb.TransferInstanceResponse{
-		Result: true,
-		Meta:   nil,
-	}), nil
+	return nil, status.Error(codes.InvalidArgument, "don't know where to transfer")
 }
 
 func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[notes.AddNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
@@ -1182,4 +1158,124 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 	}
 
 	return connect.NewResponse(&result), nil
+}
+
+func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) error {
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	_ = driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
+	accountId := driver.NewDocumentID(schema.ACCOUNTS_COL, account)
+
+	if !s.ca.HasAccess(ctx, requester, instanceId, accesspb.Level_ADMIN) {
+		return fmt.Errorf("no access to instance")
+	}
+	if !s.ca.HasAccess(ctx, requester, accountId, accesspb.Level_ADMIN) {
+		return fmt.Errorf("no access to destination account")
+	}
+
+	srvResp, err := s.srv_ctrl.List(ctx, requester, &servicespb.ListRequest{
+		Filters: map[string]*structpb.Value{
+			"account": structpb.NewStringValue(account),
+		},
+	})
+	if err != nil {
+		log.Error("Failed to retrieve services", zap.Error(err))
+		return fmt.Errorf("failed to retrieve services: %w", err)
+	}
+	services := srvResp.Result
+
+	groupResp, err := s.ctrl.GetGroup(ctx, instanceId.String())
+	if err != nil {
+		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
+		return fmt.Errorf("failed to get Group and ServicesProvider: %w", err)
+	}
+	if groupResp.SP == nil || groupResp.SP.GetUuid() == "" {
+		log.Error("SP not found, instance not linked")
+		return fmt.Errorf("SP not found, instance not linked")
+	}
+	if groupResp.Group == nil || groupResp.Group.GetUuid() == "" {
+		log.Error("Group not found, instance not linked")
+		return fmt.Errorf("group not found, instance not linked")
+	}
+	ig := groupResp.Group
+	sp := groupResp.SP
+
+	acc, err := s.acc_ctrl.Get(ctx, account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return fmt.Errorf("failed to get account: %w", err)
+	}
+
+	// Create service for user if it doesn't exist
+	var srv *servicespb.Service
+	if len(services) == 0 {
+		ns, err := s.acc_ctrl.GetNamespace(ctx, graph.Account{
+			Account: &rpb.Account{
+				Uuid: account,
+			},
+		})
+		if err != nil {
+			log.Error("Failed to get namespace", zap.Error(err))
+			return fmt.Errorf("failed to get namespace: %w", err)
+		}
+		if !s.ca.HasAccess(ctx, account, ns.ID, accesspb.Level_ADMIN) {
+			log.Error("No access to namespace")
+			return fmt.Errorf("no access to namespace")
+		}
+		if srv, err = s.srv_ctrl.Create(ctx, &servicespb.Service{
+			Version: "1",
+			Title:   "SRV_" + acc.GetTitle(),
+		}); err != nil {
+			log.Error("Failed to create service", zap.Error(err))
+			return fmt.Errorf("failed to create service: %w", err)
+		}
+	} else {
+		srv = services[0]
+	}
+
+	return nil
+}
+
+func (s *InstancesServer) transferToIG(ctx context.Context, log *zap.Logger, uuid string, igUuid string) error {
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+
+	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
+	newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, igUuid)
+	inst, err := s.ctrl.GetWithAccess(ctx, requesterId, uuid)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return fmt.Errorf("failed to get instance: %w", err)
+	}
+
+	ig, err := s.ig_ctrl.GetWithAccess(ctx, requesterId, newIGId.Key())
+	if err != nil {
+		log.Error("Failed to get instances group", zap.Error(err))
+		return fmt.Errorf("failed to get instances group: %w", err)
+	}
+
+	if inst.GetAccess().GetLevel() < accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", inst.GetUuid()))
+		return fmt.Errorf("no access to instance")
+	}
+
+	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+		return fmt.Errorf("no access to IG")
+	}
+
+	igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
+
+	if err != nil {
+		log.Error("Failed to get IG edge", zap.Error(err))
+		return fmt.Errorf("failed to get IG connection: %w", err)
+	}
+
+	err = s.ctrl.TransferInst(ctx, igEdge, newIGId, instanceId)
+	if err != nil {
+		log.Error("Failed to transfer instance", zap.Error(err))
+		return fmt.Errorf("failed to transfer: %w", err)
+	}
+
+	return nil
 }
