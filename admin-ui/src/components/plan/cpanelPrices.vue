@@ -200,7 +200,7 @@ export default {
         price.sorter = product?.sorter || 0;
         price.addons = product?.addons || [];
         price.enabled = !!product;
-
+        return price;
       });
       this.isPricesLoading = false;
     },
