@@ -73,7 +73,8 @@ type InstancesController interface {
 }
 
 const (
-	INSTANCES_COL = "Instances"
+	INSTANCES_COL                   = "Instances"
+	CreationPromocodeKey ContextKey = "creation-promocode"
 )
 
 type Instance struct {
@@ -608,27 +609,27 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 	} else {
 		log.Error("Failed to parse", zap.Error(err))
 	}
-	// Send for invoice creation
-	go func() {
-		time.Sleep(300 * time.Millisecond)
-		log.Info("Publishing creation event", zap.Any("instance", i.GetUuid()))
-		e := epb.Event{
-			Uuid: i.GetUuid(),
+	log.Info("Publishing creation event", zap.Any("instance", i.GetUuid()))
+	e := epb.Event{
+		Uuid: i.GetUuid(),
+		Data: make(map[string]*structpb.Value),
+	}
+	if promo, ok := ctx.Value(CreationPromocodeKey).(string); ok {
+		e.Data["promocode"] = structpb.NewStringValue(promo)
+	}
+	body, err = proto.Marshal(&e)
+	if err == nil {
+		err = ctrl.channel.PublishWithContext(ctx, "instances", "created_instance", false, false, amqp091.Publishing{
+			ContentType:  "text/plain",
+			DeliveryMode: amqp091.Persistent,
+			Body:         body,
+		})
+		if err != nil {
+			log.Error("Failed to publish", zap.Error(err))
 		}
-		body, err = proto.Marshal(&e)
-		if err == nil {
-			err = ctrl.channel.PublishWithContext(ctx, "instances", "created_instance", false, false, amqp091.Publishing{
-				ContentType:  "text/plain",
-				DeliveryMode: amqp091.Persistent,
-				Body:         body,
-			})
-			if err != nil {
-				log.Error("Failed to publish", zap.Error(err))
-			}
-		} else {
-			log.Error("Failed to parse", zap.Error(err))
-		}
-	}()
+	} else {
+		log.Error("Failed to parse", zap.Error(err))
+	}
 
 	return meta.Key, nil
 }

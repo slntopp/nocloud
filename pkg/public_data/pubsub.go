@@ -110,18 +110,41 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			continue
 		}
 		log.Debug("req pd", zap.Any("req", &req))
-		c, err := (*s.db).Query(context.TODO(), updatePublicDataQuery, map[string]interface{}{
+
+		db := *s.db
+		ctx := context.Background()
+		trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: []string{col},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			log.Error("Failed to start transaction to update public_data", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while start transaction to update public_data", zap.Error(err))
+			}
+			continue
+		}
+		ctx = driver.WithTransactionID(ctx, trID)
+		c, err := (*s.db).Query(ctx, updatePublicDataQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
 			"public_data": req.Data,
 		})
 		if err != nil {
+			_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 			log.Error("Failed to update public_data", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
 				log.Warn("Failed to Acknowledge the delivery while Update db", zap.Error(err))
 			}
 			continue
 		}
+		if err := db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+			log.Error("Failed to commit transaction to update public_data", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while commit transaction to update public_data", zap.Error(err))
+			}
+			continue
+		}
+
 		log.Debug("Updated public_data", zap.String("type", col), zap.String("uuid", req.Uuid))
 		if err = c.Close(); err != nil {
 			log.Warn("Error closing Driver cursor", zap.Error(err))

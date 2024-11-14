@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	bpb "github.com/slntopp/nocloud-proto/billing"
+	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	epb "github.com/slntopp/nocloud-proto/events"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -17,6 +18,7 @@ import (
 
 func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx context.Context, event *epb.Event, currencyConf CurrencyConf, now int64) error {
 	log = s.log.Named("ProcessInstanceCreation")
+	log = log.With(zap.String("instance", event.Uuid))
 
 	instance, err := s.instances.Get(ctx, event.Uuid)
 	if err != nil {
@@ -26,6 +28,15 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	if instance == nil {
 		log.Error("Failed to get instance. Instance is nil")
 		return fmt.Errorf("failed to get instance. Instance is nil")
+	}
+
+	// Create promocode on newly created instance if it was passed on creation
+	if promo, ok := event.GetData()["promocode"]; ok {
+		if err = s.promocodes.AddEntry(ctx, promo.GetStringValue(), &pb.EntryResource{
+			Instance: &event.Uuid,
+		}); err != nil {
+			log.Error("FATAL: Failed to link instance with promocode on instance creation", zap.Error(err), zap.String("promocode", promo.GetStringValue()))
+		}
 	}
 
 	// Find owner account

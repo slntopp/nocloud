@@ -160,13 +160,16 @@ init:
 			continue
 		}
 
-		updEvent, err := handler(ctx, log, &event, s.db)
-		if err != nil {
-			log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while executing handler", zap.Error(err))
+		var updEvent = &event
+		if handler != nil {
+			updEvent, err = handler(ctx, log, &event, s.db)
+			if err != nil {
+				log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
+				if err = msg.Ack(false); err != nil {
+					log.Warn("Failed to Acknowledge the delivery while executing handler", zap.Error(err))
+				}
+				continue
 			}
-			continue
 		}
 
 		updEvent, err = s.HandleEventOverride(log, updEvent)

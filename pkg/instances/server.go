@@ -32,7 +32,6 @@ import (
 
 	"github.com/arangodb/go-driver"
 	accesspb "github.com/slntopp/nocloud-proto/access"
-	ppb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	stpb "github.com/slntopp/nocloud-proto/states"
@@ -153,20 +152,9 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 
 	// Sync with driver's monitoring
 	if slices.Contains(methodsToSync, req.Method) {
-		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), 5)
+		syncer := sync.NewDataSyncer(log.With(zap.String("caller", "Invoke")), s.rdb, r.SP.GetUuid(), 50, 2000)
 		defer syncer.Open()
 		_ = syncer.WaitUntilOpenedAndCloseAfter()
-		//log.Debug("Locking mutex")
-		//m := s.spSyncers[r.SP.GetUuid()]
-		//if m == nil {
-		//	m = &go_sync.Mutex{}
-		//	s.spSyncers[r.SP.GetUuid()] = m
-		//}
-		//m.Lock()
-		//defer func() {
-		//	log.Debug("Unlocking mutex")
-		//	m.Unlock()
-		//}()
 	}
 
 	var instance graph.Instance
@@ -296,20 +284,14 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	// TODO: set sp here to log service prodiver
+	if req.Promocode != nil && req.GetPromocode() != "" {
+		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
+	}
+
 	newId, err := s.ctrl.Create(ctx, igId, "", req.GetInstance())
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if req.Promocode != nil && req.GetPromocode() != "" {
-		if err = s.promo_ctrl.AddEntry(ctx, req.GetPromocode(), &ppb.EntryResource{
-			Instance: &newId,
-		}); err != nil {
-			log.Error("Failed to add promocode entry to newly created instance", zap.Error(err))
-			return nil, status.Error(codes.OK, "Instance created successfully but promocode entry was not added: "+err.Error()+". Please contact support.")
-		}
 	}
 
 	return connect.NewResponse(&pb.CreateResponse{

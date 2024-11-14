@@ -26,6 +26,7 @@ var handlers = map[string]EventHandler{
 	"instance_renew":              GetInstAccountHandler,
 	"pending_notification":        GetInstAccountHandler,
 	"instance_credentials":        GetInstAccountHandler,
+	"inactive_chat_closed":        nil,
 	"logging":                     EventLoggingHandler,
 }
 

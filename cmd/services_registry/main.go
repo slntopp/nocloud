@@ -41,7 +41,6 @@ import (
 	stpb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/instances"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	ncauth "github.com/slntopp/nocloud/pkg/nocloud/auth"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/connect_auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -168,7 +167,7 @@ func main() {
 	defer setconn.Close()
 
 	setc := stpb.NewSettingsServiceClient(setconn)
-	token, err := ncauth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	token, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
@@ -237,7 +236,9 @@ func main() {
 	}
 	wg.Wait()
 
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+token)
+	ctx := metadata.AppendToOutgoingContext(
+		context.Background(), "authorization", "bearer "+token,
+	)
 	go iserver.MonitoringRoutine(ctx)
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
