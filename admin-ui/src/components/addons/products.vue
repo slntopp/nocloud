@@ -148,6 +148,10 @@ const changePlanAddons = async (item, val) => {
     const plan = plans.value.find((p) => p.uuid === item.id);
 
     updatingId.value = plan.uuid;
+    if (!plan.addons) {
+      plan.addons = [];
+    }
+
     if (val) {
       plan.addons.push(addon.value.uuid);
     } else {
@@ -156,6 +160,8 @@ const changePlanAddons = async (item, val) => {
       );
     }
     await api.plans.update(plan.uuid, plan);
+
+    item.enabled = !!val;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
