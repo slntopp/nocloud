@@ -211,7 +211,7 @@ const changeAmountValue = (value) => {
 const changeDateValue = (value) => {
   date.value = value;
 
-  newPeriodKind.value = periodKindsMap[value];
+  newPeriodKind.value = periodKindsMap[value]  || 'DEFAULT';
 
   if (value === "Custom") {
     return;
