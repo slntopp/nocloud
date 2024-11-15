@@ -484,9 +484,35 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 		return nil, status.Error(codes.InvalidArgument, "account and ig cannot be set at the same time")
 	}
 	if req.Account != nil {
+		trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL,
+				schema.SERV2IG, schema.IG2INST, schema.IG2SP},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			log.Error("Failed to start transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "internal error. Try again later")
+		}
+		ctx = driver.WithTransactionID(ctx, trID)
+
+		defer func() {
+			if recover() != nil {
+				if err = s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
+					log.Error("Failed to abort transaction", zap.Error(err))
+				}
+			}
+		}()
+
 		if err := s.transferToAccount(ctx, log, req.GetUuid(), req.GetAccount()); err != nil {
+			if err := s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
+				log.Error("Failed to abort transaction", zap.Error(err))
+			}
 			log.Error("Failed to transfer to account", zap.Error(err))
 			return nil, status.Error(codes.Internal, fmt.Errorf("failed to transfer to account: %w", err).Error())
+		}
+
+		if err = s.db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+			log.Error("Failed to commit transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "failed to perform transfer. Try again later")
 		}
 	} else if req.Ig != nil {
 		if err := s.transferToIG(ctx, log, req.GetUuid(), req.GetIg()); err != nil {
@@ -1282,7 +1308,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		log.Info("Destination instances group not found, creating new")
 		destIG = &pb.InstancesGroup{
 			Type:  oldIG.GetType(),
-			Title: acc.Title + " - " + oldIG.GetType(),
+			Title: acc.Title + " - " + oldIG.GetType() + " - imported",
 		}
 		if err = s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
 			log.Error("Failed to create instances group", zap.Error(err))
@@ -1379,10 +1405,18 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	userid := int(oldIG.GetData()["userid"].GetNumberValue())
 	publicVn := int(oldIG.GetData()["public_vn"].GetNumberValue())
 	privateVn := int(oldIG.GetData()["private_vn"].GetNumberValue())
-	_ = int(oldIG.GetData()["public_ips_free"].GetNumberValue())
-	_ = int(oldIG.GetData()["private_ips_free"].GetNumberValue())
-	_ = int(oldIG.GetData()["public_ips_total"].GetNumberValue())
-	_ = int(oldIG.GetData()["private_ips_total"].GetNumberValue())
+	publicIpsFree := int(oldIG.GetData()["public_ips_free"].GetNumberValue())
+	privateIpsFree := int(oldIG.GetData()["private_ips_free"].GetNumberValue())
+	publicIpsTotal := int(oldIG.GetData()["public_ips_total"].GetNumberValue())
+	privateIpsTotal := int(oldIG.GetData()["private_ips_total"].GetNumberValue())
+
+	// Checks
+	ipsPublic := int(oldIG.GetResources()["ips_public"].GetNumberValue())
+	ipsPrivate := int(oldIG.GetResources()["ips_private"].GetNumberValue())
+	if (ipsPublic != publicIpsFree || ipsPublic != publicIpsTotal) ||
+		(ipsPrivate != privateIpsFree || ipsPrivate != privateIpsTotal) {
+		return nil, fmt.Errorf("can't transfer. IONE machine currently in unstable state")
+	}
 
 	var destIG *pb.InstancesGroup
 	for _, ig := range igs {
@@ -1402,7 +1436,7 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 		log.Info("Destination instances group not found, creating new")
 		destIG = &pb.InstancesGroup{
 			Type:  oldIG.GetType(),
-			Title: accTitle + " - " + oldIG.GetType(),
+			Title: accTitle + " - " + oldIG.GetType() + " - imported",
 		}
 		if err := s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
 			log.Error("Failed to create instances group", zap.Error(err))
