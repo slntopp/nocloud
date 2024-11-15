@@ -1245,6 +1245,10 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
 		return fmt.Errorf("failed to get Group and ServicesProvider: %w", err)
 	}
+	if groupResp == nil {
+		log.Error("Failed to get instance linked data")
+		return fmt.Errorf("failed to get instance linked data. Probably broken instance")
+	}
 	if groupResp.SP == nil || groupResp.SP.GetUuid() == "" {
 		log.Error("SP not found, instance not linked")
 		return fmt.Errorf("SP not found, instance not linked")
