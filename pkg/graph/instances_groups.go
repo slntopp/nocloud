@@ -293,7 +293,7 @@ RETURN MERGE(sp, {uuid: sp._key})`
 func (ctrl *instancesGroupsController) GetSP(ctx context.Context, group string) (ServicesProvider, error) {
 	log := ctrl.log.Named("GetSP")
 	log.Debug("Getting Service Provider connected with IG", zap.String("group", group))
-	c, err := ctrl.db.Query(ctx, getGroupWithSPQuery, map[string]interface{}{
+	c, err := ctrl.db.Query(ctx, getSPQuery, map[string]interface{}{
 		"permissions":   schema.PERMISSIONS_GRAPH.Name,
 		"sps":           schema.SERVICES_PROVIDERS_COL,
 		"instanceGroup": driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
