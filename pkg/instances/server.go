@@ -1291,8 +1291,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	var srv *servicespb.Service
 	srvCount := len(services)
 	if srvCount > 1 {
-		log.Error("Multiple services found for account", zap.Int("count", srvCount))
-		return fmt.Errorf("multiple services found for account. Account must have 1 service to transfer")
+		log.Info("Multiple services found for account. Transferring to first", zap.Int("count", srvCount))
 	}
 	if srvCount == 0 {
 		log.Info("Account has no services, creating new")
