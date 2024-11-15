@@ -284,6 +284,10 @@ func (ctrl *instancesGroupsController) Provide(ctx context.Context, group, sp st
 		From: driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
 		To:   driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp),
 	})
+	if err != nil {
+		return err
+	}
+	_, err = ctrl.col.UpdateDocument(ctx, group, map[string]interface{}{"sp": sp})
 	return err
 }
 
