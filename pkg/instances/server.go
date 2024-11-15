@@ -1339,6 +1339,16 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	}
 
 	existingIGs := srv.GetInstancesGroups()
+	// Ensure each IG object has 'sp' field set as current SP
+	for _, ig := range existingIGs {
+		igSp, err := s.ig_ctrl.GetSP(ctx, ig.GetUuid())
+		if err != nil {
+			log.Error("Failed to get IG's service provider", zap.Error(err))
+			return fmt.Errorf("failed to obtain IG's service provider: %w", err)
+		}
+		ig.Sp = &igSp.Uuid
+	}
+
 	var destIG *pb.InstancesGroup
 	var _old *pb.InstancesGroup
 	for _, ig := range existingIGs {
