@@ -492,6 +492,19 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 	if req.Account != nil && req.Ig != nil {
 		return nil, status.Error(codes.InvalidArgument, "account and ig cannot be set at the same time")
 	}
+	if req.Account == nil && req.Ig == nil {
+		return nil, status.Error(codes.InvalidArgument, "don't know where to transfer")
+	}
+
+	// Obtain service provider to use syncer
+	groupResp, err := s.ctrl.GetGroup(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
+		return nil, status.Error(codes.Internal, "failed to get sp and ig. Probably broken instance")
+	}
+	syncer := sync.NewDataSyncer(log.With(zap.String("caller", "TransferInstance")), s.rdb, groupResp.SP.GetUuid(), 50)
+	defer syncer.Open()
+	_ = syncer.WaitUntilOpenedAndCloseAfter()
 
 	// Actually modified collections in transactions
 	usedCols := []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL,
@@ -541,8 +554,6 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 			log.Error("Failed to transfer to IG", zap.Error(err))
 			return nil, status.Error(codes.Internal, fmt.Errorf("failed to transfer to IG: %w", err).Error())
 		}
-	} else {
-		return nil, status.Error(codes.InvalidArgument, "don't know where to transfer")
 	}
 
 	log.Info("Finished transfer")
