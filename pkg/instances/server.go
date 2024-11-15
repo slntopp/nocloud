@@ -1263,6 +1263,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	}
 
 	// Create service for user if it doesn't exist
+	log.Info("Managing services")
 	var srv *servicespb.Service
 	srvCount := len(services)
 	if srvCount > 1 {
