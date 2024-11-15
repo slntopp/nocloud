@@ -24,6 +24,7 @@ import (
 	servicespb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"google.golang.org/protobuf/proto"
 	"slices"
@@ -1314,6 +1315,10 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		}); err != nil {
 			log.Error("Failed to create service", zap.Error(err))
 			return fmt.Errorf("failed to create service: %w", err)
+		}
+		if err = s.srv_ctrl.Join(ctx, srv, &ns, accesspb.Level_ADMIN, roles.OWNER); err != nil {
+			log.Error("Error while creating access to service", zap.Error(err))
+			return fmt.Errorf("failed to create access to service: %w", err)
 		}
 		if err = s.srv_ctrl.SetStatus(ctx, srv, spb.NoCloudStatus_UP); err != nil {
 			log.Error("Failed to up service", zap.Error(err))
