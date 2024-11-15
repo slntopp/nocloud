@@ -42,6 +42,7 @@ type InstancesGroupsController interface {
 	Provide(ctx context.Context, group, sp string) error
 	SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error)
 	GetEdge(ctx context.Context, inboundNode string, collection string) (string, error)
+	GetSP(ctx context.Context, group string) (ServicesProvider, error)
 }
 
 type InstancesGroup struct {
@@ -277,6 +278,41 @@ func (ctrl *instancesGroupsController) TransferIG(ctx context.Context, oldSrvEdg
 	}
 
 	return nil
+}
+
+const getSPQuery = `
+LET instanceGroup = DOCUMENT(@instanceGroup)
+LET sp = (
+    FOR sp IN 1 INBOUND instanceGroup
+    FILTER IS_SAME_COLLECTION(@sps, sp)
+    GRAPH @permissions
+        RETURN sp )[0]
+        
+RETURN MERGE(sp, {uuid: sp._key})`
+
+func (ctrl *instancesGroupsController) GetSP(ctx context.Context, group string) (ServicesProvider, error) {
+	log := ctrl.log.Named("GetSP")
+	log.Debug("Getting Service Provider connected with IG", zap.String("group", group))
+	c, err := ctrl.db.Query(ctx, getGroupWithSPQuery, map[string]interface{}{
+		"permissions":   schema.PERMISSIONS_GRAPH.Name,
+		"sps":           schema.SERVICES_PROVIDERS_COL,
+		"instanceGroup": driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
+	})
+	if err != nil {
+		log.Error("Error while querying", zap.Error(err))
+		return ServicesProvider{}, err
+	}
+	defer c.Close()
+
+	var r ServicesProvider
+	meta, err := c.ReadDocument(ctx, &r)
+	if err != nil {
+		log.Error("Error while reading document", zap.Error(err))
+		return r, err
+	}
+	r.Uuid = meta.Key
+
+	return r, nil
 }
 
 func (ctrl *instancesGroupsController) Provide(ctx context.Context, group, sp string) error {
