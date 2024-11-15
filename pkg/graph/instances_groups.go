@@ -287,7 +287,7 @@ LET sp = (
     FILTER IS_SAME_COLLECTION(@sps, sp)
     GRAPH @permissions
         RETURN sp )[0]
-        
+FILTER sp != null        
 RETURN MERGE(sp, {uuid: sp._key})`
 
 func (ctrl *instancesGroupsController) GetSP(ctx context.Context, group string) (ServicesProvider, error) {
