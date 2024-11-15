@@ -1342,7 +1342,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	var destIG *pb.InstancesGroup
 	var _old *pb.InstancesGroup
 	for _, ig := range existingIGs {
-		if oldIG.GetType() == ig.GetType() {
+		if oldIG.GetType() == ig.GetType() && ig.GetSp() == sp.GetUuid() {
 			destIG = ig
 			break
 		}
@@ -1478,7 +1478,7 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 
 	var destIG *pb.InstancesGroup
 	for _, ig := range igs {
-		if oldIG.GetType() != ig.GetType() {
+		if oldIG.GetType() != ig.GetType() || ig.GetSp() != spUuid {
 			continue
 		}
 		if int(ig.GetData()["userid"].GetNumberValue()) != userid ||
