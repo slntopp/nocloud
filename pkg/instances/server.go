@@ -496,7 +496,7 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 		trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
 			Exclusive: []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL,
 				schema.SERV2IG, schema.IG2INST, schema.IG2SP},
-		}, &driver.BeginTransactionOptions{})
+		}, &driver.BeginTransactionOptions{AllowImplicit: true})
 		if err != nil {
 			log.Error("Failed to start transaction", zap.Error(err))
 			return nil, status.Error(codes.Internal, "failed to perform transfer. Try again later")
