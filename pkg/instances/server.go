@@ -25,6 +25,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
+	"google.golang.org/protobuf/proto"
 	"slices"
 	go_sync "sync"
 	"time"
@@ -1160,7 +1161,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 	return connect.NewResponse(&result), nil
 }
 
-func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) error {
+func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	_ = driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
 	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
@@ -1171,6 +1172,21 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	}
 	if !s.ca.HasAccess(ctx, requester, accountId, accesspb.Level_ADMIN) {
 		return fmt.Errorf("no access to destination account")
+	}
+
+	inst, err := s.ctrl.GetWithAccess(ctx, accountId, uuid)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return fmt.Errorf("failed to get instance: %w", err)
+	}
+
+	accOwner, err := s.ctrl.GetInstanceOwner(ctx, uuid)
+	if err != nil {
+		log.Error("Failed to find instance owner", zap.Error(err))
+		return fmt.Errorf("failed to find instance owner: %w", err)
+	}
+	if accOwner.GetUuid() == account {
+		return fmt.Errorf("can't transfer. User already owns it")
 	}
 
 	srvResp, err := s.srv_ctrl.List(ctx, requester, &servicespb.ListRequest{
@@ -1197,7 +1213,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		log.Error("Group not found, instance not linked")
 		return fmt.Errorf("group not found, instance not linked")
 	}
-	ig := groupResp.Group
+	oldIG := groupResp.Group
 	sp := groupResp.SP
 
 	acc, err := s.acc_ctrl.Get(ctx, account)
@@ -1208,7 +1224,13 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 
 	// Create service for user if it doesn't exist
 	var srv *servicespb.Service
-	if len(services) == 0 {
+	srvCount := len(services)
+	if srvCount > 1 {
+		log.Error("Multiple services found for account", zap.Int("count", srvCount))
+		return fmt.Errorf("multiple services found for account. Account must have 1 service to transfer")
+	}
+	if srvCount == 0 {
+		log.Info("Account has no services, creating new")
 		ns, err := s.acc_ctrl.GetNamespace(ctx, graph.Account{
 			Account: &rpb.Account{
 				Uuid: account,
@@ -1219,8 +1241,8 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 			return fmt.Errorf("failed to get namespace: %w", err)
 		}
 		if !s.ca.HasAccess(ctx, account, ns.ID, accesspb.Level_ADMIN) {
-			log.Error("No access to namespace")
-			return fmt.Errorf("no access to namespace")
+			log.Error("Destination account has no access to namespace")
+			return fmt.Errorf("destination account has no access to namespace")
 		}
 		if srv, err = s.srv_ctrl.Create(ctx, &servicespb.Service{
 			Version: "1",
@@ -1229,14 +1251,84 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 			log.Error("Failed to create service", zap.Error(err))
 			return fmt.Errorf("failed to create service: %w", err)
 		}
+		if err = s.srv_ctrl.SetStatus(ctx, srv, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up service", zap.Error(err))
+			return fmt.Errorf("failed to up new service: %w", err)
+		}
 	} else {
 		srv = services[0]
+	}
+
+	existingIGs := srv.GetInstancesGroups()
+	var destIG *pb.InstancesGroup
+	var _old *pb.InstancesGroup
+	for _, ig := range existingIGs {
+		if oldIG.GetType() == ig.GetType() {
+			destIG = ig
+		}
+	}
+
+	// TODO: this explicit 'ione' shouldn't be here, but it is fucking hard to fix
+	if oldIG.GetType() == "ione" {
+		log.Warn("Transferring Ione instances group explicitly")
+		if destIG, err = s.processIoneIG(ctx, log, inst.Instance, oldIG, existingIGs, srv, acc.GetTitle(), sp.GetUuid()); err != nil {
+			log.Error("Failed to process Ione instances group", zap.Error(err))
+			return fmt.Errorf("failed to process instances group: %w", err)
+		}
+		goto ending
+	}
+
+	if destIG == nil {
+		log.Info("Destination instances group not found, creating new")
+		destIG = &pb.InstancesGroup{
+			Type:  oldIG.GetType(),
+			Title: acc.Title + " - " + oldIG.GetType(),
+		}
+		if err = s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
+			log.Error("Failed to create instances group", zap.Error(err))
+			return fmt.Errorf("failed to create instances group: %w", err)
+		}
+		if err = s.ig_ctrl.Provide(ctx, destIG.GetUuid(), sp.GetUuid()); err != nil {
+			log.Error("Failed to provide instances group", zap.Error(err))
+			return fmt.Errorf("failed to provide instances group: %w", err)
+		}
+		if err := s.ig_ctrl.SetStatus(ctx, destIG, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up dest instance group", zap.Error(err))
+			return fmt.Errorf("failed to up dest instance group: %w", err)
+		}
+	}
+	// Process new IG ips
+	_old = proto.Clone(destIG).(*pb.InstancesGroup)
+	destIG = processIGsIPs(destIG, inst.Instance, false)
+	if err = s.ig_ctrl.Update(ctx, destIG, _old); err != nil {
+		log.Error("Failed to update instances group", zap.Error(err))
+		return fmt.Errorf("failed to update instances group: %w", err)
+	}
+	// Process old IG ips
+	_old = proto.Clone(oldIG).(*pb.InstancesGroup)
+	oldIG = processIGsIPs(oldIG, inst.Instance, true)
+	if err = s.ig_ctrl.Update(ctx, oldIG, _old); err != nil {
+		log.Error("Failed to update instances group", zap.Error(err))
+		return fmt.Errorf("failed to update instances group: %w", err)
+	}
+
+ending:
+	igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
+	if err != nil {
+		log.Error("Failed to get instances group edge", zap.Error(err))
+		return fmt.Errorf("failed to get instances group edge: %w", err)
+	}
+	if err = s.ctrl.TransferInst(ctx, igEdge, driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, destIG.GetUuid()), instanceId); err != nil {
+		log.Error("Failed to transfer instances", zap.Error(err))
+		return fmt.Errorf("failed to transfer instances: %w", err)
 	}
 
 	return nil
 }
 
 func (s *InstancesServer) transferToIG(ctx context.Context, log *zap.Logger, uuid string, igUuid string) error {
+	return fmt.Errorf("transfer to IG option currently unavailable")
+
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
 
@@ -1278,4 +1370,132 @@ func (s *InstancesServer) transferToIG(ctx context.Context, log *zap.Logger, uui
 	}
 
 	return nil
+}
+
+func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, inst *pb.Instance, oldIG *pb.InstancesGroup,
+	igs []*pb.InstancesGroup, srv *servicespb.Service, accTitle, spUuid string) (*pb.InstancesGroup, error) {
+	log = log.Named("processIoneIG")
+
+	userid := int(oldIG.GetData()["userid"].GetNumberValue())
+	publicVn := int(oldIG.GetData()["public_vn"].GetNumberValue())
+	privateVn := int(oldIG.GetData()["private_vn"].GetNumberValue())
+	_ = int(oldIG.GetData()["public_ips_free"].GetNumberValue())
+	_ = int(oldIG.GetData()["private_ips_free"].GetNumberValue())
+	_ = int(oldIG.GetData()["public_ips_total"].GetNumberValue())
+	_ = int(oldIG.GetData()["private_ips_total"].GetNumberValue())
+
+	var destIG *pb.InstancesGroup
+	for _, ig := range igs {
+		if oldIG.GetType() != ig.GetType() {
+			continue
+		}
+		if int(ig.GetData()["userid"].GetNumberValue()) != userid ||
+			int(ig.GetData()["public_vn"].GetNumberValue()) != publicVn ||
+			int(ig.GetData()["private_vn"].GetNumberValue()) != privateVn {
+			continue
+		}
+		destIG = ig
+		break
+	}
+
+	if destIG == nil {
+		log.Info("Destination instances group not found, creating new")
+		destIG = &pb.InstancesGroup{
+			Type:  oldIG.GetType(),
+			Title: accTitle + " - " + oldIG.GetType(),
+		}
+		if err := s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
+			log.Error("Failed to create instances group", zap.Error(err))
+			return destIG, fmt.Errorf("failed to create instances group: %w", err)
+		}
+		if err := s.ig_ctrl.Provide(ctx, destIG.GetUuid(), spUuid); err != nil {
+			log.Error("Failed to provide instances group", zap.Error(err))
+			return destIG, fmt.Errorf("failed to provide instances group: %w", err)
+		}
+		if err := s.ig_ctrl.SetStatus(ctx, destIG, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up dest instance group", zap.Error(err))
+			return destIG, fmt.Errorf("failed to up dest instance group: %w", err)
+		}
+	}
+	if destIG.Data == nil {
+		destIG.Data = make(map[string]*structpb.Value)
+	}
+	if destIG.Resources == nil {
+		destIG.Resources = make(map[string]*structpb.Value)
+	}
+	if oldIG.Data == nil {
+		oldIG.Data = make(map[string]*structpb.Value)
+	}
+	if oldIG.Resources == nil {
+		oldIG.Resources = make(map[string]*structpb.Value)
+	}
+	// Process new IG
+	_old := proto.Clone(destIG).(*pb.InstancesGroup)
+	destIG = processIGsIPs(destIG, inst, false)
+	destIG.Data["public_ips_free"] = destIG.GetResources()["ips_public"]
+	destIG.Data["public_ips_total"] = destIG.GetResources()["ips_public"]
+	destIG.Data["private_ips_free"] = destIG.GetResources()["ips_private"]
+	destIG.Data["private_ips_total"] = destIG.GetResources()["ips_private"]
+	destIG.Data["imported"] = structpb.NewBoolValue(true)
+	if err := s.ig_ctrl.Update(ctx, destIG, _old); err != nil {
+		log.Error("Failed to update instances group", zap.Error(err))
+		return destIG, fmt.Errorf("failed to update instances group: %w", err)
+	}
+	// Process old IG
+	_old = proto.Clone(oldIG).(*pb.InstancesGroup)
+	oldIG = processIGsIPs(oldIG, inst, true)
+	oldIG.Data["public_ips_free"] = oldIG.GetResources()["ips_public"]
+	oldIG.Data["public_ips_total"] = oldIG.GetResources()["ips_public"]
+	oldIG.Data["private_ips_free"] = oldIG.GetResources()["ips_private"]
+	oldIG.Data["private_ips_total"] = oldIG.GetResources()["ips_private"]
+	if err := s.ig_ctrl.Update(ctx, oldIG, _old); err != nil {
+		log.Error("Failed to update instances group", zap.Error(err))
+		return destIG, fmt.Errorf("failed to update instances group: %w", err)
+	}
+
+	return destIG, nil
+}
+
+func processIGsIPs(ig *pb.InstancesGroup, inst *pb.Instance, decrease bool) *pb.InstancesGroup {
+	if ig == nil {
+		return nil
+	}
+	if inst == nil {
+		return ig
+	}
+
+	plusOrZero := func(n int) int {
+		if n < 0 {
+			return 0
+		}
+		return n
+	}
+
+	var (
+		oldAmount int
+		newAmount int
+	)
+
+	mul := 1
+	if decrease {
+		mul = -1
+	}
+
+	if ig.Resources == nil {
+		ig.Resources = make(map[string]*structpb.Value)
+	}
+
+	oldAmount = int(ig.GetResources()["ips_public"].GetNumberValue())
+	newAmount = oldAmount + int(inst.GetResources()["ips_public"].GetNumberValue())*mul
+	if oldAmount != newAmount {
+		ig.Resources["ips_public"] = structpb.NewNumberValue(float64(plusOrZero(newAmount)))
+	}
+
+	oldAmount = int(ig.GetResources()["ips_private"].GetNumberValue())
+	newAmount = oldAmount + int(inst.GetResources()["ips_private"].GetNumberValue())*mul
+	if oldAmount != newAmount {
+		ig.Resources["ips_private"] = structpb.NewNumberValue(float64(plusOrZero(newAmount)))
+	}
+
+	return ig
 }
