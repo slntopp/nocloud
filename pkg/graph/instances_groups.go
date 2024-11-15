@@ -283,7 +283,7 @@ func (ctrl *instancesGroupsController) TransferIG(ctx context.Context, oldSrvEdg
 const getSPQuery = `
 LET instanceGroup = DOCUMENT(@instanceGroup)
 LET sp = (
-    FOR sp IN 1 INBOUND instanceGroup
+    FOR sp IN 1 OUTBOUND instanceGroup
     FILTER IS_SAME_COLLECTION(@sps, sp)
     GRAPH @permissions
         RETURN sp )[0]
