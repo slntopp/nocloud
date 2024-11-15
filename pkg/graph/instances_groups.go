@@ -284,8 +284,8 @@ const getSPQuery = `
 LET instanceGroup = DOCUMENT(@instanceGroup)
 LET sp = (
     FOR sp IN 1 OUTBOUND instanceGroup
-    FILTER IS_SAME_COLLECTION(@sps, sp)
     GRAPH @permissions
+    FILTER IS_SAME_COLLECTION(@sps, sp)
         RETURN sp )[0]
 FILTER sp != null        
 RETURN MERGE(sp, {uuid: sp._key})`
