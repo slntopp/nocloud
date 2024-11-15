@@ -1426,6 +1426,7 @@ func (s *InstancesServer) transferToIG(ctx context.Context, log *zap.Logger, uui
 	//return nil
 }
 
+// TODO: Currently if IONE IG has instances in PENDING status, then you will not be able to transfer instances from this IG. Fix it
 func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, inst *pb.Instance, oldIG *pb.InstancesGroup,
 	igs []*pb.InstancesGroup, srv *servicespb.Service, accTitle, spUuid string) (*pb.InstancesGroup, error) {
 	log = log.Named("processIoneIG")
