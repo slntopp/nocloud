@@ -1291,6 +1291,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	for _, ig := range existingIGs {
 		if oldIG.GetType() == ig.GetType() {
 			destIG = ig
+			break
 		}
 	}
 
