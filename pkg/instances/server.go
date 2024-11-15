@@ -1426,7 +1426,7 @@ func (s *InstancesServer) transferToIG(ctx context.Context, log *zap.Logger, uui
 	//return nil
 }
 
-// TODO: Currently if IONE IG has instances in PENDING status, then you will not be able to transfer instances from this IG. Fix it
+// TODO: Currently if IONE IG has instances in PENDING status, then you will not be able to transfer instances from this IG. Fix it (currently it is done but need to remove check)
 func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, inst *pb.Instance, oldIG *pb.InstancesGroup,
 	igs []*pb.InstancesGroup, srv *servicespb.Service, accTitle, spUuid string) (*pb.InstancesGroup, error) {
 	log = log.Named("processIoneIG")
@@ -1504,13 +1504,18 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	if oldIG.Resources == nil {
 		oldIG.Resources = make(map[string]*structpb.Value)
 	}
+
+	ipsPublicNew := int(destIG.GetResources()["ips_public"].GetNumberValue())
+	ipsPrivateNew := int(destIG.GetResources()["ips_private"].GetNumberValue())
 	// Process new IG
 	_old := proto.Clone(destIG).(*pb.InstancesGroup)
 	destIG = processIGsIPs(destIG, inst, false)
-	destIG.Data["public_ips_free"] = destIG.GetResources()["ips_public"]
-	destIG.Data["public_ips_total"] = destIG.GetResources()["ips_public"]
-	destIG.Data["private_ips_free"] = destIG.GetResources()["ips_private"]
-	destIG.Data["private_ips_total"] = destIG.GetResources()["ips_private"]
+	differPublic := int(destIG.GetResources()["ips_public"].GetNumberValue()) - ipsPublicNew
+	differPrivate := int(destIG.GetResources()["ips_private"].GetNumberValue()) - ipsPrivateNew
+	destIG.Data["public_ips_free"] = structpb.NewNumberValue(float64(int(destIG.Data["public_ips_free"].GetNumberValue()) + differPublic))
+	destIG.Data["public_ips_total"] = structpb.NewNumberValue(float64(int(destIG.Data["public_ips_total"].GetNumberValue()) + differPublic))
+	destIG.Data["private_ips_free"] = structpb.NewNumberValue(float64(int(destIG.Data["private_ips_free"].GetNumberValue()) + differPrivate))
+	destIG.Data["private_ips_total"] = structpb.NewNumberValue(float64(int(destIG.Data["private_ips_total"].GetNumberValue()) + differPrivate))
 	destIG.Data["imported"] = structpb.NewBoolValue(true)
 	if err := s.ig_ctrl.Update(ctx, destIG, _old); err != nil {
 		log.Error("Failed to update instances group", zap.Error(err))
@@ -1519,10 +1524,12 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	// Process old IG
 	_old = proto.Clone(oldIG).(*pb.InstancesGroup)
 	oldIG = processIGsIPs(oldIG, inst, true)
-	oldIG.Data["public_ips_free"] = oldIG.GetResources()["ips_public"]
-	oldIG.Data["public_ips_total"] = oldIG.GetResources()["ips_public"]
-	oldIG.Data["private_ips_free"] = oldIG.GetResources()["ips_private"]
-	oldIG.Data["private_ips_total"] = oldIG.GetResources()["ips_private"]
+	differPublic = int(oldIG.GetResources()["ips_public"].GetNumberValue()) - ipsPublic
+	differPrivate = int(oldIG.GetResources()["ips_private"].GetNumberValue()) - ipsPrivate
+	oldIG.Data["public_ips_free"] = structpb.NewNumberValue(float64(int(oldIG.Data["public_ips_free"].GetNumberValue()) + differPublic))
+	oldIG.Data["public_ips_total"] = structpb.NewNumberValue(float64(int(oldIG.Data["public_ips_total"].GetNumberValue()) + differPublic))
+	oldIG.Data["private_ips_free"] = structpb.NewNumberValue(float64(int(oldIG.Data["private_ips_free"].GetNumberValue()) + differPrivate))
+	oldIG.Data["private_ips_total"] = structpb.NewNumberValue(float64(int(oldIG.Data["private_ips_total"].GetNumberValue()) + differPrivate))
 	if err := s.ig_ctrl.Update(ctx, oldIG, _old); err != nil {
 		log.Error("Failed to update instances group", zap.Error(err))
 		return destIG, fmt.Errorf("failed to update instances group: %w", err)
