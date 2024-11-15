@@ -288,6 +288,12 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
+	isImported := ig.GetData()["imported"].GetBoolValue()
+	if isImported {
+		log.Error("Can't create instance with imported IG")
+		return nil, status.Error(codes.InvalidArgument, "can't create instance with imported IG")
+	}
+
 	if req.Promocode != nil && req.GetPromocode() != "" {
 		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
 	}

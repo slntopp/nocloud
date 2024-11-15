@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
 
@@ -123,7 +124,13 @@ func (ctrl *instancesGroupsController) Create(ctx context.Context, service drive
 		return err
 	}
 
+	isImported := g.GetData()["imported"].GetBoolValue()
+
 	for _, instance := range g.GetInstances() {
+		if isImported {
+			log.Error("Can't create new instance to imported IG")
+			return fmt.Errorf("can't create new instance to imported IG")
+		}
 		_, err := ctrl.inst_ctrl.Create(ctx, meta.ID, *g.Sp, instance)
 		if err != nil {
 			log.Error("Failed to create Instance", zap.Error(err))
@@ -189,6 +196,8 @@ func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 		}
 	}
 
+	isImported := ig.GetData()["imported"].GetBoolValue()
+
 	// creating missing and updating existing instances
 	for _, inst := range ig.GetInstances() {
 		var instFound = false
@@ -204,6 +213,11 @@ func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 			}
 		}
 		if !instFound {
+			if isImported {
+				log.Error("Can't create new instance to imported IG")
+				return fmt.Errorf("can't create new instance to imported IG")
+			}
+
 			docID := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.Uuid)
 			_, err := ctrl.inst_ctrl.Create(ctx, docID, *oldIg.Sp, inst)
 			if err != nil {
