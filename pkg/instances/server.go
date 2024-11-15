@@ -1203,7 +1203,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 
 func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-	_ = driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
 	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
 	accountId := driver.NewDocumentID(schema.ACCOUNTS_COL, account)
 
@@ -1214,7 +1214,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		return fmt.Errorf("no access to destination account")
 	}
 
-	inst, err := s.ctrl.GetWithAccess(ctx, accountId, uuid)
+	inst, err := s.ctrl.GetWithAccess(ctx, requesterId, uuid)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return fmt.Errorf("failed to get instance: %w", err)
