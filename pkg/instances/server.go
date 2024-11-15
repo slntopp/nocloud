@@ -484,11 +484,12 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 	req := _req.Msg
 	log.Info("Request received", zap.Any("request", req))
 	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
-	log = log.With(zap.String("account", req.GetAccount()), zap.String("ig", req.GetIg()), zap.String("requester", requester))
+	log = log.With(zap.Any("account", req.Account), zap.Any("ig", req.Ig), zap.String("requester", requester))
 
 	if req.Account != nil && req.Ig != nil {
 		return nil, status.Error(codes.InvalidArgument, "account and ig cannot be set at the same time")
 	}
+
 	if req.Account != nil {
 		trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
 			Exclusive: []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL,
@@ -496,15 +497,16 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 		}, &driver.BeginTransactionOptions{})
 		if err != nil {
 			log.Error("Failed to start transaction", zap.Error(err))
-			return nil, status.Error(codes.Internal, "internal error. Try again later")
+			return nil, status.Error(codes.Internal, "failed to perform transfer. Try again later")
 		}
 		ctx = driver.WithTransactionID(ctx, trID)
 
 		defer func() {
-			if recover() != nil {
+			if panicErr := recover(); panicErr != nil {
 				if err = s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
 					log.Error("Failed to abort transaction", zap.Error(err))
 				}
+				log.Info("Recovered from panic", zap.Any("error", panicErr))
 			}
 		}()
 
@@ -525,8 +527,14 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 			log.Error("Failed to transfer to IG", zap.Error(err))
 			return nil, status.Error(codes.Internal, fmt.Errorf("failed to transfer to IG: %w", err).Error())
 		}
+	} else {
+		return nil, status.Error(codes.InvalidArgument, "don't know where to transfer")
 	}
-	return nil, status.Error(codes.InvalidArgument, "don't know where to transfer")
+
+	log.Info("Finished transfer")
+	return connect.NewResponse(&pb.TransferInstanceResponse{
+		Result: true,
+	}), nil
 }
 
 func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[notes.AddNoteRequest]) (*connect.Response[notes.NoteResponse], error) {
@@ -1361,48 +1369,48 @@ ending:
 
 func (s *InstancesServer) transferToIG(ctx context.Context, log *zap.Logger, uuid string, igUuid string) error {
 	return fmt.Errorf("transfer to IG option currently unavailable")
-
-	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
-
-	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
-	newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, igUuid)
-	inst, err := s.ctrl.GetWithAccess(ctx, requesterId, uuid)
-	if err != nil {
-		log.Error("Failed to get instance", zap.Error(err))
-		return fmt.Errorf("failed to get instance: %w", err)
-	}
-
-	ig, err := s.ig_ctrl.GetWithAccess(ctx, requesterId, newIGId.Key())
-	if err != nil {
-		log.Error("Failed to get instances group", zap.Error(err))
-		return fmt.Errorf("failed to get instances group: %w", err)
-	}
-
-	if inst.GetAccess().GetLevel() < accesspb.Level_ROOT {
-		log.Error("Access denied", zap.String("uuid", inst.GetUuid()))
-		return fmt.Errorf("no access to instance")
-	}
-
-	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
-		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
-		return fmt.Errorf("no access to IG")
-	}
-
-	igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
-
-	if err != nil {
-		log.Error("Failed to get IG edge", zap.Error(err))
-		return fmt.Errorf("failed to get IG connection: %w", err)
-	}
-
-	err = s.ctrl.TransferInst(ctx, igEdge, newIGId, instanceId)
-	if err != nil {
-		log.Error("Failed to transfer instance", zap.Error(err))
-		return fmt.Errorf("failed to transfer: %w", err)
-	}
-
-	return nil
+	//
+	//requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	//requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	//
+	//instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
+	//newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, igUuid)
+	//inst, err := s.ctrl.GetWithAccess(ctx, requesterId, uuid)
+	//if err != nil {
+	//	log.Error("Failed to get instance", zap.Error(err))
+	//	return fmt.Errorf("failed to get instance: %w", err)
+	//}
+	//
+	//ig, err := s.ig_ctrl.GetWithAccess(ctx, requesterId, newIGId.Key())
+	//if err != nil {
+	//	log.Error("Failed to get instances group", zap.Error(err))
+	//	return fmt.Errorf("failed to get instances group: %w", err)
+	//}
+	//
+	//if inst.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	//	log.Error("Access denied", zap.String("uuid", inst.GetUuid()))
+	//	return fmt.Errorf("no access to instance")
+	//}
+	//
+	//if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	//	log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+	//	return fmt.Errorf("no access to IG")
+	//}
+	//
+	//igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
+	//
+	//if err != nil {
+	//	log.Error("Failed to get IG edge", zap.Error(err))
+	//	return fmt.Errorf("failed to get IG connection: %w", err)
+	//}
+	//
+	//err = s.ctrl.TransferInst(ctx, igEdge, newIGId, instanceId)
+	//if err != nil {
+	//	log.Error("Failed to transfer instance", zap.Error(err))
+	//	return fmt.Errorf("failed to transfer: %w", err)
+	//}
+	//
+	//return nil
 }
 
 func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, inst *pb.Instance, oldIG *pb.InstancesGroup,
