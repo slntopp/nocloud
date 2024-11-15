@@ -430,6 +430,11 @@ func (ctrl *servicesController) List(ctx context.Context, requestor string, requ
 			value := val.GetStringValue()
 			query += ` FILTER path.vertices[-2]._key == @search_namespace`
 			bindVars["search_namespace"] = value
+		} else if key == "uuid" {
+			varsKey := "uuids"
+			values := val.GetListValue().AsSlice()
+			query += fmt.Sprintf(` FILTER service._key in @%s`, varsKey)
+			bindVars[varsKey] = values
 		} else {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
