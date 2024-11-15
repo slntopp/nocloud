@@ -80,6 +80,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 	sp_ctrl := graph.NewServicesProvidersController(logger, db)
 	srv_ctrl := graph.NewServicesController(logger, db, rbmq)
 	promo_ctrl := graph.NewPromocodesController(logger, db, rbmq)
+	acc_ctrl := graph.NewAccountsController(logger, db)
 	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
@@ -115,6 +116,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		sp_ctrl:    sp_ctrl,
 		srv_ctrl:   srv_ctrl,
 		promo_ctrl: promo_ctrl,
+		acc_ctrl:   acc_ctrl,
 		ca:         ca,
 		drivers:    make(map[string]driverpb.DriverServiceClient),
 		rdb:        rdb,
@@ -1267,7 +1269,6 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	}
 
 	// Create service for user if it doesn't exist
-	log.Info("Managing services")
 	var srv *servicespb.Service
 	srvCount := len(services)
 	if srvCount > 1 {
