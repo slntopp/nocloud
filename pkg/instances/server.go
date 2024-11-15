@@ -1417,6 +1417,9 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 		(ipsPrivate != privateIpsFree || ipsPrivate != privateIpsTotal) {
 		return nil, fmt.Errorf("can't transfer. IONE machine currently in unstable state")
 	}
+	if userid == 0 {
+		return nil, fmt.Errorf("can't transfer. IONE machine currently not setted up")
+	}
 
 	var destIG *pb.InstancesGroup
 	for _, ig := range igs {
@@ -1437,6 +1440,15 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 		destIG = &pb.InstancesGroup{
 			Type:  oldIG.GetType(),
 			Title: accTitle + " - " + oldIG.GetType() + " - imported",
+			Data: map[string]*structpb.Value{
+				"userid": structpb.NewNumberValue(float64(userid)),
+			},
+		}
+		if publicVn > 0 {
+			destIG.Data["public_vn"] = structpb.NewNumberValue(float64(publicVn))
+		}
+		if privateVn > 0 {
+			destIG.Data["private_vn"] = structpb.NewNumberValue(float64(privateVn))
 		}
 		if err := s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
 			log.Error("Failed to create instances group", zap.Error(err))
