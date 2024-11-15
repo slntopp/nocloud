@@ -1222,6 +1222,13 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		return fmt.Errorf("failed to get instance: %w", err)
 	}
 
+	state := inst.GetState().GetState()
+	forbiddenStates := []stpb.NoCloudState{stpb.NoCloudState_UNKNOWN, stpb.NoCloudState_INIT, stpb.NoCloudState_PENDING}
+	if slices.Contains(forbiddenStates, state) {
+		log.Error("Instance in forbidden state to transfer it to other account", zap.Any("state", state))
+		return fmt.Errorf("instance in forbidden state. Can't transfer while instance in state: %s", state.String())
+	}
+
 	accOwner, err := s.ctrl.GetInstanceOwner(ctx, uuid)
 	if err != nil {
 		log.Error("Failed to find instance owner", zap.Error(err))
@@ -1436,10 +1443,10 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	ipsPrivate := int(oldIG.GetResources()["ips_private"].GetNumberValue())
 	if (ipsPublic != publicIpsFree || ipsPublic != publicIpsTotal) ||
 		(ipsPrivate != privateIpsFree || ipsPrivate != privateIpsTotal) {
-		return nil, fmt.Errorf("can't transfer. IONE machine currently in unstable state")
+		return nil, fmt.Errorf("can't transfer. IONE cluster currently in unstable state")
 	}
 	if userid == 0 {
-		return nil, fmt.Errorf("can't transfer. IONE machine currently not setted up")
+		return nil, fmt.Errorf("can't transfer. IONE cluster currently not setted up")
 	}
 
 	var destIG *pb.InstancesGroup
