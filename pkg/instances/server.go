@@ -492,10 +492,21 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 		return nil, status.Error(codes.InvalidArgument, "account and ig cannot be set at the same time")
 	}
 
+	// Actually modified collections in transactions
+	usedCols := []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL,
+		schema.SERV2IG, schema.IG2INST, schema.IG2SP}
+	// Collection connected in Permissions graph with some collections from usedCols
+	otherCols := []string{schema.NS2ACC, schema.ACC2NS, schema.NS2SERV,
+		schema.ACC2CRED, schema.CUR2CUR, schema.SP2BP}
+	// Other collections in Permissions graph but not presented in schema (this part is cringe, must fix it somehow)
+	importedCols := []string{"Accounts2IcsLinks", "Accounts2NocalCalendars", "Instances2Runs", "Namespaces2NocalCalendars",
+		"Namespaces2NodemeshWorkflows", "Namespaces2Runs", "NocalCalendars2NocalEvents", "NodemeshWorkflows2NodemeshRuns"}
+	otherCols = append(otherCols, importedCols...)
+
 	if req.Account != nil {
 		trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
-			Exclusive: []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL,
-				schema.SERV2IG, schema.IG2INST, schema.IG2SP},
+			Exclusive: usedCols,
+			Write:     otherCols,
 		}, &driver.BeginTransactionOptions{AllowImplicit: true})
 		if err != nil {
 			log.Error("Failed to start transaction", zap.Error(err))
