@@ -1532,14 +1532,14 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	//	(ipsPrivate != privateIpsFree || ipsPrivate != privateIpsTotal) {
 	//	return nil, fmt.Errorf("can't transfer. IONE cluster currently in unstable state")
 	//}
+	if inst.GetState().GetState() == stpb.NoCloudState_PENDING {
+		return nil, fmt.Errorf("can't transfer IONE instance in PENDING state")
+	}
 	if publicIpsFree != publicIpsTotal || privateIpsFree != privateIpsTotal {
 		return nil, fmt.Errorf("can't transfer. IONE cluster currently in unstable state")
 	}
 	if userid == 0 {
 		return nil, fmt.Errorf("can't transfer. IONE cluster currently not setted up")
-	}
-	if inst.GetState().GetState() == stpb.NoCloudState_PENDING {
-		return nil, fmt.Errorf("can't transfer IONE instance in PENDING state")
 	}
 
 	var destIG *pb.InstancesGroup
