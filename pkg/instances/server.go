@@ -1416,6 +1416,46 @@ ending:
 		return fmt.Errorf("failed to transfer instances: %w", err)
 	}
 
+	// Transfer invoices
+	invoices, err := s.inv_ctrl.List(ctx, accOwner.GetUuid())
+	if err != nil {
+		log.Error("Failed to list invoices", zap.Error(err))
+		return fmt.Errorf("failed to list invoices: %w", err)
+	}
+	counter := 0
+outer:
+	for _, inv := range invoices {
+		if inv.GetAccount() != accOwner.GetUuid() {
+			log.Error("Got invoice from other account. Must be incorrect List method filter", zap.String("account", inv.GetAccount()))
+			continue
+		}
+		foundInstance := false
+		for _, item := range inv.GetItems() {
+			if item.GetInstance() == "" {
+				continue
+			}
+			if item.GetInstance() == uuid {
+				foundInstance = true
+				continue
+			}
+			if !s.ca.HasAccess(ctx, account, driver.NewDocumentID(schema.INSTANCES_COL, item.GetInstance()), accesspb.Level_ADMIN) {
+				continue outer
+			}
+		}
+		if !foundInstance {
+			continue
+		}
+		inv.Account = account
+		if _, err = s.inv_ctrl.Update(ctx, inv); err != nil {
+			log.Error("Failed to transfer invoice", zap.Error(err))
+			return fmt.Errorf("failed to transfer invoice: %w", err)
+		}
+		counter++
+	}
+	if counter > 0 {
+		log.Info("Transferred invoices", zap.Int("count", counter))
+	}
+
 	return nil
 }
 
