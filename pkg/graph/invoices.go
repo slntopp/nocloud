@@ -23,6 +23,7 @@ type InvoicesController interface {
 	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
 	List(ctx context.Context, account string) ([]*Invoice, error)
+	Transfer(ctx context.Context, uuid string, account string) (err error)
 }
 
 type InvoiceNumberMeta struct {
@@ -39,6 +40,8 @@ type Invoice struct {
 type invoicesController struct {
 	col driver.Collection // Billing Plans collection
 
+	transactions TransactionsController
+
 	log *zap.Logger
 }
 
@@ -47,10 +50,12 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 	log := logger.Named("InvoicesController")
 	col := GetEnsureCollection(log, ctx, db, schema.INVOICES_COL)
 
+	transactions := NewTransactionsController(log, db)
+
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return &invoicesController{
-		log: log, col: col,
+		log: log, col: col, transactions: transactions,
 	}
 }
 
@@ -163,6 +168,64 @@ func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoi
 func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
 	_, err := ctrl.col.UpdateDocument(driver.WithWaitForSync(ctx, true), id, patch)
 	return err
+}
+
+func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, account string) (err error) {
+	_, hasTransaction := driver.HasTransactionID(ctx)
+	var trId driver.TransactionID
+	if !hasTransaction {
+		db := ctrl.col.Database()
+		trId, err = db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: []string{schema.INVOICES_COL, schema.TRANSACTIONS_COL},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			return err
+		}
+		ctx = driver.WithTransactionID(ctx, trId)
+		defer func(err *error) {
+			if panicErr := recover(); panicErr != nil {
+				_ = db.AbortTransaction(ctx, trId, &driver.AbortTransactionOptions{})
+				ctrl.log.Warn("Recovered from panic", zap.Any("error", panicErr))
+				return
+			}
+			if err != nil {
+				_ = db.AbortTransaction(ctx, trId, &driver.AbortTransactionOptions{})
+				return
+			}
+		}(&err)
+	}
+
+	var inv *Invoice
+	inv, err = ctrl.Get(ctx, uuid)
+	if err != nil {
+		return err
+	}
+	oldAcc := inv.Account
+	if oldAcc == account {
+		err = fmt.Errorf("can't transfer to the same account")
+		return err
+	}
+	if _, err = ctrl.Update(ctx, inv); err != nil {
+		return err
+	}
+	for _, id := range inv.GetTransactions() {
+		var tr *pb.Transaction
+		tr, err = ctrl.transactions.Get(ctx, id)
+		if err != nil {
+			return err
+		}
+		tr.Account = account
+		if _, err = ctrl.transactions.Update(ctx, tr); err != nil {
+			return err
+		}
+	}
+
+	if !hasTransaction {
+		if err = ctrl.col.Database().CommitTransaction(ctx, trId, &driver.CommitTransactionOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 const listInvoices = `
