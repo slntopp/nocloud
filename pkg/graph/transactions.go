@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
@@ -29,6 +30,7 @@ type TransactionsController interface {
 	Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error)
 	Get(ctx context.Context, uuid string) (*pb.Transaction, error)
 	Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error)
+	Transfer(ctx context.Context, uuid string, account string) error
 }
 
 type Transaction struct {
@@ -38,6 +40,8 @@ type Transaction struct {
 
 type transactionsController struct {
 	col driver.Collection // Billing Plans collection
+
+	records RecordsController
 
 	log *zap.Logger
 }
@@ -49,10 +53,12 @@ func NewTransactionsController(logger *zap.Logger, db driver.Database) Transacti
 
 	log.Info("Creating Transaction controller")
 
+	records := NewRecordsController(log, db)
+
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return &transactionsController{
-		log: log, col: col,
+		log: log, col: col, records: records,
 	}
 }
 
@@ -90,4 +96,26 @@ func (ctrl *transactionsController) Update(ctx context.Context, tx *pb.Transacti
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (ctrl *transactionsController) Transfer(ctx context.Context, uuid string, account string) error {
+	tr, err := ctrl.Get(ctx, uuid)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction: %w", err)
+	}
+	tr.Account = account
+	if _, err = ctrl.Update(ctx, tr); err != nil {
+		return fmt.Errorf("failed to update transaction: %w", err)
+	}
+	recs, err := ctrl.records.Get(ctx, uuid)
+	if err != nil {
+		return fmt.Errorf("failed to get records: %w", err)
+	}
+	for _, rec := range recs {
+		rec.Account = account
+		if err = ctrl.records.Update(ctx, rec); err != nil {
+			return fmt.Errorf("failed to update record: %w", err)
+		}
+	}
+	return err
 }
