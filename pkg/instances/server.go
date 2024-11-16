@@ -1433,7 +1433,8 @@ outer:
 			log.Error("Got invoice from other account. Must be incorrect List method filter", zap.String("account", inv.GetAccount()))
 			continue
 		}
-		if inv.GetStatus() == billingpb.BillingStatus_PAID || inv.GetStatus() == billingpb.BillingStatus_RETURNED {
+		if inv.GetStatus() == billingpb.BillingStatus_PAID || inv.GetStatus() == billingpb.BillingStatus_RETURNED ||
+			inv.GetStatus() == billingpb.BillingStatus_CANCELED || inv.GetStatus() == billingpb.BillingStatus_TERMINATED {
 			continue
 		}
 		foundInstance := false
