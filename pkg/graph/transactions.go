@@ -74,11 +74,12 @@ func (ctrl *transactionsController) Create(ctx context.Context, tx *pb.Transacti
 
 func (ctrl *transactionsController) Get(ctx context.Context, uuid string) (*pb.Transaction, error) {
 	var tx pb.Transaction
-	_, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
+	meta, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
 	if err != nil {
 		ctrl.log.Error("Failed to read transaction", zap.Error(err))
 		return nil, err
 	}
+	tx.Uuid = meta.Key
 	return &tx, nil
 }
 
