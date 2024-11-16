@@ -28,6 +28,7 @@ import (
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 	"slices"
 	go_sync "sync"
@@ -1469,20 +1470,29 @@ outer:
 		}
 		transferred = append(transferred, inv)
 	}
+	// Sync with payment gateway
 	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
-	counter := 0
+	success := 0
+	g := errgroup.Group{}
+	m := &go_sync.Mutex{}
 	for _, trInv := range transferred {
-		if err = gw.CreateInvoice(ctx, trInv.Invoice); err != nil {
-			if counter == 0 {
-				return fmt.Errorf("failed to create transfered invoice via payment gateway: %w", err)
+		g.Go(func() error {
+			if err = gw.CreateInvoice(ctx, trInv.Invoice); err != nil {
+				return err
 			}
-			log.Error("FATAL: failed to create new invoice via payment gateway. Probably not synchronized now", zap.Error(err), zap.String("nc_inv_id", trInv.GetUuid()))
-			continue
-		}
-		counter++
+			m.Lock()
+			success++
+			m.Unlock()
+			return nil
+		})
 	}
-	if counter > 0 {
-		log.Info("Transferred invoices", zap.Int("count", counter))
+	if err = g.Wait(); err != nil {
+		// If gateway data is untouched, then abort transferring
+		if success == 0 {
+			return fmt.Errorf("failed to sync with payment gateway, aborted: %w", err)
+		}
+		log.Error("FATAL: Failed to sync with payment gateway, but managed to process some gateway invoices",
+			zap.Error(err), zap.Int("processed", success), zap.Int("total", len(transferred)))
 	}
 
 	return nil
