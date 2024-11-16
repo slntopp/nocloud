@@ -1297,6 +1297,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		return fmt.Errorf("IG not found, instance not linked. Probably broken instance")
 	}
 	oldIG := groupResp.Group
+	oldIG.Instances = nil
 	sp := groupResp.SP
 
 	acc, err := s.acc_ctrl.Get(ctx, account)
