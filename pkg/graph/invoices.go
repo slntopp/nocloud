@@ -198,7 +198,7 @@ func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, accou
 	var inv *Invoice
 	inv, err = ctrl.Get(ctx, uuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get invoice: %w", err)
 	}
 	oldAcc := inv.Account
 	if oldAcc == account {
@@ -207,17 +207,17 @@ func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, accou
 	}
 	inv.Account = account
 	if _, err = ctrl.Update(ctx, inv); err != nil {
-		return err
+		return fmt.Errorf("failed to update invoice: %w", err)
 	}
 	for _, id := range inv.GetTransactions() {
 		var tr *pb.Transaction
 		tr, err = ctrl.transactions.Get(ctx, id)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get transaction: %w", err)
 		}
 		tr.Account = account
 		if _, err = ctrl.transactions.Update(ctx, tr); err != nil {
-			return err
+			return fmt.Errorf("failed to update transaction: %w", err)
 		}
 	}
 
