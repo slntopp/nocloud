@@ -1472,27 +1472,29 @@ outer:
 	}
 	// Sync with payment gateway
 	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
-	success := 0
+	_z := 0
+	var success = &_z
 	g := errgroup.Group{}
 	m := &go_sync.Mutex{}
 	for _, trInv := range transferred {
+		invoice := trInv
 		g.Go(func() error {
-			if err = gw.CreateInvoice(ctx, trInv.Invoice); err != nil {
+			if err = gw.CreateInvoice(ctx, invoice.Invoice); err != nil {
 				return err
 			}
 			m.Lock()
-			success++
+			*success = *success + 1
 			m.Unlock()
 			return nil
 		})
 	}
 	if err = g.Wait(); err != nil {
 		// If gateway data is untouched, then abort transferring
-		if success == 0 {
+		if *success == 0 {
 			return fmt.Errorf("failed to sync with payment gateway, aborted: %w", err)
 		}
 		log.Error("FATAL: Failed to sync with payment gateway, but managed to process some gateway invoices",
-			zap.Error(err), zap.Int("processed", success), zap.Int("total", len(transferred)))
+			zap.Error(err), zap.Int("processed", *success), zap.Int("total", len(transferred)))
 	}
 
 	return nil
