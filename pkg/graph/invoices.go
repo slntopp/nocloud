@@ -222,6 +222,7 @@ func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, accou
 		item.Price = item.Price * (newTotal / prevTotal)
 	}
 	inv.Total = newTotal
+	inv.Currency = resCurr
 
 	if _, err = ctrl.Update(ctx, inv); err != nil {
 		return fmt.Errorf("failed to update invoice: %w", err)
