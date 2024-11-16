@@ -535,7 +535,7 @@ payment:
 		for _, item := range newInv.GetItems() {
 			i := item.GetInstance()
 			log = log.With(zap.String("instance", i))
-			instOld, err := s.instances.Get(ctx, i)
+			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
 			if err != nil {
 				log.Error("Failed to get instance to start", zap.Error(err))
 				continue
@@ -566,7 +566,7 @@ payment:
 				log.Debug("Instance item is empty")
 				continue
 			}
-			instance, err := s.instances.Get(ctx, i)
+			instance, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
 			if err != nil {
 				log.Error("Failed to get instance to renew", zap.Error(err))
 				continue
@@ -659,7 +659,7 @@ returning:
 		log.Debug("Returning instance from start to suspended")
 		for _, item := range newInv.GetItems() {
 			id := item.GetInstance()
-			i, err := s.instances.Get(ctx, id)
+			i, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), id)
 			if err != nil {
 				log.Error("Error getting instance", zap.Error(err))
 				continue
@@ -700,7 +700,7 @@ returning:
 				log.Debug("Instance item is empty")
 				continue
 			}
-			instance, err := s.instances.Get(ctx, i)
+			instance, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
 			if err != nil {
 				log.Error("Failed to get instance to cancel renew", zap.Error(err))
 				continue
