@@ -35,6 +35,7 @@ type RecordsController interface {
 	GetInstancesReportsCount(ctx context.Context) (int64, error)
 	GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error)
 	GetUnique(ctx context.Context) (map[string]interface{}, error)
+	Update(ctx context.Context, rec *pb.Record) error
 }
 
 type Record struct {
@@ -140,6 +141,11 @@ func (ctrl *recordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 	}
 
 	return res, nil
+}
+
+func (ctrl *recordsController) Update(ctx context.Context, rec *pb.Record) error {
+	_, err := ctrl.col.UpdateDocument(ctx, rec.GetUuid(), rec)
+	return err
 }
 
 func (ctrl *recordsController) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
