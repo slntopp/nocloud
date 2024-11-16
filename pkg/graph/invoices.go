@@ -22,7 +22,7 @@ type InvoicesController interface {
 	Get(ctx context.Context, uuid string) (*Invoice, error)
 	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
-	List(ctx context.Context) ([]*Invoice, error)
+	List(ctx context.Context, account string) ([]*Invoice, error)
 }
 
 type InvoiceNumberMeta struct {
@@ -165,11 +165,27 @@ func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[
 	return err
 }
 
-func (ctrl *invoicesController) List(ctx context.Context) ([]*Invoice, error) {
-	result := make([]*Invoice, 0)
-	cur, err := ctrl.col.Database().Query(ctx, "FOR doc IN "+ctrl.col.Name()+" RETURN MERGE(doc, {uuid: doc._key})", nil)
+const listInvoices = `
+    FOR doc IN @@collection
+    %s
+    RETURN MERGE(doc, {uuid: doc._key})
+`
+
+func (ctrl *invoicesController) List(ctx context.Context, account string) ([]*Invoice, error) {
+	log := ctrl.log.Named("List")
+
+	list := make([]*Invoice, 0)
+	bindVars := map[string]interface{}{
+		"@collection": schema.INVOICES_COL,
+	}
+	var filters = ""
+	if account != "" {
+		filters = ` FILTER doc.account == @account`
+		bindVars["account"] = account
+	}
+	cur, err := ctrl.col.Database().Query(ctx, fmt.Sprintf(listInvoices, filters), bindVars)
 	if err != nil {
-		ctrl.log.Error("Failed to list invoices", zap.Error(err))
+		log.Error("Failed to list invoices", zap.Error(err))
 		return nil, err
 	}
 	defer cur.Close()
@@ -178,13 +194,18 @@ func (ctrl *invoicesController) List(ctx context.Context) ([]*Invoice, error) {
 			Invoice:           &pb.Invoice{},
 			InvoiceNumberMeta: &InvoiceNumberMeta{},
 		}
-		meta, err := cur.ReadDocument(ctx, tx)
+		result := map[string]interface{}{}
+		meta, err := cur.ReadDocument(ctx, &result)
 		if err != nil {
-			ctrl.log.Error("Failed to read invoice", zap.Error(err))
+			log.Error("Failed to read invoice", zap.Error(err))
+			return nil, err
+		}
+		if err = ctrl.DecodeInvoice(result, tx); err != nil {
+			log.Error("Failed to decode invoice", zap.Error(err))
 			return nil, err
 		}
 		tx.Uuid = meta.Key
-		result = append(result, tx)
+		list = append(list, tx)
 	}
-	return result, err
+	return list, err
 }

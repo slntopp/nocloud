@@ -61,6 +61,7 @@ type InstancesServer struct {
 	srv_ctrl   graph.ServicesController
 	promo_ctrl graph.PromocodesController
 	acc_ctrl   graph.AccountsController
+	inv_ctrl   graph.InvoicesController
 	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -82,6 +83,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 	srv_ctrl := graph.NewServicesController(logger, db, rbmq)
 	promo_ctrl := graph.NewPromocodesController(logger, db, rbmq)
 	acc_ctrl := graph.NewAccountsController(logger, db)
+	inv_ctrl := graph.NewInvoicesController(logger, db)
 	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
@@ -118,6 +120,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		srv_ctrl:   srv_ctrl,
 		promo_ctrl: promo_ctrl,
 		acc_ctrl:   acc_ctrl,
+		inv_ctrl:   inv_ctrl,
 		ca:         ca,
 		drivers:    make(map[string]driverpb.DriverServiceClient),
 		rdb:        rdb,
