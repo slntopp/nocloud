@@ -1523,6 +1523,8 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	publicIpsTotal := int(oldIG.GetData()["public_ips_total"].GetNumberValue())
 	privateIpsTotal := int(oldIG.GetData()["private_ips_total"].GetNumberValue())
 
+	ipsPublic := int(oldIG.GetResources()["ips_public"].GetNumberValue())
+	ipsPrivate := int(oldIG.GetResources()["ips_private"].GetNumberValue())
 	// Checks
 	//ipsPublic := int(oldIG.GetResources()["ips_public"].GetNumberValue())
 	//ipsPrivate := int(oldIG.GetResources()["ips_private"].GetNumberValue())
@@ -1530,6 +1532,9 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	//	(ipsPrivate != privateIpsFree || ipsPrivate != privateIpsTotal) {
 	//	return nil, fmt.Errorf("can't transfer. IONE cluster currently in unstable state")
 	//}
+	if publicIpsFree != publicIpsTotal || privateIpsFree != privateIpsTotal {
+		return nil, fmt.Errorf("can't transfer. IONE cluster currently in unstable state")
+	}
 	if userid == 0 {
 		return nil, fmt.Errorf("can't transfer. IONE cluster currently not setted up")
 	}
