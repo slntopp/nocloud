@@ -205,6 +205,7 @@ func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, accou
 		err = fmt.Errorf("can't transfer to the same account")
 		return err
 	}
+	inv.Account = account
 	if _, err = ctrl.Update(ctx, inv); err != nil {
 		return err
 	}
