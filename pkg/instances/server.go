@@ -1474,6 +1474,9 @@ outer:
 		}
 		counter++
 	}
+	if counter > 0 {
+		log.Info("Transferred invoices", zap.Int("count", counter))
+	}
 
 	return nil
 }
