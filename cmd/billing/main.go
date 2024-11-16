@@ -23,6 +23,7 @@ import (
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud-proto/health/healthconnect"
+	ccinstances "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -66,9 +67,10 @@ var (
 	SIGNING_KEY  []byte
 	drivers      []string
 
-	settingsHost string
-	registryHost string
-	eventsHost   string
+	settingsHost  string
+	registryHost  string
+	eventsHost    string
+	instancesHost string
 
 	invoicesFile string
 )
@@ -91,6 +93,7 @@ func init() {
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
 	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
+	viper.SetDefault("INSTANCES_HOST", "services-registry:8000")
 
 	port = viper.GetString("PORT")
 
@@ -104,6 +107,7 @@ func init() {
 	settingsHost = viper.GetString("SETTINGS_HOST")
 	registryHost = viper.GetString("REGISTRY_HOST")
 	eventsHost = viper.GetString("EVENTS_HOST")
+	instancesHost = viper.GetString("INSTANCES_HOST")
 
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
@@ -183,6 +187,8 @@ func main() {
 	}
 	eventsClient := epb.NewEventsServiceClient(eventsConn)
 
+	instancesClient := ccinstances.NewInstancesServiceClient(http.DefaultClient, "http://"+instancesHost)
+
 	registeredDrivers := make(map[string]driverpb.DriverServiceClient)
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -199,18 +205,18 @@ func main() {
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
-	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers,
-		settingsClient, accClient, eventsClient,
-		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl)
-	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, caCtrl)
-	log.Info("Starting Currencies Service")
-
 	token, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+
+	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
+		settingsClient, accClient, eventsClient, instancesClient,
+		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl)
+	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, caCtrl)
+	log.Info("Starting Currencies Service")
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {

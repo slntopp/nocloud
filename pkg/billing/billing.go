@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	epb "github.com/slntopp/nocloud-proto/events"
+	ccinstances "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
@@ -74,9 +75,10 @@ type BillingServiceServer struct {
 	db  driver.Database
 	rdb redisdb.Client
 
-	settingsClient settingspb.SettingsServiceClient
-	accClient      registrypb.AccountsServiceClient
-	eventsClient   epb.EventsServiceClient
+	settingsClient  settingspb.SettingsServiceClient
+	accClient       registrypb.AccountsServiceClient
+	eventsClient    epb.EventsServiceClient
+	instancesClient ccinstances.InstancesServiceClient
 
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
@@ -84,38 +86,42 @@ type BillingServiceServer struct {
 	inv  *healthpb.RoutineStatus
 
 	drivers map[string]driverpb.DriverServiceClient
+
+	rootToken string
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient,
-	settingsClient settingspb.SettingsServiceClient, accClient registrypb.AccountsServiceClient, eventsClient epb.EventsServiceClient,
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
+	settingsClient settingspb.SettingsServiceClient, accClient registrypb.AccountsServiceClient, eventsClient epb.EventsServiceClient, instClient ccinstances.InstancesServiceClient,
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
 	ca graph.CommonActionsController, promocodes graph.PromocodesController) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
-		rbmq:           conn,
-		log:            log,
-		nss:            nss,
-		plans:          plans,
-		transactions:   transactions,
-		records:        records,
-		currencies:     currencies,
-		accounts:       accounts,
-		invoices:       invoices,
-		services:       services,
-		descriptions:   descriptions,
-		instances:      instances,
-		sp:             sp,
-		addons:         addons,
-		promocodes:     promocodes,
-		ca:             ca,
-		db:             db,
-		rdb:            rdb,
-		drivers:        drivers,
-		settingsClient: settingsClient,
-		accClient:      accClient,
-		eventsClient:   eventsClient,
+		rbmq:            conn,
+		log:             log,
+		nss:             nss,
+		plans:           plans,
+		transactions:    transactions,
+		records:         records,
+		currencies:      currencies,
+		accounts:        accounts,
+		invoices:        invoices,
+		services:        services,
+		descriptions:    descriptions,
+		instances:       instances,
+		sp:              sp,
+		addons:          addons,
+		promocodes:      promocodes,
+		ca:              ca,
+		db:              db,
+		rdb:             rdb,
+		drivers:         drivers,
+		settingsClient:  settingsClient,
+		accClient:       accClient,
+		eventsClient:    eventsClient,
+		instancesClient: instClient,
+		rootToken:       token,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
