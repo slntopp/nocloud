@@ -23,6 +23,7 @@ import (
 	"github.com/slntopp/nocloud-proto/health"
 	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	servicespb "github.com/slntopp/nocloud-proto/services"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
@@ -1425,7 +1426,7 @@ ending:
 		log.Error("Failed to list invoices", zap.Error(err))
 		return fmt.Errorf("failed to list invoices: %w", err)
 	}
-	counter := 0
+	transferred := make([]*graph.Invoice, 0)
 outer:
 	for _, inv := range invoices {
 		if inv.GetAccount() != accOwner.GetUuid() {
@@ -1455,10 +1456,23 @@ outer:
 			log.Error("Failed to transfer invoice", zap.Error(err))
 			return fmt.Errorf("failed to transfer old invoice to new account: %w", err)
 		}
-		counter++
+		if inv, err = s.inv_ctrl.Get(ctx, inv.GetUuid()); err != nil {
+			log.Error("Failed to get invoice", zap.Error(err))
+			return fmt.Errorf("failed to get transferred invoice: %w", err)
+		}
+		transferred = append(transferred, inv)
 	}
-	if counter > 0 {
-		log.Info("Transferred invoices", zap.Int("count", counter))
+	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
+	counter := 0
+	for _, trInv := range transferred {
+		if err = gw.CreateInvoice(ctx, trInv.Invoice); err != nil {
+			if counter == 0 {
+				return fmt.Errorf("failed to create transfered invoice via payment gateway: %w", err)
+			}
+			log.Error("FATAL: failed to create new invoice via payment gateway. Probably not synchronized now", zap.Error(err), zap.String("nc_inv_id", trInv.GetUuid()))
+			continue
+		}
+		counter++
 	}
 
 	return nil
