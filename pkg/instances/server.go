@@ -543,7 +543,7 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 			}
 		}()
 
-		if err := s.transferToAccount(ctx, log, req.GetUuid(), req.GetAccount()); err != nil {
+		if err := s.transferToAccount(ctx, log, req.GetUuid(), req.GetAccount(), !req.GetDoNotTransferInvoices()); err != nil {
 			if err := s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
 				log.Error("Failed to abort transaction", zap.Error(err))
 			}
@@ -1232,7 +1232,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 	return connect.NewResponse(&result), nil
 }
 
-func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {
+func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string, transferInvoices bool) (err error) {
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
 	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
@@ -1420,6 +1420,10 @@ ending:
 	if err = s.ctrl.TransferInst(ctx, igEdge, driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, destIG.GetUuid()), instanceId); err != nil {
 		log.Error("Failed to transfer instance", zap.Error(err))
 		return fmt.Errorf("failed to transfer instance: %w", err)
+	}
+
+	if !transferInvoices {
+		return nil
 	}
 
 	// Transfer invoices (Ignoring PAID and RETURNED invoices and take only that contains target instance and other instances that target account owns)
