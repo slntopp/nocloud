@@ -100,17 +100,17 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	// TODO: review taxed field
-	query, err := g.buildCreateInvoiceQueryBase(inv, userId)
+	q, err := g.buildCreateInvoiceQueryBase(inv, userId)
 	if err != nil {
 		return err
 	}
 	for i, item := range inv.GetItems() {
-		query.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
-		query.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", item.GetPrice()*float64(item.GetAmount())))
-		query.Set(fmt.Sprintf("itemtaxed%d", i+1), "0")
+		q.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
+		q.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", item.GetPrice()*float64(item.GetAmount())))
+		q.Set(fmt.Sprintf("itemtaxed%d", i+1), "0")
 	}
 
-	invResp, err := sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
+	invResp, err := sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
 	if err != nil {
 		return err
 	}
@@ -124,6 +124,25 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	if meta == nil {
 		meta = make(map[string]*structpb.Value)
 	}
+
+	// If invoice had whmcs invoice id, then cancel old invoice
+	if invoiceId, ok := meta[invoiceIdField]; ok {
+		updQuery := g.buildUpdateInvoiceQueryBase(int(invoiceId.GetNumberValue()))
+		newSt := statusToWhmcs(pb.BillingStatus_TERMINATED)
+		updQuery.Status = &newSt
+		note := "CANCELLED BECAUSE IT WAS REPLACED BY OTHER INVOICE (CALLED BY NOCLOUD). NEW WHMCS INVOICE ID: " + strconv.Itoa(invResp.InvoiceId)
+		updQuery.Notes = &note
+		q, err = query.Values(updQuery)
+		if err != nil {
+			fmt.Println("WHMCS Gateway: failed to build update invoice query: ", err.Error())
+			q = url.Values{}
+		}
+		_, err := sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+		if err != nil {
+			fmt.Println("WHMCS Gateway: error cancelling old whmcs invoice: ", err.Error())
+		}
+	}
+
 	meta[invoiceIdField] = structpb.NewNumberValue(float64(invResp.InvoiceId))
 	invoice.Meta = meta
 	if _, err := g.invMan.InvoicesController().Update(ctx, invoice); err != nil {
