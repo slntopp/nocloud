@@ -23,10 +23,14 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	ccb "github.com/slntopp/nocloud-proto/billing/billingconnect"
 	"github.com/slntopp/nocloud-proto/health/healthconnect"
 	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"golang.org/x/net/http2"
@@ -203,6 +207,15 @@ func main() {
 	log.Info("Registering health server")
 	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
 	router.PathPrefix(path).Handler(handler)
+
+	// Register payments gateways (nocloud, whmcs)
+	bClient := ccb.NewBillingServiceClient(http.DefaultClient, "http://"+billingHost)
+	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
+	if err != nil {
+		log.Fatal("Can't get whmcs credentials", zap.Error(err))
+	}
+	manager := invoices_manager.NewInvoicesManager(bClient, graph.NewInvoicesController(log, db), authInterceptor)
+	payments.RegisterGateways(whmcsData, graph.NewAccountsController(log, db), manager)
 
 	// Migrate
 	migrateToV2 := viper.GetBool("MIGRATE_TO_V2")
