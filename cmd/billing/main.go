@@ -26,6 +26,7 @@ import (
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
@@ -68,6 +69,8 @@ var (
 	settingsHost string
 	registryHost string
 	eventsHost   string
+
+	invoicesFile string
 )
 
 func init() {
@@ -83,6 +86,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+	viper.SetDefault("INVOICES_MIGRATIONS_FILE", "./whmcs_invoices.csv")
 
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
@@ -103,6 +107,8 @@ func init() {
 
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
+
+	invoicesFile = viper.GetString("INVOICES_MIGRATIONS_FILE")
 }
 
 func main() {
@@ -259,6 +265,9 @@ func main() {
 	log.Info("Registering health server")
 	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
 	router.PathPrefix(path).Handler(handler)
+
+	migrations.MigrateOldInvoicesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL),
+		graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile)
 
 	// Register payments gateways (nocloud, whmcs)
 	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
