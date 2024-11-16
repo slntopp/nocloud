@@ -1359,6 +1359,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	var destIG *pb.InstancesGroup
 	var _old *pb.InstancesGroup
 	for _, ig := range existingIGs {
+		ig.Instances = nil
 		if oldIG.GetType() == ig.GetType() && ig.GetSp() == sp.GetUuid() {
 			destIG = ig
 			break
