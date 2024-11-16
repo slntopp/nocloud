@@ -513,7 +513,7 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 	_ = syncer.WaitUntilOpenedAndCloseAfter()
 
 	// Actually modified collections in transactions
-	usedCols := []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, schema.INVOICES_COL,
+	usedCols := []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, schema.INVOICES_COL, schema.TRANSACTIONS_COL,
 		schema.SERV2IG, schema.IG2INST, schema.IG2SP}
 	// Collection connected in Permissions graph with some collections from usedCols
 	otherCols := []string{schema.NS2ACC, schema.ACC2NS, schema.NS2SERV,
@@ -1455,7 +1455,7 @@ outer:
 		if !foundInstance {
 			continue
 		}
-		if err = s.inv_ctrl.Transfer(ctx, inv.GetUuid(), account); err != nil {
+		if err = s.inv_ctrl.Transfer(ctx, inv.GetUuid(), account, acc.Currency); err != nil {
 			log.Error("Failed to transfer invoice", zap.Error(err))
 			return fmt.Errorf("failed to transfer old invoice to new account: %w", err)
 		}

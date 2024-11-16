@@ -23,7 +23,7 @@ type InvoicesController interface {
 	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
 	List(ctx context.Context, account string) ([]*Invoice, error)
-	Transfer(ctx context.Context, uuid string, account string) (err error)
+	Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error)
 }
 
 type InvoiceNumberMeta struct {
@@ -41,6 +41,7 @@ type invoicesController struct {
 	col driver.Collection // Billing Plans collection
 
 	transactions TransactionsController
+	currencies   CurrencyController
 
 	log *zap.Logger
 }
@@ -51,11 +52,12 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 	col := GetEnsureCollection(log, ctx, db, schema.INVOICES_COL)
 
 	transactions := NewTransactionsController(log, db)
+	currencies := NewCurrencyController(log, db)
 
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return &invoicesController{
-		log: log, col: col, transactions: transactions,
+		log: log, col: col, transactions: transactions, currencies: currencies,
 	}
 }
 
@@ -170,7 +172,11 @@ func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[
 	return err
 }
 
-func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, account string) (err error) {
+func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error) {
+	if resCurr == nil {
+		return fmt.Errorf("currency is required")
+	}
+
 	_, hasTransaction := driver.HasTransactionID(ctx)
 	var trId driver.TransactionID
 	if !hasTransaction {
@@ -206,6 +212,17 @@ func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, accou
 		return err
 	}
 	inv.Account = account
+
+	prevTotal := inv.Total
+	newTotal, err := ctrl.currencies.Convert(ctx, inv.Currency, resCurr, inv.Total)
+	if err != nil {
+		return fmt.Errorf("failed to convert currency: %w", err)
+	}
+	for _, item := range inv.GetItems() {
+		item.Price = item.Price * (newTotal / prevTotal)
+	}
+	inv.Total = newTotal
+
 	if _, err = ctrl.Update(ctx, inv); err != nil {
 		return fmt.Errorf("failed to update invoice: %w", err)
 	}
