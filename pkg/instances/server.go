@@ -19,6 +19,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	billingpb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/health"
 	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	servicespb "github.com/slntopp/nocloud-proto/services"
@@ -1416,7 +1417,7 @@ ending:
 		return fmt.Errorf("failed to transfer instances: %w", err)
 	}
 
-	// Transfer invoices
+	// Transfer invoices (Ignoring PAID and RETURNED invoices and take only that contains target instance and other instances that target account owns)
 	invoices, err := s.inv_ctrl.List(ctx, accOwner.GetUuid())
 	if err != nil {
 		log.Error("Failed to list invoices", zap.Error(err))
@@ -1427,6 +1428,9 @@ outer:
 	for _, inv := range invoices {
 		if inv.GetAccount() != accOwner.GetUuid() {
 			log.Error("Got invoice from other account. Must be incorrect List method filter", zap.String("account", inv.GetAccount()))
+			continue
+		}
+		if inv.GetStatus() == billingpb.BillingStatus_PAID || inv.GetStatus() == billingpb.BillingStatus_RETURNED {
 			continue
 		}
 		foundInstance := false
@@ -1445,8 +1449,7 @@ outer:
 		if !foundInstance {
 			continue
 		}
-		inv.Account = account
-		if _, err = s.inv_ctrl.Update(ctx, inv); err != nil {
+		if err = s.inv_ctrl.Transfer(ctx, inv.GetUuid(), account); err != nil {
 			log.Error("Failed to transfer invoice", zap.Error(err))
 			return fmt.Errorf("failed to transfer invoice: %w", err)
 		}
