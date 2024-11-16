@@ -1533,6 +1533,9 @@ func (s *InstancesServer) processIoneIG(ctx context.Context, log *zap.Logger, in
 	if userid == 0 {
 		return nil, fmt.Errorf("can't transfer. IONE cluster currently not setted up")
 	}
+	if inst.GetState().GetState() == stpb.NoCloudState_PENDING {
+		return nil, fmt.Errorf("can't transfer IONE instance in PENDING state")
+	}
 
 	var destIG *pb.InstancesGroup
 	for _, ig := range igs {
