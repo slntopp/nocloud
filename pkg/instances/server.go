@@ -1250,7 +1250,8 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 	}
 
 	state := inst.GetState().GetState()
-	forbiddenStates := []stpb.NoCloudState{stpb.NoCloudState_UNKNOWN, stpb.NoCloudState_INIT, stpb.NoCloudState_PENDING}
+	forbiddenStates := []stpb.NoCloudState{stpb.NoCloudState_UNKNOWN, stpb.NoCloudState_INIT,
+		stpb.NoCloudState_DELETED, stpb.NoCloudState_OPERATION, stpb.NoCloudState_FAILURE}
 	if slices.Contains(forbiddenStates, state) {
 		log.Error("Instance in forbidden state to transfer it to other account", zap.Any("state", state))
 		return fmt.Errorf("instance in forbidden state. Can't transfer while instance in state: %s", state.String())
