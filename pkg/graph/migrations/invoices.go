@@ -30,10 +30,10 @@ FOR t IN @@transactions
 
     LET transactions = TO_ARRAY(t._key)
 
-    LET instance = LENGTH(t.meta.instances) > 0 ? TO_STRING(t.meta.instances[0]) : null
+    LET instance = LENGTH(t.meta.instances) > 0 ? t.meta.instances[0] : ""
     LET items = (
-        FILTER IS_ARRAY(t.items)
-        FOR item IN t.items
+        FILTER IS_ARRAY(t.meta.items)
+        FOR item IN t.meta.items
             RETURN { amount: 1, price: TO_NUMBER(item.amount), description: item.description, unit: "Pcs", instance: instance }
     )
 
