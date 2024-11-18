@@ -45,7 +45,7 @@ FOR t IN @@transactions
 		total: total,
 		processed: processed,
 		payment: payment,
-		meta: { note: note, whmcs_invoice_id: @whmcsIds[newKey] },
+		meta: { note: note, whmcs_invoice_id: TO_NUMBER(@whmcsIds[newKey]) },
 		status: status,
 		type: type,
 		account: account,
