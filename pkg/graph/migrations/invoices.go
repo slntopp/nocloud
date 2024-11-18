@@ -38,7 +38,7 @@ FOR t IN @@transactions
     LET whmcs_invoice_id = TO_NUMBER(@whmcsIds[newKey])
     FILTER whmcs_invoice_id > 0
 
-    LET instancesArr = TO_ARRAY(invInstances[TO_STRING(whmcs_invoice_id)])
+    LET instancesArr = TO_ARRAY(@invInstances[TO_STRING(whmcs_invoice_id)])
 
     LET items0 = (
         FILTER IS_ARRAY(t.meta.items)
