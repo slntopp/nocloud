@@ -46,21 +46,11 @@ FOR t IN @@transactions
             RETURN { amount: 1, price: TO_NUMBER(item.amount), description: item.description, unit: "Pcs" }
     )
 
-    LET items1 = LENGTH(instancesArr) != 1 || LENGTH(items0) != 1 ? items0 : (
-		RETURN [ MERGE(items0[0], {instance: instancesArr[0]}) ]
-    )
-    LET items2 = LENGTH(instancesArr) != 2 || LENGTH(items1) != 2 ? items1 : (
-		RETURN [ MERGE(items1[0], {instance: instancesArr[0]}), MERGE(items1[1], {instance: instancesArr[1]}) ]
-    )
-    LET items3 = LENGTH(instancesArr) != 3 || LENGTH(items2) != 3 ? items2 : (
-		RETURN [ MERGE(items2[0], {instance: instancesArr[0]}), MERGE(items2[1], {instance: instancesArr[1]}), MERGE(items2[2], {instance: instancesArr[2]}) ]
-    )
-    LET items4 = LENGTH(instancesArr) != 1 || LENGTH(items3) != 2 ? items3 : (
-		RETURN [ MERGE(items3[0], {instance: instancesArr[0]}), items3[1] ]
-    )
-    LET items5 = LENGTH(instancesArr) != 1 || LENGTH(items4) != 3 ? items4 : (
-		RETURN [ MERGE(items4[0], {instance: instancesArr[0]}), items4[1], items4[2] ]
-    )
+    LET items1 = LENGTH(instancesArr) != 1 || LENGTH(items0) != 1 ? items0 : [ MERGE(items0[0], {instance: instancesArr[0]}) ]
+    LET items2 = LENGTH(instancesArr) != 2 || LENGTH(items1) != 2 ? items1 : [ MERGE(items1[0], {instance: instancesArr[0]}), MERGE(items1[1], {instance: instancesArr[1]}) ]
+    LET items3 = LENGTH(instancesArr) != 3 || LENGTH(items2) != 3 ? items2 : [ MERGE(items2[0], {instance: instancesArr[0]}), MERGE(items2[1], {instance: instancesArr[1]}), MERGE(items2[2], {instance: instancesArr[2]}) ]
+    LET items4 = LENGTH(instancesArr) != 1 || LENGTH(items3) != 2 ? items3 : [ MERGE(items3[0], {instance: instancesArr[0]}), items3[1] ]
+    LET items5 = LENGTH(instancesArr) != 1 || LENGTH(items4) != 3 ? items4 : [ MERGE(items4[0], {instance: instancesArr[0]}), items4[1], items4[2] ]
 
 	LET items = items5
 
