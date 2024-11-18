@@ -15,6 +15,8 @@ FOR t IN @@transactions
     LET existingInvoice = DOCUMENT(@@invoices, newKey)
     FILTER existingInvoice == null
 
+    FILTER t.meta.transactionType != "transaction"
+
     LET deadline = TO_NUMBER(t.meta.duedate)
     LET account = t.account
     LET created = TO_NUMBER(t.created)
@@ -23,10 +25,13 @@ FOR t IN @@transactions
     LET processed = t.proc > 0 ? TO_NUMBER(t.proc) : null
     LET payment = t.exec > 0 ? TO_NUMBER(t.exec) : null
     LET note = t.meta.note
-    LET status = t.meta.status == "Paid" ? 1 : 2
+    LET status = t.meta.status == "Paid" || t.meta.status == "Paid balance" ? 1 : 2
+
+    FILTER t.meta.transactionType == "invoice top-up" || t.meta.transactionType == "invoice payment" || t.meta.transactionType == "invoice for service"
 
     LET typesObject = { "invoice top-up": 4, "invoice payment": 1, "invoice for service": 3 }
-    LET type = typesObject[t.meta.transactionType]
+    LET typeB = typesObject[t.meta.transactionType]
+    LET type = typeB == 3 ? @invTypes[newKey] == "first" ? 2 : typeB : typeB
 
     LET transactions = TO_ARRAY(t._key)
 
@@ -68,6 +73,7 @@ OPTIONS { keepNull: false }
 func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transactions driver.Collection, whmcsInvoicesFile string) {
 	log.Info("Migrating old transaction invoices to new")
 	idToWhmcsId := make(map[string]string)
+	invTypes := make(map[string]string)
 	file, err := os.Open(whmcsInvoicesFile)
 	if err != nil {
 		log.Fatal("Error migrating old invoices to new", zap.Error(err))
@@ -82,11 +88,12 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 		log.Warn("No records found in " + whmcsInvoicesFile)
 		return
 	}
-	const id, whmcsId = 1, 2
+	const id, whmcsId, invType = 1, 2, 3
 	log.Debug("First record", zap.Any("record", records[0]))
 	for i := 1; i < len(records); i++ {
 		log.Debug("Record", zap.Any("record", records[i]))
 		idToWhmcsId[records[i][id]] = records[i][whmcsId]
+		invTypes[records[i][id]] = records[i][invType]
 	}
 
 	db := invoices.Database()
@@ -94,6 +101,7 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 		"@invoices":     invoices.Name(),
 		"@transactions": transactions.Name(),
 		"whmcsIds":      idToWhmcsId,
+		"invTypes":      invTypes,
 	})
 	if err != nil {
 		log.Fatal("Error migrating old invoices to new", zap.Error(err))
