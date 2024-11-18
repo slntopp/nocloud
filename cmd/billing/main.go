@@ -72,7 +72,8 @@ var (
 	eventsHost    string
 	instancesHost string
 
-	invoicesFile string
+	invoicesFile  string
+	instancesFile string
 )
 
 func init() {
@@ -89,6 +90,7 @@ func init() {
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("INVOICES_MIGRATIONS_FILE", "./whmcs_invoices.csv")
+	viper.SetDefault("INSTANCES_MIGRATIONS_FILE", "./instances_invoices.csv")
 
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
@@ -113,6 +115,7 @@ func init() {
 	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
 
 	invoicesFile = viper.GetString("INVOICES_MIGRATIONS_FILE")
+	instancesFile = viper.GetString("INSTANCES_MIGRATIONS_FILE")
 }
 
 func main() {
@@ -273,7 +276,7 @@ func main() {
 	router.PathPrefix(path).Handler(handler)
 
 	migrations.MigrateOldInvoicesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL),
-		graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile)
+		graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile, instancesFile)
 
 	// Register payments gateways (nocloud, whmcs)
 	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
