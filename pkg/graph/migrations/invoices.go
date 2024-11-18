@@ -51,8 +51,12 @@ FOR t IN @@transactions
     LET items3 = LENGTH(instancesArr) != 3 || LENGTH(items2) != 3 ? items2 : [ MERGE(items2[0], {instance: instancesArr[0]}), MERGE(items2[1], {instance: instancesArr[1]}), MERGE(items2[2], {instance: instancesArr[2]}) ]
     LET items4 = LENGTH(instancesArr) != 1 || LENGTH(items3) != 2 ? items3 : [ MERGE(items3[0], {instance: instancesArr[0]}), items3[1] ]
     LET items5 = LENGTH(instancesArr) != 1 || LENGTH(items4) != 3 ? items4 : [ MERGE(items4[0], {instance: instancesArr[0]}), items4[1], items4[2] ]
+    LET items6 = LENGTH(instancesArr) != 4 || LENGTH(items5) != 4 ? items5 : [ MERGE(items5[0], {instance: instancesArr[0]}), MERGE(items5[1], {instance: instancesArr[1]}), MERGE(items5[2], {instance: instancesArr[2]}), MERGE(items5[3], {instance: instancesArr[3]}) ]
+    LET items7 = LENGTH(instancesArr) != 5 || LENGTH(items6) != 5 ? items6 : [ MERGE(items6[0], {instance: instancesArr[0]}), MERGE(items6[1], {instance: instancesArr[1]}), MERGE(items6[2], {instance: instancesArr[2]}), MERGE(items6[3], {instance: instancesArr[3]}), MERGE(items6[4], {instance: instancesArr[4]}) ]
+    LET items8 = LENGTH(instancesArr) != 6 || LENGTH(items7) != 6 ? items7 : [ MERGE(items7[0], {instance: instancesArr[0]}), MERGE(items7[1], {instance: instancesArr[1]}), MERGE(items7[2], {instance: instancesArr[2]}), MERGE(items7[3], {instance: instancesArr[3]}), MERGE(items7[4], {instance: instancesArr[4]}), MERGE(items7[5], {instance: instancesArr[5]}) ]
+    LET items9 = LENGTH(instancesArr) != 7 || LENGTH(items8) != 7 ? items8 : [ MERGE(items8[0], {instance: instancesArr[0]}), MERGE(items8[1], {instance: instancesArr[1]}), MERGE(items8[2], {instance: instancesArr[2]}), MERGE(items8[3], {instance: instancesArr[3]}), MERGE(items8[4], {instance: instancesArr[4]}), MERGE(items8[5], {instance: instancesArr[5]}), MERGE(items8[6], {instance: instancesArr[6]}) ]
 
-	LET items = items5
+	LET items = items9
 
 	LET invoice = {
 		_key: newKey,
