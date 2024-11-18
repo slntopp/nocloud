@@ -25,7 +25,7 @@ FOR t IN @@transactions
     LET note = t.meta.note
     LET status = t.meta.status == "Paid" ? 1 : 2
 
-    LET typesObject = { "invoice top-up": 4, "invoice payment": 1, "invoice for service": 1 }
+    LET typesObject = { "invoice top-up": 4, "invoice payment": 1, "invoice for service": 3 }
     LET type = typesObject[t.meta.transactionType]
 
     LET transactions = TO_ARRAY(t._key)
