@@ -21,7 +21,7 @@
       <v-tab-item v-for="(tab, index) in tabItems" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="isInvoiceLoading" />
         <component
-          v-if="invoice && index === selectedTab"
+          v-else-if="invoice && index === selectedTab"
           :is="tab.component"
           :invoice="invoice"
           :is-edit="invoice.status !== 'DRAFT'"

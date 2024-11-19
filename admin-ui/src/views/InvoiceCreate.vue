@@ -9,7 +9,7 @@
       style="z-index: 0; position: relative; top: -15px; right: 20px"
     >
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
-        <v-chip :color="getTotalColor(newInvoice)">
+        <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
           Total:
           {{ `${newInvoice.total} ${accountCurrency?.title}` }}
         </v-chip>
@@ -316,7 +316,7 @@ const addPaymentOptions = ref({
   paymentDate: formatSecondsToDateString(Date.now() / 1000),
 });
 
-const isInstancesLoading = ref(false);
+const isInstancesLoading = ref(true);
 const instancesAccountMap = ref({});
 
 const types = [
@@ -356,6 +356,8 @@ const changeStatusBtns = [
 
 onMounted(async () => {
   setInvoice();
+
+  isInstancesLoading.value = false;
 });
 
 const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
@@ -479,7 +481,9 @@ const deleteInvoiceItem = (index) => {
 };
 
 const onChangeAccount = async () => {
-  selectedInstances.value = null;
+  if (!isEdit.value) {
+    selectedInstances.value = null;
+  }
 
   const account = newInvoice.value.account?.uuid;
 
