@@ -710,7 +710,7 @@ quit:
 	}
 
 	log.Info("Finished invoice update status")
-	resp = connect.NewResponse(newInv)
+	resp = connect.NewResponse(upd.Invoice)
 	return resp, nil
 }
 
