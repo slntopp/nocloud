@@ -35,16 +35,25 @@
         </v-col>
 
         <v-col cols="3">
-          <accounts-autocomplete
-            :loading="isInstancesLoading"
-            @input="onChangeAccount"
-            :disabled="isEdit"
-            label="Account"
-            v-model="newInvoice.account"
-            fetch-value
-            return-object
-            :rules="requiredRule"
-          />
+          <div class="d-flex align-center">
+            <accounts-autocomplete
+              :loading="isInstancesLoading"
+              @input="onChangeAccount"
+              :disabled="isEdit"
+              label="Account"
+              v-model="newInvoice.account"
+              fetch-value
+              return-object
+              :rules="requiredRule"
+            />
+            <v-btn
+              @click="openAccountWindow"
+              icon
+              v-if="isEdit && newInvoice.account && !isInstancesLoading"
+            >
+              <v-icon>mdi-login</v-icon>
+            </v-btn>
+          </div>
         </v-col>
 
         <v-col cols="3">
@@ -553,6 +562,10 @@ const sendEmail = async () => {
 
 const openAddPaymentDialog = () => {
   isAddPaymentDialogOpen.value = true;
+};
+
+const openAccountWindow = () => {
+  return window.open("/accounts/" + newInvoice.value.account.uuid, "_blanc");
 };
 
 const changeStatusToPaid = async () => {
