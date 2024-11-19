@@ -150,6 +150,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				}
 
 				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+				ctx = context.WithValue(ctx, "create_as_draft", true)
 				invResp, err := s.CreateRenewalInvoice(ctx, connect.NewRequest(&pb.CreateRenewalInvoiceRequest{
 					Instance: i.GetUuid(),
 				}))

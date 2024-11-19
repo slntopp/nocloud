@@ -1268,6 +1268,10 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		},
 	}
 
+	if val, ok := ctx.Value("create_as_draft").(bool); ok && val {
+		inv.Status = pb.BillingStatus_DRAFT
+	}
+
 	return s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
 		IsSendEmail: true,
 		Invoice:     inv,
