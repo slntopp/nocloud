@@ -565,7 +565,10 @@ const openAddPaymentDialog = () => {
 };
 
 const openAccountWindow = () => {
-  return window.open("/accounts/" + newInvoice.value.account.uuid, "_blanc");
+  return window.open(
+    "/admin/accounts/" + newInvoice.value.account.uuid,
+    "_blanc"
+  );
 };
 
 const changeStatusToPaid = async () => {

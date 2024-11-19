@@ -467,7 +467,7 @@ export default {
     },
     openAccountWindow() {
       return window.open(
-        "/accounts/" + this.transaction.account.uuid,
+        "/admin/accounts/" + this.transaction.account.uuid,
         "_blanc"
       );
     },
