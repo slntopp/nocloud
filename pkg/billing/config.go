@@ -82,11 +82,11 @@ var (
 	}
 	invoicesSetting = &sc.Setting[InvoicesConf]{
 		Value: InvoicesConf{
-			Template:                 "PREFIX {YEAR}/{MONTH}/{NUMBER}",
+			Template:                 "PAID {YEAR}/{MONTH}/{NUMBER}",
 			NewTemplate:              "{NUMBER}",
 			ResetCounterMode:         "MONTHLY",
 			StartWithNumber:          0,
-			IssueRenewalInvoiceAfter: 0.8,
+			IssueRenewalInvoiceAfter: 0.666,
 		},
 		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,
