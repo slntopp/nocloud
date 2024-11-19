@@ -176,8 +176,10 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		vars["acc"] = acc
 	} else {
 		if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
-			query += ` FILTER t.account == @acc`
+			query += ` FILTER t.account == @acc && t.status != @statusDraft && t.status != @statusTerm`
 			vars["acc"] = acc
+			vars["statusDraft"] = pb.BillingStatus_DRAFT
+			vars["statusTerm"] = pb.BillingStatus_TERMINATED
 		}
 	}
 
