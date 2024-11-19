@@ -187,7 +187,7 @@ const projectId = computed(() => {
 });
 
 onMounted(async () => {
-  planAddons.value = [...template.value.addons];
+  planAddons.value = [...(template.value.addons || [])];
 
   await store.dispatch("servicesProviders/fetchById", sp.value.uuid);
   isRegionsLoading.value = true;
