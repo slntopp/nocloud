@@ -176,8 +176,10 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		vars["acc"] = acc
 	} else {
 		if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
-			query += ` FILTER t.account == @acc`
+			query += ` FILTER t.account == @acc && t.status != @statusDraft && t.status != @statusTerm`
 			vars["acc"] = acc
+			vars["statusDraft"] = pb.BillingStatus_DRAFT
+			vars["statusTerm"] = pb.BillingStatus_TERMINATED
 		}
 	}
 
@@ -1266,6 +1268,10 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 			"creator":           structpb.NewStringValue(requester),
 			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 		},
+	}
+
+	if val, ok := ctx.Value("create_as_draft").(bool); ok && val {
+		inv.Status = pb.BillingStatus_DRAFT
 	}
 
 	return s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
