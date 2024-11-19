@@ -19,10 +19,17 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	billingpb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/health"
+	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
+	servicespb "github.com/slntopp/nocloud-proto/services"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/proto"
 	"slices"
 	go_sync "sync"
 	"time"
@@ -56,6 +63,8 @@ type InstancesServer struct {
 	sp_ctrl    graph.ServicesProvidersController
 	srv_ctrl   graph.ServicesController
 	promo_ctrl graph.PromocodesController
+	acc_ctrl   graph.AccountsController
+	inv_ctrl   graph.InvoicesController
 	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -76,6 +85,8 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 	sp_ctrl := graph.NewServicesProvidersController(logger, db)
 	srv_ctrl := graph.NewServicesController(logger, db, rbmq)
 	promo_ctrl := graph.NewPromocodesController(logger, db, rbmq)
+	acc_ctrl := graph.NewAccountsController(logger, db)
+	inv_ctrl := graph.NewInvoicesController(logger, db)
 	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
@@ -111,6 +122,8 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		sp_ctrl:    sp_ctrl,
 		srv_ctrl:   srv_ctrl,
 		promo_ctrl: promo_ctrl,
+		acc_ctrl:   acc_ctrl,
+		inv_ctrl:   inv_ctrl,
 		ca:         ca,
 		drivers:    make(map[string]driverpb.DriverServiceClient),
 		rdb:        rdb,
@@ -124,6 +137,8 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		spSyncers: make(map[string]*go_sync.Mutex),
 	}
 }
+
+const nebulaIGType = "ione"
 
 func (s *InstancesServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
@@ -284,6 +299,12 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
+	isImported := ig.GetData()["imported"].GetBoolValue()
+	if isImported {
+		log.Error("Can't create instance with imported IG")
+		return nil, status.Error(codes.InvalidArgument, "can't create instance with imported IG")
+	}
+
 	if req.Promocode != nil && req.GetPromocode() != "" {
 		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
 	}
@@ -319,7 +340,6 @@ func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.U
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	// TODO: set sp here to log service prodiver
 	err = s.ctrl.Update(ctx, "", req.GetInstance(), instance.Instance)
 	if err != nil {
 		log.Error("Failed to update instance", zap.Error(err))
@@ -469,54 +489,84 @@ func (s *InstancesServer) TransferIG(ctx context.Context, _req *connect.Request[
 	}), nil
 }
 
+//goland:noinspection GoErrorStringFormat
 func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Request[pb.TransferInstanceRequest]) (*connect.Response[pb.TransferInstanceResponse], error) {
-	log := s.log.Named("transfer")
+	log := s.log.Named("TransferInstance")
 	req := _req.Msg
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
-	log.Debug("Requestor", zap.String("id", requestor))
+	log.Info("Request received", zap.Any("request", req))
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.Any("account", req.Account), zap.Any("ig", req.Ig), zap.String("requester", requester))
 
-	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
-	newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
-	inst, err := s.ctrl.GetWithAccess(ctx, requestorId, req.GetUuid())
+	if req.Account != nil && req.Ig != nil {
+		return nil, fmt.Errorf("Account and IG cannot be set at the same time")
+	}
+	if req.Account == nil && req.Ig == nil {
+		return nil, fmt.Errorf("Don't know where to transfer")
+	}
 
+	// Obtain service provider to use syncer
+	groupResp, err := s.ctrl.GetGroup(ctx, req.GetUuid())
 	if err != nil {
-		log.Error("Failed to get instances group", zap.Error(err))
-		return nil, status.Error(codes.Internal, err.Error())
+		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
+		return nil, fmt.Errorf("Failed to get SP and IG. Probably broken instance")
+	}
+	syncer := sync.NewDataSyncer(log.With(zap.String("caller", "TransferInstance")), s.rdb, groupResp.SP.GetUuid(), 50)
+	defer syncer.Open()
+	_ = syncer.WaitUntilOpenedAndCloseAfter()
+
+	// Actually modified collections in transactions
+	usedCols := []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, schema.INVOICES_COL, schema.TRANSACTIONS_COL, schema.RECORDS_COL,
+		schema.SERV2IG, schema.IG2INST, schema.IG2SP}
+	// Collection connected in Permissions graph with some collections from usedCols
+	otherCols := []string{schema.NS2ACC, schema.ACC2NS, schema.NS2SERV,
+		schema.ACC2CRED, schema.CUR2CUR, schema.SP2BP}
+	// Other collections in Permissions graph but not presented in schema (this part is cringe, must fix it somehow)
+	importedCols := []string{"Accounts2IcsLinks", "Accounts2NocalCalendars", "Instances2Runs", "Namespaces2NocalCalendars",
+		"Namespaces2NodemeshWorkflows", "Namespaces2Runs", "NocalCalendars2NocalEvents", "NodemeshWorkflows2NodemeshRuns"}
+	otherCols = append(otherCols, importedCols...)
+
+	if req.Account != nil {
+		trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: usedCols,
+			Write:     otherCols,
+		}, &driver.BeginTransactionOptions{AllowImplicit: true})
+		if err != nil {
+			log.Error("Failed to start transaction", zap.Error(err))
+			return nil, fmt.Errorf("Failed to perform transfer. Try again later")
+		}
+		ctx = driver.WithTransactionID(ctx, trID)
+
+		defer func() {
+			if panicErr := recover(); panicErr != nil {
+				if err = s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
+					log.Error("Failed to abort transaction", zap.Error(err))
+				}
+				log.Info("Recovered from panic", zap.Any("error", panicErr))
+			}
+		}()
+
+		if err := s.transferToAccount(ctx, log, req.GetUuid(), req.GetAccount(), !req.GetDoNotTransferInvoices()); err != nil {
+			if err := s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
+				log.Error("Failed to abort transaction", zap.Error(err))
+			}
+			log.Error("Failed to transfer to account", zap.Error(err))
+			return nil, fmt.Errorf("Failed to transfer to account. Error: " + err.Error())
+		}
+
+		if err = s.db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+			log.Error("Failed to commit transaction", zap.Error(err))
+			return nil, fmt.Errorf("Failed to perform transfer. Try again later")
+		}
+	} else if req.Ig != nil {
+		if err := s.transferToIG(ctx, log, req.GetUuid(), req.GetIg()); err != nil {
+			log.Error("Failed to transfer to IG", zap.Error(err))
+			return nil, fmt.Errorf("Failed to transfer to IG. Error: " + err.Error())
+		}
 	}
 
-	ig, err := s.ig_ctrl.GetWithAccess(ctx, requestorId, newIGId.Key())
-
-	if err != nil {
-		log.Error("Failed to get service", zap.Error(err))
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	if inst.GetAccess().GetLevel() < accesspb.Level_ROOT {
-		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
-		return nil, status.Error(codes.PermissionDenied, "Access denied")
-	}
-
-	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
-		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
-		return nil, status.Error(codes.PermissionDenied, "Access denied")
-	}
-
-	igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
-
-	if err != nil {
-		log.Error("Failed to get Service", zap.Error(err))
-		return nil, err
-	}
-
-	err = s.ctrl.TransferInst(ctx, igEdge, newIGId, instanceId)
-	if err != nil {
-		return nil, err
-	}
-
+	log.Info("Finished transfer")
 	return connect.NewResponse(&pb.TransferInstanceResponse{
 		Result: true,
-		Meta:   nil,
 	}), nil
 }
 
@@ -1182,4 +1232,520 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 	}
 
 	return connect.NewResponse(&result), nil
+}
+
+func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string, transferInvoices bool) (err error) {
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
+	accountId := driver.NewDocumentID(schema.ACCOUNTS_COL, account)
+
+	if !s.ca.HasAccess(ctx, requester, instanceId, accesspb.Level_ADMIN) {
+		return fmt.Errorf("no access to instance")
+	}
+	if !s.ca.HasAccess(ctx, requester, accountId, accesspb.Level_ADMIN) {
+		return fmt.Errorf("no access to destination account")
+	}
+
+	inst, err := s.ctrl.GetWithAccess(ctx, requesterId, uuid)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return fmt.Errorf("failed to get instance: %w", err)
+	}
+
+	state := inst.GetState().GetState()
+	forbiddenStates := []stpb.NoCloudState{stpb.NoCloudState_UNKNOWN, stpb.NoCloudState_INIT,
+		stpb.NoCloudState_DELETED, stpb.NoCloudState_OPERATION, stpb.NoCloudState_FAILURE}
+	if slices.Contains(forbiddenStates, state) {
+		log.Error("Instance in forbidden state to transfer it to other account", zap.Any("state", state))
+		return fmt.Errorf("instance in forbidden state. Can't transfer while instance in state: %s", state.String())
+	}
+
+	accOwner, err := s.ctrl.GetInstanceOwner(ctx, uuid)
+	if err != nil {
+		log.Error("Failed to find instance owner", zap.Error(err))
+		return fmt.Errorf("failed to find instance owner: %w", err)
+	}
+	if accOwner.GetUuid() == account {
+		return fmt.Errorf("can't transfer. User already owns it")
+	}
+
+	srvResp, err := s.srv_ctrl.List(ctx, requester, &servicespb.ListRequest{
+		Filters: map[string]*structpb.Value{
+			"account": structpb.NewStringValue(account),
+		},
+	})
+	if err != nil {
+		log.Error("Failed to retrieve services", zap.Error(err))
+		return fmt.Errorf("failed to retrieve services: %w", err)
+	}
+	services := srvResp.Result
+
+	groupResp, err := s.ctrl.GetGroup(ctx, instanceId.String())
+	if err != nil {
+		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
+		return fmt.Errorf("failed to get Group and ServicesProvider: %w", err)
+	}
+	if groupResp == nil {
+		log.Error("Failed to get instance linked data")
+		return fmt.Errorf("failed to get instance linked data. Probably broken instance")
+	}
+	if groupResp.SP == nil || groupResp.SP.GetUuid() == "" {
+		log.Error("SP not found, instance not linked")
+		return fmt.Errorf("SP not found, instance not linked. Probably broken instance")
+	}
+	if groupResp.Group == nil || groupResp.Group.GetUuid() == "" {
+		log.Error("Group not found, instance not linked")
+		return fmt.Errorf("IG not found, instance not linked. Probably broken instance")
+	}
+	oldIG := groupResp.Group
+	oldIGInstancesCount := len(oldIG.GetInstances())
+	oldIG.Instances = nil
+	sp := groupResp.SP
+
+	acc, err := s.acc_ctrl.Get(ctx, account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return fmt.Errorf("failed to get account: %w", err)
+	}
+
+	// Create service for user if it doesn't exist
+	var srv *servicespb.Service
+	srvCount := len(services)
+	if srvCount > 1 {
+		log.Info("Multiple services found for account. Transferring to first", zap.Int("count", srvCount))
+	}
+	if srvCount == 0 {
+		log.Info("Account has no services, creating new")
+		ns, err := s.acc_ctrl.GetNamespace(ctx, graph.Account{
+			Account: &rpb.Account{
+				Uuid: account,
+			},
+		})
+		if err != nil {
+			log.Error("Failed to get namespace", zap.Error(err))
+			return fmt.Errorf("failed to get namespace: %w", err)
+		}
+		if !s.ca.HasAccess(ctx, account, ns.ID, accesspb.Level_ADMIN) {
+			log.Error("Destination account has no access to namespace")
+			return fmt.Errorf("destination account has no access to namespace")
+		}
+		if srv, err = s.srv_ctrl.Create(ctx, &servicespb.Service{
+			Version: "1",
+			Title:   "SRV_" + acc.GetTitle(),
+		}); err != nil {
+			log.Error("Failed to create service", zap.Error(err))
+			return fmt.Errorf("failed to create new service: %w", err)
+		}
+		if err = s.srv_ctrl.Join(ctx, srv, &ns, accesspb.Level_ADMIN, roles.OWNER); err != nil {
+			log.Error("Error while creating access to service", zap.Error(err))
+			return fmt.Errorf("failed to create access to new service: %w", err)
+		}
+		if err = s.srv_ctrl.SetStatus(ctx, srv, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up service", zap.Error(err))
+			return fmt.Errorf("failed to up new service: %w", err)
+		}
+	} else {
+		srv = services[0]
+	}
+
+	existingIGs := srv.GetInstancesGroups()
+	// Ensure each IG object has 'sp' field set as current SP
+	for _, ig := range existingIGs {
+		igSp, err := s.ig_ctrl.GetSP(ctx, ig.GetUuid())
+		if err != nil {
+			log.Error("Failed to get IG service provider", zap.Error(err))
+			return fmt.Errorf("failed to obtain IG's service provider: %w", err)
+		}
+		ig.Sp = &igSp.Uuid
+	}
+
+	igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
+	if err != nil {
+		log.Error("Failed to get instances group edge", zap.Error(err))
+		return fmt.Errorf("failed to get link between instance and old IG: %w", err)
+	}
+
+	var destIG *pb.InstancesGroup
+	var _old *pb.InstancesGroup
+	for _, ig := range existingIGs {
+		ig.Instances = nil
+		if oldIG.GetType() == ig.GetType() && ig.GetSp() == sp.GetUuid() {
+			destIG = ig
+			break
+		}
+	}
+
+	// TODO: this explicit driver type check shouldn't be here, but it is fucking hard to fix for nebula IG
+	if oldIG.GetType() == nebulaIGType {
+		log.Warn("Transferring Ione instances group explicitly")
+		if err = s.processNebulaIG(ctx, log, inst.Instance, oldIG, oldIGInstancesCount, existingIGs, srv, acc.GetTitle(), sp.GetUuid(), igEdge); err != nil {
+			log.Error("Failed to process Ione instances group", zap.Error(err))
+			return fmt.Errorf("error processing IONE: %w", err)
+		}
+		goto invoicesTransfer
+	}
+
+	if destIG == nil && oldIGInstancesCount == 1 {
+		log.Info("Transferring instances group directly to service")
+		oldIGid := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, oldIG.GetUuid())
+		srvEdge, err := s.ig_ctrl.GetEdge(ctx, oldIGid.String(), schema.SERVICES_COL)
+		if err != nil {
+			log.Error("Failed to get service->IG edge", zap.Error(err))
+			return fmt.Errorf("failed to get link between old IG and service: %w", err)
+		}
+		newSrvId := driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid())
+		if err = s.ig_ctrl.TransferIG(ctx, srvEdge, newSrvId, oldIGid); err != nil {
+			log.Error("Failed to transfer old instances group to service", zap.Error(err))
+			return fmt.Errorf("failed to transfer old instances group: %w", err)
+		}
+		goto invoicesTransfer
+
+	} else if destIG == nil {
+		log.Info("Destination instances group not found, creating new")
+		destIG = &pb.InstancesGroup{
+			Type:  oldIG.GetType(),
+			Title: acc.Title + " - " + oldIG.GetType() + " - imported",
+		}
+		if err = s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
+			log.Error("Failed to create instances group", zap.Error(err))
+			return fmt.Errorf("failed to create new instances group: %w", err)
+		}
+		if err = s.ig_ctrl.Provide(ctx, destIG.GetUuid(), sp.GetUuid()); err != nil {
+			log.Error("Failed to provide instances group", zap.Error(err))
+			return fmt.Errorf("failed to provide instances group for sp: %w", err)
+		}
+		if err := s.ig_ctrl.SetStatus(ctx, destIG, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up dest instance group", zap.Error(err))
+			return fmt.Errorf("failed to up new instances group: %w", err)
+		}
+	}
+	// Process new IG ips
+	_old = proto.Clone(destIG).(*pb.InstancesGroup)
+	destIG = processIGsIPs(destIG, inst.Instance, false)
+	if err = s.ig_ctrl.Update(ctx, destIG, _old); err != nil {
+		log.Error("Failed to update new instances group", zap.Error(err))
+		return fmt.Errorf("failed to update new instances group: %w", err)
+	}
+	// Process old IG ips
+	_old = proto.Clone(oldIG).(*pb.InstancesGroup)
+	oldIG = processIGsIPs(oldIG, inst.Instance, true)
+	if err = s.ig_ctrl.Update(ctx, oldIG, _old); err != nil {
+		log.Error("Failed to update old instances group", zap.Error(err))
+		return fmt.Errorf("failed to update old instances group: %w", err)
+	}
+
+	if err = s.ctrl.TransferInst(ctx, igEdge, driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, destIG.GetUuid()), instanceId); err != nil {
+		log.Error("Failed to transfer instance", zap.Error(err))
+		return fmt.Errorf("failed to transfer instance: %w", err)
+	}
+
+invoicesTransfer:
+	if !transferInvoices {
+		return nil
+	}
+
+	log.Info("Transferring invoices")
+	// Transfer invoices (Ignoring PAID, TERM, CANCELLED and RETURNED invoices and take only that contains target instance and other instances that target account owns)
+	invoices, err := s.inv_ctrl.List(ctx, accOwner.GetUuid())
+	if err != nil {
+		log.Error("Failed to list invoices", zap.Error(err))
+		return fmt.Errorf("failed to list invoices: %w", err)
+	}
+	transferred := make([]*graph.Invoice, 0)
+outer:
+	for _, inv := range invoices {
+		if inv.GetAccount() != accOwner.GetUuid() {
+			log.Warn("Got invoice from other account. Must be incorrect List method filter", zap.String("account", inv.GetAccount()))
+			continue
+		}
+		if inv.GetStatus() == billingpb.BillingStatus_PAID || inv.GetStatus() == billingpb.BillingStatus_RETURNED ||
+			inv.GetStatus() == billingpb.BillingStatus_CANCELED || inv.GetStatus() == billingpb.BillingStatus_TERMINATED {
+			continue
+		}
+		foundInstance := false
+		for _, item := range inv.GetItems() {
+			if item.GetInstance() == "" {
+				continue
+			}
+			if item.GetInstance() == uuid {
+				foundInstance = true
+				continue
+			}
+			if !s.ca.HasAccess(ctx, account, driver.NewDocumentID(schema.INSTANCES_COL, item.GetInstance()), accesspb.Level_ADMIN) {
+				continue outer
+			}
+		}
+		if !foundInstance {
+			continue
+		}
+		if err = s.inv_ctrl.Transfer(ctx, inv.GetUuid(), account, acc.Currency); err != nil {
+			log.Error("Failed to transfer invoice", zap.Error(err))
+			return fmt.Errorf("failed to transfer old invoice to new account: %w", err)
+		}
+		if inv, err = s.inv_ctrl.Get(ctx, inv.GetUuid()); err != nil {
+			log.Error("Failed to get invoice", zap.Error(err))
+			return fmt.Errorf("failed to get transferred invoice: %w", err)
+		}
+		transferred = append(transferred, inv)
+	}
+	// Sync with payment gateway
+	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
+	_z := 0
+	var success = &_z
+	g := errgroup.Group{}
+	m := &go_sync.Mutex{}
+	for _, trInv := range transferred {
+		invoice := trInv
+		g.Go(func() error {
+			if err = gw.CreateInvoice(ctx, invoice.Invoice); err != nil {
+				return err
+			}
+			m.Lock()
+			*success = *success + 1
+			m.Unlock()
+			return nil
+		})
+	}
+	if err = g.Wait(); err != nil {
+		// If gateway data is untouched, then abort transferring
+		if *success == 0 {
+			return fmt.Errorf("failed to sync with payment gateway, aborted: %w", err)
+		}
+		log.Error("FATAL: Failed to sync with payment gateway, but managed to process some gateway invoices",
+			zap.Error(err), zap.Int("processed", *success), zap.Int("total", len(transferred)))
+	}
+	log.Info("Transferred invoices", zap.Int("count", *success))
+
+	return nil
+}
+
+func (s *InstancesServer) transferToIG(ctx context.Context, log *zap.Logger, uuid string, igUuid string) error {
+	return fmt.Errorf("transfer to IG option currently unavailable")
+	//
+	//requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	//requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	//
+	//instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
+	//newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, igUuid)
+	//inst, err := s.ctrl.GetWithAccess(ctx, requesterId, uuid)
+	//if err != nil {
+	//	log.Error("Failed to get instance", zap.Error(err))
+	//	return fmt.Errorf("failed to get instance: %w", err)
+	//}
+	//
+	//ig, err := s.ig_ctrl.GetWithAccess(ctx, requesterId, newIGId.Key())
+	//if err != nil {
+	//	log.Error("Failed to get instances group", zap.Error(err))
+	//	return fmt.Errorf("failed to get instances group: %w", err)
+	//}
+	//
+	//if inst.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	//	log.Error("Access denied", zap.String("uuid", inst.GetUuid()))
+	//	return fmt.Errorf("no access to instance")
+	//}
+	//
+	//if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	//	log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+	//	return fmt.Errorf("no access to IG")
+	//}
+	//
+	//igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
+	//
+	//if err != nil {
+	//	log.Error("Failed to get IG edge", zap.Error(err))
+	//	return fmt.Errorf("failed to get IG connection: %w", err)
+	//}
+	//
+	//err = s.ctrl.TransferInst(ctx, igEdge, newIGId, instanceId)
+	//if err != nil {
+	//	log.Error("Failed to transfer instance", zap.Error(err))
+	//	return fmt.Errorf("failed to transfer: %w", err)
+	//}
+	//
+	//return nil
+}
+
+func (s *InstancesServer) processNebulaIG(ctx context.Context, log *zap.Logger, inst *pb.Instance, oldIG *pb.InstancesGroup, oldIGInstancesCount int,
+	igs []*pb.InstancesGroup, srv *servicespb.Service, accTitle, spUuid, oldIGEdgeKey string) error {
+	log = log.Named("processNebulaIG")
+
+	userid := int(oldIG.GetData()["userid"].GetNumberValue())
+	publicVn := int(oldIG.GetData()["public_vn"].GetNumberValue())
+	privateVn := int(oldIG.GetData()["private_vn"].GetNumberValue())
+	publicIpsFree := int(oldIG.GetData()["public_ips_free"].GetNumberValue())
+	privateIpsFree := int(oldIG.GetData()["private_ips_free"].GetNumberValue())
+	publicIpsTotal := int(oldIG.GetData()["public_ips_total"].GetNumberValue())
+	privateIpsTotal := int(oldIG.GetData()["private_ips_total"].GetNumberValue())
+
+	ipsPublic := int(oldIG.GetResources()["ips_public"].GetNumberValue())
+	ipsPrivate := int(oldIG.GetResources()["ips_private"].GetNumberValue())
+	// Checks
+	//ipsPublic := int(oldIG.GetResources()["ips_public"].GetNumberValue())
+	//ipsPrivate := int(oldIG.GetResources()["ips_private"].GetNumberValue())
+	//if (ipsPublic != publicIpsFree || ipsPublic != publicIpsTotal) ||
+	//	(ipsPrivate != privateIpsFree || ipsPrivate != privateIpsTotal) {
+	//	return nil, fmt.Errorf("can't transfer. IONE cluster currently in unstable state")
+	//}
+	if inst.GetState().GetState() == stpb.NoCloudState_PENDING {
+		return fmt.Errorf("can't transfer IONE instance in PENDING state")
+	}
+	if publicIpsFree != publicIpsTotal || privateIpsFree != privateIpsTotal {
+		return fmt.Errorf("can't transfer. IONE cluster currently in unstable state")
+	}
+	if userid == 0 {
+		return fmt.Errorf("can't transfer. IONE cluster currently not setted up")
+	}
+
+	var destIG *pb.InstancesGroup
+	for _, ig := range igs {
+		if oldIG.GetType() != ig.GetType() || ig.GetSp() != spUuid {
+			continue
+		}
+		if int(ig.GetData()["userid"].GetNumberValue()) != userid ||
+			int(ig.GetData()["public_vn"].GetNumberValue()) != publicVn ||
+			int(ig.GetData()["private_vn"].GetNumberValue()) != privateVn {
+			continue
+		}
+		destIG = ig
+		break
+	}
+
+	if destIG == nil && oldIGInstancesCount == 1 {
+		log.Info("Transferring instances group directly to service")
+		oldIGid := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, oldIG.GetUuid())
+		srvEdge, err := s.ig_ctrl.GetEdge(ctx, oldIGid.String(), schema.SERVICES_COL)
+		if err != nil {
+			log.Error("Failed to get service->IG edge", zap.Error(err))
+			return fmt.Errorf("failed to get link between old IG and service: %w", err)
+		}
+		newSrvId := driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid())
+		if err = s.ig_ctrl.TransferIG(ctx, srvEdge, newSrvId, oldIGid); err != nil {
+			log.Error("Failed to transfer old instances group to service", zap.Error(err))
+			return fmt.Errorf("failed to transfer old instances group: %w", err)
+		}
+		return nil
+
+	} else if destIG == nil {
+		log.Info("Destination instances group not found, creating new")
+		destIG = &pb.InstancesGroup{
+			Type:  oldIG.GetType(),
+			Title: accTitle + " - " + oldIG.GetType() + " - imported",
+			Data: map[string]*structpb.Value{
+				"userid": structpb.NewNumberValue(float64(userid)),
+			},
+		}
+		if publicVn > 0 {
+			destIG.Data["public_vn"] = structpb.NewNumberValue(float64(publicVn))
+		}
+		if privateVn > 0 {
+			destIG.Data["private_vn"] = structpb.NewNumberValue(float64(privateVn))
+		}
+		if err := s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
+			log.Error("Failed to create instances group", zap.Error(err))
+			return fmt.Errorf("failed to create new instances group: %w", err)
+		}
+		if err := s.ig_ctrl.Provide(ctx, destIG.GetUuid(), spUuid); err != nil {
+			log.Error("Failed to provide instances group", zap.Error(err))
+			return fmt.Errorf("failed to provide new instances group for sp: %w", err)
+		}
+		if err := s.ig_ctrl.SetStatus(ctx, destIG, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up dest instance group", zap.Error(err))
+			return fmt.Errorf("failed to up new instances group: %w", err)
+		}
+	}
+	if destIG.Data == nil {
+		destIG.Data = make(map[string]*structpb.Value)
+	}
+	if destIG.Resources == nil {
+		destIG.Resources = make(map[string]*structpb.Value)
+	}
+	if oldIG.Data == nil {
+		oldIG.Data = make(map[string]*structpb.Value)
+	}
+	if oldIG.Resources == nil {
+		oldIG.Resources = make(map[string]*structpb.Value)
+	}
+
+	ipsPublicNew := int(destIG.GetResources()["ips_public"].GetNumberValue())
+	ipsPrivateNew := int(destIG.GetResources()["ips_private"].GetNumberValue())
+	// Process new IG
+	_old := proto.Clone(destIG).(*pb.InstancesGroup)
+	destIG = processIGsIPs(destIG, inst, false)
+	differPublic := int(destIG.GetResources()["ips_public"].GetNumberValue()) - ipsPublicNew
+	differPrivate := int(destIG.GetResources()["ips_private"].GetNumberValue()) - ipsPrivateNew
+	destIG.Data["public_ips_free"] = structpb.NewNumberValue(float64(int(destIG.Data["public_ips_free"].GetNumberValue()) + differPublic))
+	destIG.Data["public_ips_total"] = structpb.NewNumberValue(float64(int(destIG.Data["public_ips_total"].GetNumberValue()) + differPublic))
+	destIG.Data["private_ips_free"] = structpb.NewNumberValue(float64(int(destIG.Data["private_ips_free"].GetNumberValue()) + differPrivate))
+	destIG.Data["private_ips_total"] = structpb.NewNumberValue(float64(int(destIG.Data["private_ips_total"].GetNumberValue()) + differPrivate))
+	destIG.Data["imported"] = structpb.NewBoolValue(true)
+	if err := s.ig_ctrl.Update(ctx, destIG, _old); err != nil {
+		log.Error("Failed to update instances group", zap.Error(err))
+		return fmt.Errorf("failed to update new instances group: %w", err)
+	}
+	// Process old IG
+	_old = proto.Clone(oldIG).(*pb.InstancesGroup)
+	oldIG = processIGsIPs(oldIG, inst, true)
+	differPublic = int(oldIG.GetResources()["ips_public"].GetNumberValue()) - ipsPublic
+	differPrivate = int(oldIG.GetResources()["ips_private"].GetNumberValue()) - ipsPrivate
+	oldIG.Data["public_ips_free"] = structpb.NewNumberValue(float64(int(oldIG.Data["public_ips_free"].GetNumberValue()) + differPublic))
+	oldIG.Data["public_ips_total"] = structpb.NewNumberValue(float64(int(oldIG.Data["public_ips_total"].GetNumberValue()) + differPublic))
+	oldIG.Data["private_ips_free"] = structpb.NewNumberValue(float64(int(oldIG.Data["private_ips_free"].GetNumberValue()) + differPrivate))
+	oldIG.Data["private_ips_total"] = structpb.NewNumberValue(float64(int(oldIG.Data["private_ips_total"].GetNumberValue()) + differPrivate))
+	if err := s.ig_ctrl.Update(ctx, oldIG, _old); err != nil {
+		log.Error("Failed to update instances group", zap.Error(err))
+		return fmt.Errorf("failed to update old instances group: %w", err)
+	}
+
+	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, inst.GetUuid())
+	if err := s.ctrl.TransferInst(ctx, oldIGEdgeKey, driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, destIG.GetUuid()), instanceId); err != nil {
+		log.Error("Failed to transfer instance", zap.Error(err))
+		return fmt.Errorf("failed to transfer instance: %w", err)
+	}
+
+	return nil
+}
+
+func processIGsIPs(ig *pb.InstancesGroup, inst *pb.Instance, decrease bool) *pb.InstancesGroup {
+	if ig == nil {
+		return nil
+	}
+	if inst == nil {
+		return ig
+	}
+
+	plusOrZero := func(n int) int {
+		if n < 0 {
+			return 0
+		}
+		return n
+	}
+
+	var (
+		oldAmount int
+		newAmount int
+	)
+
+	mul := 1
+	if decrease {
+		mul = -1
+	}
+
+	if ig.Resources == nil {
+		ig.Resources = make(map[string]*structpb.Value)
+	}
+
+	oldAmount = int(ig.GetResources()["ips_public"].GetNumberValue())
+	newAmount = oldAmount + int(inst.GetResources()["ips_public"].GetNumberValue())*mul
+	if oldAmount != newAmount {
+		ig.Resources["ips_public"] = structpb.NewNumberValue(float64(plusOrZero(newAmount)))
+	}
+
+	oldAmount = int(ig.GetResources()["ips_private"].GetNumberValue())
+	newAmount = oldAmount + int(inst.GetResources()["ips_private"].GetNumberValue())*mul
+	if oldAmount != newAmount {
+		ig.Resources["ips_private"] = structpb.NewNumberValue(float64(plusOrZero(newAmount)))
+	}
+
+	return ig
 }

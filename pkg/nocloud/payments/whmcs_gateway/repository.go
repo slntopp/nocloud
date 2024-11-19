@@ -11,7 +11,7 @@ const invoiceIdField = "whmcs_invoice_id"
 const userIdField = "whmcs_id"
 
 func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, error) {
-	invoices, err := g.invMan.InvoicesController().List(context.Background())
+	invoices, err := g.invMan.InvoicesController().List(context.Background(), "")
 	if err != nil {
 		return nil, err
 	}

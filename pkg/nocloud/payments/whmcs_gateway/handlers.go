@@ -53,6 +53,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 	log.Info("Event received", zap.String("event", resp.Event))
 	log = log.With(zap.String("event", resp.Event))
 
+	// Now process only PAID and REFUNDED events. Only these events are valuable due to after-paid actions
 	ctx := context.WithValue(context.Background(), GatewayCallback, true)
 	var innerErr error
 	switch resp.Event {
@@ -71,12 +72,12 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		}
 		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceCancelled":
-		data, err := unmarshal[InvoiceCancelled](body)
+		_, err := unmarshal[InvoiceCancelled](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceRefunded":
 		data, err := unmarshal[InvoiceRefunded](body)
 		if err != nil {
@@ -85,12 +86,12 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		}
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceUnpaid":
-		data, err := unmarshal[InvoiceUnpaid](body)
+		_, err := unmarshal[InvoiceUnpaid](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "UpdateInvoiceTotal":
 		_, err := unmarshal[UpdateInvoiceTotal](body)
 		if err != nil {

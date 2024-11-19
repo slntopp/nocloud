@@ -22,7 +22,8 @@ type InvoicesController interface {
 	Get(ctx context.Context, uuid string) (*Invoice, error)
 	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
-	List(ctx context.Context) ([]*Invoice, error)
+	List(ctx context.Context, account string) ([]*Invoice, error)
+	Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error)
 }
 
 type InvoiceNumberMeta struct {
@@ -39,6 +40,9 @@ type Invoice struct {
 type invoicesController struct {
 	col driver.Collection // Billing Plans collection
 
+	transactions TransactionsController
+	currencies   CurrencyController
+
 	log *zap.Logger
 }
 
@@ -47,10 +51,13 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 	log := logger.Named("InvoicesController")
 	col := GetEnsureCollection(log, ctx, db, schema.INVOICES_COL)
 
+	transactions := NewTransactionsController(log, db)
+	currencies := NewCurrencyController(log, db)
+
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return &invoicesController{
-		log: log, col: col,
+		log: log, col: col, transactions: transactions, currencies: currencies,
 	}
 }
 
@@ -165,11 +172,96 @@ func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[
 	return err
 }
 
-func (ctrl *invoicesController) List(ctx context.Context) ([]*Invoice, error) {
-	result := make([]*Invoice, 0)
-	cur, err := ctrl.col.Database().Query(ctx, "FOR doc IN "+ctrl.col.Name()+" RETURN MERGE(doc, {uuid: doc._key})", nil)
+func (ctrl *invoicesController) Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error) {
+	if resCurr == nil {
+		return fmt.Errorf("currency is required")
+	}
+
+	_, hasTransaction := driver.HasTransactionID(ctx)
+	var trId driver.TransactionID
+	if !hasTransaction {
+		db := ctrl.col.Database()
+		trId, err = db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: []string{schema.INVOICES_COL, schema.TRANSACTIONS_COL},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			return err
+		}
+		ctx = driver.WithTransactionID(ctx, trId)
+		defer func(err *error) {
+			if panicErr := recover(); panicErr != nil {
+				_ = db.AbortTransaction(ctx, trId, &driver.AbortTransactionOptions{})
+				ctrl.log.Warn("Recovered from panic", zap.Any("error", panicErr))
+				return
+			}
+			if err != nil {
+				_ = db.AbortTransaction(ctx, trId, &driver.AbortTransactionOptions{})
+				return
+			}
+		}(&err)
+	}
+
+	var inv *Invoice
+	inv, err = ctrl.Get(ctx, uuid)
 	if err != nil {
-		ctrl.log.Error("Failed to list invoices", zap.Error(err))
+		return fmt.Errorf("failed to get invoice: %w", err)
+	}
+	oldAcc := inv.Account
+	if oldAcc == account {
+		err = fmt.Errorf("can't transfer to the same account")
+		return err
+	}
+	inv.Account = account
+
+	prevTotal := inv.Total
+	newTotal, err := ctrl.currencies.Convert(ctx, inv.Currency, resCurr, inv.Total)
+	if err != nil {
+		return fmt.Errorf("failed to convert currency: %w", err)
+	}
+	for _, item := range inv.GetItems() {
+		item.Price = item.Price * (newTotal / prevTotal)
+	}
+	inv.Total = newTotal
+	inv.Currency = resCurr
+
+	if _, err = ctrl.Update(ctx, inv); err != nil {
+		return fmt.Errorf("failed to update invoice: %w", err)
+	}
+	for _, id := range inv.GetTransactions() {
+		if err = ctrl.transactions.Transfer(ctx, id, account); err != nil {
+			return fmt.Errorf("failed to transfer transaction: %w", err)
+		}
+	}
+
+	if !hasTransaction {
+		if err = ctrl.col.Database().CommitTransaction(ctx, trId, &driver.CommitTransactionOptions{}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+const listInvoices = `
+    FOR doc IN @@collection
+    %s
+    RETURN MERGE(doc, {uuid: doc._key})
+`
+
+func (ctrl *invoicesController) List(ctx context.Context, account string) ([]*Invoice, error) {
+	log := ctrl.log.Named("List")
+
+	list := make([]*Invoice, 0)
+	bindVars := map[string]interface{}{
+		"@collection": schema.INVOICES_COL,
+	}
+	var filters = ""
+	if account != "" {
+		filters = ` FILTER doc.account == @account`
+		bindVars["account"] = account
+	}
+	cur, err := ctrl.col.Database().Query(ctx, fmt.Sprintf(listInvoices, filters), bindVars)
+	if err != nil {
+		log.Error("Failed to list invoices", zap.Error(err))
 		return nil, err
 	}
 	defer cur.Close()
@@ -178,13 +270,18 @@ func (ctrl *invoicesController) List(ctx context.Context) ([]*Invoice, error) {
 			Invoice:           &pb.Invoice{},
 			InvoiceNumberMeta: &InvoiceNumberMeta{},
 		}
-		meta, err := cur.ReadDocument(ctx, tx)
+		result := map[string]interface{}{}
+		meta, err := cur.ReadDocument(ctx, &result)
 		if err != nil {
-			ctrl.log.Error("Failed to read invoice", zap.Error(err))
+			log.Error("Failed to read invoice", zap.Error(err))
+			return nil, err
+		}
+		if err = ctrl.DecodeInvoice(result, tx); err != nil {
+			log.Error("Failed to decode invoice", zap.Error(err))
 			return nil, err
 		}
 		tx.Uuid = meta.Key
-		result = append(result, tx)
+		list = append(list, tx)
 	}
-	return result, err
+	return list, err
 }

@@ -113,10 +113,8 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/slntopp/nocloud-proto v0.0.0-20241105012036-f79c24361f46 h1:KPwpDno8P+qMLwq8Ykc6XWTg8YHeY2RsSMx1xc0KKgs=
-github.com/slntopp/nocloud-proto v0.0.0-20241105012036-f79c24361f46/go.mod h1:qPbslPB2J9Q7qm6H9Jaqf/Ysf61YlPL0DUFhIdAEikI=
-github.com/slntopp/nocloud-proto v0.0.0-20241107022353-c0ff7d46a77c h1:WVL0FC8+Ho0IaSrUuFNkWBBQ6IHm4HjhyzO0c8Mmobw=
-github.com/slntopp/nocloud-proto v0.0.0-20241107022353-c0ff7d46a77c/go.mod h1:qPbslPB2J9Q7qm6H9Jaqf/Ysf61YlPL0DUFhIdAEikI=
+github.com/slntopp/nocloud-proto v0.0.0-20241116172643-ebb28f6e8161 h1:7kVCLBTZEP1LI4ZaJMTrzZA+ks+qkUVLGBdBlmi9FXU=
+github.com/slntopp/nocloud-proto v0.0.0-20241116172643-ebb28f6e8161/go.mod h1:qPbslPB2J9Q7qm6H9Jaqf/Ysf61YlPL0DUFhIdAEikI=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
@@ -206,6 +204,8 @@ golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
+golang.org/x/sync v0.6.0 h1:5BMeUDZ7vkXGfEr1x9B4bRcTH4lpkTkpdh0T/J+qjbQ=
+golang.org/x/sync v0.6.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=

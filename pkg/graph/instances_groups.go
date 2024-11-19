@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
 
@@ -41,6 +42,7 @@ type InstancesGroupsController interface {
 	Provide(ctx context.Context, group, sp string) error
 	SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error)
 	GetEdge(ctx context.Context, inboundNode string, collection string) (string, error)
+	GetSP(ctx context.Context, group string) (ServicesProvider, error)
 }
 
 type InstancesGroup struct {
@@ -123,7 +125,13 @@ func (ctrl *instancesGroupsController) Create(ctx context.Context, service drive
 		return err
 	}
 
+	isImported := g.GetData()["imported"].GetBoolValue()
+
 	for _, instance := range g.GetInstances() {
+		if isImported {
+			log.Error("Can't create new instance to imported IG")
+			return fmt.Errorf("can't create new instance to imported IG")
+		}
 		_, err := ctrl.inst_ctrl.Create(ctx, meta.ID, *g.Sp, instance)
 		if err != nil {
 			log.Error("Failed to create Instance", zap.Error(err))
@@ -189,6 +197,8 @@ func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 		}
 	}
 
+	isImported := ig.GetData()["imported"].GetBoolValue()
+
 	// creating missing and updating existing instances
 	for _, inst := range ig.GetInstances() {
 		var instFound = false
@@ -204,6 +214,11 @@ func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 			}
 		}
 		if !instFound {
+			if isImported {
+				log.Error("Can't create new instance to imported IG")
+				return fmt.Errorf("can't create new instance to imported IG")
+			}
+
 			docID := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.Uuid)
 			_, err := ctrl.inst_ctrl.Create(ctx, docID, *oldIg.Sp, inst)
 			if err != nil {
@@ -265,11 +280,50 @@ func (ctrl *instancesGroupsController) TransferIG(ctx context.Context, oldSrvEdg
 	return nil
 }
 
+const getSPQuery = `
+LET instanceGroup = DOCUMENT(@instanceGroup)
+LET sp = (
+    FOR sp IN 1 OUTBOUND instanceGroup
+    GRAPH @permissions
+    FILTER IS_SAME_COLLECTION(@sps, sp)
+        RETURN sp )[0]
+FILTER sp != null        
+RETURN MERGE(sp, {uuid: sp._key})`
+
+func (ctrl *instancesGroupsController) GetSP(ctx context.Context, group string) (ServicesProvider, error) {
+	log := ctrl.log.Named("GetSP")
+	log.Debug("Getting Service Provider connected with IG", zap.String("group", group))
+	c, err := ctrl.db.Query(ctx, getSPQuery, map[string]interface{}{
+		"permissions":   schema.PERMISSIONS_GRAPH.Name,
+		"sps":           schema.SERVICES_PROVIDERS_COL,
+		"instanceGroup": driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
+	})
+	if err != nil {
+		log.Error("Error while querying", zap.Error(err))
+		return ServicesProvider{}, err
+	}
+	defer c.Close()
+
+	var r ServicesProvider
+	meta, err := c.ReadDocument(ctx, &r)
+	if err != nil {
+		log.Error("Error while reading document", zap.Error(err))
+		return r, err
+	}
+	r.Uuid = meta.Key
+
+	return r, nil
+}
+
 func (ctrl *instancesGroupsController) Provide(ctx context.Context, group, sp string) error {
 	_, err := ctrl.ig2sp.CreateDocument(ctx, Access{
 		From: driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
 		To:   driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp),
 	})
+	if err != nil {
+		return err
+	}
+	_, err = ctrl.col.UpdateDocument(ctx, group, map[string]interface{}{"sp": sp})
 	return err
 }
 
