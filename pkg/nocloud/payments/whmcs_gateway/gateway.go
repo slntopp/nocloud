@@ -99,8 +99,10 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		return fmt.Errorf("whmcs user not found")
 	}
 
+	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
+
 	// TODO: review taxed field
-	q, err := g.buildCreateInvoiceQueryBase(inv, userId)
+	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail)
 	if err != nil {
 		return err
 	}

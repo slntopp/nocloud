@@ -18,14 +18,20 @@ func EncodeStringBase64(s string) string {
 }
 
 // TODO: review TaxRate, PaymentMethod, AutoApplyCredit and other fields
-func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId int) (url.Values, error) {
+func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId int, _sendEmail bool) (url.Values, error) {
+
+	var sendEmail string = "1"
+	if !_sendEmail {
+		sendEmail = "0"
+	}
+
 	res, err := query.Values(CreateInvoiceQuery{
 		Action:          "CreateInvoice",
 		Username:        g.apiUsername,
 		Password:        g.apiPassword,
 		UserId:          fmt.Sprintf("%d", whmcsUserId),
 		Status:          statusToWhmcs(inv.Status),
-		SendInvoice:     "1",
+		SendInvoice:     sendEmail,
 		PaymentMethod:   "mailin",
 		TaxRate:         "10",
 		Date:            time.Unix(inv.Created, 0).Format("2006-01-02"),
