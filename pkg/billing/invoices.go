@@ -1262,6 +1262,11 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		return fmt.Sprintf("%d", d)
 	}
 
+	var dueDate = expire
+	if dueDate < now {
+		dueDate = now + period/2
+	}
+
 	inv := &pb.Invoice{
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
@@ -1277,7 +1282,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Total:    cost,
 		Type:     pb.ActionType_INSTANCE_RENEWAL,
 		Created:  now,
-		Deadline: expire, // Until when invoice should be paid
+		Deadline: dueDate, // Until when invoice should be paid
 		Account:  acc.GetUuid(),
 		Currency: acc.Currency,
 		Meta: map[string]*structpb.Value{

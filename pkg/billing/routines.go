@@ -96,7 +96,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 						log.Error("Error getting invoice. Skipping invoice creation", zap.Error(err))
 						continue
 					}
-					if inv.GetDeadline() > now {
+					if inv.GetDeadline() > now && inv.GetStatus() == pb.BillingStatus_UNPAID {
 						log.Info("Last renew invoice for this instance didn't expired yet. Skipping invoice creation", zap.String("invoice", inv.GetUuid()))
 						continue
 					}
