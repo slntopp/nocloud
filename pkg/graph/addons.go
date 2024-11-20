@@ -214,7 +214,7 @@ func (c *addonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 				query += fmt.Sprintf(` 
 FILTER LENGTH(
   FOR p IN @@plans
-	FILTER p.uuid IN @planUuids
+	FILTER p._key IN @planUuids
     LET products = p.products
     LET presentInProducts = LENGTH(
         FILTER IS_OBJECT(products)
