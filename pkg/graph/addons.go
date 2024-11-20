@@ -146,7 +146,7 @@ func (c *addonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 					continue
 				}
 				query = `
-LET searchAddons = FLATTEN(
+LET searchAddons = UNIQUE(FLATTEN(
   FOR p IN @@plans
     FILTER p._key IN @planUuids
     LET productsAddons = (
@@ -157,7 +157,7 @@ LET searchAddons = FLATTEN(
     )
     LET planAddons = IS_ARRAY(p.addons) ? p.addons : []
 	RETURN UNION_DISTINCT(planAddons, productsAddons)
-)
+))
  ` + query
 				query += " FILTER a._key IN searchAddons"
 				vars["planUuids"] = values
