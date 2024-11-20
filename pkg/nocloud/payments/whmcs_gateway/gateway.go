@@ -18,7 +18,7 @@ import (
 
 type NoCloudInvoicesManager interface {
 	CreateInvoice(inv *pb.Invoice) error
-	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) error
+	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
 
@@ -99,8 +99,10 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		return fmt.Errorf("whmcs user not found")
 	}
 
+	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
+
 	// TODO: review taxed field
-	q, err := g.buildCreateInvoiceQueryBase(inv, userId)
+	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail)
 	if err != nil {
 		return err
 	}
@@ -242,7 +244,7 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 		return "", fmt.Errorf("failed to get whmcs invoice")
 	}
 
-	body := g.buildPaymentURIQueryBase(userId)
+	body := g.buildPaymentURIQueryBase(userId, invId)
 	q, err := query.Values(body)
 	if err != nil {
 		return "", err
@@ -252,7 +254,7 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 		return "", err
 	}
 
-	return g.buildPaymentURI(invId, resp.AccessToken), nil
+	return g.buildPaymentURI(invId, resp), nil
 }
 
 func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invoice, error) {
@@ -290,7 +292,7 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
 		inv.Status = statusToNoCloud(whmcsInv.Status)
-		if err := g.invMan.UpdateInvoiceStatus(inv.GetUuid(), inv.Status); err != nil {
+		if inv, err = g.invMan.UpdateInvoiceStatus(inv.GetUuid(), inv.Status); err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 	}

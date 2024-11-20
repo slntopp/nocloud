@@ -366,9 +366,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 			log.Warn("Need SUDO Access token", zap.String("requestor", requestor.(string)))
 			return nil, status.Error(codes.Unauthenticated, "Wrong credentials")
 		}
-
-		// TODO: MAKE IT 5 MINUTES AGAIN
-		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*60*24)
+		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*10)
 	} else {
 		if request.GetAuth() == nil {
 			return nil, status.Error(codes.InvalidArgument, "Auth data was not presented")

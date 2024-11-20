@@ -161,7 +161,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 
 	// Find out record's item price (product, resource or addon)
 	var itemPrice float64
-	inst, err := s.instances.Get(ctx, record.Instance)
+	inst, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), record.Instance)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return err

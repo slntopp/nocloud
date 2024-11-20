@@ -480,6 +480,13 @@ func listAccounts[T Accessible](
 			}
 			insert += ` FILTER TO_NUMBER(node.status) in @statuses`
 			bindVars["statuses"] = values
+		} else if key == "currency" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER TO_NUMBER(node.currency.id) in @currencies`
+			bindVars["currencies"] = values
 		} else if key == "balance" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {

@@ -166,6 +166,11 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		return s._HandleGetSingleInvoice(ctx, acc, req.GetUuid())
 	}
 
+	var isAdmin bool
+	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		isAdmin = true
+	}
+
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
@@ -271,6 +276,17 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	}
 
 	log.Debug("Invoices retrieved", zap.Any("invoices", invoices))
+
+	for _, inv := range invoices {
+		if isAdmin {
+			continue
+		}
+		if !strings.Contains(inv.GetCurrency().GetTitle(), "EUR") {
+			continue
+		}
+		inv.Currency.Title = "EUR"
+	}
+
 	resp := connect.NewResponse(&pb.Invoices{Pool: invoices})
 	return resp, nil
 }
@@ -361,18 +377,18 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Transactions = []string{newTr.Msg.Uuid}
 	}
 
-	trCtx, err := s.invoices.BeginTransaction(ctx)
-	if err != nil {
-		log.Error("Failed to begin transaction", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to begin transaction")
-	}
+	//trCtx, err := s.invoices.BeginTransaction(ctx)
+	//if err != nil {
+	//	log.Error("Failed to begin transaction", zap.Error(err))
+	//	return nil, status.Error(codes.Internal, "Failed to begin transaction")
+	//}
 
 	t.Number = strNum
 	t.Created = now.Unix()
 	t.Payment = 0
 	t.Processed = 0
 	t.Returned = 0
-	r, err := s.invoices.Create(trCtx, &graph.Invoice{
+	r, err := s.invoices.Create(ctx, &graph.Invoice{
 		Invoice: t,
 		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
 			NumericNumber:  num,
@@ -380,21 +396,21 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		},
 	})
 	if err != nil {
-		_ = s.invoices.AbortTransaction(trCtx)
+		_ = s.invoices.AbortTransaction(ctx)
 		log.Error("Failed to create invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	gatewayCallback, _ := trCtx.Value(payments.GatewayCallback).(bool)
+	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
 	if !gatewayCallback {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(trCtx, r.Invoice); err != nil {
-			_ = s.invoices.AbortTransaction(trCtx)
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
+			//_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
 		}
 	}
 
-	_ = s.invoices.CommitTransaction(trCtx)
+	//_ = s.invoices.CommitTransaction(trCtx)
 
 	if req.Msg.GetIsSendEmail() {
 		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
@@ -710,7 +726,7 @@ quit:
 	}
 
 	log.Info("Finished invoice update status")
-	resp = connect.NewResponse(newInv)
+	resp = connect.NewResponse(upd.Invoice)
 	return resp, nil
 }
 

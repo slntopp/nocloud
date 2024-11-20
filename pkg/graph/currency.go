@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
 
@@ -303,6 +304,16 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 			Title:  doc.Title,
 			Public: doc.Public,
 		})
+	}
+
+	for _, currency := range currencies {
+		if isAdmin {
+			continue
+		}
+		if !strings.Contains(currency.GetTitle(), "EUR") {
+			continue
+		}
+		currency.Title = "EUR"
 	}
 
 	return currencies, nil

@@ -133,6 +133,7 @@ type InvoiceResponse struct {
 
 type PaymentURIResponse struct {
 	AccessToken string `json:"access_token"`
+	RedirectUrl string `json:"redirect_url"`
 	Result      string `json:"result"`
 	Message     string `json:"message"`
 }
@@ -165,11 +166,13 @@ type UpdateInvoiceQuery struct {
 }
 
 type PaymentURIQuery struct {
-	Action       string `url:"action"`
-	Username     string `url:"username"`
-	Password     string `url:"password"`
-	ClientID     int    `url:"client_id"`
-	ResponseType string `url:"responsetype"`
+	Action          string `url:"action"`
+	Username        string `url:"username"`
+	Password        string `url:"password"`
+	ClientID        int    `url:"client_id"`
+	Destination     string `url:"destination"`
+	SsoRedirectPath string `url:"sso_redirect_path"`
+	ResponseType    string `url:"responsetype"`
 }
 
 type InvoicePaid struct {

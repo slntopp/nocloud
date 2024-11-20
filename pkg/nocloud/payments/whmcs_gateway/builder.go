@@ -18,14 +18,20 @@ func EncodeStringBase64(s string) string {
 }
 
 // TODO: review TaxRate, PaymentMethod, AutoApplyCredit and other fields
-func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId int) (url.Values, error) {
+func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId int, _sendEmail bool) (url.Values, error) {
+
+	var sendEmail string = "1"
+	if !_sendEmail {
+		sendEmail = "0"
+	}
+
 	res, err := query.Values(CreateInvoiceQuery{
 		Action:          "CreateInvoice",
 		Username:        g.apiUsername,
 		Password:        g.apiPassword,
 		UserId:          fmt.Sprintf("%d", whmcsUserId),
 		Status:          statusToWhmcs(inv.Status),
-		SendInvoice:     "1",
+		SendInvoice:     sendEmail,
 		PaymentMethod:   "mailin",
 		TaxRate:         "10",
 		Date:            time.Unix(inv.Created, 0).Format("2006-01-02"),
@@ -40,22 +46,20 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 	return res, nil
 }
 
-func (g *WhmcsGateway) buildPaymentURIQueryBase(clientId int) PaymentURIQuery {
+func (g *WhmcsGateway) buildPaymentURIQueryBase(clientId int, invoiceId int) PaymentURIQuery {
 	return PaymentURIQuery{
-		Action:       "CreateSsoToken",
-		Username:     g.apiUsername,
-		Password:     g.apiPassword,
-		ResponseType: "json",
-		ClientID:     clientId,
+		Action:          "CreateSsoToken",
+		Username:        g.apiUsername,
+		Password:        g.apiPassword,
+		ResponseType:    "json",
+		ClientID:        clientId,
+		Destination:     "sso:custom_redirect",
+		SsoRedirectPath: fmt.Sprintf("viewinvoice.php?id=%d", invoiceId),
 	}
 }
 
-func (g *WhmcsGateway) buildPaymentURI(invoiceId int, token string) string {
-	u, err := url.Parse(g.baseUrl)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("%s?access_token=%s&id=%d", u.Scheme+"://"+u.Host+"/viewinvoice.php", token, invoiceId)
+func (g *WhmcsGateway) buildPaymentURI(_ int, data PaymentURIResponse) string {
+	return data.RedirectUrl
 }
 
 func (g *WhmcsGateway) buildUpdateInvoiceQueryBase(whmcsInvoiceId int) UpdateInvoiceQuery {
