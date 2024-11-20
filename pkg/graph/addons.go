@@ -159,9 +159,7 @@ LET searchAddons = UNION_DISTINCT(
 	RETURN UNION_DISTINCT(planAddons, productsAddons)
 )
  ` + query
-				query += fmt.Sprintf(` 
-FILTER a._key IN searchAddons
-`)
+				query += " FILTER a._key IN searchAddons"
 				vars["planUuids"] = values
 				vars["@plans"] = schema.BILLING_PLANS_COL
 			} else {
