@@ -146,7 +146,7 @@ func (c *addonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 					continue
 				}
 				query = `
-LET searchAddonsArrays = FLATTEN(
+LET searchAddons = FLATTEN(
   FOR p IN @@plans
     FILTER p._key IN @planUuids
     LET productsAddons = (
