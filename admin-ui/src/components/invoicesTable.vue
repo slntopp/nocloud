@@ -37,7 +37,7 @@
 
     <template v-slot:[`item.total`]="{ item }">
       <v-chip :color="getTotalColor(item)" abs>
-        {{ `${-item.total} ${item.currency?.title || defaultCurrency.title}` }}
+        {{ `${item.total} ${item.currency?.title || defaultCurrency.title}` }}
       </v-chip>
     </template>
 
@@ -116,7 +116,7 @@ const headers = ref([
   { text: "UUID", value: "uuid" },
   { text: "Number", value: "number" },
   { text: "Account ", value: "account" },
-  { text: "Amount ", value: "total" },
+  { text: "Total ", value: "total" },
   { text: "Type ", value: "type" },
   { text: "Payment invoice id", value: "meta.whmcs_invoice_id" },
   { text: "Created date ", value: "created" },
@@ -181,7 +181,7 @@ const searchFields = computed(() => [
     title: "Account",
     component: AccountsAutocomplete,
   },
-  { title: "Amount", key: "total", type: "number-range" },
+  { title: "Total", key: "total", type: "number-range" },
   { title: "Payment invoice id", key: "whmcs_invoice_id", type: "input" },
   { title: "Due date", key: "deadline", type: "date" },
   { title: "Created date", key: "created", type: "date" },
