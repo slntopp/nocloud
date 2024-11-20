@@ -166,6 +166,11 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		return s._HandleGetSingleInvoice(ctx, acc, req.GetUuid())
 	}
 
+	var isAdmin bool
+	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		isAdmin = true
+	}
+
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
@@ -271,6 +276,17 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	}
 
 	log.Debug("Invoices retrieved", zap.Any("invoices", invoices))
+
+	for _, inv := range invoices {
+		if isAdmin {
+			continue
+		}
+		if !strings.Contains(inv.GetCurrency().GetTitle(), "EUR") {
+			continue
+		}
+		inv.Currency.Title = "EUR"
+	}
+
 	resp := connect.NewResponse(&pb.Invoices{Pool: invoices})
 	return resp, nil
 }
