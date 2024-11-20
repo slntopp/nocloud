@@ -917,10 +917,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 	newStatus := req.GetStatus()
 	oldStatus := t.GetStatus()
-	if (oldStatus == pb.BillingStatus_UNPAID && newStatus == pb.BillingStatus_DRAFT) ||
-		(oldStatus == pb.BillingStatus_DRAFT && newStatus == pb.BillingStatus_UNPAID) {
-		return nil, status.Error(codes.InvalidArgument, "Forbidden status conversion")
-	}
+	//if (oldStatus == pb.BillingStatus_UNPAID && newStatus == pb.BillingStatus_DRAFT) ||
+	//	(oldStatus == pb.BillingStatus_DRAFT && newStatus == pb.BillingStatus_UNPAID) {
+	//	return nil, status.Error(codes.InvalidArgument, "Forbidden status conversion")
+	//}
 
 	if req.GetPayment() != 0 && t.GetPayment() != 0 {
 		t.Payment = req.GetPayment()
