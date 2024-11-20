@@ -150,13 +150,12 @@ FILTER LENGTH(
   FOR p IN @@plans
 	FILTER p._key IN @planUuids
     LET products = p.products
-    LET presentInProducts = LENGTH(
+    FILTER a._key IN p.addons || LENGTH(
         FILTER IS_OBJECT(products)
         FOR attr IN ATTRIBUTES(products)
             FILTER a._key IN products[attr].addons
             RETURN true
     ) > 0
-    FILTER a._key IN p.addons || presentInProducts
 	RETURN true
 ) > 0
 `)
