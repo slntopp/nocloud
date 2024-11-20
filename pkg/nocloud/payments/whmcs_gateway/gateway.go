@@ -244,7 +244,7 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 		return "", fmt.Errorf("failed to get whmcs invoice")
 	}
 
-	body := g.buildPaymentURIQueryBase(userId)
+	body := g.buildPaymentURIQueryBase(userId, invId)
 	q, err := query.Values(body)
 	if err != nil {
 		return "", err
@@ -254,7 +254,7 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 		return "", err
 	}
 
-	return g.buildPaymentURI(invId, resp.AccessToken), nil
+	return g.buildPaymentURI(invId, resp), nil
 }
 
 func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invoice, error) {

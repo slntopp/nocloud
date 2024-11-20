@@ -46,22 +46,20 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 	return res, nil
 }
 
-func (g *WhmcsGateway) buildPaymentURIQueryBase(clientId int) PaymentURIQuery {
+func (g *WhmcsGateway) buildPaymentURIQueryBase(clientId int, invoiceId int) PaymentURIQuery {
 	return PaymentURIQuery{
-		Action:       "CreateSsoToken",
-		Username:     g.apiUsername,
-		Password:     g.apiPassword,
-		ResponseType: "json",
-		ClientID:     clientId,
+		Action:          "CreateSsoToken",
+		Username:        g.apiUsername,
+		Password:        g.apiPassword,
+		ResponseType:    "json",
+		ClientID:        clientId,
+		Destination:     "sso:custom_redirect",
+		SsoRedirectPath: fmt.Sprintf("viewinvoice.php?id=%d", invoiceId),
 	}
 }
 
-func (g *WhmcsGateway) buildPaymentURI(invoiceId int, token string) string {
-	u, err := url.Parse(g.baseUrl)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("%s?access_token=%s&id=%d", u.Scheme+"://"+u.Host+"/viewinvoice.php", token, invoiceId)
+func (g *WhmcsGateway) buildPaymentURI(_ int, data PaymentURIResponse) string {
+	return data.RedirectUrl
 }
 
 func (g *WhmcsGateway) buildUpdateInvoiceQueryBase(whmcsInvoiceId int) UpdateInvoiceQuery {
