@@ -206,6 +206,28 @@ func (c *addonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 				query += fmt.Sprintf(` FILTER (%t && a.system == true) || (!%t && (!a.system || a.system == false))`, value.GetBoolValue(), value.GetBoolValue())
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(a.title) LIKE LOWER("%s") || LOWER(a.group) LIKE LOWER("%s") || a._key LIKE "%s"`, "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+			} else if key == "plan_uuid" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` 
+FILTER LENGTH(
+  FOR p IN @@plans
+	FILTER p.uuid IN @planUuids
+    LET products = p.products
+    LET presentInProducts = LENGTH(
+        FILTER IS_OBJECT(products)
+        FOR attr IN ATTRIBUTES(products)
+            FILTER a._key IN products[attr].addons
+            RETURN true
+    ) > 0
+    FILTER a._key IN p.addons || presentInProducts
+	RETURN true
+) > 0
+`)
+				vars["planUuids"] = values
+				vars["@plans"] = schema.BILLING_PLANS_COL
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
