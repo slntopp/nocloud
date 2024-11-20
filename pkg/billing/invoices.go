@@ -1271,7 +1271,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
 			{
-				Description: fmt.Sprintf("Instance «%s» renewal: %s:%s - %s:%s",
+				Description: fmt.Sprintf("Instance «%s» renewal: %s.%s - %s.%s",
 					inst.GetTitle(), fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month()))),
 				Amount:   1,
 				Unit:     "Pcs",
