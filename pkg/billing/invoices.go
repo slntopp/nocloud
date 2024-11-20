@@ -1277,12 +1277,13 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Total:    cost,
 		Type:     pb.ActionType_INSTANCE_RENEWAL,
 		Created:  now,
-		Deadline: time.Unix(now, 0).Add(time.Duration(period) * time.Second).Unix(), // Until when invoice should be paid
+		Deadline: expire, // Until when invoice should be paid
 		Account:  acc.GetUuid(),
 		Currency: acc.Currency,
 		Meta: map[string]*structpb.Value{
-			"creator":           structpb.NewStringValue(requester),
-			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
+			"creator":              structpb.NewStringValue(requester),
+			"no_discount_price":    structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
+			"expiration_timestamp": structpb.NewNumberValue(float64(expire)),
 		},
 	}
 
