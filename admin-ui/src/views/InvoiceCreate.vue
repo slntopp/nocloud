@@ -1,8 +1,6 @@
 <template>
   <div class="pa-4">
-    <h1 v-if="!isEdit && invoice?.status !== 'DRAFT'" class="page__title">
-      Create invoice
-    </h1>
+    <h1 v-if="!isEdit && !isDraft" class="page__title">Create invoice</h1>
 
     <div
       v-if="isEdit"
@@ -197,6 +195,15 @@
           >
             email
           </v-btn>
+
+          <v-btn
+            class="mx-4"
+            v-if="isEdit"
+            color="background-light"
+            @click="downloadInvoice"
+          >
+            download
+          </v-btn>
         </div>
 
         <div v-if="isEdit">
@@ -370,6 +377,7 @@ onMounted(async () => {
 });
 
 const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
+const isDraft = computed(() => invoice.value?.status !== "DRAFT");
 const instances = computed(() => {
   const account = newInvoice.value.account?.uuid;
   if (!account || isInstancesLoading.value) {
@@ -465,6 +473,22 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     isSaveLoading.value = false;
+  }
+};
+
+const downloadInvoice = async () => {
+  try {
+    const { paymentLink } = await store.getters["invoices/invoicesClient"].pay({
+      invoiceId: invoice.value.uuid,
+    });
+    if (!paymentLink) {
+      throw new Error("No link");
+    }
+    window.open(paymentLink, "_blanc");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Document not found",
+    });
   }
 };
 

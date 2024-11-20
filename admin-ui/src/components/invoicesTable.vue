@@ -45,8 +45,14 @@
       {{ formatSecondsToDate(item.processed, true) }}
     </template>
 
-    <template v-slot:[`item.payment_invoice_id`]="{ item }">
-      {{ item?.meta?.whmcs_invoice_id }}
+    <template v-slot:[`item.meta.whmcs_invoice_id`]="{ item }">
+      <a
+        style="text-decoration: underline"
+        @click="() => downloadInvoice(item)"
+        class="router-link-exact-active router-link-active"
+      >
+        {{ item?.meta?.whmcs_invoice_id }}
+      </a>
     </template>
 
     <template v-slot:[`item.type`]="{ value }">
@@ -118,7 +124,7 @@ const headers = ref([
   { text: "Account ", value: "account" },
   { text: "Total ", value: "total" },
   { text: "Type ", value: "type" },
-  { text: "Payment invoice id", value: "meta.whmcs_invoice_id" },
+  { text: "External ID", value: "meta.whmcs_invoice_id" },
   { text: "Created date ", value: "created" },
   { text: "Due date", value: "deadline" },
   { text: "Payment date", value: "payment" },
@@ -182,7 +188,7 @@ const searchFields = computed(() => [
     component: AccountsAutocomplete,
   },
   { title: "Total", key: "total", type: "number-range" },
-  { title: "Payment invoice id", key: "whmcs_invoice_id", type: "input" },
+  { title: "External ID", key: "whmcs_invoice_id", type: "input" },
   { title: "Due date", key: "deadline", type: "date" },
   { title: "Created date", key: "created", type: "date" },
   { title: "Payment date", key: "payment", type: "date" },
