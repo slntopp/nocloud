@@ -50,6 +50,7 @@ import AccountReport from "@/components/account/reports.vue";
 import AccountChats from "@/components/account/chats.vue";
 import AccountNotes from "@/components/account/notes.vue";
 import AccountSubaccounts from "@/components/account/subaccounts.vue";
+import AccountInvoices from "@/components/account/invoices.vue";
 
 const store = useStore();
 const route = useRoute();
@@ -80,6 +81,10 @@ const tabItems = computed(() => [
   {
     component: AccountsInfo,
     title: "info",
+  },
+  {
+    component: AccountInvoices,
+    title: "invoices",
   },
   {
     component: AccountNotes,

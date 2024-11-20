@@ -12,6 +12,7 @@
     :server-items-length="count"
     :server-side-page="page"
     @update:options="setOptions"
+    :show-select="!hideSelect"
   >
     <template v-slot:[`uuid-actions`]="{ item }">
       <v-btn @click="downloadInvoice(item)" icon>
@@ -95,18 +96,26 @@ import {
   ActionType,
   BillingStatus,
 } from "nocloud-proto/proto/es/billing/billing_pb";
+import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
   value: {},
+  customFilter: {},
+  noSearch: { type: Boolean, default: false },
+  hideSelect: { type: Boolean, default: false },
   refetch: { type: Boolean, default: false },
 });
-const { tableName, value, refetch } = toRefs(props);
+const { tableName, value, refetch, noSearch, customFilter } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
 const store = useStore();
 const { getInvoiceStatusColor, getTotalColor } = useInvoices();
+useSearch({
+  name: props.tableName,
+  noSearch: props.noSearch,
+});
 
 const count = ref(10);
 const page = ref(1);
@@ -134,7 +143,9 @@ const headers = ref([
 ]);
 
 onMounted(() => {
-  store.commit("appSearch/setFields", searchFields.value);
+  if (!props.noSearch) {
+    store.commit("appSearch/setFields", searchFields.value);
+  }
 
   store.commit("reloadBtn/setCallback", {
     event: () => {
@@ -198,53 +209,66 @@ const searchFields = computed(() => [
 
 const invoicesFilters = computed(() => {
   const filters = {};
-  const datekeys = ["created", "processed", "returned", "payment", "deadline"];
 
-  for (const key of Object.keys(filter.value)) {
-    const value = filter.value[key];
-
-    if (
-      !value ||
-      (Array.isArray(value) && !value.length) ||
-      (typeof value === "object" && !Object.keys(value).length)
-    ) {
-      continue;
+  if (noSearch.value) {
+    for (const key of Object.keys(customFilter.value)) {
+      filters[key] = customFilter.value[key];
     }
+  } else {
+    const datekeys = [
+      "created",
+      "processed",
+      "returned",
+      "payment",
+      "deadline",
+    ];
 
-    if (value?.to || value?.from) {
-      const total = {};
-      if (value?.to) {
-        total.to = +value?.to;
-      }
-      if (value?.from) {
-        total.from = +value?.from;
+    for (const key of Object.keys(filter.value)) {
+      const value = filter.value[key];
+
+      if (
+        !value ||
+        (Array.isArray(value) && !value.length) ||
+        (typeof value === "object" && !Object.keys(value).length)
+      ) {
+        continue;
       }
 
-      filters[key] = total;
-      continue;
+      if (value?.to || value?.from) {
+        const total = {};
+        if (value?.to) {
+          total.to = +value?.to;
+        }
+        if (value?.from) {
+          total.from = +value?.from;
+        }
+
+        filters[key] = total;
+        continue;
+      }
+
+      if (datekeys.includes(key)) {
+        let dates = [];
+
+        if (value[0]) {
+          dates.push(new Date(value[0]).getTime() / 1000);
+        }
+        if (value[1]) {
+          dates.push(new Date(value[1]).getTime() / 1000);
+        }
+
+        dates = dates.sort();
+
+        const result = { from: dates[0] };
+        if (dates[1]) {
+          result.to = dates[1];
+        }
+        filters[key] = result;
+        continue;
+      }
+
+      filters[key] = filter.value[key];
     }
-
-    if (datekeys.includes(key)) {
-      let dates = [];
-
-      if (value[0]) {
-        dates.push(new Date(value[0]).getTime() / 1000);
-      }
-      if (value[1]) {
-        dates.push(new Date(value[1]).getTime() / 1000);
-      }
-
-      dates = dates.sort();
-
-      const result = { from: dates[0] };
-      if (dates[1]) {
-        result.to = dates[1];
-      }
-      filters[key] = result;
-      continue;
-    }
-
-    filters[key] = filter.value[key];
   }
 
   if (searchParam.value) {
@@ -352,10 +376,8 @@ watch(invoices, () => {
 </script>
 
 <script>
-import search from "@/mixins/search";
-
 export default {
   name: "invoices-table",
-  mixins: [search({ name: "invoices-table" })],
+  mixins: [],
 };
 </script>
