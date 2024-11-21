@@ -205,6 +205,12 @@ start:
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
 	for {
+		// Check if current time is 12:00
+		if tick.Hour() != 12 {
+			log.Info("Skip executing if it is not 12:00-12:59")
+			goto ticker
+		}
+
 		s.inv.Status.Status = hpb.Status_RUNNING
 		s.inv.Status.Error = nil
 
@@ -212,6 +218,8 @@ start:
 		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf, iPub)
 
 		s.inv.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+
+	ticker:
 		select {
 		case tick = <-ticker.C:
 			continue
