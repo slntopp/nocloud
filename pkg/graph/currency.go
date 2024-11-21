@@ -30,9 +30,12 @@ type CurrencyController interface {
 }
 
 type Currency struct {
-	Id     int32  `json:"id"`
-	Title  string `json:"title"`
-	Public bool   `json:"public"`
+	Id        int32  `json:"id"`
+	Title     string `json:"title"`
+	Public    bool   `json:"public"`
+	Precision int32  `json:"precision"`
+	Format    string `json:"format"`
+	Rounding  int    `json:"rounding"`
 	driver.DocumentMeta
 }
 
@@ -46,6 +49,9 @@ func CurrencyFromPb(currency *pb.Currency) Currency {
 			Key: key,
 			ID:  driver.NewDocumentID(schema.CUR_COL, key),
 		},
+		Precision: currency.GetPrecision(),
+		Format:    currency.GetFormat(),
+		Rounding:  int(currency.GetRounding()),
 	}
 }
 
