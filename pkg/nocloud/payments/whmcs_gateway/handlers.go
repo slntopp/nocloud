@@ -9,6 +9,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
 	"time"
@@ -144,6 +145,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 	log = log.With(zap.String("event", resp.Event))
 
 	ctx := context.WithValue(context.Background(), GatewayCallback, true)
+	ctx = metadata.AppendToOutgoingContext(ctx, string(GatewayCallback), "true")
 	var innerErr error
 	switch resp.Event {
 	case "InvoicePaid":
