@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
-	"google.golang.org/grpc/metadata"
 	"slices"
 	"strings"
 	"time"
@@ -30,22 +29,6 @@ import (
 
 func ctxWithRoot(ctx context.Context) context.Context {
 	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
-}
-
-func getGatewayCallbackValue(ctx context.Context) bool {
-	md, ok := metadata.FromIncomingContext(ctx)
-	if ok {
-		if v, ok := md[string(payments.GatewayCallback)]; ok {
-			return v[0] == "true"
-		}
-	}
-	md, ok = metadata.FromOutgoingContext(ctx)
-	if ok {
-		if v, ok := md[string(payments.GatewayCallback)]; ok {
-			return v[0] == "true"
-		}
-	}
-	return ctx.Value(payments.GatewayCallback).(bool)
 }
 
 type pair[T any] struct {
@@ -418,7 +401,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	if !getGatewayCallbackValue(ctx) {
+	if !payments.GetGatewayCallbackValue(ctx) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
 			//_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
@@ -734,7 +717,7 @@ quit:
 	if err != nil {
 		log.Error("Failed to get updated invoice", zap.Error(err))
 	}
-	if err == nil && !getGatewayCallbackValue(ctx) {
+	if err == nil && !payments.GetGatewayCallbackValue(ctx) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
@@ -1088,8 +1071,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	log.Info("GATEWAY CALLBACK VAL", zap.Bool("val", getGatewayCallbackValue(ctx)))
-	if !getGatewayCallbackValue(ctx) {
+	log.Info("GATEWAY CALLBACK VAL", zap.Bool("val", payments.GetGatewayCallbackValue(ctx)))
+	if !payments.GetGatewayCallbackValue(ctx) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}

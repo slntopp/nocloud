@@ -7,6 +7,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	"google.golang.org/grpc/metadata"
 )
 
 type PaymentGateway interface {
@@ -19,6 +20,23 @@ type PaymentGateway interface {
 type ContextKey string
 
 const GatewayCallback = ContextKey("payment-gateway-callback")
+
+func GetGatewayCallbackValue(ctx context.Context) bool {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		if v, ok := md[string(GatewayCallback)]; ok {
+			return v[0] == "true"
+		}
+	}
+	md, ok = metadata.FromOutgoingContext(ctx)
+	if ok {
+		if v, ok := md[string(GatewayCallback)]; ok {
+			return v[0] == "true"
+		}
+	}
+	val, _ := ctx.Value(GatewayCallback).(bool)
+	return val
+}
 
 var (
 	_registered bool
