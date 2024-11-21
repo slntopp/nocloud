@@ -280,8 +280,11 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 	for cursor.HasMore() {
 		doc := struct {
 			driver.DocumentMeta
-			Title  string `json:"title"`
-			Public bool   `json:"public"`
+			Title     string `json:"title"`
+			Public    bool   `json:"public"`
+			Precision int32  `json:"precision"`
+			Format    string `json:"format"`
+			Rounding  int    `json:"rounding"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
@@ -300,9 +303,12 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 		}
 
 		currencies = append(currencies, &pb.Currency{
-			Id:     int32(id),
-			Title:  doc.Title,
-			Public: doc.Public,
+			Id:        int32(id),
+			Title:     doc.Title,
+			Public:    doc.Public,
+			Precision: doc.Precision,
+			Format:    doc.Format,
+			Rounding:  pb.Rounding(doc.Rounding),
 		})
 	}
 
