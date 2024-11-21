@@ -4,6 +4,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"github.com/arangodb/go-driver"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	epb "github.com/slntopp/nocloud-proto/events"
@@ -13,21 +14,19 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+	"strings"
 	"time"
 )
 
 func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx context.Context, event *epb.Event, currencyConf CurrencyConf, now int64) error {
 	log = s.log.Named("ProcessInstanceCreation")
 	log = log.With(zap.String("instance", event.Uuid))
+	rootId := driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY)
 
-	instance, err := s.instances.Get(ctx, event.Uuid)
+	instance, err := s.instances.GetWithAccess(ctx, rootId, event.GetUuid())
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
 		return err
-	}
-	if instance == nil {
-		log.Error("Failed to get instance. Instance is nil")
-		return fmt.Errorf("failed to get instance. Instance is nil")
 	}
 
 	// Create promocode on newly created instance if it was passed on creation
@@ -85,11 +84,22 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		return fmt.Errorf("failed to convert cost: %w", err)
 	}
 
+	bp := instance.GetBillingPlan()
+	product, hasProduct := bp.GetProducts()[instance.GetProduct()]
+	if !hasProduct {
+		log.Warn("Product not found in billing plan", zap.String("product", instance.GetProduct()))
+	}
+	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
+	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
+	productTitle := product.GetTitle() + " "
+	startDescription := fmt.Sprintf("%s%s", invoicePrefix, productTitle)
+	startDescription = strings.TrimSpace(startDescription)
+
 	inv := &bpb.Invoice{
 		Status: bpb.BillingStatus_UNPAID,
 		Items: []*bpb.Item{
 			{
-				Description: fmt.Sprintf("Instance «%s» start payment", instance.GetTitle()),
+				Description: startDescription,
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       cost,
@@ -97,13 +107,13 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			},
 		},
 		Meta: map[string]*structpb.Value{
-			"creator":           structpb.NewStringValue("nocloud.billing.ProcessInstanceCreation"),
+			"creator":           structpb.NewStringValue("system"),
 			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 		},
 		Total:    cost,
 		Type:     bpb.ActionType_INSTANCE_START,
 		Created:  now,
-		Deadline: now + (int64(time.Hour.Seconds()) * 24),
+		Deadline: now + (int64(time.Hour.Seconds()) * 24 * 5),
 		Account:  acc.GetUuid(),
 		Currency: accCurrency,
 	}

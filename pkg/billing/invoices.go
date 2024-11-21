@@ -1197,8 +1197,11 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       req.GetSum(),
-				Description: "Top up balance",
+				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
 			},
+		},
+		Meta: map[string]*structpb.Value{
+			"creator": structpb.NewStringValue(requester),
 		},
 	}
 
@@ -1322,7 +1325,18 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	period := periods[len(periods)-1]
 	expire := expirings[0]
 	expireDate := time.Unix(expire, 0)
-	untilDate := expireDate.Add(time.Duration(period) * time.Second)
+
+	var untilDate time.Time
+	const monthSecs = 3600 * 24 * 30
+	const daySecs = 3600 * 24
+	if period == monthSecs {
+		untilDate = expireDate.AddDate(0, 1, 0)
+	} else {
+		untilDate = expireDate.Add(time.Duration(period) * time.Second)
+	}
+	if untilDate.Unix()-expireDate.Unix() > daySecs {
+		untilDate = untilDate.AddDate(0, 0, -1)
+	}
 
 	fDateNum := func(d int) string {
 		if d < 10 {
@@ -1336,16 +1350,28 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		dueDate = now + period/2
 	}
 
+	bp := inst.GetBillingPlan()
+	product, hasProduct := bp.GetProducts()[inst.GetProduct()]
+	if !hasProduct {
+		log.Warn("Product not found in billing plan", zap.String("product", inst.GetProduct()))
+	}
+	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
+	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
+	productTitle := product.GetTitle() + " "
+	renewDescription := fmt.Sprintf("%s%s(%s.%s.%d - %s.%s.%d)", invoicePrefix, productTitle,
+		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
+		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
+	renewDescription = strings.TrimSpace(renewDescription)
+
 	inv := &pb.Invoice{
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
 			{
-				Description: fmt.Sprintf("Instance «%s» renewal: %s.%s - %s.%s",
-					inst.GetTitle(), fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month()))),
-				Amount:   1,
-				Unit:     "Pcs",
-				Price:    cost,
-				Instance: inst.GetUuid(),
+				Description: renewDescription,
+				Amount:      1,
+				Unit:        "Pcs",
+				Price:       cost,
+				Instance:    inst.GetUuid(),
 			},
 		},
 		Total:    cost,
