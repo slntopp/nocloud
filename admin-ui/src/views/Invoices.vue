@@ -4,8 +4,8 @@
       <div class="d-flex align-center">
         <v-btn class="mr-1" :to="{ name: 'Invoice create' }"> Create </v-btn>
 
-        <v-btn class="mr-1 ml-3">overdue</v-btn>
-        <v-btn class="mr-1">unpaid</v-btn>
+        <v-btn class="mr-1 ml-3" @click="setOverdueLayout">overdue</v-btn>
+        <v-btn class="mr-1" @click="setUnpaidLayout">unpaid</v-btn>
       </div>
       <div class="d-flex align-center">
         <confirm-dialog>
@@ -59,7 +59,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
 import {
@@ -177,6 +177,57 @@ const handleCopyInvoice = async () => {
     isCopyLoading.value = false;
   }
 };
+
+const defaultLayouts = computed(() => ({
+  unpaid: {
+    title: "Unpaid",
+    filter: { status: [2] },
+    fields: ["status"],
+    id: "id" + Math.random().toString(16).slice(2),
+  },
+  overdue: {
+    id: "id" + Math.random().toString(16).slice(2),
+    title: "Overdue",
+    fields: ["deadline", "status"],
+    filter: {
+      status: [2],
+      deadline: [
+        new Date(Date.now() - 86000 * 365 * 1000).toISOString().split("T")[0],
+        new Date(Date.now()).toISOString().split("T")[0],
+      ],
+    },
+  },
+}));
+
+const setDefaultLayouts = () => {
+  const defaults = Object.values(defaultLayouts.value);
+  const layouts = JSON.parse(
+    JSON.stringify(store.getters["appSearch/layouts"])
+  );
+
+  defaults.forEach((layout) => {
+    const index = layouts.findIndex((l) => l.title === layout.title);
+    if (index == -1) {
+      layouts.push(layout);
+    } else {
+      layouts[index] = layout;
+    }
+  });
+
+  store.commit("appSearch/setLayouts", layouts);
+};
+
+const setOverdueLayout = () => {
+  store.commit("appSearch/setCurrentLayout", defaultLayouts.value.overdue.id);
+};
+
+const setUnpaidLayout = () => {
+  store.commit("appSearch/setCurrentLayout", defaultLayouts.value.unpaid.id);
+};
+
+onMounted(() => {
+  setTimeout(() => setDefaultLayouts(), 500);
+});
 </script>
 
 <script>
