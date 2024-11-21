@@ -65,18 +65,18 @@ func statusToNoCloud(status string) pb.BillingStatus {
 }
 
 type CreateInvoiceQuery struct {
-	Action          string `url:"action"`
-	Username        string `url:"username"`
-	Password        string `url:"password"` // md5 hash
-	UserId          string `url:"userid"`
-	Status          string `url:"status"`
-	SendInvoice     string `url:"sendinvoice"`
-	PaymentMethod   string `url:"paymentmethod"`
-	TaxRate         string `url:"taxrate"`
-	Date            string `url:"date"`
-	DueDate         string `url:"duedate"`
-	AutoApplyCredit string `url:"autoapplycredit"`
-	ResponseType    string `url:"responsetype"`
+	Action          string  `url:"action"`
+	Username        string  `url:"username"`
+	Password        string  `url:"password"` // md5 hash
+	UserId          string  `url:"userid"`
+	Status          string  `url:"status"`
+	SendInvoice     string  `url:"sendinvoice"`
+	PaymentMethod   *string `url:"paymentmethod"`
+	TaxRate         string  `url:"taxrate"`
+	Date            string  `url:"date"`
+	DueDate         string  `url:"duedate"`
+	AutoApplyCredit string  `url:"autoapplycredit"`
+	ResponseType    string  `url:"responsetype"`
 }
 
 type GetInvoiceQuery struct {
