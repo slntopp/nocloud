@@ -986,10 +986,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 	newStatus := req.GetStatus()
 	oldStatus := t.GetStatus()
-	//if (oldStatus == pb.BillingStatus_UNPAID && newStatus == pb.BillingStatus_DRAFT) ||
-	//	(oldStatus == pb.BillingStatus_DRAFT && newStatus == pb.BillingStatus_UNPAID) {
-	//	return nil, status.Error(codes.InvalidArgument, "Forbidden status conversion")
-	//}
 
 	if req.GetPayment() != 0 && t.GetPayment() != 0 {
 		t.Payment = req.GetPayment()
@@ -1027,9 +1023,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Total = req.GetTotal()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
-	if req.Transactions != nil {
-		t.Transactions = req.Transactions
-	}
 	if req.Currency == nil {
 		t.Currency = defCurr
 	}
@@ -1037,6 +1030,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
+	oldSum := old.Total
 	sum := 0.0
 	if len(t.GetItems()) > 0 {
 		for _, item := range t.Items {
@@ -1047,30 +1041,25 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 	}
 
-	//if t.Type == pb.ActionType_BALANCE {
-	//	var transactionTotal = t.GetTotal()
-	//	transactionTotal *= -1
-	//
-	//	// Convert invoice's currency to default currency(according to how creating transaction works)
-	//	rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
-	//	if err != nil {
-	//		log.Error("Failed to get exchange rate", zap.Error(err))
-	//		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-	//	}
-	//
-	//	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
-	//		Priority: pb.Priority_NORMAL,
-	//		Account:  t.GetAccount(),
-	//		Currency: defCurr,
-	//		Total:    transactionTotal * rate,
-	//		Exec:     0,
-	//	}))
-	//	if err != nil {
-	//		log.Error("Failed to create transaction", zap.Error(err))
-	//		return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
-	//	}
-	//	t.Transactions = []string{newTr.Msg.Uuid}
-	//}
+	if t.Type == pb.ActionType_BALANCE && sum != oldSum {
+		var transactionTotal = t.GetTotal()
+		transactionTotal *= -1
+
+		if len(t.GetTransactions()) != 1 {
+			return nil, status.Error(codes.InvalidArgument, "Balance invoice must have only one transaction")
+		}
+
+		tr, err := s.transactions.Get(ctx, t.GetTransactions()[0])
+		if err != nil {
+			log.Error("Failed to get transaction to update", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get transaction")
+		}
+		tr.Total = transactionTotal
+		if _, err := s.transactions.Update(ctx, tr); err != nil {
+			log.Error("Failed to update transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to update transaction")
+		}
+	}
 
 	upd, err := s.invoices.Update(ctx, t)
 	if err != nil {

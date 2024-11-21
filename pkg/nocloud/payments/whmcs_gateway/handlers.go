@@ -3,8 +3,15 @@ package whmcs_gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/arangodb/go-driver"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/structpb"
+	"strings"
+	"time"
 )
 
 type ContextKey string
@@ -12,23 +19,106 @@ type ContextKey string
 const GatewayCallback = ContextKey("payment-gateway-callback")
 
 func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logger, data InvoiceCreated) error {
-	whmcsInv, err := g.GetInvoice(context.Background(), data.InvoiceId)
-	if err != nil {
+	log.Info("Got invoiceCreated event. Got data", zap.Any("data", data))
+	var err error
+	if _, err = g.getInvoiceByWhmcsId(data.InvoiceId); err == nil || data.Source == "api" {
+		log.Info("Invoice already exists in NoCloud", zap.Int("invoice_id", data.InvoiceId))
+		return nil
+	}
+	if !errors.Is(err, errNotFound) {
+		log.Error("Error getting invoice", zap.Error(err))
 		return err
 	}
 
-	_, err = g.GetAccountByWhmcsId(whmcsInv.UserId)
+	whmcsInv, err := g.GetInvoice(ctx, data.InvoiceId)
 	if err != nil {
+		log.Error("Error getting invoice", zap.Error(err))
 		return err
 	}
 
-	// TODO
+	acc, err := g.GetAccountByWhmcsId(whmcsInv.UserId)
+	if err != nil {
+		log.Error("Error getting account", zap.Error(err))
+		return err
+	}
+
+	inv := &pb.Invoice{
+		Status:       statusToNoCloud(whmcsInv.Status),
+		Account:      acc.GetUuid(),
+		Transactions: make([]string, 0),
+		Total:        float64(whmcsInv.Total),
+		Meta: map[string]*structpb.Value{
+			"note":         structpb.NewStringValue("=== CREATED THROUGH WHMCS ===\n" + whmcsInv.Notes),
+			invoiceIdField: structpb.NewNumberValue(float64(data.InvoiceId)),
+		},
+		Currency: acc.GetCurrency(),
+		Type:     pb.ActionType_WHMCS_INVOICE,
+	}
+
+	newItems := make([]*pb.Item, 0)
+	for _, item := range whmcsInv.Items.Items {
+		newItems = append(newItems, &pb.Item{
+			Description: item.Description,
+			Amount:      1,
+			Price:       float64(item.Amount),
+			Unit:        "Pcs",
+		})
+	}
+	inv.Items = newItems
+
+	if !strings.Contains(whmcsInv.DatePaid, "0000-00-00") {
+		t, err := time.Parse("2006-01-02 15:04:05", whmcsInv.DatePaid)
+		if err != nil {
+			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
+		}
+		inv.Payment = t.Unix()
+		inv.Processed = inv.Payment
+	}
+	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
+		t, err := time.Parse("2006-01-02", whmcsInv.DueDate)
+		if err != nil {
+			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
+		}
+		inv.Deadline = t.Unix()
+	}
+	if !strings.Contains(whmcsInv.Date, "0000-00-00") {
+		t, err := time.Parse("2006-01-02", whmcsInv.Date)
+		if err != nil {
+			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
+		}
+		inv.Created = t.Unix()
+	}
+
+	if err = g.invMan.CreateInvoice(ctx, inv); err != nil {
+		log.Error("Error creating invoice", zap.Error(err))
+		return err
+	}
 
 	return nil
 }
 
 func (g *WhmcsGateway) invoiceDeletedHandler(ctx context.Context, log *zap.Logger, data InvoiceDeleted) error {
-	return fmt.Errorf("not implemented invoicedeleted logic")
+	log.Info("Got invoiceCreated event. Got data", zap.Any("data", data))
+	var err error
+	inv, err := g.getInvoiceByWhmcsId(data.InvoiceId)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			log.Info("Invoice not found in NoCloud", zap.Int("invoice_id", data.InvoiceId))
+			return nil
+		}
+		return err
+	}
+	if inv, err = g.invMan.UpdateInvoiceStatus(ctx, inv.GetUuid(), pb.BillingStatus_TERMINATED); err != nil {
+		log.Error("Error updating invoice status to terminated", zap.Error(err))
+		return err
+	}
+	delete(inv.Meta, invoiceIdField)
+	inv.Meta["note"] = structpb.NewStringValue(fmt.Sprintf("DELETED THROUGH WHMCS %d\n", data.InvoiceId) + inv.Meta["note"].GetStringValue())
+	if _, err = g.invMan.InvoicesController().Update(ctx, &graph.Invoice{Invoice: inv, DocumentMeta: driver.DocumentMeta{Key: inv.GetUuid()}}); err != nil {
+		log.Error("Error updating invoice", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func unmarshal[T any](b []byte) (T, error) {
@@ -53,7 +143,6 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 	log.Info("Event received", zap.String("event", resp.Event))
 	log = log.With(zap.String("event", resp.Event))
 
-	// Now process only PAID and REFUNDED events. Only these events are valuable due to after-paid actions
 	ctx := context.WithValue(context.Background(), GatewayCallback, true)
 	var innerErr error
 	switch resp.Event {
@@ -65,19 +154,19 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		}
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceModified":
-		_, err := unmarshal[InvoiceModified](body)
+		data, err := unmarshal[InvoiceModified](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceCancelled":
-		_, err := unmarshal[InvoiceCancelled](body)
+		data, err := unmarshal[InvoiceCancelled](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceRefunded":
 		data, err := unmarshal[InvoiceRefunded](body)
 		if err != nil {
@@ -86,33 +175,33 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		}
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceUnpaid":
-		_, err := unmarshal[InvoiceUnpaid](body)
+		data, err := unmarshal[InvoiceUnpaid](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "UpdateInvoiceTotal":
-		_, err := unmarshal[UpdateInvoiceTotal](body)
+		data, err := unmarshal[UpdateInvoiceTotal](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		//innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceCreated":
-		_, err := unmarshal[InvoiceCreated](body)
+		data, err := unmarshal[InvoiceCreated](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		//innerErr = g.invoiceCreatedHandler(ctx, log, data)
+		innerErr = g.invoiceCreatedHandler(ctx, log, data)
 	case "InvoiceDeleted":
-		_, err := unmarshal[InvoiceDeleted](body)
+		data, err := unmarshal[InvoiceDeleted](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
-		//innerErr = g.invoiceDeletedHandler(ctx, log, data)
+		innerErr = g.invoiceDeletedHandler(ctx, log, data)
 	default:
 		log.Error("Unknown event", zap.String("event", resp.Event))
 		return

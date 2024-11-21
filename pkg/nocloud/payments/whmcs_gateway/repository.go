@@ -5,10 +5,14 @@ import (
 	"fmt"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const invoiceIdField = "whmcs_invoice_id"
 const userIdField = "whmcs_id"
+
+var errNotFound = fmt.Errorf("not found")
 
 func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, error) {
 	invoices, err := g.invMan.InvoicesController().List(context.Background(), "")
@@ -24,11 +28,23 @@ func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, err
 			return inv.Invoice, nil
 		}
 	}
-	return nil, fmt.Errorf("not found")
+	return nil, errNotFound
 }
 
 func (g *WhmcsGateway) GetAccountByWhmcsId(whmcsUserId int) (*rpb.Account, error) {
-	return nil, fmt.Errorf("not implemented")
+	acc, _, _, err := g.accounts.ListImproved(context.Background(), schema.ROOT_ACCOUNT_KEY, 100, 0, 0, "", "", map[string]*structpb.Value{
+		fmt.Sprintf("data.%s", userIdField): structpb.NewNumberValue(float64(whmcsUserId)),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(acc) == 0 {
+		return nil, errNotFound
+	}
+	if len(acc) > 1 {
+		return nil, fmt.Errorf("multiple accounts found")
+	}
+	return acc[0].Account, nil
 }
 
 func (g *WhmcsGateway) getWhmcsUser(acc *rpb.Account) (int, bool) {
@@ -59,3 +75,7 @@ func (g *WhmcsGateway) getWhmcsInvoice(inv *pb.Invoice) (int, bool) {
 	}
 	return casted, true
 }
+
+const getAccountByWhmcsId = `
+
+`

@@ -11,8 +11,8 @@ import (
 )
 
 type InvoicesManager interface {
-	CreateInvoice(inv *pb.Invoice) error
-	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
+	CreateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
 
@@ -30,7 +30,7 @@ func NewInvoicesManager(inv billingconnect.BillingServiceClient, invCtrl graph.I
 	return &invoicesManager{inv: inv, invCtrl: invCtrl, tm: tm}
 }
 
-func (i *invoicesManager) CreateInvoice(inv *pb.Invoice) error {
+func (i *invoicesManager) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
 	req := connect.NewRequest(&pb.CreateInvoiceRequest{
 		Invoice:     inv,
 		IsSendEmail: true,
@@ -40,11 +40,11 @@ func (i *invoicesManager) CreateInvoice(inv *pb.Invoice) error {
 		return err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
-	_, err = i.inv.CreateInvoice(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
+	_, err = i.inv.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	return err
 }
 
-func (i *invoicesManager) UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) (*pb.Invoice, error) {
+func (i *invoicesManager) UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error) {
 	req := connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 		Status: newStatus,
 		Uuid:   id,
@@ -54,7 +54,7 @@ func (i *invoicesManager) UpdateInvoiceStatus(id string, newStatus pb.BillingSta
 		return nil, err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
-	inv, err := i.inv.UpdateInvoiceStatus(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
+	inv, err := i.inv.UpdateInvoiceStatus(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	if err != nil {
 		return nil, err
 	}

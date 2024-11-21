@@ -19,8 +19,8 @@ import (
 )
 
 type NoCloudInvoicesManager interface {
-	CreateInvoice(inv *pb.Invoice) error
-	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
+	CreateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
 
@@ -334,7 +334,7 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
 		inv.Status = statusToNoCloud(whmcsInv.Status)
-		if inv, err = g.invMan.UpdateInvoiceStatus(inv.GetUuid(), inv.Status); err != nil {
+		if inv, err = g.invMan.UpdateInvoiceStatus(ctx, inv.GetUuid(), inv.Status); err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 	}
