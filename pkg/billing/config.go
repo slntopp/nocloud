@@ -53,6 +53,7 @@ type InvoicesConf struct {
 	StartWithNumber          int     `json:"start_with_number"`
 	ResetCounterMode         string  `json:"reset_counter_mode"`
 	IssueRenewalInvoiceAfter float64 `json:"issue_renewal_invoice_after"`
+	TopUpItemMessage         string  `json:"top_up_item_message"`
 }
 
 var (
@@ -87,6 +88,7 @@ var (
 			ResetCounterMode:         "MONTHLY",
 			StartWithNumber:          0,
 			IssueRenewalInvoiceAfter: 0.666,
+			TopUpItemMessage:         "Пополнение баланса (услуги хостинга, оплата за сервисы)",
 		},
 		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,
