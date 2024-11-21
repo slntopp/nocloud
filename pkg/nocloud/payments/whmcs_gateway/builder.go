@@ -34,6 +34,7 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 		SendInvoice:     sendEmail,
 		PaymentMethod:   nil,
 		TaxRate:         "10",
+		Notes:           inv.GetMeta()["note"].GetStringValue(),
 		Date:            time.Unix(inv.Created, 0).Format("2006-01-02"),
 		DueDate:         time.Unix(inv.Deadline, 0).Format("2006-01-02"),
 		AutoApplyCredit: "0",
