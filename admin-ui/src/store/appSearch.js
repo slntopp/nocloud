@@ -7,13 +7,14 @@ export default {
     filter: {},
     param: "",
     defaultLayout: null,
+    layouts: [],
   },
   mutations: {
     setFields(state, fields) {
       state.fields = fields;
     },
     pushFields(state, fields) {
-      state.fields=[...state.fields,...fields]
+      state.fields = [...state.fields, ...fields];
     },
     setCurrentLayout(state, name) {
       state.currentLayout = name;
@@ -30,8 +31,11 @@ export default {
     setFilterValue(state, { key, value }) {
       state.filter[key] = value;
     },
-    setDefaultLayout(state,val){
-      state.defaultLayout=val
+    setDefaultLayout(state, val) {
+      state.defaultLayout = val;
+    },
+    setLayouts(state, val) {
+      state.layouts = val;
     },
   },
   getters: {
@@ -46,6 +50,9 @@ export default {
     },
     filter(state) {
       return state.filter;
+    },
+    layouts(state) {
+      return state.layouts;
     },
     searchName(state) {
       return state.searchName;
