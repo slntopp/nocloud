@@ -85,6 +85,10 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 }
 
 func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
+	if inv.Status == pb.BillingStatus_DRAFT || inv.Status == pb.BillingStatus_TERMINATED {
+		return nil
+	}
+
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -155,6 +159,10 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 }
 
 func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *pb.Invoice) error {
+	if inv.Status == pb.BillingStatus_DRAFT || inv.Status == pb.BillingStatus_TERMINATED {
+		return nil
+	}
+
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
