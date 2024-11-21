@@ -159,10 +159,6 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 }
 
 func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *pb.Invoice) error {
-	if inv.Status == pb.BillingStatus_DRAFT || inv.Status == pb.BillingStatus_TERMINATED {
-		return nil
-	}
-
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -170,10 +166,10 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 
 	id, ok := inv.GetMeta()[invoiceIdField]
 	if !ok {
-		return fmt.Errorf("failed to get invoice id from meta")
+		return g.CreateInvoice(ctx, inv)
 	}
-	body := g.buildUpdateInvoiceQueryBase(int(id.GetNumberValue()))
 
+	body := g.buildUpdateInvoiceQueryBase(int(id.GetNumberValue()))
 	whmcsInv, err := g.GetInvoice(ctx, int(id.GetNumberValue()))
 	if err != nil {
 		return err
