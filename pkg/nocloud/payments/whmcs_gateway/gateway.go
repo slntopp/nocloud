@@ -102,7 +102,6 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
 
-	// TODO: review taxed field
 	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail)
 	if err != nil {
 		return err
