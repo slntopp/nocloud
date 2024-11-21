@@ -208,6 +208,8 @@ start:
 		// Check if current time is 12:00
 		if tick.Hour() != 12 {
 			log.Info("Skip executing if it is not 12:00-12:59")
+			s.inv.Status.Status = hpb.Status_STOPPED
+			s.inv.Status.Error = nil
 			goto ticker
 		}
 
