@@ -175,6 +175,20 @@ type PaymentURIQuery struct {
 	ResponseType    string `url:"responsetype"`
 }
 
+type AddPaymentQuery struct {
+	Action       string         `url:"action"`
+	InvoiceId    int            `url:"invoiceid"`
+	ResponseType string         `url:"responsetype"`
+	Username     string         `url:"username"`
+	Password     string         `url:"password"` // md5 hash
+	TransId      string         `url:"transid"`
+	Gateway      string         `url:"gateway"`
+	Date         string         `url:"date"`
+	Amount       *floatAsString `url:"amount"`
+	Fees         *floatAsString `url:"fees"`
+	NoEmail      *bool          `url:"noemail"`
+}
+
 type InvoicePaid struct {
 	InvoiceId int `json:"invoiceid"`
 }

@@ -736,6 +736,10 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requester))
 
+	if req.WhmcsId != 0 {
+		return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
+	}
+
 	inv, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
 	if err != nil {
 		log.Warn("Failed to get invoice", zap.Error(err))
@@ -797,6 +801,71 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		Priority: pb.Priority_URGENT,
 		Account:  inv.GetAccount(),
 		Total:    inv.GetTotal(),
+		Currency: invCurrency,
+	}))
+	if err != nil {
+		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	}
+
+	return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
+}
+
+func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, invId int64) (*connect.Response[pb.PayWithBalanceResponse], error) {
+	log := s.log.Named("payWithBalanceWhmcsInvoice")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	inv, err := s.whmcsGateway.GetInvoice(ctx, int(invId))
+	if err != nil {
+		log.Warn("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Invoice not found")
+	}
+
+	acc, err := s.accounts.Get(ctx, requester)
+	if err != nil {
+		log.Warn("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Account not found")
+	}
+	clientIdVal, ok := acc.GetData().AsMap()["whmcs_id"].(float64)
+	if !ok {
+		log.Warn("Failed to get client id", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Client not found")
+	}
+	clientId := int(clientIdVal)
+	if inv.UserId != clientId {
+		return nil, status.Error(codes.PermissionDenied, "No access to this invoice")
+	}
+	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+
+	balance := acc.GetBalance()
+	accCurrency := acc.Currency
+	if accCurrency == nil {
+		accCurrency = currConf.Currency
+	}
+	invCurrency := acc.Currency
+
+	if accCurrency.GetId() != invCurrency.GetId() {
+		balance, err = s.currencies.Convert(ctx, accCurrency, invCurrency, balance)
+		if err != nil {
+			log.Error("Failed to convert balance", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to convert balance")
+		}
+	}
+
+	if balance < float64(inv.Balance) {
+		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
+	}
+
+	if err = s.whmcsGateway.PayInvoice(ctx, int(invId)); err != nil {
+		log.Error("Failed to pay invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
+	}
+
+	_, err = s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
+		Exec:     time.Now().Unix(),
+		Priority: pb.Priority_URGENT,
+		Account:  requester,
+		Total:    float64(inv.Balance),
 		Currency: invCurrency,
 	}))
 	if err != nil {

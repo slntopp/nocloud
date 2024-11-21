@@ -172,6 +172,21 @@ func main() {
 		})
 	})
 
+	// Register payments gateways (nocloud, whmcs)
+	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
+	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
+	if err != nil {
+		log.Fatal("Can't get whmcs credentials", zap.Error(err))
+	}
+	manager := invoices_manager.NewInvoicesManager(bClient, invoicesCtrl, authInterceptor)
+	payments.RegisterGateways(whmcsData, accountsCtrl, manager)
+
+	// Register WHMCS hooks handler (hooks for invoices status e.g.)
+	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, manager)
+	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
+	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
+	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
+
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
@@ -217,7 +232,7 @@ func main() {
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw)
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, caCtrl)
 	log.Info("Starting Currencies Service")
 
@@ -277,21 +292,6 @@ func main() {
 
 	migrations.MigrateOldInvoicesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL),
 		graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile, instancesFile)
-
-	// Register payments gateways (nocloud, whmcs)
-	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
-	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
-	if err != nil {
-		log.Fatal("Can't get whmcs credentials", zap.Error(err))
-	}
-	manager := invoices_manager.NewInvoicesManager(bClient, invoicesCtrl, authInterceptor)
-	payments.RegisterGateways(whmcsData, accountsCtrl, manager)
-
-	// Register WHMCS hooks handler (hooks for invoices status e.g.)
-	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, manager)
-	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
-	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
-	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 

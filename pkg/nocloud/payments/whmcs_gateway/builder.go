@@ -86,3 +86,13 @@ func (g *WhmcsGateway) buildGetInvoiceQueryBase(whmcsInvoiceId int) (url.Values,
 
 	return res, nil
 }
+
+func (g *WhmcsGateway) buildAddPaymentQueryBase(whmcsInvoiceId int) AddPaymentQuery {
+	return AddPaymentQuery{
+		Action:       "AddInvoicePayment",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		ResponseType: "json",
+		InvoiceId:    whmcsInvoiceId,
+	}
+}

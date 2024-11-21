@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/go-querystring/query"
+	"github.com/google/uuid"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -180,6 +181,12 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	}
 	if inv.Status != old.Status {
 		body.Status = ptr(statusToWhmcs(inv.Status))
+		if inv.Status == pb.BillingStatus_PAID {
+			if err = g.PayInvoice(ctx, int(id.GetNumberValue())); err != nil {
+				return fmt.Errorf("failed to pay invoice: %w", err)
+			}
+			body.Status = nil
+		}
 	}
 	if inv.Created != old.Created {
 		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
@@ -221,6 +228,37 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int) error {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return err
+	}
+
+	inv, err := g.GetInvoice(ctx, whmcsInvoiceId)
+	if err != nil {
+		return err
+	}
+	if inv.Status == statusToWhmcs(pb.BillingStatus_PAID) {
+		return nil
+	}
+
+	body := g.buildAddPaymentQueryBase(whmcsInvoiceId)
+	body.TransId = uuid.New().String()
+	body.Date = time.Now().Format("2006-01-02 15:04:05")
+	body.Gateway = "system"
+
+	q, err := query.Values(body)
+	if err != nil {
+		return err
+	}
+	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
