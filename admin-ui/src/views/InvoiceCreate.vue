@@ -1,6 +1,6 @@
 <template>
   <div class="pa-4">
-    <h1 v-if="!isEdit && !isDraft" class="page__title">Create invoice</h1>
+    <h1 v-if="!isEdit && isDraft" class="page__title">Create invoice</h1>
 
     <div
       v-if="isEdit"
@@ -56,7 +56,7 @@
 
         <v-col cols="3">
           <v-autocomplete
-            :disabled="isEdit"
+            :disabled="isEdit || isBalanceInvoice"
             :filter="defaultFilterObject"
             label="Instances"
             v-model="selectedInstances"
@@ -70,12 +70,14 @@
           />
         </v-col>
 
-        <v-col cols="2" v-if="isBalanceInvoice">
+        <v-col cols="2">
           <v-text-field
+            :disabled="!isBalanceInvoice"
             type="number"
             label="Total"
+            :value="newInvoice.total"
             :suffix="accountCurrency?.title"
-            v-model="newInvoice.total"
+            @input="newInvoice.items[0].price = +$event"
           />
         </v-col>
 
@@ -134,13 +136,13 @@
         v-model="newInvoice.meta.note"
       ></v-textarea>
 
-      <div class="mt-2" v-if="!isBalanceInvoice">
-        <div class="d-flex justify-space-between">
+      <div class="mt-2">
+        <div v-if="!isBalanceInvoice" class="d-flex justify-space-between">
           <v-subheader>Invoice items</v-subheader>
           <v-btn @click="addInvoiceItem">Add</v-btn>
         </div>
         <invoice-items-table
-          show-delete
+          :show-delete="!isBalanceInvoice"
           :account="newInvoice.account"
           :items="newInvoice.items"
           :instances="instances"
@@ -174,7 +176,7 @@
             :disabled="isSaveDisabled"
             @click="saveInvoice(false)"
           >
-            Publish
+            {{ isEdit && !isDraft ? "Save" : "Publish" }}
           </v-btn>
           <v-btn
             class="mx-4"
@@ -183,7 +185,7 @@
             @click="saveInvoice(true)"
             :disabled="isEmailDisabled"
           >
-            Publish + email
+            {{ isEdit && !isDraft ? "Save" : "Publish" }} + email
           </v-btn>
           <v-btn
             v-if="isEdit"
@@ -377,7 +379,7 @@ onMounted(async () => {
 });
 
 const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
-const isDraft = computed(() => invoice.value?.status !== "DRAFT");
+const isDraft = computed(() => invoice.value?.status === "DRAFT");
 const instances = computed(() => {
   const account = newInvoice.value.account?.uuid;
   if (!account || isInstancesLoading.value) {
@@ -385,6 +387,14 @@ const instances = computed(() => {
   }
 
   return instancesAccountMap.value[account];
+});
+
+const topUpItemMessage = computed(() => {
+  const data = store.getters["settings/all"].find(
+    (s) => s.key === "billing-invoices"
+  );
+
+  return (JSON.parse(data?.value || "{}") || {}).top_up_item_message;
 });
 
 const accountCurrency = computed(
@@ -412,6 +422,12 @@ const setInvoice = () => {
     };
 
     selectedInstances.value = invoice.value.items?.map((item) => item.instance);
+
+    if (isBalanceInvoice.value) {
+      setTimeout(() => {
+        newInvoice.value.items = invoice.value.items;
+      }, 1);
+    }
   }
 };
 
@@ -466,7 +482,7 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       });
 
       if (!isEdit.value) {
-        router.push({ name: "Invoices" });
+        store.dispatch("reloadBtn/onclick");
       }
     }
   } catch (e) {
@@ -514,7 +530,7 @@ const deleteInvoiceItem = (index) => {
 };
 
 const onChangeAccount = async () => {
-  if (!isEdit.value) {
+  if (!isEdit.value && !isDraft.value) {
     selectedInstances.value = null;
   }
 
@@ -643,17 +659,27 @@ watch(instances, (instances) => {
   }
 });
 
-watch(isBalanceInvoice, () => {
+watch(isBalanceInvoice, (value) => {
+  if (value) {
+    newInvoice.value.items = [
+      {
+        description: topUpItemMessage.value,
+        price: newInvoice.value.total,
+        instance: "",
+        amount: 1,
+        unit: "Pcs",
+      },
+    ];
+  } else {
+    newInvoice.value.items = [];
+  }
+
   selectedInstances.value = [];
-  newInvoice.value.items = [];
 });
 
 watch(
   () => newInvoice.value.items,
   () => {
-    if (invoice.value?.uuid && invoice.value.type === "BALANCE") {
-      return;
-    }
     newInvoice.value.total = newInvoice.value.items?.reduce(
       (acc, i) => acc + Number(i.price) * Number(i.amount),
       0

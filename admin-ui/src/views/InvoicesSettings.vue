@@ -2,7 +2,7 @@
   <div class="settings pa-10">
     <v-row>
       <v-col cols="6">
-        <div class="d-flex ">
+        <div class="d-flex">
           <h2 class="page__title">Invoices settings</h2>
         </div>
 
@@ -44,11 +44,18 @@
           type="number"
           label="Start with number"
         />
+
         <v-select
           :loading="isSettingsLoading"
           v-model="newSettings.reset_counter_mode"
           :items="resetCounterModes"
           label="Reset counter mode"
+        />
+
+        <v-textarea
+          :loading="isSettingsLoading"
+          v-model.number="newSettings.top_up_item_message"
+          label="Top up item message"
         />
       </v-col>
       <v-divider vertical></v-divider>
