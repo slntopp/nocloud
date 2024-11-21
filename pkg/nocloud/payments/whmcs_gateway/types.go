@@ -76,6 +76,7 @@ type CreateInvoiceQuery struct {
 	Date            string  `url:"date"`
 	DueDate         string  `url:"duedate"`
 	AutoApplyCredit string  `url:"autoapplycredit"`
+	Notes           string  `url:"notes"`
 	ResponseType    string  `url:"responsetype"`
 }
 
