@@ -12,6 +12,7 @@ import (
 
 type InvoicesManager interface {
 	CreateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 	UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
@@ -41,6 +42,20 @@ func (i *invoicesManager) CreateInvoice(ctx context.Context, inv *pb.Invoice) er
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
 	_, err = i.inv.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
+	return err
+}
+
+func (i *invoicesManager) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
+	req := connect.NewRequest(&pb.UpdateInvoiceRequest{
+		Invoice:     inv,
+		IsSendEmail: true,
+	})
+	token, err := i.tm.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		return err
+	}
+	req.Header().Set("Authorization", "Bearer "+token)
+	_, err = i.inv.UpdateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	return err
 }
 
