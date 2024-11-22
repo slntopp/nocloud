@@ -14,7 +14,7 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
-const DailyCronExecutionTimeKey = "bill"
+const DailyCronExecutionTimeKey = "billing-daily-cron-exec-time"
 const DailyCronLastExecutionKey = "billing-daily-cron-last-execution"
 
 type cronData struct {
@@ -57,14 +57,6 @@ func getValuesFromTime(t string) (hours int, minutes int, seconds int, err error
 
 func (s *BillingServiceServer) DailyCronJob(ctx context.Context, log *zap.Logger) {
 	log = s.log.Named("DailyCronJob")
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Error("Recovered from panic", zap.Any("error", r))
-		}
-		s.cron.Status.Status = hpb.Status_INTERNAL
-		s.cron.Status.Error = ptr(fmt.Sprintf("Permanently failed due to panic or error behavior"))
-	}()
 
 start:
 	s.cron.Status.Status = hpb.Status_RUNNING
