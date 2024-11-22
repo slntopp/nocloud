@@ -159,7 +159,8 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 
 	query := `FOR t IN @@invoices`
 	vars := map[string]interface{}{
-		"@invoices": schema.INVOICES_COL,
+		"@invoices":   schema.INVOICES_COL,
+		"@currencies": schema.CUR_COL,
 	}
 
 	if req.GetUuid() != "" {
