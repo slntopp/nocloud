@@ -337,15 +337,23 @@ const addPaymentOptions = ref({
 const isInstancesLoading = ref(true);
 const instancesAccountMap = ref({});
 
-const types = [
-  { id: "NO_ACTION", title: "No action" },
-  { id: "INSTANCE_START", title: "Instance start" },
-  { id: "INSTANCE_RENEWAL", title: "Instance renewal" },
-  {
-    id: "BALANCE",
-    title: "Top up balance",
-  },
-];
+const types = computed(() => {
+  const types = [
+    { id: "NO_ACTION", title: "No action" },
+    { id: "INSTANCE_START", title: "Instance start" },
+    { id: "INSTANCE_RENEWAL", title: "Instance renewal" },
+    {
+      id: "BALANCE",
+      title: "Top up balance",
+    },
+  ];
+
+  if (isEdit.value && !isDraft.value) {
+    types.push({ id: "WHMCS_INVOICE", title: "WHMCS Invoice" });
+  }
+
+  return types;
+});
 
 const changeStatusBtns = [
   {
@@ -441,6 +449,7 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
     const data = {
       total: convertPrice(newInvoice.value.total),
       account: newInvoice.value.account.uuid || invoice.value.account,
+      currency: { id: accountCurrency.value.id },
       items: newInvoice.value.items,
       meta: newInvoice.value.meta,
       status: status ? status : newInvoice.value.status,
