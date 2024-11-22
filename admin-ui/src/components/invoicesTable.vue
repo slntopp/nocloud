@@ -143,10 +143,6 @@ const headers = ref([
 ]);
 
 onMounted(() => {
-  if (!props.noSearch) {
-    store.commit("appSearch/setFields", searchFields.value);
-  }
-
   store.commit("reloadBtn/setCallback", {
     event: () => {
       accounts.value = [];
@@ -380,6 +376,12 @@ watch(invoices, () => {
       );
     }
   });
+});
+
+watch(searchFields, () => {
+  if (!props.noSearch) {
+    store.commit("appSearch/setFields", searchFields.value);
+  }
 });
 </script>
 
