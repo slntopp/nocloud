@@ -305,7 +305,8 @@ OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
 // FILTER edge.level > 0 // TODO: ensure all edges have level
     LET perm = path.edges[0]
-	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+    LET currency = DOCUMENT(@@currencies, TO_STRING(node.currency.id))
+	RETURN MERGE(node, { uuid: node._key, currency: currency, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 `
 
 func listWithAccess[T Accessible](
@@ -323,6 +324,7 @@ func listWithAccess[T Accessible](
 		"from":              fromDocument,
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@kind":             collectionName,
+		"@currencies":       schema.CUR_COL,
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))

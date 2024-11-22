@@ -380,7 +380,7 @@ func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 	cost := 0.0
 
 	product, ok := plan.GetProducts()[i.GetProduct()]
-	if ok {
+	if ok && product != nil {
 		charge := (product.GetPeriod() == 0 && includeOneTimePayments) || product.GetPeriod() != 0
 		if charge {
 			cost += product.Price
