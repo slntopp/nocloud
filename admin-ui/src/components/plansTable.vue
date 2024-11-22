@@ -325,8 +325,8 @@ const updatePlan = async (item, { key, value }) => {
 
     await store.getters["plans/plansClient"].updatePlan(
       Plan.fromJson({
-        uuid: item.uuid,
-        [key]: value,
+        ...item,
+        [key]: !!value,
       })
     );
     item[key] = value;
