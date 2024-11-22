@@ -177,13 +177,10 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		return err
 	}
 
-	// Process params
-	if inv.Payment != old.Payment {
-		body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
-	}
-	if inv.Deadline != old.Deadline {
-		body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
-	}
+	body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
+	body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
+	body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
+
 	if inv.Status != old.Status {
 		body.Status = ptr(statusToWhmcs(inv.Status))
 		if inv.Status == pb.BillingStatus_PAID {
@@ -193,12 +190,8 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 			body.Status = nil
 		}
 	}
-	if inv.Created != old.Created {
-		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
-	}
-	if inv.GetMeta()["note"].GetStringValue() != old.GetMeta()["note"].GetStringValue() {
-		body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
-	}
+
+	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 
 	// Delete all existing invoice items
 	toDelete := make([]int, 0)
