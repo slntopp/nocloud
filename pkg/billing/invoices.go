@@ -194,16 +194,19 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 			} else if key == "whmcs_invoice_id" {
 				query += fmt.Sprintf(` FILTER t.meta["%s"] LIKE "%s"`, key, "%"+value.GetStringValue()+"%")
 			} else if key == "search_param" {
-				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
-|| t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s"`,
-					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+				query += fmt.Sprintf(`
+LET acc = DOCUMENT(@@accounts, t.account)
+FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s" || LOWER(acc.title) LIKE LOWER("%s") || LOWER(acc.data.email) LIKE LOWER("%s")`,
+					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+				vars["@accounts"] = schema.ACCOUNTS_COL
 			} else if key == "currency" {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER t.currency.id in @%s`, "currencyId")
-				vars["currencyId"] = values
+				query += fmt.Sprintf(` FILTER TO_NUMBER(t.currency.id) in @%s`, "currencyIds")
+				vars["currencyIds"] = values
+				log.Debug("Added currency filter", zap.Any("values", values), zap.String("query", query))
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
