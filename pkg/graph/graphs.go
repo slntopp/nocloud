@@ -384,7 +384,7 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
                    RETURN n
         )
         
-		RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key, username: cred.username } })
+		RETURN MERGE(node, { uuid: node._key, currency: DOCUMENT(@@currencies, TO_STRING(node.currency.id)), active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key, username: cred.username } })
 	)
 	
 	LET active = LENGTH(
@@ -429,6 +429,7 @@ func listAccounts[T Accessible](
 		"@subkiund":         schema.INSTANCES_COL,
 		"offset":            offset,
 		"limit":             limit,
+		"@currencies":       schema.CUR_COL,
 	}
 
 	var insert string
