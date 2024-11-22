@@ -324,6 +324,7 @@ func listWithAccess[T Accessible](
 		"from":              fromDocument,
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@kind":             collectionName,
+		"@currencies":       schema.CUR_COL,
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
