@@ -2,20 +2,20 @@
   <div class="pa-4">
     <div class="d-flex align-center mb-5 justify-space-between">
       <div class="d-flex align-center">
-        <v-btn class="mr-1 mr-4" :to="{ name: 'Invoice create' }">
-          Create
-        </v-btn>
-
         <v-btn
           v-for="layout in Object.keys(defaultLayouts)"
           class="mr-1"
           :key="layout"
           :disabled="defaultLayouts[layout].id === currentSearchLayout"
           @click="setInvoicesLayout(layout)"
-          >{{ layout }}</v-btn
+        >
+          <v-icon small class="mr-1">mdi-filter</v-icon>
+          {{ layout }}</v-btn
         >
       </div>
       <div class="d-flex align-center">
+        <v-btn class="mr-1" :to="{ name: 'Invoice create' }"> Create </v-btn>
+
         <confirm-dialog>
           <v-btn class="mr-1" disabled>Merge</v-btn>
         </confirm-dialog>
@@ -28,7 +28,7 @@
           <v-btn
             :disabled="isCopyDisabled"
             :loading="isCopyLoading"
-            class="mr-5"
+            class="mr-8"
             >Copy</v-btn
           >
         </confirm-dialog>
@@ -111,14 +111,14 @@ const changeStatusBtns = computed(() => [
     ),
   },
   {
-    title: "canceled",
+    title: "cancel",
     status: "CANCELED",
     disabled: selectedInvoices.value.some((invoice) =>
       ["TERMINATED", "RETURNED", "DRAFT", "PAID"].includes(invoice.status)
     ),
   },
   {
-    title: "terminated",
+    title: "terminate",
     status: "TERMINATED",
     disabled: false,
   },
