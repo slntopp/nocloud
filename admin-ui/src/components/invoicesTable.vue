@@ -198,6 +198,14 @@ const searchFields = computed(() => [
     title: "Account",
     component: AccountsAutocomplete,
   },
+  {
+    title: "Currency",
+    key: "currency",
+    type: "select",
+    items: store.getters["currencies/all"]
+      .filter((c) => c.title !== "NCU")
+      .map((c) => ({ text: c.title, value: c.id })),
+  },
   { title: "Total", key: "total", type: "number-range" },
   { title: "External ID", key: "whmcs_invoice_id", type: "input" },
   { title: "Due date", key: "deadline", type: "date" },
