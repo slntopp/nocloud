@@ -108,7 +108,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
 
-	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
+	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
 	taxed := "0"
 	if tax > 0 {
 		taxed = "1"
@@ -202,7 +202,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	}
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
-	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
+	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
 	_taxed := tax > 0
 
 	body.TaxRate = ptr(floatAsString(tax))
@@ -374,7 +374,7 @@ skipStatus:
 		inv.Created = t.Unix()
 	}
 
-	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(float64(whmcsInv.TaxRate))
+	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(float64(whmcsInv.TaxRate / 100))
 
 	whmcsItems := whmcsInv.Items.Items
 	ncItems := slices.Clone(inv.GetItems())
