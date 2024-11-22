@@ -10,6 +10,8 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
 	"time"
 )
@@ -27,6 +29,7 @@ type InvoicesController interface {
 }
 
 const InvoiceTaxMetaKey = "tax_rate"
+const InvoiceRenewalDataKey = "billing_data"
 
 type InvoiceNumberMeta struct {
 	NumericNumber  int    `json:"numeric_number"`
@@ -48,6 +51,14 @@ type invoicesController struct {
 	log *zap.Logger
 }
 
+type BillingData struct {
+	RenewalData map[string]RenewalData `json:"renewal_data"` // Key - instance uuid
+}
+
+type RenewalData struct {
+	ExpirationTs int64 `json:"expiration_ts"`
+}
+
 func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesController {
 	ctx := context.TODO()
 	log := logger.Named("InvoicesController")
@@ -61,6 +72,53 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 	return &invoicesController{
 		log: log, col: col, transactions: transactions, currencies: currencies,
 	}
+}
+
+func (i *Invoice) SetBillingData(d *BillingData) {
+	if i.Meta == nil {
+		i.Meta = make(map[string]*structpb.Value)
+	}
+	if d == nil {
+		delete(i.Meta, InvoiceRenewalDataKey)
+		return
+	}
+	b, err := json.Marshal(d)
+	if err != nil {
+		fmt.Println("SetBillingData: error marshaling billing data", err)
+		return
+	}
+	s := &structpb.Struct{}
+	if err = protojson.Unmarshal(b, s); err != nil {
+		fmt.Println("SetBillingData: error unmarshalling billing data", err)
+		return
+	}
+	i.Meta[InvoiceRenewalDataKey] = structpb.NewStructValue(s)
+}
+
+func (i *Invoice) BillingData() *BillingData {
+	if i.Meta == nil {
+		i.Meta = make(map[string]*structpb.Value)
+		return nil
+	}
+	v, ok := i.Meta[InvoiceRenewalDataKey]
+	if !ok {
+		return nil
+	}
+	if v == nil {
+		return nil
+	}
+	s := v.GetStructValue()
+	b, err := protojson.Marshal(s)
+	if err != nil {
+		fmt.Println("BillingData: error marshaling billing data", err)
+		return nil
+	}
+	d := BillingData{}
+	if err = json.Unmarshal(b, &d); err != nil {
+		fmt.Println("BillingData: error unmarshalling billing data", err)
+		return nil
+	}
+	return &d
 }
 
 func (ctrl *invoicesController) BeginTransaction(ctx context.Context) (context.Context, error) {
