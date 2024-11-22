@@ -62,9 +62,11 @@ func (i *invoicesManager) UpdateInvoice(ctx context.Context, inv *pb.Invoice) er
 		return err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
+	fmt.Println("SETTING HEADER")
+	req.Header().Set(string(payments.GatewayCallback), "true")
 	if val := ctx.Value(payments.GatewayCallback); val != nil {
 		fmt.Println("VALUE: ", val)
-		fmt.Println("SETTING HEADER")
+		fmt.Println("SETTING HEADER INSIDE")
 		req.Header().Set(string(payments.GatewayCallback), "true")
 	}
 	_, err = i.inv.UpdateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
