@@ -196,11 +196,7 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 			} else if key == "search_param" {
 				query += fmt.Sprintf(`
 LET acc = DOCUMENT(@@accounts, t.account)
-FILTER LOWER(t["number"]) LIKE LOWER("%s") 
- || t._key LIKE "%s" 
- || t.meta["whmcs_invoice_id"] LIKE "%s" 
- || LOWER(acc.title) LIKE LOWER("%s") 
- || LOWER(acc.data.email) LIKE LOWER("%s")`,
+FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s" || LOWER(acc.title) LIKE LOWER("%s") || LOWER(acc.data.email) LIKE LOWER("%s")`,
 					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 				vars["@accounts"] = schema.ACCOUNTS_COL
 			} else if key == "currency" {
