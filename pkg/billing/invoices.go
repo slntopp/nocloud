@@ -208,7 +208,7 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s")
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER t.currency.id in @%s`, "currencyIds")
+				query += fmt.Sprintf(` FILTER TO_NUMBER(t.currency.id) in @%s`, "currencyIds")
 				vars["currencyIds"] = values
 				log.Debug("Added currency filter", zap.Any("values", values), zap.String("query", query))
 			} else {
