@@ -9,7 +9,6 @@ import (
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"go.uber.org/zap"
@@ -59,9 +58,6 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		i.log.Debug("Invoked", zap.String("method", req.Spec().Procedure))
 
 		header := req.Header().Get("Authorization")
-
-		i.log.Debug("Header", zap.String("header", req.Header().Get(string(payments.GatewayCallback))))
-		i.log.Debug("ctx", zap.Any("ctx", ctx))
 
 		switch req.Spec().Procedure {
 		case "/nocloud.registry.AccountsService/SignUp":
