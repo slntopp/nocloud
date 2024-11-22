@@ -223,6 +223,7 @@ func getWithAccess[T Accessible](ctx context.Context, db driver.Database, from d
 		"node":              id,
 		"permissions":       schema.PERMISSIONS_GRAPH.Name,
 		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
+		"@currencies":       schema.CUR_COL,
 	}
 	c, err := db.Query(ctx, getWithAccessLevel, vars)
 	if err != nil {
