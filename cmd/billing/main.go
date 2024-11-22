@@ -248,9 +248,6 @@ func main() {
 	log.Info("Starting Account Suspension Routine")
 	go server.SuspendAccountsRoutine(ctx)
 
-	log.Info("Starting Invoices Routine")
-	go server.IssueInvoicesRoutine(ctx)
-
 	log.Info("Starting Instances Creation Consumer")
 	go server.ConsumeCreatedInstances(ctx)
 
@@ -261,6 +258,9 @@ func main() {
 	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, promoCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
+
+	log.Info("Starting Daily Cron Job")
+	go server.DailyCronJob(ctx, log)
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
