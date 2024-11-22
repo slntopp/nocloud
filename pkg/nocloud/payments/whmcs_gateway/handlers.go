@@ -46,8 +46,9 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		Transactions: make([]string, 0),
 		Total:        float64(whmcsInv.Total),
 		Meta: map[string]*structpb.Value{
-			"note":         structpb.NewStringValue("=== CREATED THROUGH WHMCS ===\n" + whmcsInv.Notes),
-			invoiceIdField: structpb.NewNumberValue(float64(data.InvoiceId)),
+			"note":                  structpb.NewStringValue("=== CREATED THROUGH WHMCS ===\n" + whmcsInv.Notes),
+			invoiceIdField:          structpb.NewNumberValue(float64(data.InvoiceId)),
+			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(float64(whmcsInv.TaxRate)),
 		},
 		Currency: acc.GetCurrency(),
 		Type:     pb.ActionType_WHMCS_INVOICE,

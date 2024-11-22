@@ -97,6 +97,16 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 	return &accountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
 }
 
+func (acc *Account) GetTaxRate() float64 {
+	_data := acc.Data
+	if _data == nil {
+		return 0
+	}
+	data := _data.AsMap()
+	rate, _ := data["tax_rate"].(float64)
+	return rate
+}
+
 func (ctrl *accountsController) Get(ctx context.Context, id string) (Account, error) {
 	if id == "me" {
 		id = ctx.Value(nocloud.NoCloudAccount).(string)

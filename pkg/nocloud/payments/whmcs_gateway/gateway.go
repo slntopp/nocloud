@@ -108,17 +108,23 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
 
+	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
+	taxed := "0"
+	if tax > 0 {
+		taxed = "1"
+	}
+
 	oldNote := inv.GetMeta()["note"].GetStringValue()
 	newNote := "NOCLOUD INVOICE ID: " + inv.GetUuid() + "\n" + oldNote
 	inv.GetMeta()["note"] = structpb.NewStringValue(newNote)
-	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail)
+	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail, tax)
 	if err != nil {
 		return err
 	}
 	for i, item := range inv.GetItems() {
 		q.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
 		q.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", item.GetPrice()*float64(item.GetAmount())))
-		q.Set(fmt.Sprintf("itemtaxed%d", i+1), "0")
+		q.Set(fmt.Sprintf("itemtaxed%d", i+1), taxed)
 	}
 
 	invResp, err := sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
@@ -196,6 +202,10 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	}
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
+	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
+	_taxed := tax > 0
+
+	body.TaxRate = ptr(floatAsString(tax))
 
 	// Delete all existing invoice items
 	toDelete := make([]int, 0)
@@ -211,7 +221,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	for i, item := range inv.GetItems() {
 		description[i] = item.GetDescription()
 		amount[i] = floatAsString(item.GetPrice() * float64(item.GetAmount()))
-		taxed[i] = false
+		taxed[i] = _taxed
 	}
 	body.NewItemDescription = description
 	body.NewItemAmount = amount
@@ -363,6 +373,8 @@ skipStatus:
 		}
 		inv.Created = t.Unix()
 	}
+
+	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(float64(whmcsInv.TaxRate))
 
 	whmcsItems := whmcsInv.Items.Items
 	ncItems := slices.Clone(inv.GetItems())

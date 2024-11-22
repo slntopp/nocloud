@@ -26,6 +26,8 @@ type InvoicesController interface {
 	Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error)
 }
 
+const InvoiceTaxMetaKey = "tax_rate"
+
 type InvoiceNumberMeta struct {
 	NumericNumber  int    `json:"numeric_number"`
 	NumberTemplate string `json:"number_template"`
