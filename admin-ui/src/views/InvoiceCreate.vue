@@ -439,6 +439,14 @@ const setInvoice = () => {
   }
 };
 
+const getInvoiceDateTs = (originalTs, newDate) => {
+  return (
+    new Date(newDate).getTime() / 1000 +
+    (+originalTs -
+      new Date(formatSecondsToDateString(originalTs)).getTime() / 1000)
+  );
+};
+
 const saveInvoice = async (withEmail = false, status = "UNPAID") => {
   if (!(await invoiceForm.value.validate())) {
     return;
@@ -469,15 +477,24 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       data.uuid = invoice.value.uuid;
 
       if (newInvoice.value.created) {
-        data.created = new Date(newInvoice.value.created).getTime() / 1000;
+        data.created = getInvoiceDateTs(
+          invoice.value.created,
+          newInvoice.value.created
+        );
       }
 
       if (newInvoice.value.returned) {
-        data.returned = new Date(newInvoice.value.returned).getTime() / 1000;
+        data.returned = getInvoiceDateTs(
+          invoice.value.returned,
+          newInvoice.value.returned
+        );
       }
 
       if (newInvoice.value.payment) {
-        data.payment = new Date(newInvoice.value.payment).getTime() / 1000;
+        data.payment = getInvoiceDateTs(
+          invoice.value.payment,
+          newInvoice.value.payment
+        );
       }
 
       await store.getters["invoices/invoicesClient"].updateInvoice(
