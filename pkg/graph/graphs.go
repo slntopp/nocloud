@@ -210,6 +210,7 @@ GRAPH @permissions SORT path.edges[0].level
         )
     RETURN MERGE(path.vertices[-1], {
         uuid: path.vertices[-1]._key,
+        currency: DOCUMENT(@@currencies, TO_STRING(path.vertices[-1].currency.id))
 	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key, username: cred.username }
 	})
 `

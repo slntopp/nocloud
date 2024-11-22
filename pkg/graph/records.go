@@ -212,7 +212,8 @@ func (ctrl *recordsController) GetInstancesReports(ctx context.Context, req *pb.
 func (ctrl *recordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error) {
 	query := "LET records = ( FOR record in @@records FILTER record.processed"
 	params := map[string]interface{}{
-		"@records": schema.RECORDS_COL,
+		"@records":    schema.RECORDS_COL,
+		"@currencies": schema.CUR_COL,
 	}
 
 	if req.Account != nil {
@@ -285,7 +286,11 @@ func (ctrl *recordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 		}
 	}
 
-	query += " RETURN merge(record, {uuid: record._key})) RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}"
+	query += ` 
+   LET currency = DOCUMENT(@@currencies, TO_STRING(record.currency.id))
+   RETURN merge(record, {uuid: record._key, currency: currency})
+) 
+RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}`
 
 	ctrl.log.Debug("Final query", zap.String("query", query))
 
