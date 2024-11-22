@@ -65,7 +65,12 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 	} else {
 		log.Warn("Wrong expiring percentage in config. Using default value", zap.Float64("percentage", expiringPercentage))
 	}
+	const days15 = int64(3600 * 24 * 15)
+	const days10 = int64(3600 * 24 * 10)
 	expiringTime := func(expiringAt, period int64) int64 {
+		if period > days15 {
+			return expiringAt - days10
+		}
 		return expiringAt - int64(float64(period)*(1.0-expiringPercentage))
 	}
 

@@ -108,6 +108,9 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
 
+	oldNote := inv.GetMeta()["note"].GetStringValue()
+	newNote := "NOCLOUD INVOICE ID: " + inv.GetUuid() + "\n" + oldNote
+	inv.GetMeta()["note"] = structpb.NewStringValue(newNote)
 	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail)
 	if err != nil {
 		return err
@@ -152,6 +155,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	meta[invoiceIdField] = structpb.NewNumberValue(float64(invResp.InvoiceId))
+	meta["note"] = structpb.NewStringValue(newNote)
 	invoice.Meta = meta
 	if _, err := g.invMan.InvoicesController().Update(ctx, invoice); err != nil {
 		return err
@@ -317,8 +321,6 @@ func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) err
 }
 
 func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) error {
-	fmt.Println("SYNC WHMCS INVOICE")
-
 	whmcsInv, err := g.GetInvoice(ctx, invoiceId)
 	if err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
@@ -328,13 +330,17 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 
+	if inv.Status == pb.BillingStatus_TERMINATED && whmcsInv.Status == statusToWhmcs(pb.BillingStatus_CANCELED) {
+		goto skipStatus
+	}
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
 		inv.Status = statusToNoCloud(whmcsInv.Status)
-		fmt.Println("STATUS UPDATE")
 		if inv, err = g.invMan.UpdateInvoiceStatus(ctx, inv.GetUuid(), inv.Status); err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 	}
+
+skipStatus:
 	if !strings.Contains(whmcsInv.DatePaid, "0000-00-00") {
 		t, err := time.Parse("2006-01-02 15:04:05", whmcsInv.DatePaid)
 		if err != nil {
@@ -396,7 +402,6 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	meta["note"] = structpb.NewStringValue(warning + whmcsInv.Notes)
 	inv.Meta = meta
 
-	fmt.Println("UPDATING INVOICE")
 	if err = g.invMan.UpdateInvoice(ctx, inv); err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
