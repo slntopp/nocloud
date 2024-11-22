@@ -223,6 +223,7 @@ const uniqueProducts = ref([]);
 const uniqueLocations = ref([]);
 const uniquePlans = ref([]);
 const uniquePeriods = ref([]);
+const uniqueSp = ref([]);
 
 const instancesTypes = ref([]);
 
@@ -397,7 +398,7 @@ const searchFields = computed(() => [
   },
   {
     key: "sp",
-    items: servicesProviders.value.map((sp) => ({
+    items: uniqueSp.value.map((sp) => ({
       text: sp.title,
       value: sp.uuid,
     })),
@@ -414,7 +415,7 @@ const searchFields = computed(() => [
     key: "account",
     custom: true,
     multiple: true,
-    fetchValue:true,
+    fetchValue: true,
     title: "Account",
     component: AccountsAutocomplete,
   },
@@ -517,6 +518,7 @@ const fetchUnique = async () => {
     uniqueProducts.value = unique.products;
     uniquePlans.value = unique.billing_plans;
     uniquePeriods.value = unique.periods;
+    uniqueSp.value = unique.service_providers;
 
     isUniqueFetched.value = true;
   } catch {
