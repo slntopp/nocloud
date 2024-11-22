@@ -43,8 +43,9 @@ func (i *invoicesManager) CreateInvoice(ctx context.Context, inv *pb.Invoice) er
 		return err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
-	gwc, _ := ctx.Value(payments.GatewayCallback).(bool)
-	if gwc {
+	if val := ctx.Value(payments.GatewayCallback); val != nil {
+		fmt.Println("VALUE: ", val)
+		fmt.Println("SETTING HEADER")
 		req.Header().Set(string(payments.GatewayCallback), "true")
 	}
 	_, err = i.inv.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
@@ -61,8 +62,8 @@ func (i *invoicesManager) UpdateInvoice(ctx context.Context, inv *pb.Invoice) er
 		return err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
-	gwc, _ := ctx.Value(payments.GatewayCallback).(bool)
-	if gwc {
+	if val := ctx.Value(payments.GatewayCallback); val != nil {
+		fmt.Println("VALUE: ", val)
 		fmt.Println("SETTING HEADER")
 		req.Header().Set(string(payments.GatewayCallback), "true")
 	}
@@ -80,8 +81,9 @@ func (i *invoicesManager) UpdateInvoiceStatus(ctx context.Context, id string, ne
 		return nil, err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
-	gwc, _ := ctx.Value(payments.GatewayCallback).(bool)
-	if gwc {
+	if val := ctx.Value(payments.GatewayCallback); val != nil {
+		fmt.Println("VALUE: ", val)
+		fmt.Println("SETTING HEADER")
 		req.Header().Set(string(payments.GatewayCallback), "true")
 	}
 	inv, err := i.inv.UpdateInvoiceStatus(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
