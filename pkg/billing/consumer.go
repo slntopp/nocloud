@@ -96,6 +96,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	startDescription = strings.TrimSpace(startDescription)
 
 	tax := acc.GetTaxRate()
+	invCost := cost + cost*tax
 
 	inv := &bpb.Invoice{
 		Status: bpb.BillingStatus_UNPAID,
@@ -104,7 +105,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 				Description: startDescription,
 				Amount:      1,
 				Unit:        "Pcs",
-				Price:       cost + cost*tax,
+				Price:       invCost,
 				Instance:    instance.GetUuid(),
 			},
 		},
@@ -113,7 +114,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
-		Total:    cost + cost*tax,
+		Total:    invCost,
 		Type:     bpb.ActionType_INSTANCE_START,
 		Created:  now,
 		Deadline: now + (int64(time.Hour.Seconds()) * 24 * 5),
