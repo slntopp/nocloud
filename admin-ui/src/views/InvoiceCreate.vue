@@ -441,6 +441,7 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
     const data = {
       total: convertPrice(newInvoice.value.total),
       account: newInvoice.value.account.uuid || invoice.value.account,
+      currency: { id: accountCurrency.value.id },
       items: newInvoice.value.items,
       meta: newInvoice.value.meta,
       status: status ? status : newInvoice.value.status,
