@@ -61,6 +61,7 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		header := req.Header().Get("Authorization")
 
 		i.log.Debug("Header", zap.String("header", req.Header().Get(string(payments.GatewayCallback))))
+		i.log.Debug("ctx", zap.Any("ctx", ctx))
 
 		switch req.Spec().Procedure {
 		case "/nocloud.registry.AccountsService/SignUp":
