@@ -195,6 +195,11 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		}
 	}
 
+	if inv.Status == pb.BillingStatus_DRAFT || inv.Status == pb.BillingStatus_CANCELED || inv.Status == pb.BillingStatus_TERMINATED {
+		body.Publish = ptr(false)
+		body.PublishAndSendEmail = ptr(false)
+	}
+
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 
 	// Delete all existing invoice items
