@@ -42,13 +42,12 @@ import (
 
 func (s *BillingServiceServer) RoutinesState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
-		s.gen, s.proc, s.sus, s.inv,
+		s.gen, s.proc, s.sus, s.cron,
 	}
 }
 
-func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log *zap.Logger, tick time.Time,
-	currencyConf CurrencyConf, roundingConf RoundingConf, iPub Pub) {
-	log.Info("Trying to issue invoices for expiring instances", zap.Time("tick", tick))
+func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Context, log *zap.Logger) {
+	log = log.Named("InvoicesIssuer")
 
 	list, err := s.services.List(ctx, schema.ROOT_ACCOUNT_KEY, &services.ListRequest{})
 	if err != nil {
@@ -185,57 +184,6 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 const updateDataQuery = `
 UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
 `
-
-func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
-	log := s.log.Named("IssueInvoicesRoutine")
-
-	ch, err := s.rbmq.Channel()
-	if err != nil {
-		log.Fatal("Failed to open a channel", zap.Error(err))
-	}
-	defer ch.Close()
-
-start:
-
-	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
-	roundingConf := MakeRoundingConf(ctx, log, &s.settingsClient)
-	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
-	iPub := NewInstanceDataPublisher(ch)
-
-	upd := make(chan bool, 1)
-	go sc.Subscribe([]string{currencyKey}, upd)
-
-	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("routine", routineConf), zap.Any("rounding", roundingConf))
-
-	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
-	tick := time.Now()
-	for {
-		// Check if current time is 12:00
-		if tick.Hour() != 12 {
-			log.Info("Skip executing if it is not 12:00-12:59")
-			s.inv.Status.Status = hpb.Status_STOPPED
-			s.inv.Status.Error = nil
-			goto ticker
-		}
-
-		s.inv.Status.Status = hpb.Status_RUNNING
-		s.inv.Status.Error = nil
-
-		log.Info("Entering new Iteration", zap.Time("ts", tick))
-		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf, iPub)
-
-		s.inv.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
-
-	ticker:
-		select {
-		case tick = <-ticker.C:
-			continue
-		case <-upd:
-			log.Info("New Configuration Received, restarting Routine")
-			goto start
-		}
-	}
-}
 
 func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Logger, tick time.Time,
 	currencyConf CurrencyConf, roundingConf RoundingConf) {
