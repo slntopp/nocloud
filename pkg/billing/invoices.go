@@ -197,6 +197,13 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 				query += fmt.Sprintf(` FILTER LOWER(t["number"]) LIKE LOWER("%s")
 || t._key LIKE "%s" || t.meta["whmcs_invoice_id"] LIKE "%s"`,
 					"%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+			} else if key == "currency" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER t.currency.id in @%s`, "currencyId")
+				vars["currencyId"] = values
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
