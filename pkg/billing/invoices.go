@@ -401,8 +401,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
-	if !gatewayCallback {
+	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
 			//_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
@@ -718,8 +717,7 @@ quit:
 	if err != nil {
 		log.Error("Failed to get updated invoice", zap.Error(err))
 	}
-	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
-	if err == nil && !gatewayCallback {
+	if err == nil && !payments.GetGatewayCallbackValue(ctx, req.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
@@ -735,6 +733,10 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requester))
+
+	if req.WhmcsId != 0 {
+		return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
+	}
 
 	inv, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
 	if err != nil {
@@ -797,6 +799,71 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		Priority: pb.Priority_URGENT,
 		Account:  inv.GetAccount(),
 		Total:    inv.GetTotal(),
+		Currency: invCurrency,
+	}))
+	if err != nil {
+		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	}
+
+	return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
+}
+
+func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, invId int64) (*connect.Response[pb.PayWithBalanceResponse], error) {
+	log := s.log.Named("payWithBalanceWhmcsInvoice")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	inv, err := s.whmcsGateway.GetInvoice(ctx, int(invId))
+	if err != nil {
+		log.Warn("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Invoice not found")
+	}
+
+	acc, err := s.accounts.Get(ctx, requester)
+	if err != nil {
+		log.Warn("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Account not found")
+	}
+	clientIdVal, ok := acc.GetData().AsMap()["whmcs_id"].(float64)
+	if !ok {
+		log.Warn("Failed to get client id", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Client not found")
+	}
+	clientId := int(clientIdVal)
+	if inv.UserId != clientId {
+		return nil, status.Error(codes.PermissionDenied, "No access to this invoice")
+	}
+	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+
+	balance := acc.GetBalance()
+	accCurrency := acc.Currency
+	if accCurrency == nil {
+		accCurrency = currConf.Currency
+	}
+	invCurrency := acc.Currency
+
+	if accCurrency.GetId() != invCurrency.GetId() {
+		balance, err = s.currencies.Convert(ctx, accCurrency, invCurrency, balance)
+		if err != nil {
+			log.Error("Failed to convert balance", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to convert balance")
+		}
+	}
+
+	if balance < float64(inv.Balance) {
+		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
+	}
+
+	if err = s.whmcsGateway.PayInvoice(ctx, int(invId)); err != nil {
+		log.Error("Failed to pay invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
+	}
+
+	_, err = s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
+		Exec:     time.Now().Unix(),
+		Priority: pb.Priority_URGENT,
+		Account:  requester,
+		Total:    float64(inv.Balance),
 		Currency: invCurrency,
 	}))
 	if err != nil {
@@ -917,10 +984,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 	newStatus := req.GetStatus()
 	oldStatus := t.GetStatus()
-	if (oldStatus == pb.BillingStatus_UNPAID && newStatus == pb.BillingStatus_DRAFT) ||
-		(oldStatus == pb.BillingStatus_DRAFT && newStatus == pb.BillingStatus_UNPAID) {
-		return nil, status.Error(codes.InvalidArgument, "Forbidden status conversion")
-	}
 
 	if req.GetPayment() != 0 && t.GetPayment() != 0 {
 		t.Payment = req.GetPayment()
@@ -958,9 +1021,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Total = req.GetTotal()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
-	if req.Transactions != nil {
-		t.Transactions = req.Transactions
-	}
 	if req.Currency == nil {
 		t.Currency = defCurr
 	}
@@ -968,6 +1028,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
+	oldSum := old.Total
 	sum := 0.0
 	if len(t.GetItems()) > 0 {
 		for _, item := range t.Items {
@@ -978,30 +1039,25 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 	}
 
-	//if t.Type == pb.ActionType_BALANCE {
-	//	var transactionTotal = t.GetTotal()
-	//	transactionTotal *= -1
-	//
-	//	// Convert invoice's currency to default currency(according to how creating transaction works)
-	//	rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
-	//	if err != nil {
-	//		log.Error("Failed to get exchange rate", zap.Error(err))
-	//		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-	//	}
-	//
-	//	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
-	//		Priority: pb.Priority_NORMAL,
-	//		Account:  t.GetAccount(),
-	//		Currency: defCurr,
-	//		Total:    transactionTotal * rate,
-	//		Exec:     0,
-	//	}))
-	//	if err != nil {
-	//		log.Error("Failed to create transaction", zap.Error(err))
-	//		return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
-	//	}
-	//	t.Transactions = []string{newTr.Msg.Uuid}
-	//}
+	if t.Type == pb.ActionType_BALANCE && sum != oldSum {
+		var transactionTotal = t.GetTotal()
+		transactionTotal *= -1
+
+		if len(t.GetTransactions()) != 1 {
+			return nil, status.Error(codes.InvalidArgument, "Balance invoice must have only one transaction")
+		}
+
+		tr, err := s.transactions.Get(ctx, t.GetTransactions()[0])
+		if err != nil {
+			log.Error("Failed to get transaction to update", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get transaction")
+		}
+		tr.Total = transactionTotal
+		if _, err := s.transactions.Update(ctx, tr); err != nil {
+			log.Error("Failed to update transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to update transaction")
+		}
+	}
 
 	upd, err := s.invoices.Update(ctx, t)
 	if err != nil {
@@ -1015,8 +1071,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	gatewayCallback, _ := ctx.Value(payments.GatewayCallback).(bool)
-	if !gatewayCallback {
+	log.Info("GATEWAY CALLBACK VAL", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, r.Header())))
+	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
@@ -1128,8 +1184,11 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       req.GetSum(),
-				Description: "Top up balance",
+				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
 			},
+		},
+		Meta: map[string]*structpb.Value{
+			"creator": structpb.NewStringValue(requester),
 		},
 	}
 
@@ -1253,7 +1312,18 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	period := periods[len(periods)-1]
 	expire := expirings[0]
 	expireDate := time.Unix(expire, 0)
-	untilDate := expireDate.Add(time.Duration(period) * time.Second)
+
+	var untilDate time.Time
+	const monthSecs = 3600 * 24 * 30
+	const daySecs = 3600 * 24
+	if period == monthSecs {
+		untilDate = expireDate.AddDate(0, 1, 0)
+	} else {
+		untilDate = expireDate.Add(time.Duration(period) * time.Second)
+	}
+	if untilDate.Unix()-expireDate.Unix() > daySecs {
+		untilDate = untilDate.AddDate(0, 0, -1)
+	}
 
 	fDateNum := func(d int) string {
 		if d < 10 {
@@ -1262,27 +1332,45 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		return fmt.Sprintf("%d", d)
 	}
 
+	var dueDate = expire
+	if dueDate < now {
+		dueDate = now + period/2
+	}
+
+	bp := inst.GetBillingPlan()
+	product, hasProduct := bp.GetProducts()[inst.GetProduct()]
+	if !hasProduct {
+		log.Warn("Product not found in billing plan", zap.String("product", inst.GetProduct()))
+	}
+	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
+	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
+	productTitle := product.GetTitle() + " "
+	renewDescription := fmt.Sprintf("%s%s(%s.%s.%d - %s.%s.%d)", invoicePrefix, productTitle,
+		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
+		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
+	renewDescription = strings.TrimSpace(renewDescription)
+
 	inv := &pb.Invoice{
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
 			{
-				Description: fmt.Sprintf("Instance «%s» renewal: %s:%s - %s:%s",
-					inst.GetTitle(), fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month()))),
-				Amount:   1,
-				Unit:     "Pcs",
-				Price:    cost,
-				Instance: inst.GetUuid(),
+				Description: renewDescription,
+				Amount:      1,
+				Unit:        "Pcs",
+				Price:       cost,
+				Instance:    inst.GetUuid(),
 			},
 		},
 		Total:    cost,
 		Type:     pb.ActionType_INSTANCE_RENEWAL,
 		Created:  now,
-		Deadline: time.Unix(now, 0).Add(time.Duration(period) * time.Second).Unix(), // Until when invoice should be paid
+		Deadline: dueDate, // Until when invoice should be paid
 		Account:  acc.GetUuid(),
 		Currency: acc.Currency,
 		Meta: map[string]*structpb.Value{
-			"creator":           structpb.NewStringValue(requester),
-			"no_discount_price": structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
+			"creator":              structpb.NewStringValue(requester),
+			"no_discount_price":    structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
+			"expiration_timestamp": structpb.NewNumberValue(float64(expire)),
 		},
 	}
 

@@ -145,21 +145,21 @@ func (c *addonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` 
-FILTER LENGTH(
+				query = `
+LET searchAddons = UNIQUE(FLATTEN(
   FOR p IN @@plans
-	FILTER p._key IN @planUuids
-    LET products = p.products
-    LET presentInProducts = LENGTH(
-        FILTER IS_OBJECT(products)
-        FOR attr IN ATTRIBUTES(products)
-            FILTER a._key IN products[attr].addons
-            RETURN true
-    ) > 0
-    FILTER a._key IN p.addons || presentInProducts
-	RETURN true
-) > 0
-`)
+    FILTER p._key IN @planUuids
+    LET productsAddons = (
+	  FOR attr IN ATTRIBUTES(p.products)
+        FILTER p.products[attr] && IS_ARRAY(p.products[attr].addons)
+		FOR add IN p.products[attr].addons
+		  RETURN add
+    )
+    LET planAddons = IS_ARRAY(p.addons) ? p.addons : []
+	RETURN UNION_DISTINCT(planAddons, productsAddons)
+))
+ ` + query
+				query += " FILTER a._key IN searchAddons"
 				vars["planUuids"] = values
 				vars["@plans"] = schema.BILLING_PLANS_COL
 			} else {

@@ -48,7 +48,7 @@
       />
     </template>
 
-    <template v-slot:[`item.actions`]="{ index }">
+    <template v-if="showDelete" v-slot:[`item.actions`]="{ index }">
       <div class="d-flex justify-center">
         <v-btn icon @click="emit('click:delete', index)"
           ><v-icon>mdi-delete</v-icon></v-btn
@@ -89,7 +89,7 @@ const headers = computed(() =>
     { text: "Amount", value: "amount", width: 125 },
     { text: "Price", value: "price", width: 125 },
     { text: "Unit", value: "unit", width: 125 },
-    showDelete.value && { text: "Actions", value: "actions", width: 25 },
+    showDelete.value ? { text: "Actions", value: "actions", width: 25 } : null,
   ].filter((c) => !!c)
 );
 const accountCurrency = computed(

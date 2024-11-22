@@ -65,18 +65,19 @@ func statusToNoCloud(status string) pb.BillingStatus {
 }
 
 type CreateInvoiceQuery struct {
-	Action          string `url:"action"`
-	Username        string `url:"username"`
-	Password        string `url:"password"` // md5 hash
-	UserId          string `url:"userid"`
-	Status          string `url:"status"`
-	SendInvoice     string `url:"sendinvoice"`
-	PaymentMethod   string `url:"paymentmethod"`
-	TaxRate         string `url:"taxrate"`
-	Date            string `url:"date"`
-	DueDate         string `url:"duedate"`
-	AutoApplyCredit string `url:"autoapplycredit"`
-	ResponseType    string `url:"responsetype"`
+	Action          string  `url:"action"`
+	Username        string  `url:"username"`
+	Password        string  `url:"password"` // md5 hash
+	UserId          string  `url:"userid"`
+	Status          string  `url:"status"`
+	SendInvoice     string  `url:"sendinvoice"`
+	PaymentMethod   *string `url:"paymentmethod"`
+	TaxRate         string  `url:"taxrate"`
+	Date            string  `url:"date"`
+	DueDate         string  `url:"duedate"`
+	AutoApplyCredit string  `url:"autoapplycredit"`
+	Notes           string  `url:"notes"`
+	ResponseType    string  `url:"responsetype"`
 }
 
 type GetInvoiceQuery struct {
@@ -175,6 +176,20 @@ type PaymentURIQuery struct {
 	ResponseType    string `url:"responsetype"`
 }
 
+type AddPaymentQuery struct {
+	Action       string         `url:"action"`
+	InvoiceId    int            `url:"invoiceid"`
+	ResponseType string         `url:"responsetype"`
+	Username     string         `url:"username"`
+	Password     string         `url:"password"` // md5 hash
+	TransId      string         `url:"transid"`
+	Gateway      string         `url:"gateway"`
+	Date         string         `url:"date"`
+	Amount       *floatAsString `url:"amount"`
+	Fees         *floatAsString `url:"fees"`
+	NoEmail      *bool          `url:"noemail"`
+}
+
 type InvoicePaid struct {
 	InvoiceId int `json:"invoiceid"`
 }
@@ -208,4 +223,5 @@ type InvoiceCreated struct {
 	InvoiceId int    `json:"invoiceid"`
 	Source    string `json:"source"`
 	Status    string `json:"status"`
+	User      int    `json:"user"`
 }

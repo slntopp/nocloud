@@ -2,14 +2,22 @@
   <div class="pa-4">
     <div class="d-flex align-center mb-5 justify-space-between">
       <div class="d-flex align-center">
-        <v-btn class="mr-1" :to="{ name: 'Invoice create' }"> Create </v-btn>
+        <v-btn class="mr-1 mr-4" :to="{ name: 'Invoice create' }">
+          Create
+        </v-btn>
 
-        <v-btn class="mr-1 ml-3">overdue</v-btn>
-        <v-btn class="mr-1">unpaid</v-btn>
+        <v-btn
+          v-for="layout in Object.keys(defaultLayouts)"
+          class="mr-1"
+          :key="layout"
+          :disabled="defaultLayouts[layout].id === currentSearchLayout"
+          @click="setInvoicesLayout(layout)"
+          >{{ layout }}</v-btn
+        >
       </div>
       <div class="d-flex align-center">
         <confirm-dialog>
-          <v-btn class="mr-1">Merge</v-btn>
+          <v-btn class="mr-1" disabled>Merge</v-btn>
         </confirm-dialog>
 
         <confirm-dialog
@@ -37,7 +45,8 @@
           <v-btn
             :disabled="
               (isUpdateStatusLoading && updateStatusName !== button.status) ||
-              button.disabled
+              button.disabled ||
+              !selectedInvoices.length
             "
             :loading="
               isUpdateStatusLoading && updateStatusName === button.status
@@ -59,7 +68,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
 import {
@@ -114,6 +123,31 @@ const changeStatusBtns = computed(() => [
     disabled: false,
   },
 ]);
+
+const defaultLayouts = computed(() => ({
+  unpaid: {
+    title: "Unpaid",
+    filter: { status: [2] },
+    fields: ["status"],
+    id: "id" + Math.random().toString(16).slice(2),
+  },
+  overdue: {
+    id: "id" + Math.random().toString(16).slice(2),
+    title: "Overdue",
+    fields: ["deadline", "status"],
+    filter: {
+      status: [2],
+      deadline: [
+        new Date(Date.now() - 86000 * 365 * 1000).toISOString().split("T")[0],
+        new Date(Date.now()).toISOString().split("T")[0],
+      ],
+    },
+  },
+}));
+
+const currentSearchLayout = computed(
+  () => store.getters["appSearch/currentLayout"]
+);
 
 const refetchInvoices = () => {
   refetch.value = !refetch.value;
@@ -177,6 +211,32 @@ const handleCopyInvoice = async () => {
     isCopyLoading.value = false;
   }
 };
+
+const setDefaultLayouts = () => {
+  const defaults = Object.values(defaultLayouts.value);
+  const layouts = JSON.parse(
+    JSON.stringify(store.getters["appSearch/layouts"])
+  );
+
+  defaults.forEach((layout) => {
+    const index = layouts.findIndex((l) => l.title === layout.title);
+    if (index == -1) {
+      layouts.push(layout);
+    } else {
+      layouts[index] = layout;
+    }
+  });
+
+  store.commit("appSearch/setLayouts", layouts);
+};
+
+const setInvoicesLayout = (key) => {
+  store.commit("appSearch/setCurrentLayout", defaultLayouts.value[key].id);
+};
+
+onMounted(() => {
+  setTimeout(() => setDefaultLayouts(), 500);
+});
 </script>
 
 <script>

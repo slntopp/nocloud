@@ -22,6 +22,7 @@ import (
 	ccinstances "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"slices"
@@ -88,6 +89,8 @@ type BillingServiceServer struct {
 	drivers map[string]driverpb.DriverServiceClient
 
 	rootToken string
+
+	whmcsGateway *whmcs_gateway.WhmcsGateway
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
@@ -95,7 +98,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:            conn,
@@ -122,6 +125,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		eventsClient:    eventsClient,
 		instancesClient: instClient,
 		rootToken:       token,
+		whmcsGateway:    whmcsGateway,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{

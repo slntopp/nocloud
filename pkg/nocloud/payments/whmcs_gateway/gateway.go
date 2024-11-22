@@ -5,20 +5,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/go-querystring/query"
+	"github.com/google/uuid"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
 type NoCloudInvoicesManager interface {
-	CreateInvoice(inv *pb.Invoice) error
-	UpdateInvoiceStatus(id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
+	CreateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
 
@@ -84,6 +87,10 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 }
 
 func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
+	if inv.Status == pb.BillingStatus_DRAFT || inv.Status == pb.BillingStatus_TERMINATED {
+		return nil
+	}
+
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -101,7 +108,6 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
 
-	// TODO: review taxed field
 	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail)
 	if err != nil {
 		return err
@@ -162,31 +168,30 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 
 	id, ok := inv.GetMeta()[invoiceIdField]
 	if !ok {
-		return fmt.Errorf("failed to get invoice id from meta")
+		return g.CreateInvoice(ctx, inv)
 	}
-	body := g.buildUpdateInvoiceQueryBase(int(id.GetNumberValue()))
 
+	body := g.buildUpdateInvoiceQueryBase(int(id.GetNumberValue()))
 	whmcsInv, err := g.GetInvoice(ctx, int(id.GetNumberValue()))
 	if err != nil {
 		return err
 	}
 
-	// Process params
-	if inv.Payment != old.Payment {
-		body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
-	}
-	if inv.Deadline != old.Deadline {
-		body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
-	}
+	body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
+	body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
+	body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
+
 	if inv.Status != old.Status {
 		body.Status = ptr(statusToWhmcs(inv.Status))
+		if inv.Status == pb.BillingStatus_PAID {
+			if err = g.PayInvoice(ctx, int(id.GetNumberValue())); err != nil {
+				return fmt.Errorf("failed to pay invoice: %w", err)
+			}
+			body.Status = nil
+		}
 	}
-	if inv.Created != old.Created {
-		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
-	}
-	if inv.GetMeta()["note"].GetStringValue() != old.GetMeta()["note"].GetStringValue() {
-		body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
-	}
+
+	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 
 	// Delete all existing invoice items
 	toDelete := make([]int, 0)
@@ -221,6 +226,37 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int) error {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return err
+	}
+
+	inv, err := g.GetInvoice(ctx, whmcsInvoiceId)
+	if err != nil {
+		return err
+	}
+	if inv.Status == statusToWhmcs(pb.BillingStatus_PAID) {
+		return nil
+	}
+
+	body := g.buildAddPaymentQueryBase(whmcsInvoiceId)
+	body.TransId = uuid.New().String()
+	body.Date = time.Now().Format("2006-01-02 15:04:05")
+	body.Gateway = "system"
+
+	q, err := query.Values(body)
+	if err != nil {
+		return err
+	}
+	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -281,6 +317,8 @@ func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) err
 }
 
 func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) error {
+	fmt.Println("SYNC WHMCS INVOICE")
+
 	whmcsInv, err := g.GetInvoice(ctx, invoiceId)
 	if err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
@@ -292,7 +330,8 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
 		inv.Status = statusToNoCloud(whmcsInv.Status)
-		if inv, err = g.invMan.UpdateInvoiceStatus(inv.GetUuid(), inv.Status); err != nil {
+		fmt.Println("STATUS UPDATE")
+		if inv, err = g.invMan.UpdateInvoiceStatus(ctx, inv.GetUuid(), inv.Status); err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 	}
@@ -318,25 +357,47 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		}
 		inv.Created = t.Unix()
 	}
-	inv.Total = float64(whmcsInv.Total)
-	// TODO: sync invoice number too. Have to refactor number logic in invoice controller
-	// TODO: Update items too or refactor
-	//inv.Items = []*pb.Item{}
-	//for _, item := range whmcsInv.Items.Items {
-	//	inv.Items = append(inv.Items, &pb.Item{
-	//		Description: item.Description,
-	//		Amount:      1,
-	//		Price:       float64(item.Amount),
-	//		Unit:        "Pcs",
-	//	})
-	//}
+
+	whmcsItems := whmcsInv.Items.Items
+	ncItems := slices.Clone(inv.GetItems())
+	newItems := make([]*pb.Item, 0)
+	synced := true
+	for _, item := range whmcsItems {
+		found := false
+		index := 0
+		for i, ncItem := range ncItems {
+			if item.Description == ncItem.Description && equalFloats(float64(item.Amount), ncItem.Price*float64(ncItem.Amount)) {
+				found = true
+				index = i
+				break
+			}
+		}
+		if found {
+			ncItems = slices.Delete(ncItems, index, index+1)
+		} else {
+			synced = false
+		}
+
+		newItems = append(newItems, &pb.Item{
+			Description: item.Description,
+			Amount:      1,
+			Price:       float64(item.Amount),
+			Unit:        "Pcs",
+		})
+	}
+	var warning string
+	if !synced && inv.Type != pb.ActionType_WHMCS_INVOICE {
+		warning = "[WARNING]: THIS INVOICE ITEMS WERE UPDATED DIRECTLY FROM WHMCS. THIS MEANS THAT NOW THIS INVOICE DO NOT PROVIDE FUNCTIONALITY IN NOCLOUD! (DONT UPDATE AUTOGENERATED AND FUNCTIONAL INVOICES THROUGH WHMCS)\n"
+		inv.Items = newItems
+		inv.Total = float64(whmcsInv.Total)
+	}
+
 	meta := inv.GetMeta()
-	meta["note"] = structpb.NewStringValue(whmcsInv.Notes)
+	meta["note"] = structpb.NewStringValue(warning + whmcsInv.Notes)
 	inv.Meta = meta
 
-	if _, err = g.invMan.InvoicesController().Update(ctx, &graph.Invoice{
-		Invoice: inv,
-	}); err != nil {
+	fmt.Println("UPDATING INVOICE")
+	if err = g.invMan.UpdateInvoice(ctx, inv); err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
 	return nil

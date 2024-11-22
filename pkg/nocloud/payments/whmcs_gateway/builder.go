@@ -32,8 +32,9 @@ func (g *WhmcsGateway) buildCreateInvoiceQueryBase(inv *pb.Invoice, whmcsUserId 
 		UserId:          fmt.Sprintf("%d", whmcsUserId),
 		Status:          statusToWhmcs(inv.Status),
 		SendInvoice:     sendEmail,
-		PaymentMethod:   "mailin",
+		PaymentMethod:   nil,
 		TaxRate:         "10",
+		Notes:           inv.GetMeta()["note"].GetStringValue(),
 		Date:            time.Unix(inv.Created, 0).Format("2006-01-02"),
 		DueDate:         time.Unix(inv.Deadline, 0).Format("2006-01-02"),
 		AutoApplyCredit: "0",
@@ -85,4 +86,14 @@ func (g *WhmcsGateway) buildGetInvoiceQueryBase(whmcsInvoiceId int) (url.Values,
 	}
 
 	return res, nil
+}
+
+func (g *WhmcsGateway) buildAddPaymentQueryBase(whmcsInvoiceId int) AddPaymentQuery {
+	return AddPaymentQuery{
+		Action:       "AddInvoicePayment",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		ResponseType: "json",
+		InvoiceId:    whmcsInvoiceId,
+	}
 }
