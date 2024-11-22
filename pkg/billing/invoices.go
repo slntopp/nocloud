@@ -36,20 +36,7 @@ type pair[T any] struct {
 	s T
 }
 
-var forbiddenStatusConversions = []pair[pb.BillingStatus]{
-	// From DRAFT
-	{pb.BillingStatus_DRAFT, pb.BillingStatus_RETURNED},
-	{pb.BillingStatus_DRAFT, pb.BillingStatus_PAID},
-	// From UNPAID
-	{pb.BillingStatus_UNPAID, pb.BillingStatus_RETURNED},
-	// From PAID
-	{pb.BillingStatus_PAID, pb.BillingStatus_DRAFT},
-	{pb.BillingStatus_PAID, pb.BillingStatus_UNPAID},
-	{pb.BillingStatus_PAID, pb.BillingStatus_CANCELED},
-	// From CANCELLED  (All forbidden)
-	// From RETURNED   (All forbidden)
-	// From TERMINATED (All forbidden)
-}
+var forbiddenStatusConversions = []pair[pb.BillingStatus]{}
 
 const instanceOwner = `
 LET account = LAST( // Find Instance owner Account
@@ -402,6 +389,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
+	log.Debug("GATEWAY CALLBACK VALUE CREATE", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, req.Header())))
 	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
 			//_ = s.invoices.AbortTransaction(trCtx)
@@ -470,12 +458,6 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	if oldStatus == newStatus {
 		return nil, status.Error(codes.InvalidArgument, "Same status")
-	}
-	// Cannot rollback from cancelled, terminated or returned statuses
-	if oldStatus == pb.BillingStatus_CANCELED ||
-		oldStatus == pb.BillingStatus_TERMINATED ||
-		oldStatus == pb.BillingStatus_RETURNED {
-		return nil, status.Error(codes.InvalidArgument, "Cannot rollback from cancelled, terminated or returned statuses")
 	}
 	if slices.Contains(forbiddenStatusConversions, pair[pb.BillingStatus]{oldStatus, newStatus}) {
 		return nil, status.Error(codes.InvalidArgument, "Cannot convert from "+oldStatus.String()+" to "+newStatus.String())
@@ -714,6 +696,7 @@ quit:
 		Requestor: requestor,
 	})
 
+	log.Debug("GATEWAY CALLBACK VALUE UPDATE STATUS", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, req.Header())))
 	upd, err := s.invoices.Get(ctx, t.GetUuid())
 	if err != nil {
 		log.Error("Failed to get updated invoice", zap.Error(err))
@@ -1072,7 +1055,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	log.Info("GATEWAY CALLBACK VAL", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, r.Header())))
+	log.Debug("GATEWAY CALLBACK VALUE UPDATE", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, r.Header())))
 	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
