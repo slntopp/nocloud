@@ -7,6 +7,7 @@ import (
 	"github.com/slntopp/nocloud-proto/billing/billingconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
@@ -41,6 +42,10 @@ func (i *invoicesManager) CreateInvoice(ctx context.Context, inv *pb.Invoice) er
 		return err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
+	gwc, _ := ctx.Value(payments.GatewayCallback).(bool)
+	if gwc {
+		req.Header().Set(string(payments.GatewayCallback), "true")
+	}
 	_, err = i.inv.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	return err
 }
@@ -55,6 +60,10 @@ func (i *invoicesManager) UpdateInvoice(ctx context.Context, inv *pb.Invoice) er
 		return err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
+	gwc, _ := ctx.Value(payments.GatewayCallback).(bool)
+	if gwc {
+		req.Header().Set(string(payments.GatewayCallback), "true")
+	}
 	_, err = i.inv.UpdateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	return err
 }
@@ -69,6 +78,10 @@ func (i *invoicesManager) UpdateInvoiceStatus(ctx context.Context, id string, ne
 		return nil, err
 	}
 	req.Header().Set("Authorization", "Bearer "+token)
+	gwc, _ := ctx.Value(payments.GatewayCallback).(bool)
+	if gwc {
+		req.Header().Set(string(payments.GatewayCallback), "true")
+	}
 	inv, err := i.inv.UpdateInvoiceStatus(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
 	if err != nil {
 		return nil, err

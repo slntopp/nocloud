@@ -402,7 +402,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	if !payments.GetGatewayCallbackValue(ctx) {
+	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
 			//_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
@@ -718,7 +718,7 @@ quit:
 	if err != nil {
 		log.Error("Failed to get updated invoice", zap.Error(err))
 	}
-	if err == nil && !payments.GetGatewayCallbackValue(ctx) {
+	if err == nil && !payments.GetGatewayCallbackValue(ctx, req.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
@@ -1075,7 +1075,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	log.Info("GATEWAY CALLBACK VAL", zap.Bool("val", payments.GetGatewayCallbackValue(ctx)))
 	md, _ := metadata.FromIncomingContext(ctx)
 	log.Info("metadata", zap.Any("md", md), zap.Any("ctx", ctx))
-	if !payments.GetGatewayCallbackValue(ctx) {
+	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
