@@ -3,6 +3,7 @@ package invoices_manager
 import (
 	"connectrpc.com/connect"
 	"context"
+	"fmt"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/billing/billingconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -62,6 +63,7 @@ func (i *invoicesManager) UpdateInvoice(ctx context.Context, inv *pb.Invoice) er
 	req.Header().Set("Authorization", "Bearer "+token)
 	gwc, _ := ctx.Value(payments.GatewayCallback).(bool)
 	if gwc {
+		fmt.Println("SETTING HEADER")
 		req.Header().Set(string(payments.GatewayCallback), "true")
 	}
 	_, err = i.inv.UpdateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)

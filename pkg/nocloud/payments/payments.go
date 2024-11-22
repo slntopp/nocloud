@@ -19,7 +19,7 @@ type PaymentGateway interface {
 
 type ContextKey string
 
-const GatewayCallback = ContextKey("payment-gateway-callback")
+const GatewayCallback = ContextKey("PaymentGatewayCallback")
 
 func GetGatewayCallbackValue(ctx context.Context, h ...http.Header) bool {
 	if len(h) > 0 {
