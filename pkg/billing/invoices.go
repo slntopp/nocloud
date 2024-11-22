@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
-	"google.golang.org/grpc/metadata"
 	"slices"
 	"strings"
 	"time"
@@ -1072,9 +1071,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	log.Info("GATEWAY CALLBACK VAL", zap.Bool("val", payments.GetGatewayCallbackValue(ctx)))
-	md, _ := metadata.FromIncomingContext(ctx)
-	log.Info("metadata", zap.Any("md", md), zap.Any("ctx", ctx))
+	log.Info("GATEWAY CALLBACK VAL", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, r.Header())))
+	log.Info("headers", zap.Any("headers", r.Header().Values(string(payments.GatewayCallback))))
 	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
