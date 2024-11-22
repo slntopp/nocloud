@@ -33,6 +33,10 @@
       {{ getShortName(item.data.email) }}
     </template>
 
+    <template v-slot:[`item.data.tax_rate`]="{ item }">
+      {{ (item.data.tax_rate || 0) * 100 }}
+    </template>
+
     <template v-slot:[`item.balance`]="{ item }">
       <balance
         :hide-currency="true"
@@ -103,10 +107,11 @@ const props = defineProps({
   },
   noSearch: { type: Boolean, default: false },
   customSearchParam: { type: String, default: "" },
-  customFilter: { type: Object},
+  customFilter: { type: Object },
   tableName: { type: String, default: "accounts" },
 });
-const { value, singleSelect, customSearchParam, noSearch,customFilter } = toRefs(props);
+const { value, singleSelect, customSearchParam, noSearch, customFilter } =
+  toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -134,6 +139,7 @@ const headers = ref([
   { text: "Client currency", value: "currency.title" },
   { text: "Access level", value: "access.level" },
   { text: "WHMCS ID", value: "data.whmcs_id" },
+  { text: "Tax rate", value: "data.tax_rate" },
   { text: "Invoice based", value: "data.regular_payment" },
 ]);
 const levelColorMap = ref({
@@ -219,7 +225,9 @@ const requestOptions = computed(() => ({
         search_param:
           searchParam.value || filter.value.search_param || undefined,
       }
-    : customFilter.value?customFilter.value:{ search_param: customSearchParam.value || undefined },
+    : customFilter.value
+    ? customFilter.value
+    : { search_param: customSearchParam.value || undefined },
   page: options.value.page,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],

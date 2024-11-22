@@ -4,7 +4,7 @@
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <hint-btn hint="Create instance">
           <v-btn
-            :class="(viewport < 600) ? 'ma-0' : 'ma-1'"
+            :class="viewport < 600 ? 'ma-0' : 'ma-1'"
             :small="viewport < 600"
             :disabled="isLocked"
             :to="{
@@ -25,7 +25,7 @@
                 :disabled="isChangeRegularPaymentLoading"
                 :loading="isChangeRegularPaymentLoading"
                 :small="viewport < 600"
-                :class="(viewport < 600) ? 'ma-4' : 'ma-1'"
+                :class="viewport < 600 ? 'ma-4' : 'ma-1'"
                 v-bind="attrs"
                 v-on="on"
               >
@@ -96,6 +96,10 @@
           item-value="id"
           label="currency"
         />
+      </v-col>
+
+      <v-col lg="2" md="4" sm="6" cols="12">
+        <v-text-field v-model="taxRate" label="tax rate" suffix="%"/>
       </v-col>
     </v-row>
 
@@ -279,6 +283,7 @@ export default {
     accountNamespace: null,
     uuid: "",
     title: "",
+    taxRate: 0,
     currency: "",
     keys: [],
     selected: [],
@@ -288,7 +293,7 @@ export default {
     isChangeRegularPaymentLoading: false,
     isChangeRegularPaymentOpen: false,
     showDeletedInstances: false,
-    viewport: window.innerWidth
+    viewport: window.innerWidth,
   }),
   methods: {
     formatSecondsToDate,
@@ -321,6 +326,10 @@ export default {
         ...this.account,
         title: this.title,
         currency: this.currency,
+        data: {
+          ...this.account.data,
+          tax_rate: this.taxRate / 100,
+        },
       };
       if (!newAccount.data) {
         newAccount.data = {};
@@ -446,8 +455,13 @@ export default {
       }
     },
     setViewport() {
-      this.viewport = window.innerWidth
-    }
+      this.viewport = window.innerWidth;
+    },
+    initTaxRate() {
+      this.taxRate = this.account.data.tax_rate
+        ? this.account.data.tax_rate * 100
+        : 0;
+    },
   },
   mounted() {
     this.title = this.account.title;
@@ -458,10 +472,12 @@ export default {
     this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     this.fetchNamespace();
 
-    window.addEventListener('resize', this.setViewport)
+    window.addEventListener("resize", this.setViewport);
+
+    this.initTaxRate();
   },
   destroyed() {
-    window.removeEventListener('resize', this.setViewport)
+    window.removeEventListener("resize", this.setViewport);
   },
   computed: {
     services() {
@@ -531,6 +547,11 @@ export default {
     },
     whmcsApi() {
       return this.$store.getters["settings/whmcsApi"];
+    },
+  },
+  watch: {
+    account() {
+      this.initTaxRate();
     },
   },
 };
