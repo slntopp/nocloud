@@ -5,6 +5,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"google.golang.org/grpc/metadata"
 	"net/http"
@@ -17,30 +18,26 @@ type PaymentGateway interface {
 	//AddClient(types.CreateUserParams) (int, error)
 }
 
-type ContextKey string
-
-const GatewayCallback = ContextKey("PaymentGatewayCallback")
-
 func GetGatewayCallbackValue(ctx context.Context, h ...http.Header) bool {
 	if len(h) > 0 {
-		header := h[0].Get(string(GatewayCallback))
+		header := h[0].Get(string(types.GatewayCallback))
 		if header != "" {
 			return header == "true"
 		}
 	}
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
-		if v, ok := md[string(GatewayCallback)]; ok {
+		if v, ok := md[string(types.GatewayCallback)]; ok {
 			return v[0] == "true"
 		}
 	}
 	md, ok = metadata.FromOutgoingContext(ctx)
 	if ok {
-		if v, ok := md[string(GatewayCallback)]; ok {
+		if v, ok := md[string(types.GatewayCallback)]; ok {
 			return v[0] == "true"
 		}
 	}
-	val, _ := ctx.Value(GatewayCallback).(bool)
+	val, _ := ctx.Value(types.GatewayCallback).(bool)
 	return val
 }
 

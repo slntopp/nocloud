@@ -2,6 +2,10 @@ package types
 
 import pb "github.com/slntopp/nocloud-proto/billing"
 
+type ContextKey string
+
+const GatewayCallback = ContextKey("PaymentGatewayCallback")
+
 type CreateUserParams struct {
 	Firstname       string       `json:"firstname" validate:"required"`
 	Lastname        string       `json:"lastname" validate:"required"`

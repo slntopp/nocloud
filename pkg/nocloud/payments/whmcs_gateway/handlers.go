@@ -8,15 +8,12 @@ import (
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
 	"time"
 )
-
-type ContextKey string
-
-const GatewayCallback = ContextKey("payment-gateway-callback")
 
 func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logger, data InvoiceCreated) error {
 	log.Info("Got invoiceCreated event. Got data", zap.Any("data", data))
@@ -143,7 +140,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 	log.Info("Event received", zap.String("event", resp.Event))
 	log = log.With(zap.String("event", resp.Event))
 
-	ctx := context.WithValue(context.Background(), GatewayCallback, true)
+	ctx := context.WithValue(context.Background(), types.GatewayCallback, true)
 	var innerErr error
 	switch resp.Event {
 	case "InvoicePaid":
