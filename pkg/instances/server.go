@@ -743,7 +743,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER sp in @%s`, key)
+			query += fmt.Sprintf(` FILTER sp._key in @%s`, key)
 			bindVars[key] = values
 		} else if key == "billing_plan" {
 			values := val.GetListValue().AsSlice()

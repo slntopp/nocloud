@@ -66,6 +66,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	query := `FOR t IN @@transactions`
 	vars := map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
+		"@currencies":   schema.CUR_COL,
 	}
 
 	if req.GetUuid() != "" {
@@ -136,7 +137,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 			vars["count"] = limit
 		}
 	}
-	query += ` RETURN t`
+	query += ` RETURN MERGE(t, {currency: DOCUMENT(@@currencies, TO_STRING(t.currency.id))})`
 
 	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
 

@@ -30,12 +30,12 @@ type CurrencyController interface {
 }
 
 type Currency struct {
-	Id        int32  `json:"id"`
-	Title     string `json:"title"`
-	Public    bool   `json:"public"`
-	Precision int32  `json:"precision"`
-	Format    string `json:"format"`
-	Rounding  int    `json:"rounding"`
+	Id        int32       `json:"id"`
+	Title     string      `json:"title"`
+	Public    bool        `json:"public"`
+	Precision int32       `json:"precision"`
+	Format    string      `json:"format"`
+	Rounding  pb.Rounding `json:"rounding"`
 	driver.DocumentMeta
 }
 
@@ -51,7 +51,7 @@ func CurrencyFromPb(currency *pb.Currency) Currency {
 		},
 		Precision: currency.GetPrecision(),
 		Format:    currency.GetFormat(),
-		Rounding:  int(currency.GetRounding()),
+		Rounding:  currency.GetRounding(),
 	}
 }
 
@@ -286,11 +286,11 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 	for cursor.HasMore() {
 		doc := struct {
 			driver.DocumentMeta
-			Title     string `json:"title"`
-			Public    bool   `json:"public"`
-			Precision int32  `json:"precision"`
-			Format    string `json:"format"`
-			Rounding  int    `json:"rounding"`
+			Title     string      `json:"title"`
+			Public    bool        `json:"public"`
+			Precision int32       `json:"precision"`
+			Format    string      `json:"format"`
+			Rounding  pb.Rounding `json:"rounding"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
@@ -314,7 +314,7 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 			Public:    doc.Public,
 			Precision: doc.Precision,
 			Format:    doc.Format,
-			Rounding:  pb.Rounding(doc.Rounding),
+			Rounding:  doc.Rounding,
 		})
 	}
 
