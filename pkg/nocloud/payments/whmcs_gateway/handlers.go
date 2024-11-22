@@ -142,7 +142,10 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 	log = log.With(zap.String("event", resp.Event))
 
 	ctx := context.WithValue(context.Background(), types.GatewayCallback, true)
-	ctx = metadata.AppendToOutgoingContext(ctx, string(types.GatewayCallback), "true")
+	md := metadata.New(map[string]string{
+		string(types.GatewayCallback): "true",
+	})
+	ctx = metadata.NewOutgoingContext(ctx, md)
 	var innerErr error
 	switch resp.Event {
 	case "InvoicePaid":
