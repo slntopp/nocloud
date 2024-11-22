@@ -4,7 +4,6 @@ import (
 	"context"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"google.golang.org/grpc/metadata"
@@ -51,12 +50,12 @@ var (
 	whmcsData whmcs_gateway.WhmcsData
 
 	accountController graph.AccountsController
-	invoicesManager   invoices_manager.InvoicesManager
+	invoicesManager   whmcs_gateway.NoCloudInvoicesManager
 )
 
 func RegisterGateways(whmcs whmcs_gateway.WhmcsData,
 	accountCtrl graph.AccountsController,
-	invoicesMan invoices_manager.InvoicesManager) {
+	invoicesMan whmcs_gateway.NoCloudInvoicesManager) {
 	if _registered {
 		panic("payment gateways are already registered")
 	}
