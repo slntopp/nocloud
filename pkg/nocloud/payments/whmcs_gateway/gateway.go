@@ -247,8 +247,8 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		amount[i] = floatAsString(item.GetPrice() * float64(item.GetAmount()))
 		taxed[i] = isTaxed
 	}
-	body.NewItemDescription = description
-	body.NewItemAmount = amount
+	//body.NewItemDescription = description
+	//body.NewItemAmount = amount
 	//body.NewItemTaxed = isTaxed
 
 	q, err := query.Values(body)
