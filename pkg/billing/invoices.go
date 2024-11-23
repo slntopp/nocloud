@@ -379,6 +379,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
+	tax := acc.GetTaxRate()
 
 	// Create transaction if it's balance deposit or instance start
 	if t.GetType() == pb.ActionType_BALANCE || t.GetType() == pb.ActionType_INSTANCE_START {
@@ -398,6 +399,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
 		}
 		t.Transactions = []string{newTr.Msg.Uuid}
+	}
+
+	if t.Meta == nil {
+		t.Meta = make(map[string]*structpb.Value)
+	}
+	if t.Meta[graph.InvoiceTaxMetaKey] == nil {
+		t.Meta[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 	}
 
 	//trCtx, err := s.invoices.BeginTransaction(ctx)
