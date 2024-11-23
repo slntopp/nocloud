@@ -3,6 +3,7 @@ package billing
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -265,13 +266,17 @@ func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context
 
 	ctx = context.WithValue(ctx, "create_as_draft", true)
 	if err := s.createRenewalInvoice(ctx, log, &data.Account, expData, defCurr); err != nil {
-		log.Error("Error creating renewal invoice", zap.Error(err))
-		errCount++
+		if !errors.Is(err, errNothingToRenew) {
+			log.Error("Error creating renewal invoice", zap.Error(err))
+			errCount++
+		}
 		return false, errCount, warnsCount
 	}
 
 	return true, errCount, warnsCount
 }
+
+var errNothingToRenew = fmt.Errorf("nothing to renew")
 
 func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *zap.Logger, _acc *graph.Account, data []*instanceExpData, defCurr *pb.Currency) error {
 	now := time.Now().Unix()
@@ -380,7 +385,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	inv.SetBillingData(&billingData)
 
 	if len(inv.Items) == 0 {
-		return nil
+		return errNothingToRenew
 	}
 
 	slices.Sort(expirations)
