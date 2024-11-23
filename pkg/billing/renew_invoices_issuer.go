@@ -167,6 +167,8 @@ end:
 		preConclusion = "ERRORS"
 	} else if preWarns > 0 {
 		preConclusion = "WARNS"
+	} else {
+		preConclusion = "OK"
 	}
 	if !started {
 		conclusion = "DIDN'T EVEN STARTED"
