@@ -260,7 +260,7 @@ func main() {
 	go records.Consume(ctx)
 
 	log.Info("Starting Daily Cron Job")
-	go server.DailyCronJob(ctx, log)
+	go server.DailyCronJob(ctx, log, token)
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
