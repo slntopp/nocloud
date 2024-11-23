@@ -74,6 +74,8 @@ var (
 
 	invoicesFile  string
 	instancesFile string
+
+	dailyCronTime string
 )
 
 func init() {
@@ -97,6 +99,8 @@ func init() {
 	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
 	viper.SetDefault("INSTANCES_HOST", "services-registry:8000")
 
+	viper.SetDefault("DAILY_CRON_TIME", "14:00")
+
 	port = viper.GetString("PORT")
 
 	arangodbHost = viper.GetString("DB_HOST")
@@ -116,6 +120,8 @@ func init() {
 
 	invoicesFile = viper.GetString("INVOICES_MIGRATIONS_FILE")
 	instancesFile = viper.GetString("INSTANCES_MIGRATIONS_FILE")
+
+	dailyCronTime = viper.GetString("DAILY_CRON_TIME")
 }
 
 func main() {
@@ -260,7 +266,7 @@ func main() {
 	go records.Consume(ctx)
 
 	log.Info("Starting Daily Cron Job")
-	go server.DailyCronJob(ctx, log, token)
+	go server.DailyCronJob(ctx, log, token, dailyCronTime)
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)

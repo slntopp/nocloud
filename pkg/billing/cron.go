@@ -58,12 +58,21 @@ func getValuesFromTime(t string) (hours int, minutes int, seconds int, err error
 	return hours, minutes, seconds, nil
 }
 
-func (s *BillingServiceServer) DailyCronJob(ctx context.Context, log *zap.Logger, rootToken string) {
+func (s *BillingServiceServer) DailyCronJob(ctx context.Context, log *zap.Logger, rootToken string, cronTime string) {
 	log = s.log.Named("DailyCronJob")
 	// Append root account data
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	ctx = context.WithValue(ctx, nocloud.NoCloudToken, rootToken)
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+rootToken)
+
+retry:
+	if cronTime != "" {
+		if err := s.rdb.Set(ctx, DailyCronExecutionTimeKey, cronTime, 0).Err(); err != nil {
+			log.Error("Error setting cron execution time", zap.Error(err))
+			time.Sleep(time.Second * 10)
+			goto retry
+		}
+	}
 
 start:
 	s.cron.Status.Status = hpb.Status_RUNNING
