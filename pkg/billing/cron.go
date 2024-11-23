@@ -102,7 +102,7 @@ start:
 		goto start
 	}
 
-	now := time.Now()
+	now := time.Now().In(time.UTC)
 	log.Info("Cron is set up to run on time: "+d.ExecutionTime, zap.Time("now", now), zap.Time("last_execution", time.Unix(d.LastExecution, 0)),
 		zap.Time("last_manual_execution", time.Unix(d.LastManualExecution, 0)))
 
