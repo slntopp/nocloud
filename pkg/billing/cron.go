@@ -146,8 +146,8 @@ start:
 	log.Info("Will be starting next cron job in "+fmt.Sprintf("%v", untilNext), zap.Duration("duration", untilNext))
 	select {
 	case <-t.C:
-	case ctx = <-cronNotify:
-		requester, _ = ctx.Value(nocloud.NoCloudAccount).(string)
+	case _ctx := <-cronNotify:
+		requester, _ = _ctx.Value(nocloud.NoCloudAccount).(string)
 		executedManually = true
 		log.Info("Received notification to start daily cron job. Starting", zap.String("requester", requester))
 	}
