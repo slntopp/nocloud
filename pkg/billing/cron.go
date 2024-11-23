@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	hpb "github.com/slntopp/nocloud-proto/health"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 	"strconv"
 	"strings"
 	"time"
@@ -55,8 +58,12 @@ func getValuesFromTime(t string) (hours int, minutes int, seconds int, err error
 	return hours, minutes, seconds, nil
 }
 
-func (s *BillingServiceServer) DailyCronJob(ctx context.Context, log *zap.Logger) {
+func (s *BillingServiceServer) DailyCronJob(ctx context.Context, log *zap.Logger, rootToken string) {
 	log = s.log.Named("DailyCronJob")
+	// Append root account data
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+	ctx = context.WithValue(ctx, nocloud.NoCloudToken, rootToken)
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+rootToken)
 
 start:
 	s.cron.Status.Status = hpb.Status_RUNNING
