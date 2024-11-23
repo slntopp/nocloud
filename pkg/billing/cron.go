@@ -26,10 +26,12 @@ func ptr[T any](v T) *T {
 
 const DailyCronExecutionTimeKey = "billing-daily-cron-exec-time"
 const DailyCronLastExecutionKey = "billing-daily-cron-last-execution"
+const DailyCronLastManualExecutionKey = "billing-daily-cron-last-manual-execution"
 
 type cronData struct {
-	ExecutionTime string `redis:"billing-daily-cron-exec-time"`
-	LastExecution int64  `redis:"billing-daily-cron-last-execution"`
+	ExecutionTime       string `redis:"billing-daily-cron-exec-time"`
+	LastExecution       int64  `redis:"billing-daily-cron-last-execution"`
+	LastManualExecution int64  `redis:"billing-daily-cron-last-manual-execution"`
 }
 
 var cronNotify = make(chan context.Context, 10)
@@ -92,12 +94,17 @@ start:
 	s.cron.Status.Error = nil
 
 	var d cronData
-	if err := s.rdb.MGet(ctx, DailyCronExecutionTimeKey, DailyCronLastExecutionKey).Scan(&d); err != nil {
+	if err := s.rdb.MGet(ctx, DailyCronExecutionTimeKey, DailyCronLastExecutionKey, DailyCronLastManualExecutionKey).Scan(&d); err != nil {
 		log.Error("Error getting cron data", zap.Error(err))
 		s.cron.Status.Status = hpb.Status_INTERNAL
 		s.cron.Status.Error = ptr(err.Error())
 		time.Sleep(time.Second * 10)
 		goto start
+	}
+
+	s.cron.LastExecution = time.Unix(d.LastExecution, 0).Format("2006-01-02T15:04:05Z07:00")
+	if d.LastManualExecution > d.LastExecution {
+		s.cron.LastExecution = time.Unix(d.LastManualExecution, 0).Format("2006-01-02T15:04:05Z07:00")
 	}
 
 	now := time.Now()
@@ -160,14 +167,21 @@ cron:
 	})
 	log.Info("Finished daily cron job", zap.Int64("duration_seconds", a-b))
 	if executedManually {
-		goto start
-	}
-	if err = s.rdb.MSet(ctx, DailyCronLastExecutionKey, a).Err(); err != nil {
-		log.Error("Error setting cron data", zap.Error(err))
-		s.cron.Status.Status = hpb.Status_INTERNAL
-		s.cron.Status.Error = ptr(err.Error())
-		time.Sleep(time.Second * 10)
-		goto start
+		if err = s.rdb.MSet(ctx, DailyCronLastManualExecutionKey, a).Err(); err != nil {
+			log.Error("Error setting cron data for manual exec", zap.Error(err))
+			s.cron.Status.Status = hpb.Status_INTERNAL
+			s.cron.Status.Error = ptr(err.Error())
+			time.Sleep(time.Second * 10)
+			goto start
+		}
+	} else {
+		if err = s.rdb.MSet(ctx, DailyCronLastExecutionKey, a).Err(); err != nil {
+			log.Error("Error setting cron data", zap.Error(err))
+			s.cron.Status.Status = hpb.Status_INTERNAL
+			s.cron.Status.Error = ptr(err.Error())
+			time.Sleep(time.Second * 10)
+			goto start
+		}
 	}
 	goto start
 }
