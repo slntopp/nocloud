@@ -446,7 +446,7 @@ skipStatus:
 		})
 	}
 	var warning string
-	if !synced && inv.Type != pb.ActionType_WHMCS_INVOICE {
+	if !synced {
 		warning = "[WARNING]: THIS INVOICE ITEMS WERE UPDATED DIRECTLY FROM WHMCS."
 		inv.Items = newItems
 		inv.Total = float64(whmcsInv.Total)
