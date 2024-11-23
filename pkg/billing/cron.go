@@ -1,13 +1,20 @@
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	epb "github.com/slntopp/nocloud-proto/events_logging"
 	hpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +31,8 @@ type cronData struct {
 	ExecutionTime string `redis:"billing-daily-cron-exec-time"`
 	LastExecution int64  `redis:"billing-daily-cron-last-execution"`
 }
+
+var cronNotify = make(chan context.Context, 10)
 
 func getValuesFromTime(t string) (hours int, minutes int, seconds int, err error) {
 	trZero := func(s string) string {
@@ -77,6 +86,8 @@ retry:
 	}
 
 start:
+	executedManually := false
+	requester := "system"
 	s.cron.Status.Status = hpb.Status_RUNNING
 	s.cron.Status.Error = nil
 
@@ -123,7 +134,13 @@ start:
 	}
 
 	log.Info("Will be starting next cron job in "+fmt.Sprintf("%v", untilNext), zap.Duration("duration", untilNext))
-	<-t.C
+	select {
+	case <-t.C:
+	case ctx = <-cronNotify:
+		requester, _ = ctx.Value(nocloud.NoCloudAccount).(string)
+		executedManually = true
+		log.Info("Received notification to start daily cron job. Starting", zap.String("requester", requester))
+	}
 cron:
 	log.Info("Starting daily cron job")
 	b := time.Now().Unix()
@@ -131,7 +148,20 @@ cron:
 	a := time.Now().Unix()
 	d.LastExecution = b
 	s.cron.LastExecution = time.Unix(b, 0).Format("2006-01-02T15:04:05Z07:00")
+	nocloud.Log(log, &epb.Event{
+		Entity:    "Cron",
+		Uuid:      "Billing",
+		Scope:     "database",
+		Action:    "daily_cron_job",
+		Requestor: requester,
+		Snapshot:  &epb.Snapshot{Diff: ""},
+		Ts:        b,
+		Rc:        0,
+	})
 	log.Info("Finished daily cron job", zap.Int64("duration_seconds", a-b))
+	if executedManually {
+		goto start
+	}
 	if err = s.rdb.MSet(ctx, DailyCronLastExecutionKey, a).Err(); err != nil {
 		log.Error("Error setting cron data", zap.Error(err))
 		s.cron.Status.Status = hpb.Status_INTERNAL
@@ -151,4 +181,13 @@ func (s *BillingServiceServer) dailyCronJobAction(ctx context.Context, log *zap.
 	}()
 	// Jobs
 	s.InvoiceExpiringInstancesCronJob(ctx, log)
+}
+
+func (s *BillingServiceServer) RunDailyCronJob(ctx context.Context, _ *connect.Request[pb.RunDailyCronJobRequest]) (*connect.Response[pb.RunDailyCronJobResponse], error) {
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+	cronNotify <- ctx
+	return connect.NewResponse(&pb.RunDailyCronJobResponse{}), nil
 }
