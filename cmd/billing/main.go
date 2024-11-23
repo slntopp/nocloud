@@ -76,6 +76,8 @@ var (
 	instancesFile string
 
 	dailyCronTime string
+
+	whmcsPricesTaxExcluded bool
 )
 
 func init() {
@@ -101,6 +103,8 @@ func init() {
 
 	viper.SetDefault("DAILY_CRON_TIME", "08:00")
 
+	viper.SetDefault("WHMCS_PRICES_TAX_EXCLUDED", true)
+
 	port = viper.GetString("PORT")
 
 	arangodbHost = viper.GetString("DB_HOST")
@@ -122,6 +126,8 @@ func init() {
 	instancesFile = viper.GetString("INSTANCES_MIGRATIONS_FILE")
 
 	dailyCronTime = viper.GetString("DAILY_CRON_TIME")
+
+	whmcsPricesTaxExcluded = viper.GetBool("WHMCS_PRICES_TAX_EXCLUDED")
 }
 
 func main() {
@@ -185,10 +191,10 @@ func main() {
 		log.Fatal("Can't get whmcs credentials", zap.Error(err))
 	}
 	manager := invoices_manager.NewInvoicesManager(bClient, invoicesCtrl, authInterceptor)
-	payments.RegisterGateways(whmcsData, accountsCtrl, manager)
+	payments.RegisterGateways(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
 
 	// Register WHMCS hooks handler (hooks for invoices status e.g.)
-	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, manager)
+	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
 	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
 	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
 	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))

@@ -70,6 +70,8 @@ var (
 	rbmq         string
 	settingsHost string
 	billingHost  string
+
+	whmcsTaxExcluded bool
 )
 
 func init() {
@@ -87,6 +89,7 @@ func init() {
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("BILLING_HOST", "billing:8000")
+	viper.SetDefault("WHMCS_PRICES_TAX_EXCLUDED", true)
 
 	port = viper.GetString("PORT")
 
@@ -99,6 +102,7 @@ func init() {
 	settingsHost = viper.GetString("SETTINGS_HOST")
 	billingHost = viper.GetString("BILLING_HOST")
 	redisHost = viper.GetString("REDIS_HOST")
+	whmcsTaxExcluded = viper.GetBool("WHMCS_PRICES_TAX_EXCLUDED")
 }
 
 func main() {
@@ -215,7 +219,7 @@ func main() {
 		log.Fatal("Can't get whmcs credentials", zap.Error(err))
 	}
 	manager := invoices_manager.NewInvoicesManager(bClient, graph.NewInvoicesController(log, db), authInterceptor)
-	payments.RegisterGateways(whmcsData, graph.NewAccountsController(log, db), manager)
+	payments.RegisterGateways(whmcsData, graph.NewAccountsController(log, db), graph.NewCurrencyController(log, db), manager, whmcsTaxExcluded)
 
 	// Migrate
 	migrateToV2 := viper.GetBool("MIGRATE_TO_V2")

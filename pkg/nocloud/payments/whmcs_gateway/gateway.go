@@ -10,6 +10,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"slices"
@@ -31,11 +32,14 @@ type WhmcsGateway struct {
 	baseUrl     string
 	trustedIP   string
 
-	accounts graph.AccountsController
-	invMan   NoCloudInvoicesManager
+	accounts   graph.AccountsController
+	currencies graph.CurrencyController
+	invMan     NoCloudInvoicesManager
+
+	taxExcluded bool
 }
 
-func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, invMan NoCloudInvoicesManager) *WhmcsGateway {
+func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool) *WhmcsGateway {
 	return &WhmcsGateway{
 		apiUsername: data.WhmcsUser,
 		apiPassword: data.WhmcsPassHash,
@@ -43,6 +47,8 @@ func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, invMan NoClou
 		trustedIP:   data.TrustedIP,
 		accounts:    acc,
 		invMan:      invMan,
+		taxExcluded: whmcsTaxExcluded,
+		currencies:  curr,
 	}
 }
 
@@ -114,6 +120,12 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		taxed = "1"
 	}
 
+	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	if err != nil {
+		return err
+	}
+	precision := int(curr.Precision)
+
 	oldNote := inv.GetMeta()["note"].GetStringValue()
 	newNote := "NOCLOUD INVOICE ID: " + inv.GetUuid() + "\n" + oldNote
 	inv.GetMeta()["note"] = structpb.NewStringValue(newNote)
@@ -122,8 +134,16 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		return err
 	}
 	for i, item := range inv.GetItems() {
+		var price float64
+		if g.taxExcluded {
+			price = (item.GetPrice() * float64(item.GetAmount())) / (1 + tax/100)
+		} else {
+			price = item.GetPrice() * float64(item.GetAmount())
+		}
+		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+
 		q.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
-		q.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", item.GetPrice()*float64(item.GetAmount())))
+		q.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", price))
 		q.Set(fmt.Sprintf("itemtaxed%d", i+1), taxed)
 	}
 
@@ -233,7 +253,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	}
 	for i := range inv.GetItems() {
 		q.Set(fmt.Sprintf("newitemdescription[%d]", i), description[i])
-		q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%f", amount[i]))
+		q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%.2f", amount[i]))
 		q.Set(fmt.Sprintf("newitemtaxed[%d]", i), strconv.FormatBool(taxed[i]))
 	}
 	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
