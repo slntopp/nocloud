@@ -148,7 +148,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 			},
 		},
 		cron: &healthpb.RoutineStatus{
-			Routine: "Daily Cron Job",
+			Routine: "Daily Cron Job (UTC)",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,

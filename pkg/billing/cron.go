@@ -109,9 +109,9 @@ start:
 	log.Info("Cron is set up to run on time: "+d.ExecutionTime, zap.Time("now", now), zap.Time("last_execution", time.Unix(d.LastExecution, 0)),
 		zap.Time("last_manual_execution", time.Unix(d.LastManualExecution, 0)))
 
-	s.cron.LastExecution = time.Unix(d.LastExecution, 0).Format("2006-01-02T15:04:05Z07:00")
+	s.cron.LastExecution = time.Unix(d.LastExecution, 0).Format("2006-01-02T15:04:05")
 	if d.LastManualExecution > d.LastExecution {
-		s.cron.LastExecution = time.Unix(d.LastManualExecution, 0).Format("2006-01-02T15:04:05Z07:00")
+		s.cron.LastExecution = time.Unix(d.LastManualExecution, 0).Format("2006-01-02T15:04:05")
 	}
 
 	last := time.Unix(d.LastExecution, 0)
@@ -169,7 +169,7 @@ cron:
 	s.dailyCronJobAction(ctx, log)
 	a := time.Now().Unix()
 	d.LastExecution = b
-	s.cron.LastExecution = time.Unix(b, 0).Format("2006-01-02T15:04:05Z07:00")
+	s.cron.LastExecution = time.Unix(b, 0).Format("2006-01-02T15:04:05")
 	nocloud.Log(log, &epb.Event{
 		Entity:    "Cron",
 		Uuid:      "Billing",
