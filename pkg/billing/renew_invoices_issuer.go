@@ -226,6 +226,9 @@ func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context
 			warnsCount++
 			continue
 		}
+		if product.GetKind() == pb.Kind_POSTPAID {
+			expires += period
+		}
 		if product.GetPeriod() != period {
 			log.Error("Product period mismatch", zap.String("product", inst.GetProduct()), zap.String("instance", inst.GetUuid()))
 			errCount++
