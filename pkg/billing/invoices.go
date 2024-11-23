@@ -1374,7 +1374,6 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Meta: map[string]*structpb.Value{
 			"creator":               structpb.NewStringValue(requester),
 			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
-			"expiration_timestamp":  structpb.NewNumberValue(float64(expire)),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
 	}
