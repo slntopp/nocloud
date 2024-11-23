@@ -207,6 +207,12 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		return err
 	}
 
+	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	if err != nil {
+		return err
+	}
+	precision := int(curr.Precision)
+
 	body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
 	body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
 	body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
@@ -243,8 +249,16 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	amount := make(map[int]floatAsString)
 	taxed := make(map[int]string)
 	for i, item := range inv.GetItems() {
+		var price float64
+		if g.taxExcluded {
+			price = (item.GetPrice() * float64(item.GetAmount())) / (1 + tax/100)
+		} else {
+			price = item.GetPrice() * float64(item.GetAmount())
+		}
+		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+
 		description[i] = item.GetDescription()
-		amount[i] = floatAsString(item.GetPrice() * float64(item.GetAmount()))
+		amount[i] = floatAsString(price)
 		taxed[i] = isTaxed
 	}
 	//body.NewItemDescription = description
