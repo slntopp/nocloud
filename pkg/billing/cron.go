@@ -69,6 +69,8 @@ retry:
 	if cronTime != "" {
 		if err := s.rdb.Set(ctx, DailyCronExecutionTimeKey, cronTime, 0).Err(); err != nil {
 			log.Error("Error setting cron execution time", zap.Error(err))
+			s.cron.Status.Status = hpb.Status_INTERNAL
+			s.cron.Status.Error = ptr(err.Error())
 			time.Sleep(time.Second * 10)
 			goto retry
 		}
