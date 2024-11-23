@@ -104,6 +104,10 @@ start:
 		}
 	}
 
+	// Stub to test this routine every minute
+	// TODO: remove stub
+	t = time.NewTicker(time.Duration(60) * time.Second)
+
 	log.Info("Will be starting next cron job in "+fmt.Sprintf("%v", untilNext), zap.Duration("duration", untilNext))
 	<-t.C
 cron:
