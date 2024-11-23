@@ -224,6 +224,10 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
 	_taxed := tax > 0
+	isTaxed := "0"
+	if _taxed {
+		isTaxed = "1"
+	}
 
 	body.TaxRate = ptr(floatAsString(tax))
 
@@ -237,15 +241,15 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	// From new list of items
 	description := make(map[int]string)
 	amount := make(map[int]floatAsString)
-	taxed := make(map[int]bool)
+	taxed := make(map[int]string)
 	for i, item := range inv.GetItems() {
 		description[i] = item.GetDescription()
 		amount[i] = floatAsString(item.GetPrice() * float64(item.GetAmount()))
-		taxed[i] = _taxed
+		taxed[i] = isTaxed
 	}
 	body.NewItemDescription = description
 	body.NewItemAmount = amount
-	body.NewItemTaxed = taxed
+	//body.NewItemTaxed = isTaxed
 
 	q, err := query.Values(body)
 	if err != nil {
@@ -254,7 +258,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	for i := range inv.GetItems() {
 		q.Set(fmt.Sprintf("newitemdescription[%d]", i), description[i])
 		q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%.2f", amount[i]))
-		q.Set(fmt.Sprintf("newitemtaxed[%d]", i), strconv.FormatBool(taxed[i]))
+		q.Set(fmt.Sprintf("newitemtaxed[%d]", i), isTaxed)
 	}
 	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
 	if err != nil {
