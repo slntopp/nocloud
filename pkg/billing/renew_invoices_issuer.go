@@ -393,6 +393,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	if dueDate < now {
 		dueDate = now + monthSecs
 	}
+	inv.Deadline = dueDate
 
 	inv.Total = total
 	inv.Meta["no_discount_price"] = structpb.NewStringValue(fmt.Sprintf("%.2f %s", totalNoDiscount, acc.Currency.GetTitle()))
