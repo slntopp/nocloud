@@ -18,6 +18,7 @@ type Client interface {
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	Options() *redis.Options
 	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
+	Ping(ctx context.Context) *redis.StatusCmd
 }
 
 type client struct {

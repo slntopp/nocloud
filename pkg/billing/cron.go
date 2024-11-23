@@ -3,15 +3,18 @@ package billing
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	dpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events_logging"
 	hpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -82,7 +85,7 @@ retry:
 			log.Error("Error setting cron execution time", zap.Error(err))
 			s.cron.Status.Status = hpb.Status_INTERNAL
 			s.cron.Status.Error = ptr(err.Error())
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 30)
 			goto retry
 		}
 	}
@@ -98,7 +101,7 @@ start:
 		log.Error("Error getting cron data", zap.Error(err))
 		s.cron.Status.Status = hpb.Status_INTERNAL
 		s.cron.Status.Error = ptr(err.Error())
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 30)
 		goto start
 	}
 
@@ -106,9 +109,9 @@ start:
 	log.Info("Cron is set up to run on time: "+d.ExecutionTime, zap.Time("now", now), zap.Time("last_execution", time.Unix(d.LastExecution, 0)),
 		zap.Time("last_manual_execution", time.Unix(d.LastManualExecution, 0)))
 
-	s.cron.LastExecution = time.Unix(d.LastExecution, 0).Format("2006-01-02T15:04:05")
+	s.cron.LastExecution = time.Unix(d.LastExecution, 0).Format("2006-01-02T15:04:05Z07:00")
 	if d.LastManualExecution > d.LastExecution {
-		s.cron.LastExecution = time.Unix(d.LastManualExecution, 0).Format("2006-01-02T15:04:05")
+		s.cron.LastExecution = time.Unix(d.LastManualExecution, 0).Format("2006-01-02T15:04:05Z07:00")
 	}
 
 	last := time.Unix(d.LastExecution, 0)
@@ -117,7 +120,7 @@ start:
 		log.Error("Cron data has invalid time format", zap.Error(err))
 		s.cron.Status.Status = hpb.Status_INTERNAL
 		s.cron.Status.Error = ptr(err.Error())
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 30)
 		goto start
 	}
 
@@ -152,12 +155,21 @@ start:
 		log.Info("Received notification to start daily cron job. Starting", zap.String("requester", requester))
 	}
 cron:
+	if err = s.cronPreflightChecks(ctx, log); err != nil {
+		log.Error("Cron preflight checks failed", zap.Error(err))
+		s.cron.Status.Status = hpb.Status_INTERNAL
+		s.cron.Status.Error = ptr(err.Error())
+		time.Sleep(time.Second * 30)
+		goto start
+	}
+	log.Info("All preflight checks passed")
+
 	log.Info("Starting daily cron job")
 	b := time.Now().Unix()
 	s.dailyCronJobAction(ctx, log)
 	a := time.Now().Unix()
 	d.LastExecution = b
-	s.cron.LastExecution = time.Unix(b, 0).Format("2006-01-02T15:04:05")
+	s.cron.LastExecution = time.Unix(b, 0).Format("2006-01-02T15:04:05Z07:00")
 	nocloud.Log(log, &epb.Event{
 		Entity:    "Cron",
 		Uuid:      "Billing",
@@ -174,7 +186,7 @@ cron:
 			log.Error("Error setting cron data for manual exec", zap.Error(err))
 			s.cron.Status.Status = hpb.Status_INTERNAL
 			s.cron.Status.Error = ptr(err.Error())
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 30)
 			goto start
 		}
 	} else {
@@ -182,7 +194,7 @@ cron:
 			log.Error("Error setting cron data", zap.Error(err))
 			s.cron.Status.Status = hpb.Status_INTERNAL
 			s.cron.Status.Error = ptr(err.Error())
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 30)
 			goto start
 		}
 	}
@@ -198,6 +210,42 @@ func (s *BillingServiceServer) dailyCronJobAction(ctx context.Context, log *zap.
 	}()
 	// Jobs
 	s.InvoiceExpiringInstancesCronJob(ctx, log)
+}
+
+func (s *BillingServiceServer) cronPreflightChecks(ctx context.Context, log *zap.Logger) error {
+	log = log.Named("CronPreflightChecks")
+	errGroup := &errgroup.Group{}
+	errGroup.Go(func() error {
+		if _, err := s.db.Info(ctx); err != nil {
+			log.Error("No connection with arangodb", zap.Error(err))
+			return err
+		}
+		return nil
+	})
+	errGroup.Go(func() error {
+		if err := s.rdb.Ping(ctx).Err(); err != nil {
+			log.Error("No connection with redis", zap.Error(err))
+			return err
+		}
+		return nil
+	})
+	errGroup.Go(func() error {
+		if s.rbmq.IsClosed() {
+			log.Error("RabbitMQ connection is closed")
+			return errors.New("RabbitMQ connection is closed")
+		}
+		return nil
+	})
+	for name, client := range s.drivers {
+		errGroup.Go(func() error {
+			if _, err := client.GetType(ctx, &dpb.GetTypeRequest{}); err != nil {
+				log.Error("No connection with driver", zap.Error(err), zap.String("driver", name))
+				return fmt.Errorf("no connection with driver %s: %w", name, err)
+			}
+			return nil
+		})
+	}
+	return errGroup.Wait()
 }
 
 func (s *BillingServiceServer) RunDailyCronJob(ctx context.Context, _ *connect.Request[pb.RunDailyCronJobRequest]) (*connect.Response[pb.RunDailyCronJobResponse], error) {
