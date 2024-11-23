@@ -73,6 +73,9 @@ func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Conte
 		for _, ig := range srv.GetInstancesGroups() {
 			for _, inst := range ig.GetInstances() {
 				log := log.With(zap.String("instance", inst.GetUuid()))
+				if inst.GetProduct() == "" {
+					continue
+				}
 				acc, err := s.instances.GetInstanceOwner(ctx, inst.GetUuid())
 				if err != nil {
 					log.Error("Error getting instance owner", zap.Error(err))
