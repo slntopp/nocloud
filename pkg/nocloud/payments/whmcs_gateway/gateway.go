@@ -356,22 +356,28 @@ skipStatus:
 		if err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
-		inv.Payment = t.Unix()
-		inv.Processed = inv.Payment
+		if !isDateEqualWithoutTime(time.Unix(inv.Payment, 0), t) {
+			inv.Payment = t.Unix()
+			inv.Processed = inv.Payment
+		}
 	}
-	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") && inv.Deadline == 0 {
+	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
 		t, err := time.Parse("2006-01-02", whmcsInv.DueDate)
 		if err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
-		inv.Deadline = t.Unix()
+		if !isDateEqualWithoutTime(time.Unix(inv.Deadline, 0), t) {
+			inv.Deadline = t.Unix()
+		}
 	}
-	if !strings.Contains(whmcsInv.Date, "0000-00-00") && inv.Created == 0 {
+	if !strings.Contains(whmcsInv.Date, "0000-00-00") {
 		t, err := time.Parse("2006-01-02", whmcsInv.Date)
 		if err != nil {
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
-		inv.Created = t.Unix()
+		if !isDateEqualWithoutTime(time.Unix(inv.Created, 0), t) {
+			inv.Created = t.Unix()
+		}
 	}
 
 	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(float64(whmcsInv.TaxRate / 100))
