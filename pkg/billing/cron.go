@@ -102,12 +102,15 @@ start:
 		goto start
 	}
 
+	now := time.Now()
+	log.Info("Cron is set up to run on time: "+d.ExecutionTime, zap.Time("now", now), zap.Time("last_execution", time.Unix(d.LastExecution, 0)),
+		zap.Time("last_manual_execution", time.Unix(d.LastManualExecution, 0)))
+
 	s.cron.LastExecution = time.Unix(d.LastExecution, 0).Format("2006-01-02T15:04:05Z07:00")
 	if d.LastManualExecution > d.LastExecution {
 		s.cron.LastExecution = time.Unix(d.LastManualExecution, 0).Format("2006-01-02T15:04:05Z07:00")
 	}
 
-	now := time.Now()
 	last := time.Unix(d.LastExecution, 0)
 	h, m, sec, err := getValuesFromTime(d.ExecutionTime)
 	if err != nil {
