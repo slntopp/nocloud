@@ -99,7 +99,7 @@ func init() {
 	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
 	viper.SetDefault("INSTANCES_HOST", "services-registry:8000")
 
-	viper.SetDefault("DAILY_CRON_TIME", "14:00")
+	viper.SetDefault("DAILY_CRON_TIME", "08:00")
 
 	port = viper.GetString("PORT")
 
