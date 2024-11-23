@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -29,6 +30,14 @@ import (
 
 func ctxWithRoot(ctx context.Context) context.Context {
 	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
+}
+
+func compareFloat(a, b float64, precisionDigits int) bool {
+	return math.Abs(a-b) < math.Pow10(-precisionDigits)
+}
+
+func round(f float64, precisionDigits int) float64 {
+	return math.Round(f*math.Pow10(precisionDigits)) / math.Pow10(precisionDigits)
 }
 
 type pair[T any] struct {
@@ -323,23 +332,38 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
+	if t.Currency == nil {
+		t.Currency = defCurr
+	}
 	if t.Transactions == nil {
 		t.Transactions = []string{}
 	}
 	if t.Deadline != 0 && t.Deadline < time.Now().Unix() {
 		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
 	}
+
+	// Rounding invoice items
+	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
+	if err != nil {
+		log.Error("Failed to get currency", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get currency")
+	}
+	precision := int(cur.Precision)
+	var newTotal float64
+	for _, item := range t.GetItems() {
+		price := round(item.GetPrice(), precision)
+		item.Price = price
+		newTotal += price * float64(item.GetAmount())
+	}
+	t.Total = round(newTotal, precision)
 	sum := 0.0
 	if len(t.GetItems()) > 0 {
 		for _, item := range t.GetItems() {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 	}
-	if sum != t.GetTotal() {
+	if !compareFloat(sum, t.GetTotal(), precision+1) {
 		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-	}
-	if t.Currency == nil {
-		t.Currency = defCurr
 	}
 
 	now := time.Now()
@@ -1024,17 +1048,32 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
 	oldSum := old.Total
+
+	// Rounding invoice items
+	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
+	if err != nil {
+		log.Error("Failed to get currency", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get currency")
+	}
+	precision := int(cur.Precision)
+	var newTotal float64
+	for _, item := range t.GetItems() {
+		price := round(item.GetPrice(), precision)
+		item.Price = price
+		newTotal += price * float64(item.GetAmount())
+	}
+	t.Total = round(newTotal, precision)
 	sum := 0.0
 	if len(t.GetItems()) > 0 {
-		for _, item := range t.Items {
+		for _, item := range t.GetItems() {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 	}
-	if sum != t.Total {
+	if !compareFloat(sum, t.GetTotal(), precision+1) {
 		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 	}
 
-	if t.Type == pb.ActionType_BALANCE && sum != oldSum {
+	if t.Type == pb.ActionType_BALANCE && !compareFloat(oldSum, t.GetTotal(), precision+1) {
 		tax := t.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
 		var transactionTotal = t.GetTotal() / (1 + tax)
 		transactionTotal *= -1

@@ -27,6 +27,7 @@ type CurrencyController interface {
 	Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error)
 	GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error)
 	GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error)
+	Get(ctx context.Context, id int32) (Currency, error)
 }
 
 type Currency struct {
@@ -143,6 +144,13 @@ func (c *сurrencyController) migrateToDynamic() {
 func (c *сurrencyController) CreateCurrency(ctx context.Context, currency *pb.Currency) error {
 	_, err := c.col.CreateDocument(ctx, CurrencyFromPb(currency))
 	return err
+}
+
+func (c *сurrencyController) Get(ctx context.Context, id int32) (Currency, error) {
+	key := fmt.Sprintf("%d", id)
+	currency := Currency{}
+	_, err := c.col.ReadDocument(ctx, key, &currency)
+	return currency, err
 }
 
 func (c *сurrencyController) UpdateCurrency(ctx context.Context, currency *pb.Currency) error {
