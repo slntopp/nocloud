@@ -404,8 +404,8 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		inv.Status = pb.BillingStatus_DRAFT
 	}
 
-	if inv.Total == 0 {
-		log.Warn("Total is 0, skipping invoice creation. May be delete 0 price products from database?")
+	if inv.Total < 0 {
+		log.Warn("Total less than 0, skipping invoice creation. Wtf?")
 		return errNothingToRenew
 	}
 	resp, err := s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
