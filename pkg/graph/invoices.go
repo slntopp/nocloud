@@ -186,9 +186,6 @@ func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 	if tx.GetAccount() == "" {
 		return nil, errors.New("account is required")
 	}
-	if tx.Total == 0 {
-		return nil, errors.New("total is required")
-	}
 	meta, err := ctrl.col.CreateDocument(driver.WithWaitForSync(ctx, true), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to create transaction", zap.Error(err))

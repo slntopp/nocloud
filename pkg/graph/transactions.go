@@ -66,9 +66,6 @@ func (ctrl *transactionsController) Create(ctx context.Context, tx *pb.Transacti
 	if tx.GetAccount() == "" {
 		return nil, errors.New("account is required")
 	}
-	if tx.Total == 0 {
-		return nil, errors.New("total is required")
-	}
 	meta, err := ctrl.col.CreateDocument(ctx, tx)
 	if err != nil {
 		ctrl.log.Error("Failed to create transaction", zap.Error(err))
