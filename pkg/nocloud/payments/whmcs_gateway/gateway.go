@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -27,6 +28,8 @@ type NoCloudInvoicesManager interface {
 }
 
 type WhmcsGateway struct {
+	m *sync.Mutex
+
 	apiUsername string
 	apiPassword string
 	baseUrl     string
@@ -41,6 +44,7 @@ type WhmcsGateway struct {
 
 func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool) *WhmcsGateway {
 	return &WhmcsGateway{
+		m:           &sync.Mutex{},
 		apiUsername: data.WhmcsUser,
 		apiPassword: data.WhmcsPassHash,
 		baseUrl:     data.WhmcsBaseUrl,

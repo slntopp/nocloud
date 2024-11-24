@@ -212,7 +212,9 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			return
 		}
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
-	case "InvoiceCreation":
+	case "InvoiceCreation", "InvoiceCreated":
+		g.m.Lock()
+		defer g.m.Unlock()
 		data, err := unmarshal[InvoiceCreated](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
