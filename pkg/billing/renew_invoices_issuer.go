@@ -200,7 +200,6 @@ type instanceExpData struct {
 
 func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context, log *zap.Logger, data *accountPool, isExp func(now, expiringAt, period int64) bool, defCurr *pb.Currency) (created bool, errCount int, warnsCount int) {
 	log = log.Named("ProcessAccount").With(zap.String("account", data.Account.GetUuid()))
-	log.Info("Processing account", zap.Int("instance_count", len(data.Instances)), zap.Int("invoice_count", len(data.Invoices)), zap.Int("expirings", len(data.InstExpRecords)))
 	defer func(errs *int, warns *int) {
 		if err := recover(); err != nil {
 			log.Error("Recovered from panic", zap.Error(fmt.Errorf("%v", err)))
