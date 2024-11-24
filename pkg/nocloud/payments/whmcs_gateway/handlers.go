@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/structpb"
+	"math"
 	"strings"
 	"time"
 )
@@ -40,11 +41,16 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		return err
 	}
 
+	curr, err := g.currencies.Get(ctx, acc.GetCurrency().GetId())
+	if err != nil {
+		return err
+	}
+	precision := int(curr.Precision)
+
 	inv := &pb.Invoice{
 		Status:       statusToNoCloud(whmcsInv.Status),
 		Account:      acc.GetUuid(),
 		Transactions: make([]string, 0),
-		Total:        float64(whmcsInv.Total),
 		Meta: map[string]*structpb.Value{
 			"note":                  structpb.NewStringValue("=== CREATED THROUGH WHMCS ===\n" + whmcsInv.Notes),
 			invoiceIdField:          structpb.NewNumberValue(float64(data.InvoiceId)),
@@ -54,8 +60,21 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		Type:     pb.ActionType_WHMCS_INVOICE,
 	}
 
+	tax := float64(whmcsInv.TaxRate / 100)
+
+	var total float64
 	newItems := make([]*pb.Item, 0)
 	for _, item := range whmcsInv.Items.Items {
+		var price float64
+		whmcsAmount := float64(item.Amount)
+		if g.taxExcluded {
+			price = whmcsAmount + whmcsAmount*tax
+		} else {
+			price = whmcsAmount
+		}
+		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		total += price
+
 		newItems = append(newItems, &pb.Item{
 			Description: item.Description,
 			Amount:      1,
@@ -64,6 +83,8 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		})
 	}
 	inv.Items = newItems
+	total = math.Round(total*math.Pow10(precision)) / math.Pow10(precision)
+	inv.Total = total
 
 	if !strings.Contains(whmcsInv.DatePaid, "0000-00-00") {
 		t, err := time.Parse("2006-01-02 15:04:05", whmcsInv.DatePaid)

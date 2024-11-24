@@ -378,6 +378,12 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 
+	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	if err != nil {
+		return err
+	}
+	precision := int(curr.Precision)
+
 	if inv.Status == pb.BillingStatus_TERMINATED && whmcsInv.Status == statusToWhmcs(pb.BillingStatus_CANCELED) {
 		goto skipStatus
 	}
@@ -418,7 +424,8 @@ skipStatus:
 		}
 	}
 
-	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(float64(whmcsInv.TaxRate / 100))
+	tax := float64(whmcsInv.TaxRate / 100)
+	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 
 	// Found linked instances
 	linked := make([]string, 0)
@@ -433,11 +440,23 @@ skipStatus:
 	ncItems := slices.Clone(inv.GetItems())
 	newItems := make([]*pb.Item, 0)
 	synced := true
+	var total float64
 	for j, item := range whmcsItems {
+		var price float64
+		whmcsAmount := float64(item.Amount)
+		if g.taxExcluded {
+			price = whmcsAmount + whmcsAmount*tax
+		} else {
+			price = whmcsAmount
+		}
+		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+
 		found := false
 		index := 0
 		for i, ncItem := range ncItems {
-			if item.Description == ncItem.Description && equalFloats(float64(item.Amount), ncItem.Price*float64(ncItem.Amount)) {
+			ncPrice := ncItem.Price * float64(ncItem.Amount)
+			ncPrice = math.Round(ncPrice*math.Pow10(precision)) / math.Pow10(precision)
+			if item.Description == ncItem.Description && compareFloat(price, ncPrice, precision) {
 				found = true
 				index = i
 				break
@@ -455,19 +474,22 @@ skipStatus:
 			inst = linked[j]
 		}
 
+		total += price
 		newItems = append(newItems, &pb.Item{
 			Description: item.Description,
 			Amount:      1,
-			Price:       float64(item.Amount),
+			Price:       price,
 			Unit:        "Pcs",
 			Instance:    inst,
 		})
 	}
+	total = math.Round(total*math.Pow10(precision)) / math.Pow10(precision)
+
 	var warning string
 	if !synced {
 		warning = "[WARNING]: THIS INVOICE ITEMS WERE UPDATED DIRECTLY FROM WHMCS."
 		inv.Items = newItems
-		inv.Total = float64(whmcsInv.Total)
+		inv.Total = total
 		if len(linked) > len(whmcsItems) && inv.Type != pb.ActionType_WHMCS_INVOICE && inv.Type != pb.ActionType_NO_ACTION && inv.Type != pb.ActionType_BALANCE {
 			warning += " YOU DELETED SOME ITEMS FROM WHMCS: THIS IS FUNCTIONAL INVOICE AND INSTANCES MAY BE NOT LINKED!"
 		}
