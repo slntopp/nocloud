@@ -313,9 +313,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		t.Type = pb.ActionType_NO_ACTION
 	}
-	if t.GetDeadline() == 0 {
-		t.Deadline = time.Now().Unix()
-	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
@@ -326,8 +323,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.GetStatus() != pb.BillingStatus_DRAFT && t.GetStatus() != pb.BillingStatus_UNPAID {
 		return nil, status.Error(codes.InvalidArgument, "Status can be only DRAFT and UNPAID on creation")
 	}
-	if t.GetTotal() <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "Zero or negative total")
+	if t.GetTotal() < 0 {
+		return nil, status.Error(codes.InvalidArgument, "Negative total")
 	}
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
