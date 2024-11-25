@@ -831,8 +831,12 @@ func (s *ServicesServer) Get(ctx context.Context, _request *connect.Request[pb.G
 			if instance == nil {
 				continue
 			}
-			instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, false)
+			var oneTime bool
 			instance.Period, _ = s.instances.GetInstancePeriod(instance)
+			if instance.Period != nil && *instance.Period == 0 {
+				oneTime = true
+			}
+			instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, oneTime)
 		}
 	}
 
@@ -854,9 +858,12 @@ func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.
 	}
 
 	wg := &sync.WaitGroup{}
-	wg.Add(len(r.Result))
 	for _, service := range r.Result {
 		service := service
+		if service == nil {
+			continue
+		}
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for _, group := range service.GetInstancesGroups() {
@@ -864,8 +871,12 @@ func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.
 					if instance == nil {
 						continue
 					}
-					instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, false)
+					var oneTime bool
 					instance.Period, _ = s.instances.GetInstancePeriod(instance)
+					if instance.Period != nil && *instance.Period == 0 {
+						oneTime = true
+					}
+					instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, oneTime)
 				}
 			}
 		}()
