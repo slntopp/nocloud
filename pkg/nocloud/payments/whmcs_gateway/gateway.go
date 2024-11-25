@@ -217,9 +217,15 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	}
 	precision := int(curr.Precision)
 
-	body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
-	body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
-	body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
+	if inv.Payment > 0 {
+		body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
+	}
+	if inv.Deadline > 0 {
+		body.DueDate = ptr(time.Unix(inv.Deadline, 0).Format("2006-01-02"))
+	}
+	if inv.Created > 0 {
+		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
+	}
 
 	if inv.Status != old.Status {
 		body.Status = ptr(statusToWhmcs(inv.Status))

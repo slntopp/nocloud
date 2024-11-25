@@ -985,16 +985,24 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 		return nil, err
 	}
 
-	// Calculate estimate and period values if not presented
+	wg := &go_sync.WaitGroup{}
 	for _, value := range result.Pool {
-		inst := value.Instance
-		if inst.GetEstimate() == 0 {
-			inst.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(inst, false)
+		value := value
+		if value.Instance == nil {
+			continue
 		}
-		if inst.GetPeriod() == 0 {
-			inst.Period, _ = s.ctrl.GetInstancePeriod(inst)
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			value.Instance.Period, _ = s.ctrl.GetInstancePeriod(value.Instance)
+			var oneTime bool
+			if value.Instance.Period != nil && *value.Instance.Period == 0 {
+				oneTime = true
+			}
+			value.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(value.Instance, oneTime)
+		}()
 	}
+	wg.Wait()
 
 	log.Debug("Result", zap.Any("result", &result))
 	return connect.NewResponse(&result), nil
@@ -1229,6 +1237,15 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 	_, err = c.ReadDocument(ctx, &result)
 	if err != nil {
 		return nil, err
+	}
+
+	if result.Instance != nil {
+		var oneTime bool
+		result.Instance.Period, _ = s.ctrl.GetInstancePeriod(result.Instance)
+		if result.Instance.Period != nil && *result.Instance.Period == 0 {
+			oneTime = true
+		}
+		result.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(result.Instance, oneTime)
 	}
 
 	return connect.NewResponse(&result), nil
