@@ -359,15 +359,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		newTotal += price * float64(item.GetAmount())
 	}
 	t.Total = round(newTotal, precision)
-	sum := 0.0
-	if len(t.GetItems()) > 0 {
-		for _, item := range t.GetItems() {
-			sum += item.GetPrice() * float64(item.GetAmount())
-		}
-	}
-	if !compareFloat(sum, t.GetTotal(), precision+1) {
-		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-	}
 
 	now := time.Now()
 
@@ -1090,15 +1081,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		newTotal += price * float64(item.GetAmount())
 	}
 	t.Total = round(newTotal, precision)
-	sum := 0.0
-	if len(t.GetItems()) > 0 {
-		for _, item := range t.GetItems() {
-			sum += item.GetPrice() * float64(item.GetAmount())
-		}
-	}
-	if !compareFloat(sum, t.GetTotal(), precision+1) {
-		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-	}
 
 	if t.Type == pb.ActionType_BALANCE && !compareFloat(oldSum, t.GetTotal(), precision+1) {
 		tax := t.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
