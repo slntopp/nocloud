@@ -254,12 +254,10 @@ const searchFields = computed(() => [
     type: "select",
   },
   {
-    items: Object.keys(NoCloudStatus)
-      .filter((value) => !Number.isInteger(+value))
-      .map((key) => ({
-        text: key,
-        value: NoCloudStatus[key],
-      })),
+    items: Object.keys(statusMap).map((key) => ({
+      text: statusMap[key].title,
+      value: NoCloudStatus[key],
+    })),
     title: "Status",
     key: "status",
     type: "select",
