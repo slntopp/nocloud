@@ -176,6 +176,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceModified":
 		data, err := unmarshal[InvoiceModified](body)
@@ -183,6 +184,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceCancelled":
 		data, err := unmarshal[InvoiceCancelled](body)
@@ -190,6 +192,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceRefunded":
 		data, err := unmarshal[InvoiceRefunded](body)
@@ -197,6 +200,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceUnpaid":
 		data, err := unmarshal[InvoiceUnpaid](body)
@@ -204,6 +208,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "UpdateInvoiceTotal":
 		data, err := unmarshal[UpdateInvoiceTotal](body)
@@ -211,6 +216,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
 	case "InvoiceCreation", "InvoiceCreated":
 		g.m.Lock()
@@ -220,6 +226,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.invoiceCreatedHandler(ctx, log, data)
 	case "InvoiceDeleted":
 		data, err := unmarshal[InvoiceDeleted](body)
@@ -227,6 +234,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 			log.Error("Error decoding request", zap.Error(err))
 			return
 		}
+		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.invoiceDeletedHandler(ctx, log, data)
 	default:
 		log.Error("Unknown event", zap.String("event", resp.Event))
