@@ -372,6 +372,10 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 
 // CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
 func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error) {
+	if i == nil {
+		return -1, fmt.Errorf("instance is nil")
+	}
+
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
 		return -1, err
@@ -433,6 +437,10 @@ func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 func (ctrl *instancesController) GetInstancePeriod(i *pb.Instance) (*int64, error) {
 	zero := int64(0)
 	_err := int64(-1)
+
+	if i == nil {
+		return &_err, fmt.Errorf("instance is nil")
+	}
 
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
