@@ -548,7 +548,7 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 					continue
 				}
 				varsKey := "filteredStatuses"
-				query += fmt.Sprintf(` FILTER p.%s in @%s`, key, varsKey)
+				query += fmt.Sprintf(` FILTER TO_NUMBER(p.%s) in @%s`, key, varsKey)
 				vars[varsKey] = values
 			} else {
 				values := value.GetListValue().AsSlice()
