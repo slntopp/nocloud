@@ -169,7 +169,7 @@
       <v-skeleton-loader type="text" v-else />
     </template>
 
-    <template v-slot:[`item.accountBalance`]="{ item }">
+    <template v-slot:[`item.balance`]="{ item }">
       <span v-if="!isAccountsLoading">
         {{ (getAccount(item.account)?.balance || 0).toFixed(2) }}
         {{ getAccount(item.account)?.currency?.title }}
@@ -287,7 +287,7 @@ const headers = computed(() => {
     { text: "Type", value: "type" },
     { text: "NCU price", value: "estimate" },
     { text: "Account price", value: "accountPrice" },
-    { text: "Account balance", value: "accountBalance" },
+    { text: "Account balance", value: "balance" },
     { text: "Period", value: "period" },
     { text: "Email", value: "email" },
     { text: "Created date", value: "created", editable: { type: "date" } },
