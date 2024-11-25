@@ -395,20 +395,10 @@ export default {
         .then((res) => {
           this.token = res.meta.token;
           this.desktopName = this.instance?.title ?? "Unknown";
-          console.log(
-            window.location.origin,
-            window.location.origin.replace("api", "proxy")
-          );
-          console.log(
-            `wss://${this.instance.sp}.${window.location.origin.replace(
-              "api",
-              "proxy"
-            )}/socket?${res.meta.url}`
-          );
 
           this.url = `wss://${
             this.instance.sp
-          }.${window.location.origin.replace("api", "proxy")}/socket?${
+          }.${window.location.hostname.replace("api", "proxy")}/socket?${
             res.meta.url
           }`;
           this.connect(this.$store.state.auth.token);
