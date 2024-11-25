@@ -503,6 +503,9 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 	if req.Account == nil && req.Ig == nil {
 		return nil, fmt.Errorf("Don't know where to transfer")
 	}
+	if !req.GetDoNotTransferInvoices() {
+		return nil, fmt.Errorf("Invoices transfer feature is currently disabled!")
+	}
 
 	// Obtain service provider to use syncer
 	groupResp, err := s.ctrl.GetGroup(ctx, req.GetUuid())
