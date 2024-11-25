@@ -97,14 +97,14 @@ const changeStatusBtns = computed(() => [
     title: "paid",
     status: "PAID",
     disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"].includes(invoice.status)
+      ["TERMINATED", "DRAFT", "RETURNED"].includes(invoice.status)
     ),
   },
   {
     title: "unpaid",
     status: "UNPAID",
     disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "CANCELED", "RETURNED"].includes(invoice.status)
+      ["TERMINATED", "RETURNED"].includes(invoice.status)
     ),
   },
   {

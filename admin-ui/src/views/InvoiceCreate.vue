@@ -383,13 +383,13 @@ const changeStatusBtns = [
   {
     title: "draft",
     status: "DRAFT",
-    disabled: ["TERMINATED", "CANCELED", "PAID", "RETURNED"],
+    disabled: ["TERMINATED", "PAID", "RETURNED"],
   },
   {
     title: "Add payment",
     status: "PAID",
     onClick: () => openAddPaymentDialog(),
-    disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"],
+    disabled: ["TERMINATED", "DRAFT", "RETURNED"],
   },
   {
     title: "cancel",
