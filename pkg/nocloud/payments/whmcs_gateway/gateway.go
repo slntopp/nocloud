@@ -131,7 +131,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 	precision := int(curr.Precision)
 
 	oldNote := inv.GetMeta()["note"].GetStringValue()
-	newNote := "NOCLOUD INVOICE ID: " + inv.GetUuid() + "\n" + oldNote
+	newNote := oldNote
 	inv.GetMeta()["note"] = structpb.NewStringValue(newNote)
 	q, err := g.buildCreateInvoiceQueryBase(inv, userId, sendEmail, tax)
 	if err != nil {
