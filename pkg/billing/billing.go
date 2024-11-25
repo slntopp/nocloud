@@ -81,10 +81,11 @@ type BillingServiceServer struct {
 	eventsClient    epb.EventsServiceClient
 	instancesClient ccinstances.InstancesServiceClient
 
+	cron *healthpb.RoutineStatus
+
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
 	sus  *healthpb.RoutineStatus
-	inv  *healthpb.RoutineStatus
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -146,8 +147,8 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 				Status:  healthpb.Status_STOPPED,
 			},
 		},
-		inv: &healthpb.RoutineStatus{
-			Routine: "Invoices Issuer Routine",
+		cron: &healthpb.RoutineStatus{
+			Routine: "Daily Cron Job (UTC)",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,

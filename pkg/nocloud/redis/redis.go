@@ -14,9 +14,11 @@ type Client interface {
 	Keys(ctx context.Context, pattern string) *redis.StringSliceCmd
 	Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd
 	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
+	MSet(ctx context.Context, values ...interface{}) *redis.StatusCmd
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	Options() *redis.Options
 	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
+	Ping(ctx context.Context) *redis.StatusCmd
 }
 
 type client struct {

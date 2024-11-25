@@ -51,19 +51,24 @@ var (
 
 	whmcsData whmcs_gateway.WhmcsData
 
-	accountController graph.AccountsController
-	invoicesManager   whmcs_gateway.NoCloudInvoicesManager
+	accountController  graph.AccountsController
+	currencyController graph.CurrencyController
+	invoicesManager    whmcs_gateway.NoCloudInvoicesManager
+
+	whmcsTaxExcluded bool
 )
 
 func RegisterGateways(whmcs whmcs_gateway.WhmcsData,
-	accountCtrl graph.AccountsController,
-	invoicesMan whmcs_gateway.NoCloudInvoicesManager) {
+	accountCtrl graph.AccountsController, currCtrl graph.CurrencyController,
+	invoicesMan whmcs_gateway.NoCloudInvoicesManager, whmcsPricesTaxExcluded bool) {
 	if _registered {
 		panic("payment gateways are already registered")
 	}
 	whmcsData = whmcs
 	accountController = accountCtrl
+	currencyController = currCtrl
 	invoicesManager = invoicesMan
+	whmcsTaxExcluded = whmcsPricesTaxExcluded
 	_registered = true
 }
 
@@ -75,8 +80,8 @@ func GetPaymentGateway(t string) PaymentGateway {
 	case "nocloud":
 		return nocloud_gateway.NewNoCloudGateway()
 	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, invoicesManager)
+		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, currencyController, invoicesManager, whmcsTaxExcluded)
 	default:
-		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, invoicesManager)
+		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, currencyController, invoicesManager, whmcsTaxExcluded)
 	}
 }

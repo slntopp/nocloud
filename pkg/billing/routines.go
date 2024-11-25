@@ -18,224 +18,25 @@ package billing
 import (
 	"context"
 	"fmt"
-	"github.com/arangodb/go-driver"
-	ipb "github.com/slntopp/nocloud-proto/instances"
-	"google.golang.org/protobuf/proto"
 	"time"
-
-	"connectrpc.com/connect"
-	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud-proto/services"
-	"github.com/slntopp/nocloud/pkg/nocloud"
-	"google.golang.org/protobuf/types/known/structpb"
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
-	dpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	hpb "github.com/slntopp/nocloud-proto/health"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
-	stpb "github.com/slntopp/nocloud-proto/states"
-	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
 
 func (s *BillingServiceServer) RoutinesState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
-		s.gen, s.proc, s.sus, s.inv,
+		s.gen, s.proc, s.sus, s.cron,
 	}
-}
-
-func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log *zap.Logger, tick time.Time,
-	currencyConf CurrencyConf, roundingConf RoundingConf, iPub Pub) {
-	log.Info("Trying to issue invoices for expiring instances", zap.Time("tick", tick))
-
-	list, err := s.services.List(ctx, schema.ROOT_ACCOUNT_KEY, &services.ListRequest{})
-	if err != nil {
-		log.Error("Error getting services", zap.Error(err))
-		return
-	}
-
-	log.Debug("Got list of services", zap.Any("count", len(list.Result)))
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-
-	var expiringPercentage = 0.9
-	if invConf.IssueRenewalInvoiceAfter > 0 && invConf.IssueRenewalInvoiceAfter <= 1 {
-		expiringPercentage = invConf.IssueRenewalInvoiceAfter
-	} else {
-		log.Warn("Wrong expiring percentage in config. Using default value", zap.Float64("percentage", expiringPercentage))
-	}
-	const days15 = int64(3600 * 24 * 15)
-	const days10 = int64(3600 * 24 * 10)
-	expiringTime := func(expiringAt, period int64) int64 {
-		if period > days15 {
-			return expiringAt - days10
-		}
-		return expiringAt - int64(float64(period)*(1.0-expiringPercentage))
-	}
-
-	counter := 0
-	// Process every instance
-	for _, srv := range list.Result {
-		for _, ig := range srv.GetInstancesGroups() {
-			for _, i := range ig.GetInstances() {
-				log := log.With(zap.String("instance", i.GetUuid()))
-
-				if i.GetStatus() == spb.NoCloudStatus_DEL ||
-					i.GetState().GetState() == stpb.NoCloudState_PENDING ||
-					i.GetState().GetState() == stpb.NoCloudState_DELETED ||
-					i.GetStatus() == spb.NoCloudStatus_INIT {
-					continue
-				}
-
-				now := time.Now().Unix()
-
-				if i.Config == nil {
-					i.Config = map[string]*structpb.Value{}
-				}
-
-				lastRenewInvoice, ok := i.Config["renew_invoice"]
-				if ok {
-					inv, err := s.invoices.Get(ctx, lastRenewInvoice.GetStringValue())
-					if err != nil {
-						log.Error("Error getting invoice. Skipping invoice creation", zap.Error(err))
-						continue
-					}
-					if inv.GetStatus() == pb.BillingStatus_UNPAID || inv.GetStatus() == pb.BillingStatus_DRAFT {
-						log.Info("Last renew invoice for this instance didn't expired yet. Skipping invoice creation", zap.String("invoice", inv.GetUuid()))
-						continue
-					}
-				} else {
-					log.Info("No last renew invoice for this instance. Continue")
-				}
-
-				res, err := s.instances.GetGroup(ctx, driver.NewDocumentID(schema.INSTANCES_COL, i.GetUuid()).String())
-				if err != nil || res.Group == nil || res.SP == nil {
-					log.Error("Error getting instance group or sp", zap.Error(err), zap.Any("group", res.Group), zap.Any("sp", res.SP))
-					continue
-				}
-
-				log = log.With(zap.String("driver", res.SP.GetType()))
-
-				client, ok := s.drivers[res.SP.GetType()]
-				if !ok {
-					log.Error("Error getting driver. Driver not registered")
-					continue
-				}
-
-				resp, err := client.GetExpiration(ctx, &dpb.GetExpirationRequest{
-					Instance:         i,
-					ServicesProvider: res.SP,
-				})
-				if err != nil {
-					log.Error("Error getting expiration", zap.Error(err))
-					continue
-				}
-				records := resp.GetRecords()
-				log.Info("Got expiration records", zap.Any("records", records))
-
-				// If got expiring records calculate renewal for all instance billing resources
-				var expiring = false
-				for _, r := range records {
-					log := log.With(zap.Any("record", r))
-					if expiringTime(r.Expires, r.Period) > now {
-						log.Info("Not expiring yet")
-						continue
-					}
-					if r.Product == "" {
-						log.Info("Ignoring non product record")
-						continue
-					}
-					expiring = true
-				}
-
-				if !expiring {
-					log.Info("Instance is not expiring. Skipping invoice creation.")
-					continue
-				}
-
-				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
-				ctx = context.WithValue(ctx, "create_as_draft", true)
-				invResp, err := s.CreateRenewalInvoice(ctx, connect.NewRequest(&pb.CreateRenewalInvoiceRequest{
-					Instance: i.GetUuid(),
-				}))
-				if err != nil {
-					log.Error("Failed to create invoice", zap.Error(err))
-					continue
-				}
-
-				log.Debug("Invoice created", zap.String("invoice", invResp.Msg.GetUuid()))
-
-				log.Debug("Updating instance")
-				i.Config["renew_invoice"] = structpb.NewStringValue(invResp.Msg.GetUuid())
-				if err = s.instances.Update(ctx, "", proto.Clone(i).(*ipb.Instance), proto.Clone(i).(*ipb.Instance)); err != nil {
-					log.Error("Failed to update instance", zap.Error(err))
-					continue
-				}
-
-				log.Debug("Finished")
-				counter++
-			}
-		}
-	}
-
-	log.Info("Routine finished", zap.Int("invoices_created", counter))
 }
 
 const updateDataQuery = `
 UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
 `
-
-func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
-	log := s.log.Named("IssueInvoicesRoutine")
-
-	ch, err := s.rbmq.Channel()
-	if err != nil {
-		log.Fatal("Failed to open a channel", zap.Error(err))
-	}
-	defer ch.Close()
-
-start:
-
-	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
-	roundingConf := MakeRoundingConf(ctx, log, &s.settingsClient)
-	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
-	iPub := NewInstanceDataPublisher(ch)
-
-	upd := make(chan bool, 1)
-	go sc.Subscribe([]string{currencyKey}, upd)
-
-	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("routine", routineConf), zap.Any("rounding", roundingConf))
-
-	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
-	tick := time.Now()
-	for {
-		// Check if current time is 12:00
-		if tick.Hour() != 12 {
-			log.Info("Skip executing if it is not 12:00-12:59")
-			s.inv.Status.Status = hpb.Status_STOPPED
-			s.inv.Status.Error = nil
-			goto ticker
-		}
-
-		s.inv.Status.Status = hpb.Status_RUNNING
-		s.inv.Status.Error = nil
-
-		log.Info("Entering new Iteration", zap.Time("ts", tick))
-		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf, iPub)
-
-		s.inv.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
-
-	ticker:
-		select {
-		case tick = <-ticker.C:
-			continue
-		case <-upd:
-			log.Info("New Configuration Received, restarting Routine")
-			goto start
-		}
-	}
-}
 
 func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Logger, tick time.Time,
 	currencyConf CurrencyConf, roundingConf RoundingConf) {

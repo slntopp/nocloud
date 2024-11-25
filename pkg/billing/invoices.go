@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -29,6 +30,14 @@ import (
 
 func ctxWithRoot(ctx context.Context) context.Context {
 	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
+}
+
+func compareFloat(a, b float64, precisionDigits int) bool {
+	return math.Abs(a-b) < math.Pow10(-precisionDigits)
+}
+
+func round(f float64, precisionDigits int) float64 {
+	return math.Round(f*math.Pow10(precisionDigits)) / math.Pow10(precisionDigits)
 }
 
 type pair[T any] struct {
@@ -304,9 +313,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		t.Type = pb.ActionType_NO_ACTION
 	}
-	if t.GetDeadline() == 0 {
-		t.Deadline = time.Now().Unix()
-	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
@@ -317,11 +323,14 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.GetStatus() != pb.BillingStatus_DRAFT && t.GetStatus() != pb.BillingStatus_UNPAID {
 		return nil, status.Error(codes.InvalidArgument, "Status can be only DRAFT and UNPAID on creation")
 	}
-	if t.GetTotal() <= 0 {
-		return nil, status.Error(codes.InvalidArgument, "Zero or negative total")
+	if t.GetTotal() < 0 {
+		return nil, status.Error(codes.InvalidArgument, "Negative total")
 	}
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
+	}
+	if t.Currency == nil {
+		t.Currency = defCurr
 	}
 	if t.Transactions == nil {
 		t.Transactions = []string{}
@@ -329,17 +338,29 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Deadline != 0 && t.Deadline < time.Now().Unix() {
 		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
 	}
+
+	// Rounding invoice items
+	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
+	if err != nil {
+		log.Error("Failed to get currency", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get currency")
+	}
+	precision := int(cur.Precision)
+	var newTotal float64
+	for _, item := range t.GetItems() {
+		price := round(item.GetPrice(), precision)
+		item.Price = price
+		newTotal += price * float64(item.GetAmount())
+	}
+	t.Total = round(newTotal, precision)
 	sum := 0.0
 	if len(t.GetItems()) > 0 {
 		for _, item := range t.GetItems() {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 	}
-	if sum != t.GetTotal() {
+	if !compareFloat(sum, t.GetTotal(), precision+1) {
 		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-	}
-	if t.Currency == nil {
-		t.Currency = defCurr
 	}
 
 	now := time.Now()
@@ -355,10 +376,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
+	tax := acc.GetTaxRate()
 
 	// Create transaction if it's balance deposit or instance start
 	if t.GetType() == pb.ActionType_BALANCE || t.GetType() == pb.ActionType_INSTANCE_START {
-		var transactionTotal = t.GetTotal()
+		tax := t.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
+		var transactionTotal = t.GetTotal() / (1 + tax)
 		transactionTotal *= -1
 
 		newTr, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
@@ -373,6 +396,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
 		}
 		t.Transactions = []string{newTr.Msg.Uuid}
+	}
+
+	if t.Meta == nil {
+		t.Meta = make(map[string]*structpb.Value)
+	}
+	if t.Meta[graph.InvoiceTaxMetaKey] == nil {
+		t.Meta[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 	}
 
 	//trCtx, err := s.invoices.BeginTransaction(ctx)
@@ -1023,18 +1053,34 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
 	oldSum := old.Total
+
+	// Rounding invoice items
+	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
+	if err != nil {
+		log.Error("Failed to get currency", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get currency")
+	}
+	precision := int(cur.Precision)
+	var newTotal float64
+	for _, item := range t.GetItems() {
+		price := round(item.GetPrice(), precision)
+		item.Price = price
+		newTotal += price * float64(item.GetAmount())
+	}
+	t.Total = round(newTotal, precision)
 	sum := 0.0
 	if len(t.GetItems()) > 0 {
-		for _, item := range t.Items {
+		for _, item := range t.GetItems() {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 	}
-	if sum != t.Total {
+	if !compareFloat(sum, t.GetTotal(), precision+1) {
 		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 	}
 
-	if t.Type == pb.ActionType_BALANCE && sum != oldSum {
-		var transactionTotal = t.GetTotal()
+	if t.Type == pb.ActionType_BALANCE && !compareFloat(oldSum, t.GetTotal(), precision+1) {
+		tax := t.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
+		var transactionTotal = t.GetTotal() / (1 + tax)
 		transactionTotal *= -1
 
 		if len(t.GetTransactions()) != 1 {
@@ -1167,30 +1213,35 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		return nil, status.Error(codes.InvalidArgument, "Sum must be greater than 0")
 	}
 
-	ivnToCreate := &pb.Invoice{
-		Deadline: time.Now().Add(72 * time.Hour).Unix(),
-		Status:   pb.BillingStatus_UNPAID,
-		Account:  requester,
-		Total:    req.GetSum(),
-		Type:     pb.ActionType_BALANCE,
-		Items: []*pb.Item{
-			{
-				Amount:      1,
-				Unit:        "Pcs",
-				Price:       req.GetSum(),
-				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
-			},
-		},
-		Meta: map[string]*structpb.Value{
-			"creator": structpb.NewStringValue(requester),
-		},
-	}
-
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, requester)
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
+
+	tax := acc.GetTaxRate()
+	sum := req.GetSum() + req.GetSum()*tax
+
+	ivnToCreate := &pb.Invoice{
+		Deadline: time.Now().Add(72 * time.Hour).Unix(),
+		Status:   pb.BillingStatus_UNPAID,
+		Account:  acc.GetUuid(),
+		Total:    sum,
+		Type:     pb.ActionType_BALANCE,
+		Items: []*pb.Item{
+			{
+				Amount:      1,
+				Unit:        "Pcs",
+				Price:       sum,
+				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+			},
+		},
+		Meta: map[string]*structpb.Value{
+			"creator":               structpb.NewStringValue(requester),
+			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
+		},
+	}
+
 	if acc.Currency != nil {
 		ivnToCreate.Currency = acc.Currency
 	}
@@ -1344,6 +1395,9 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
 	renewDescription = strings.TrimSpace(renewDescription)
 
+	tax := acc.GetTaxRate()
+	cost = cost + cost*tax
+
 	inv := &pb.Invoice{
 		Status: pb.BillingStatus_UNPAID,
 		Items: []*pb.Item{
@@ -1362,9 +1416,9 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Account:  acc.GetUuid(),
 		Currency: acc.Currency,
 		Meta: map[string]*structpb.Value{
-			"creator":              structpb.NewStringValue(requester),
-			"no_discount_price":    structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
-			"expiration_timestamp": structpb.NewNumberValue(float64(expire)),
+			"creator":               structpb.NewStringValue(requester),
+			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
+			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
 	}
 

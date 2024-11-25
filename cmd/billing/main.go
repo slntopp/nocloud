@@ -74,6 +74,10 @@ var (
 
 	invoicesFile  string
 	instancesFile string
+
+	dailyCronTime string
+
+	whmcsPricesTaxExcluded bool
 )
 
 func init() {
@@ -97,6 +101,10 @@ func init() {
 	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
 	viper.SetDefault("INSTANCES_HOST", "services-registry:8000")
 
+	viper.SetDefault("DAILY_CRON_TIME", "08:00")
+
+	viper.SetDefault("WHMCS_PRICES_TAX_EXCLUDED", true)
+
 	port = viper.GetString("PORT")
 
 	arangodbHost = viper.GetString("DB_HOST")
@@ -116,6 +124,10 @@ func init() {
 
 	invoicesFile = viper.GetString("INVOICES_MIGRATIONS_FILE")
 	instancesFile = viper.GetString("INSTANCES_MIGRATIONS_FILE")
+
+	dailyCronTime = viper.GetString("DAILY_CRON_TIME")
+
+	whmcsPricesTaxExcluded = viper.GetBool("WHMCS_PRICES_TAX_EXCLUDED")
 }
 
 func main() {
@@ -179,10 +191,10 @@ func main() {
 		log.Fatal("Can't get whmcs credentials", zap.Error(err))
 	}
 	manager := invoices_manager.NewInvoicesManager(bClient, invoicesCtrl, authInterceptor)
-	payments.RegisterGateways(whmcsData, accountsCtrl, manager)
+	payments.RegisterGateways(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
 
 	// Register WHMCS hooks handler (hooks for invoices status e.g.)
-	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, manager)
+	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
 	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
 	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
 	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
@@ -248,9 +260,6 @@ func main() {
 	log.Info("Starting Account Suspension Routine")
 	go server.SuspendAccountsRoutine(ctx)
 
-	log.Info("Starting Invoices Routine")
-	go server.IssueInvoicesRoutine(ctx)
-
 	log.Info("Starting Instances Creation Consumer")
 	go server.ConsumeCreatedInstances(ctx)
 
@@ -261,6 +270,9 @@ func main() {
 	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, promoCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
+
+	log.Info("Starting Daily Cron Job")
+	go server.DailyCronJob(ctx, log, token, dailyCronTime)
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
