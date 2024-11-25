@@ -491,13 +491,14 @@ skipStatus:
 
 	var warning string
 	if !synced {
-		warning = "[WARNING]: THIS INVOICE ITEMS WERE UPDATED DIRECTLY FROM WHMCS."
+		if inv.Type != pb.ActionType_WHMCS_INVOICE {
+			warning = "[WARNING]: THIS INVOICE ITEMS WERE UPDATED DIRECTLY FROM WHMCS.\n"
+		}
+		if len(linked) > len(whmcsItems) && inv.Type != pb.ActionType_WHMCS_INVOICE && inv.Type != pb.ActionType_NO_ACTION && inv.Type != pb.ActionType_BALANCE {
+			warning += "[CRITICAL] YOU DELETED SOME ITEMS FROM WHMCS: THIS IS FUNCTIONAL INVOICE AND INSTANCES MAY BE NOT LINKED!\n"
+		}
 		inv.Items = newItems
 		inv.Total = total
-		if len(linked) > len(whmcsItems) && inv.Type != pb.ActionType_WHMCS_INVOICE && inv.Type != pb.ActionType_NO_ACTION && inv.Type != pb.ActionType_BALANCE {
-			warning += " YOU DELETED SOME ITEMS FROM WHMCS: THIS IS FUNCTIONAL INVOICE AND INSTANCES MAY BE NOT LINKED!"
-		}
-		warning += "\n"
 	}
 
 	meta := inv.GetMeta()
