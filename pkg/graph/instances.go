@@ -374,7 +374,7 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error) {
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
 
 	cost := 0.0
@@ -389,11 +389,11 @@ func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 		for _, addonId := range i.GetAddons() {
 			addon, err := ctrl.addons.Get(context.Background(), addonId)
 			if err != nil {
-				return 0, fmt.Errorf("failed to get addon %s: %w", addonId, err)
+				return -1, fmt.Errorf("failed to get addon %s: %w", addonId, err)
 			}
 			price, hasPrice := addon.GetPeriods()[product.GetPeriod()]
 			if !hasPrice {
-				return 0, fmt.Errorf("addon %s has no price for period %d", addonId, product.GetPeriod())
+				return -1, fmt.Errorf("addon %s has no price for period %d", addonId, product.GetPeriod())
 			}
 			if charge {
 				cost += price
@@ -429,13 +429,14 @@ func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 
 // GetInstancePeriod returns billing period for the whole instance
 //
-// Now it simply returns product's period or period of some random resource if product is not defined or it's period is 0
+// Now it simply returns product's period
 func (ctrl *instancesController) GetInstancePeriod(i *pb.Instance) (*int64, error) {
 	zero := int64(0)
+	_err := int64(-1)
 
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
-		return nil, err
+		return &_err, err
 	}
 
 	product, ok := plan.GetProducts()[i.GetProduct()]
@@ -447,12 +448,6 @@ func (ctrl *instancesController) GetInstancePeriod(i *pb.Instance) (*int64, erro
 			return &zero, nil
 		}
 	}
-
-	//for _, res := range plan.GetResources() {
-	//	if _, ok := i.GetResources()[res.GetKey()]; ok && res.GetPeriod() > 0 {
-	//		return res.GetPeriod(), nil
-	//	}
-	//}
 
 	return nil, nil
 }
