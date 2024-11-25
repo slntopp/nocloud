@@ -60,7 +60,7 @@
       <span>{{ (item.price * item.amount).toFixed(2) }}</span>
     </template>
 
-    <template v-slot:body.append>
+    <template v-if="items.length" v-slot:body.append>
       <tr>
         <td></td>
         <td></td>

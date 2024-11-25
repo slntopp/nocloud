@@ -446,6 +446,8 @@ const setInvoice = () => {
   if (invoice.value) {
     newInvoice.value = {
       ...invoice.value,
+      items: invoice.value.items || [],
+      total: invoice.value.total || 0,
       deadline: formatSecondsToDateString(invoice.value.deadline),
       payment: formatSecondsToDateString(invoice.value.payment),
       returned: formatSecondsToDateString(invoice.value.returned),

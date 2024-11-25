@@ -38,7 +38,7 @@
 
     <template v-slot:[`item.total`]="{ item }">
       <v-chip :color="getTotalColor(item)" abs>
-        {{ `${item.total} ${item.currency?.title || defaultCurrency.title}` }}
+        {{ `${item.total || 0} ${item.currency?.title || defaultCurrency.title}` }}
       </v-chip>
     </template>
 
