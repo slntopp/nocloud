@@ -868,13 +868,14 @@ func getSortQuery(field, order string, customOrder []interface{}, bindVars map[s
 		query += fmt.Sprintf(" SORT acc.title %s", order)
 	} else if field == "email" {
 		query += fmt.Sprintf(" SORT acc.data.email %s", order)
+	} else if field == "balance" {
+		query += fmt.Sprintf(" SORT acc.balance %s", order)
 	} else if field == "type" {
 		query += fmt.Sprintf(" SORT bp.type %s", order)
 	} else if field == "billing_plan" {
 		query += fmt.Sprintf(" SORT bp.title %s", order)
 	} else if field == "sp" {
 		query += fmt.Sprintf(" SORT sp.title %s", order)
-
 	} else if field == "state.state" {
 		bindKey := "customOrder"
 		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) DESC", bindKey)
