@@ -384,8 +384,9 @@ func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 	cost := 0.0
 
 	product, ok := plan.GetProducts()[i.GetProduct()]
+	prodPeriod := product.GetPeriod()
 	if ok && product != nil {
-		charge := (product.GetPeriod() == 0 && includeOneTimePayments) || product.GetPeriod() != 0
+		charge := (prodPeriod == 0 && includeOneTimePayments) || prodPeriod != 0
 		if charge {
 			cost += product.Price
 		}
@@ -395,9 +396,9 @@ func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 			if err != nil {
 				return -1, fmt.Errorf("failed to get addon %s: %w", addonId, err)
 			}
-			price, hasPrice := addon.GetPeriods()[product.GetPeriod()]
+			price, hasPrice := addon.GetPeriods()[prodPeriod]
 			if !hasPrice {
-				return -1, fmt.Errorf("addon %s has no price for period %d", addonId, product.GetPeriod())
+				return -1, fmt.Errorf("addon %s has no price for period %d", addonId, prodPeriod)
 			}
 			if charge {
 				cost += price
