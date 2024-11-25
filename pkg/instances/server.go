@@ -545,7 +545,7 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 			}
 		}()
 
-		if err := s.transferToAccount(ctx, log, req.GetUuid(), req.GetAccount(), !req.GetDoNotTransferInvoices()); err != nil {
+		if err := s.transferToAccount(ctx, log, req.GetUuid(), req.GetAccount()); err != nil {
 			if err := s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
 				log.Error("Failed to abort transaction", zap.Error(err))
 			}
@@ -564,7 +564,97 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 		}
 	}
 
-	log.Info("Finished transfer")
+	if req.GetDoNotTransferInvoices() {
+		log.Info("Finished transfer. Not transferring invoices")
+		return connect.NewResponse(&pb.TransferInstanceResponse{
+			Result: true,
+		}), nil
+	}
+
+	// Transfer invoices
+	log.Info("Transferring invoices")
+	errTmpl := "Instance was transferred, but failed to transfer invoices. Error: %w"
+	acc, err := s.acc_ctrl.Get(ctx, req.GetAccount())
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, fmt.Errorf(errTmpl, err)
+	}
+	accOwner, err := s.ctrl.GetInstanceOwner(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Failed to get instance owner", zap.Error(err))
+		return nil, fmt.Errorf(errTmpl, err)
+	}
+	// Transfer invoices (Ignoring PAID, TERM, CANCELLED and RETURNED invoices and take only that contains target instance and other instances that target account owns)
+	invoices, err := s.inv_ctrl.List(ctx, accOwner.GetUuid())
+	if err != nil {
+		log.Error("Failed to list invoices", zap.Error(err))
+		return nil, fmt.Errorf(errTmpl, err)
+	}
+	transferred := make([]*graph.Invoice, 0)
+outer:
+	for _, inv := range invoices {
+		if inv.GetAccount() != accOwner.GetUuid() {
+			log.Warn("Got invoice from other account. Must be incorrect List method filter", zap.String("account", inv.GetAccount()))
+			continue
+		}
+		if inv.GetStatus() == billingpb.BillingStatus_PAID || inv.GetStatus() == billingpb.BillingStatus_RETURNED ||
+			inv.GetStatus() == billingpb.BillingStatus_CANCELED || inv.GetStatus() == billingpb.BillingStatus_TERMINATED {
+			continue
+		}
+		foundInstance := false
+		for _, item := range inv.GetItems() {
+			if item.GetInstance() == "" {
+				continue
+			}
+			if item.GetInstance() == req.GetUuid() {
+				foundInstance = true
+				continue
+			}
+			if !s.ca.HasAccess(ctx, acc.GetUuid(), driver.NewDocumentID(schema.INSTANCES_COL, item.GetInstance()), accesspb.Level_ADMIN) {
+				continue outer
+			}
+		}
+		if !foundInstance {
+			continue
+		}
+		if err = s.inv_ctrl.Transfer(ctx, inv.GetUuid(), acc.GetUuid(), acc.Currency); err != nil {
+			log.Error("Failed to transfer invoice", zap.Error(err))
+			return nil, fmt.Errorf(errTmpl, err)
+		}
+		if inv, err = s.inv_ctrl.Get(ctx, inv.GetUuid()); err != nil {
+			log.Error("Failed to get invoice", zap.Error(err))
+			return nil, fmt.Errorf(errTmpl, err)
+		}
+		transferred = append(transferred, inv)
+	}
+	// Sync with payment gateway
+	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
+	_z := 0
+	var success = &_z
+	g := errgroup.Group{}
+	m := &go_sync.Mutex{}
+	for _, trInv := range transferred {
+		invoice := trInv
+		g.Go(func() error {
+			if err = gw.CreateInvoice(ctx, invoice.Invoice); err != nil {
+				return err
+			}
+			m.Lock()
+			*success = *success + 1
+			m.Unlock()
+			return nil
+		})
+	}
+	if err = g.Wait(); err != nil {
+		// If gateway data is untouched, then abort transferring
+		if *success == 0 {
+			return nil, fmt.Errorf(errTmpl, err)
+		}
+		log.Error("FATAL: Failed to sync with payment gateway, but managed to process some gateway invoices",
+			zap.Error(err), zap.Int("processed", *success), zap.Int("total", len(transferred)))
+	}
+
+	log.Info("Finished transfer. Invoices were transferred", zap.Int("count", *success))
 	return connect.NewResponse(&pb.TransferInstanceResponse{
 		Result: true,
 	}), nil
@@ -1252,7 +1342,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 	return connect.NewResponse(&result), nil
 }
 
-func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string, transferInvoices bool) (err error) {
+func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
 	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, uuid)
@@ -1401,7 +1491,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 			log.Error("Failed to process Ione instances group", zap.Error(err))
 			return fmt.Errorf("error processing IONE: %w", err)
 		}
-		goto invoicesTransfer
+		return nil
 	}
 
 	if destIG == nil && oldIGInstancesCount == 1 {
@@ -1417,7 +1507,7 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 			log.Error("Failed to transfer old instances group to service", zap.Error(err))
 			return fmt.Errorf("failed to transfer old instances group: %w", err)
 		}
-		goto invoicesTransfer
+		return nil
 
 	} else if destIG == nil {
 		log.Info("Destination instances group not found, creating new")
@@ -1457,83 +1547,6 @@ func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger
 		log.Error("Failed to transfer instance", zap.Error(err))
 		return fmt.Errorf("failed to transfer instance: %w", err)
 	}
-
-invoicesTransfer:
-	if !transferInvoices {
-		return nil
-	}
-
-	log.Info("Transferring invoices")
-	// Transfer invoices (Ignoring PAID, TERM, CANCELLED and RETURNED invoices and take only that contains target instance and other instances that target account owns)
-	invoices, err := s.inv_ctrl.List(ctx, accOwner.GetUuid())
-	if err != nil {
-		log.Error("Failed to list invoices", zap.Error(err))
-		return fmt.Errorf("failed to list invoices: %w", err)
-	}
-	transferred := make([]*graph.Invoice, 0)
-outer:
-	for _, inv := range invoices {
-		if inv.GetAccount() != accOwner.GetUuid() {
-			log.Warn("Got invoice from other account. Must be incorrect List method filter", zap.String("account", inv.GetAccount()))
-			continue
-		}
-		if inv.GetStatus() == billingpb.BillingStatus_PAID || inv.GetStatus() == billingpb.BillingStatus_RETURNED ||
-			inv.GetStatus() == billingpb.BillingStatus_CANCELED || inv.GetStatus() == billingpb.BillingStatus_TERMINATED {
-			continue
-		}
-		foundInstance := false
-		for _, item := range inv.GetItems() {
-			if item.GetInstance() == "" {
-				continue
-			}
-			if item.GetInstance() == uuid {
-				foundInstance = true
-				continue
-			}
-			if !s.ca.HasAccess(ctx, account, driver.NewDocumentID(schema.INSTANCES_COL, item.GetInstance()), accesspb.Level_ADMIN) {
-				continue outer
-			}
-		}
-		if !foundInstance {
-			continue
-		}
-		if err = s.inv_ctrl.Transfer(ctx, inv.GetUuid(), account, acc.Currency); err != nil {
-			log.Error("Failed to transfer invoice", zap.Error(err))
-			return fmt.Errorf("failed to transfer old invoice to new account: %w", err)
-		}
-		if inv, err = s.inv_ctrl.Get(ctx, inv.GetUuid()); err != nil {
-			log.Error("Failed to get invoice", zap.Error(err))
-			return fmt.Errorf("failed to get transferred invoice: %w", err)
-		}
-		transferred = append(transferred, inv)
-	}
-	// Sync with payment gateway
-	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
-	_z := 0
-	var success = &_z
-	g := errgroup.Group{}
-	m := &go_sync.Mutex{}
-	for _, trInv := range transferred {
-		invoice := trInv
-		g.Go(func() error {
-			if err = gw.CreateInvoice(ctx, invoice.Invoice); err != nil {
-				return err
-			}
-			m.Lock()
-			*success = *success + 1
-			m.Unlock()
-			return nil
-		})
-	}
-	if err = g.Wait(); err != nil {
-		// If gateway data is untouched, then abort transferring
-		if *success == 0 {
-			return fmt.Errorf("failed to sync with payment gateway, aborted: %w", err)
-		}
-		log.Error("FATAL: Failed to sync with payment gateway, but managed to process some gateway invoices",
-			zap.Error(err), zap.Int("processed", *success), zap.Int("total", len(transferred)))
-	}
-	log.Info("Transferred invoices", zap.Int("count", *success))
 
 	return nil
 }
