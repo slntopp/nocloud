@@ -52,7 +52,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		Account:      acc.GetUuid(),
 		Transactions: make([]string, 0),
 		Meta: map[string]*structpb.Value{
-			"note":                  structpb.NewStringValue("=== CREATED THROUGH WHMCS ===\n" + whmcsInv.Notes),
+			"note":                  structpb.NewStringValue(""),
 			invoiceIdField:          structpb.NewNumberValue(float64(data.InvoiceId)),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(float64(whmcsInv.TaxRate / 100)),
 		},
