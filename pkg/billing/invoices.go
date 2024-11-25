@@ -994,7 +994,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
-	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
@@ -1058,8 +1057,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if t.Items == nil {
 		t.Items = make([]*pb.Item, 0)
 	}
-	if req.Currency == nil {
-		t.Currency = defCurr
+	if req.Currency != nil {
+		t.Currency = req.GetCurrency()
 	}
 
 	if t.Account == "" {
@@ -1103,7 +1102,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 	}
 
-	upd, err := s.invoices.Update(ctx, t)
+	upd, err := s.invoices.Replace(ctx, t)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
