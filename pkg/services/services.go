@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -825,6 +826,16 @@ func (s *ServicesServer) Get(ctx context.Context, _request *connect.Request[pb.G
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
+	for _, group := range service.GetInstancesGroups() {
+		for _, instance := range group.GetInstances() {
+			if instance == nil {
+				continue
+			}
+			instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, false)
+			instance.Period, _ = s.instances.GetInstancePeriod(instance)
+		}
+	}
+
 	return connect.NewResponse(service), nil
 }
 
@@ -841,6 +852,25 @@ func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.
 		log.Debug("Error reading Services from DB", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
+
+	wg := &sync.WaitGroup{}
+	wg.Add(len(r.Result))
+	for _, service := range r.Result {
+		service := service
+		go func() {
+			defer wg.Done()
+			for _, group := range service.GetInstancesGroups() {
+				for _, instance := range group.GetInstances() {
+					if instance == nil {
+						continue
+					}
+					instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, false)
+					instance.Period, _ = s.instances.GetInstancePeriod(instance)
+				}
+			}
+		}()
+	}
+	wg.Wait()
 
 	return connect.NewResponse(&pb.Services{
 		Pool: r.Result, Count: int64(r.Count),

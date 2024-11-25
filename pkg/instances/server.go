@@ -1231,6 +1231,11 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 		return nil, err
 	}
 
+	if result.Instance != nil {
+		result.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(result.Instance, false)
+		result.Instance.Period, _ = s.ctrl.GetInstancePeriod(result.Instance)
+	}
+
 	return connect.NewResponse(&result), nil
 }
 
