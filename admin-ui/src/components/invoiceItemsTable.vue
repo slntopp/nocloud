@@ -55,6 +55,27 @@
         >
       </div>
     </template>
+
+    <template v-if="showDelete" v-slot:[`item.total`]="{ item }">
+      <span>{{ (item.price * item.amount).toFixed(2) }}</span>
+    </template>
+
+    <template v-slot:body.append>
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>
+          {{
+            items
+              .reduce((acc, item) => acc + item.amount * item.price, 0)
+              .toFixed(2)
+          }}
+        </td>
+        <td></td>
+      </tr>
+    </template>
   </nocloud-table>
 </template>
 
@@ -86,9 +107,10 @@ const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
     { text: "Description", value: "description", width: "40%" },
-    { text: "Amount", value: "amount", width: 125 },
-    { text: "Price", value: "price", width: 125 },
-    { text: "Unit", value: "unit", width: 125 },
+    { text: "Unit", value: "unit", width: 100 },
+    { text: "Amount", value: "amount", width: 100 },
+    { text: "Price", value: "price", width: 100 },
+    { text: "Total", value: "total", width: 75 },
     showDelete.value ? { text: "Actions", value: "actions", width: 25 } : null,
   ].filter((c) => !!c)
 );

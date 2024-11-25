@@ -19,8 +19,8 @@
     </div>
 
     <v-form v-model="isValid" ref="invoiceForm">
-      <v-row>
-        <v-col cols="2">
+      <div class="invoice__container">
+        <div class="item" style="width: 150px">
           <v-select
             :disabled="isEdit"
             item-value="id"
@@ -30,31 +30,30 @@
             :items="types"
           >
           </v-select>
-        </v-col>
+        </div>
 
-        <v-col cols="3">
-          <div class="d-flex align-center">
-            <accounts-autocomplete
-              :loading="isInstancesLoading"
-              @input="onChangeAccount"
-              :disabled="isEdit"
-              label="Account"
-              v-model="newInvoice.account"
-              fetch-value
-              return-object
-              :rules="requiredRule"
-            />
-            <v-btn
-              @click="openAccountWindow"
-              icon
-              v-if="isEdit && newInvoice.account && !isInstancesLoading"
-            >
-              <v-icon>mdi-login</v-icon>
-            </v-btn>
-          </div>
-        </v-col>
+        <div class="item d-flex">
+          <accounts-autocomplete
+            :loading="isInstancesLoading"
+            @input="onChangeAccount"
+            :disabled="isEdit"
+            label="Account"
+            v-model="newInvoice.account"
+            fetch-value
+            return-object
+            :rules="requiredRule"
+          />
+          <v-btn
+            style="margin-top: 20px"
+            @click="openAccountWindow"
+            icon
+            v-if="isEdit && newInvoice.account && !isInstancesLoading"
+          >
+            <v-icon>mdi-login</v-icon>
+          </v-btn>
+        </div>
 
-        <v-col cols="3">
+        <div class="item">
           <v-autocomplete
             :disabled="isEdit || isBalanceInvoice"
             :filter="defaultFilterObject"
@@ -68,38 +67,37 @@
             @change="onChangeInstance"
             :loading="isInstancesLoading"
           />
-        </v-col>
+        </div>
 
-        <v-col cols="2">
+        <div class="item" v-if="isBalanceInvoice">
           <v-text-field
-            :disabled="!isBalanceInvoice"
             type="number"
             label="Total"
             :value="newInvoice.total"
             :suffix="accountCurrency?.title"
             @input="newInvoice.items[0].price = +$event"
           />
-        </v-col>
+        </div>
 
-        <v-col cols="2">
+        <div class="item date">
           <date-picker
             :min="formatSecondsToDateString(Date.now() / 1000)"
             label="Due date"
             v-model="newInvoice.deadline"
           />
-        </v-col>
+        </div>
 
         <template v-if="isEdit">
-          <v-col cols="2">
+          <div class="item date">
             <date-picker
               label="Created"
               v-model="newInvoice.created"
               :readonly="!newInvoice.created"
               :disabled="!newInvoice.created"
             />
-          </v-col>
+          </div>
 
-          <v-col cols="2">
+          <div class="item date">
             <date-picker
               :min="newInvoice.created"
               label="Payment"
@@ -107,18 +105,18 @@
               :readonly="!newInvoice.payment"
               :disabled="!newInvoice.payment"
             />
-          </v-col>
+          </div>
 
-          <v-col cols="2">
+          <div class="item date">
             <date-picker
               label="Processed"
               v-model="newInvoice.processed"
               readonly
               disabled
             />
-          </v-col>
+          </div>
 
-          <v-col v-if="newInvoice.returned" cols="2">
+          <div class="item date" v-if="newInvoice.returned">
             <date-picker
               :min="newInvoice.payment"
               label="Refunded"
@@ -126,9 +124,10 @@
               :readonly="!newInvoice.returned"
               :disabled="!newInvoice.returned"
             />
-          </v-col>
+          </div>
         </template>
-      </v-row>
+      </div>
+
       <v-textarea
         outlined
         no-resize
@@ -158,7 +157,7 @@
       </nocloud-expansion-panels>
 
       <v-row justify="space-between" class="mt-4 mb-4">
-        <div>
+        <div class="mt-2 ml-1">
           <v-btn
             v-if="!isEdit"
             class="mx-3"
@@ -179,7 +178,7 @@
             {{ isEdit && !isDraft ? "Save" : "Publish" }}
           </v-btn>
           <v-btn
-            class="mx-4"
+            class="mx-1"
             color="background-light"
             :loading="isSaveLoading"
             @click="saveInvoice(true)"
@@ -189,7 +188,7 @@
           </v-btn>
           <v-btn
             v-if="isEdit"
-            class="mx-4"
+            class="mx-1"
             color="background-light"
             :loading="isSendEmailLoading"
             @click="sendEmail"
@@ -199,33 +198,56 @@
           </v-btn>
 
           <v-btn
-            class="mx-4"
+            class="mx-1"
             v-if="isEdit"
             color="background-light"
             @click="downloadInvoice"
           >
             download
           </v-btn>
+
+          <confirm-dialog
+            v-if="isEdit"
+            @confirm="copyInvoice"
+            :loading="isCopyLoading"
+          >
+            <v-btn
+              class="mx-1"
+              :loading="isCopyLoading"
+              color="background-light"
+            >
+              copy
+            </v-btn>
+          </confirm-dialog>
         </div>
 
-        <div v-if="isEdit">
-          <v-btn
+        <div class="mt-2" v-if="isEdit">
+          <confirm-dialog
             v-for="btn in changeStatusBtns"
-            class="mx-4"
             :key="btn.status"
-            :loading="isStatusChangeLoading && btn.status === newStatus"
             :disabled="
               (isStatusChangeLoading && btn.status !== newStatus) ||
               btn.disabled.includes(newInvoice.status) ||
               btn.status === newInvoice.status
             "
-            color="background-light"
-            @click="
+            :loading="isStatusChangeLoading && btn.status === newStatus"
+            @confirm="
               btn.onClick ? btn.onClick() : changeInvoiceStatus(btn.status)
             "
           >
-            {{ btn.title }}
-          </v-btn>
+            <v-btn
+              class="mx-1"
+              :loading="isStatusChangeLoading && btn.status === newStatus"
+              :disabled="
+                (isStatusChangeLoading && btn.status !== newStatus) ||
+                btn.disabled.includes(newInvoice.status) ||
+                btn.status === newInvoice.status
+              "
+              color="background-light"
+            >
+              {{ btn.title }}
+            </v-btn>
+          </confirm-dialog>
         </div>
       </v-row>
     </v-form>
@@ -292,6 +314,7 @@ import {
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import useInvoices from "../hooks/useInvoices";
+import confirmDialog from "@/components/confirmDialog.vue";
 
 const props = defineProps({
   invoice: {},
@@ -328,6 +351,7 @@ const isStatusChangeLoading = ref(false);
 const newStatus = ref("");
 const isAddPaymentDialogOpen = ref(false);
 const isAddPaymentLoading = ref(false);
+const isCopyLoading = ref(false);
 const addPaymentOptions = ref({
   sendEmail: false,
   changePaymentDate: false,
@@ -387,7 +411,7 @@ onMounted(async () => {
 });
 
 const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
-const isDraft = computed(() => invoice.value?.status === "DRAFT");
+const isDraft = computed(() => newInvoice.value?.status === "DRAFT");
 const instances = computed(() => {
   const account = newInvoice.value.account?.uuid;
   if (!account || isInstancesLoading.value) {
@@ -531,6 +555,18 @@ const downloadInvoice = async () => {
     store.commit("snackbar/showSnackbarError", {
       message: "Document not found",
     });
+  }
+};
+
+const copyInvoice = async () => {
+  isCopyLoading.value = true;
+
+  try {
+    await store.dispatch("invoices/copy", invoice.value);
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    isCopyLoading.value = false;
   }
 };
 
@@ -717,7 +753,7 @@ watch(
 watch(invoice, setInvoice);
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .page__title {
   color: var(--v-primary-base);
   font-weight: 400;
@@ -725,5 +761,19 @@ watch(invoice, setInvoice);
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
+}
+
+.invoice__container {
+  display: flex;
+  flex-wrap: wrap;
+
+  .item {
+    margin-left: 10px;
+    margin-left: 10px;
+    width: 200px;
+    &.date {
+      width: 140px;
+    }
+  }
 }
 </style>

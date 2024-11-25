@@ -1,6 +1,7 @@
 import { createPromiseClient } from "@connectrpc/connect";
 import { BillingService } from "nocloud-proto/proto/es/billing/billing_connect";
 import {
+  CreateInvoiceRequest,
   GetInvoicesCountRequest,
   GetInvoicesRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
@@ -49,6 +50,24 @@ export default {
       } finally {
         commit("setLoading", false);
       }
+    },
+    copy({ getters }, invoice) {
+      const data = {
+        items: invoice.items,
+        total: invoice.total,
+        account: invoice.account,
+        type: invoice.type,
+        deadline: invoice.deadline,
+        meta: invoice.meta,
+        status: "DRAFT",
+      };
+
+      return getters["invoicesClient"].createInvoice(
+        CreateInvoiceRequest.fromJson({
+          invoice: data,
+          isSendEmail: false,
+        })
+      );
     },
   },
   getters: {

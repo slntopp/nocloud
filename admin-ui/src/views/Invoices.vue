@@ -73,7 +73,6 @@ import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
 import {
   BillingStatus,
-  CreateInvoiceRequest,
   UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import confirmDialog from "@/components/confirmDialog.vue";
@@ -87,8 +86,6 @@ const isUpdateStatusLoading = ref(false);
 const updateStatusName = ref("");
 
 const store = useStore();
-
-const invoicesClient = computed(() => store.getters["invoices/invoicesClient"]);
 
 const isLoading = computed(() => store.getters["invoices/isLoading"]);
 const invoices = computed(() => store.getters["invoices/all"]);
@@ -186,22 +183,7 @@ const handleCopyInvoice = async () => {
   isCopyLoading.value = true;
 
   try {
-    const data = {
-      items: selectedInvoices.value[0].items,
-      total: selectedInvoices.value[0].total,
-      account: selectedInvoices.value[0].account,
-      type: selectedInvoices.value[0].type,
-      deadline: selectedInvoices.value[0].deadline,
-      meta: selectedInvoices.value[0].meta,
-      status: "DRAFT",
-    };
-
-    await invoicesClient.value.createInvoice(
-      CreateInvoiceRequest.fromJson({
-        invoice: data,
-        isSendEmail: false,
-      })
-    );
+    await store.dispatch["invoices/copy"](selectedInvoices.value[0]);
 
     refetchInvoices();
     selectedInvoices.value = [];
