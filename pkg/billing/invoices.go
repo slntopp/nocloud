@@ -1064,6 +1064,9 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Total = req.GetTotal()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
+	if t.Items == nil {
+		t.Items = make([]*pb.Item, 0)
+	}
 	if req.Currency == nil {
 		t.Currency = defCurr
 	}
