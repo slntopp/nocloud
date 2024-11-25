@@ -151,12 +151,27 @@
     </template>
 
     <template v-slot:[`item.estimate`]="{ item }">
-      {{ item.estimate }} {{ defaultCurrency?.title }}
+      <template v-if="item.estimate">
+        {{ item.estimate }} {{ defaultCurrency?.title }}
+      </template>
+      <template v-else> - </template>
     </template>
 
     <template v-slot:[`item.accountPrice`]="{ item }">
       <span v-if="!isAccountsLoading">
-        {{ convertTo(item.estimate, getAccount(item.account)?.currency) }}
+        <template v-if="item.estimate">
+          {{ convertTo(item.estimate, getAccount(item.account)?.currency) }}
+          {{ getAccount(item.account)?.currency?.title }}
+        </template>
+        <template v-else> - </template>
+      </span>
+
+      <v-skeleton-loader type="text" v-else />
+    </template>
+
+    <template v-slot:[`item.accountBalance`]="{ item }">
+      <span v-if="!isAccountsLoading">
+        {{ (getAccount(item.account)?.balance || 0).toFixed(2) }}
         {{ getAccount(item.account)?.currency?.title }}
       </span>
 
@@ -272,6 +287,7 @@ const headers = computed(() => {
     { text: "Type", value: "type" },
     { text: "NCU price", value: "estimate" },
     { text: "Account price", value: "accountPrice" },
+    { text: "Account balance", value: "accountBalance" },
     { text: "Period", value: "period" },
     { text: "Email", value: "email" },
     { text: "Created date", value: "created", editable: { type: "date" } },

@@ -35,7 +35,7 @@
 import { computed } from 'vue'
 import { VDialog, VMenu } from 'vuetify/lib/components'
 import store from '@/store'
-import instancesTable from '@/components/instances_table.vue'
+import instancesTable from '@/components/instancesTable.vue'
 
 const props = defineProps({
   uuid: { type: String, required: true },
