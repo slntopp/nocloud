@@ -266,7 +266,6 @@ func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context
 		})
 	}
 
-	ctx = context.WithValue(ctx, "create_as_draft", true)
 	if err := s.createRenewalInvoice(ctx, log, &data.Account, expData, defCurr); err != nil {
 		if !errors.Is(err, errNothingToRenew) {
 			log.Error("Error creating renewal invoice", zap.Error(err))
