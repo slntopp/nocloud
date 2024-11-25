@@ -218,10 +218,9 @@ type InvoiceDeleted struct {
 	InvoiceId int `json:"invoiceid"`
 }
 
-// InvoiceCreated Missing user field
 type InvoiceCreated struct {
 	InvoiceId int    `json:"invoiceid"`
 	Source    string `json:"source"`
 	Status    string `json:"status"`
-	User      int    `json:"user"`
+	User      string `json:"user"`
 }
