@@ -45,7 +45,8 @@ func (i *invoicesManager) CreateInvoice(ctx context.Context, inv *pb.Invoice) er
 	if gwc, _ := ctx.Value(types.GatewayCallback).(bool); gwc {
 		req.Header().Set(string(types.GatewayCallback), "true")
 	}
-	_, err = i.inv.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), req)
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+	_, err = i.inv.CreateInvoice(ctx, req)
 	return err
 }
 
