@@ -219,8 +219,8 @@ type InvoiceDeleted struct {
 }
 
 type InvoiceCreated struct {
-	InvoiceId int    `json:"invoiceid"`
-	Source    string `json:"source"`
-	Status    string `json:"status"`
-	User      string `json:"user"`
+	InvoiceId int         `json:"invoiceid"`
+	Source    string      `json:"source"`
+	Status    string      `json:"status"`
+	User      interface{} `json:"user"`
 }

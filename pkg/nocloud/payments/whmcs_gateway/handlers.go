@@ -160,7 +160,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		return
 	}
 
-	log.Info("Event received", zap.String("event", resp.Event))
+	log.Info("Event received", zap.String("event", resp.Event), zap.String("body", string(body)))
 	log = log.With(zap.String("event", resp.Event))
 
 	ctx := context.WithValue(context.Background(), types.GatewayCallback, true)
