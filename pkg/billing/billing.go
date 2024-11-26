@@ -51,6 +51,21 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+const internalAccessKey = nocloud.ContextKey("billing-internal-access")
+
+func ctxWithRoot(ctx context.Context) context.Context {
+	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
+}
+
+func ctxWithInternalAccess(ctx context.Context) context.Context {
+	return context.WithValue(ctx, internalAccessKey, true)
+}
+
+func hasInternalAccess(ctx context.Context) bool {
+	v, _ := ctx.Value(internalAccessKey).(bool)
+	return v
+}
+
 type BillingServiceServer struct {
 	log *zap.Logger
 

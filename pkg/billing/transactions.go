@@ -178,7 +178,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
-	if !ok {
+	if !ok && !hasInternalAccess(ctx) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 

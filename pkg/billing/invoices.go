@@ -27,16 +27,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const invoicesAccessKey = nocloud.ContextKey("invoices-internal-access")
-
-func ctxWithRoot(ctx context.Context) context.Context {
-	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
-}
-
-func ctxWithInvoicesAccess(ctx context.Context) context.Context {
-	return context.WithValue(ctx, invoicesAccessKey, true)
-}
-
 func compareFloat(a, b float64, precisionDigits int) bool {
 	return math.Abs(a-b) < math.Pow10(-precisionDigits)
 }
@@ -321,7 +311,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
-	if has, ok := ctx.Value(invoicesAccessKey).(bool); !rootAccess && (t.Account != requester || !ok || !has) {
+	if !rootAccess && (t.Account != requester || !hasInternalAccess(ctx)) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
@@ -1005,7 +995,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		ivnToCreate.Currency = acc.Currency
 	}
 
-	return s.CreateInvoice(ctxWithInvoicesAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
+	return s.CreateInvoice(ctxWithInternalAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
 		IsSendEmail: true,
 		Invoice:     ivnToCreate,
 	}))
@@ -1185,7 +1175,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		inv.Status = pb.BillingStatus_DRAFT
 	}
 
-	return s.CreateInvoice(ctxWithInvoicesAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
+	return s.CreateInvoice(ctxWithInternalAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
 		IsSendEmail: true,
 		Invoice:     inv,
 	}))
