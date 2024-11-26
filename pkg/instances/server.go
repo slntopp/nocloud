@@ -962,7 +962,7 @@ func getSortQuery(field, order string, customOrder []interface{}, bindVars map[s
 	} else if field == "email" {
 		query += fmt.Sprintf(" SORT acc.data.email %s", order)
 	} else if field == "balance" {
-		query += fmt.Sprintf(" SORT acc.balance %s", order)
+		query += fmt.Sprintf(" SORT TO_NUMBER(acc.balance) %s", order)
 	} else if field == "type" {
 		query += fmt.Sprintf(" SORT bp.type %s", order)
 	} else if field == "billing_plan" {
