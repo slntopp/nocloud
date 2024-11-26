@@ -563,7 +563,7 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 
 	log.Debug("period and estimate", zap.Any("period", period), zap.Any("estimate", estimate))
 	// Attempt create document
-	meta, err := ctrl.col.CreateDocument(ctx, i)
+	meta, err := ctrl.col.CreateDocument(driver.WithWaitForSync(ctx, true), i)
 	if err != nil {
 		log.Error("Failed to create Instance", zap.Error(err))
 		return "", err
