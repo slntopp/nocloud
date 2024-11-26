@@ -1220,7 +1220,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 	case pb.ActionType_BALANCE:
 		total := inv.GetTotal() / (tax + 1)
 		total = round(total, int(c.Precision))
-		tr, err := s.applyTransaction(ctx, total, inv.GetAccount(), inv.GetCurrency())
+		tr, err := s.applyTransaction(ctx, -total, inv.GetAccount(), inv.GetCurrency())
 		if err != nil {
 			return inv, fmt.Errorf("failed to apply transaction: %w", err)
 		}
@@ -1267,7 +1267,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				log.Error("Failed to convert cost", zap.Error(err))
 				return inv, fmt.Errorf("failed to convert cost: %w", err)
 			}
-			_, err = s.applyTransaction(ctx, cost, acc.GetUuid(), acc.GetCurrency())
+			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency())
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
