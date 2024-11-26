@@ -216,7 +216,7 @@ func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Re
 	}
 
 	mustFetch := make([]int32, 0)
-	if !isAdmin {
+	if !isAdmin && ok {
 		acc, err := s.accounts.Get(ctx, requester)
 		if err == nil {
 			if acc.Currency == nil {
