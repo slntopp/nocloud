@@ -491,11 +491,11 @@ func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid stri
 		log.Error("Error getting instance owner. Failed to read from cursor", zap.Error(err))
 		return Account{}, fmt.Errorf("failed to get instance owner: %w", err)
 	}
-	acc.Uuid = acc.Key
 	if acc.GetUuid() == "" {
 		log.Error("Instance owner not found. Uuid is empty")
 		return Account{}, fmt.Errorf("instance owner not found. Uuid is empty")
 	}
+	acc.Uuid = acc.Key
 	return acc, nil
 }
 
