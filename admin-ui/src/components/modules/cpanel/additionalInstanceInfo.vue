@@ -32,7 +32,7 @@
       <password-text-field
         @input="emit('update', { key: 'config.password', value: $event })"
         :readonly="false"
-        :value="template.config.password"
+        :value="template.config?.password || template.data?.password"
         copy
       />
     </v-col>

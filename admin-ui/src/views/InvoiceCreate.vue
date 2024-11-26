@@ -745,7 +745,7 @@ watch(
   () => newInvoice.value.items,
   () => {
     newInvoice.value.total = newInvoice.value.items?.reduce(
-      (acc, i) => acc + Number(i.price) * Number(i.amount),
+      (acc, i) => acc + Number(i.price || 0) * Number(i.amount || 0),
       0
     );
   },
