@@ -710,7 +710,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
-			rate, _, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
+			rate, _, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")

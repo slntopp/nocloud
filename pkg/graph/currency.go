@@ -19,10 +19,10 @@ import (
 type CurrencyController interface {
 	CreateCurrency(ctx context.Context, currency *pb.Currency) error
 	UpdateCurrency(ctx context.Context, currency *pb.Currency) error
-	GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error)
+	GetExchangeRateDirect(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error)
 	GetExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error)
-	CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error
-	UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error
+	CreateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error
+	UpdateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error
 	DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error
 	Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error)
 	GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error)
@@ -37,6 +37,7 @@ type Currency struct {
 	Precision int32       `json:"precision"`
 	Format    string      `json:"format"`
 	Rounding  pb.Rounding `json:"rounding"`
+	Code      string      `json:"code"`
 	driver.DocumentMeta
 }
 
@@ -53,6 +54,7 @@ func CurrencyFromPb(currency *pb.Currency) Currency {
 		Precision: currency.GetPrecision(),
 		Format:    currency.GetFormat(),
 		Rounding:  currency.GetRounding(),
+		Code:      currency.GetCode(),
 	}
 }
 
@@ -163,7 +165,11 @@ FOR CURRENCY in @@currencies
 	return CURRENCY
 `
 
-func (c *сurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error) {
+func (c *сurrencyController) GetExchangeRateDirect(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error) {
+	if from == nil || to == nil {
+		return 0, 0, fmt.Errorf("currency is nil")
+	}
+
 	edge := map[string]interface{}{}
 	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from.GetId(), to.GetId()), &edge)
 	if err != nil {
@@ -231,13 +237,17 @@ func (c *сurrencyController) GetExchangeRate(ctx context.Context, from *pb.Curr
 	return totalRate, totalCommission, nil
 }
 
-func (c *сurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
+func (c *сurrencyController) CreateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error {
+	if from == nil || to == nil {
+		return fmt.Errorf("currency is nil")
+	}
+
 	edge := map[string]interface{}{
 		"_key":       fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
 		"_from":      fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
 		"_to":        fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
-		"from":       CurrencyFromPb(&from),
-		"to":         CurrencyFromPb(&to),
+		"from":       CurrencyFromPb(from),
+		"to":         CurrencyFromPb(to),
 		"rate":       rate,
 		"commission": commission,
 	}
@@ -246,7 +256,11 @@ func (c *сurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cu
 	return err
 }
 
-func (c *сurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
+func (c *сurrencyController) UpdateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error {
+	if from == nil || to == nil {
+		return fmt.Errorf("currency is nil")
+	}
+
 	key := fmt.Sprintf("%d-%d", from.GetId(), to.GetId())
 
 	edge := map[string]interface{}{
@@ -299,6 +313,7 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 			Precision int32       `json:"precision"`
 			Format    string      `json:"format"`
 			Rounding  pb.Rounding `json:"rounding"`
+			Code      string      `json:"code"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
@@ -323,6 +338,7 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 			Precision: doc.Precision,
 			Format:    doc.Format,
 			Rounding:  doc.Rounding,
+			Code:      doc.Code,
 		})
 	}
 

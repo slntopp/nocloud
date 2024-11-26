@@ -1,15 +1,14 @@
 package billing
 
 import (
-	"context"
-	"math/rand"
-
 	"connectrpc.com/connect"
+	"context"
 	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"strings"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -47,15 +46,39 @@ func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.R
 	if req.Currency == nil {
 		return nil, status.Error(codes.InvalidArgument, "no currency provided")
 	}
-	if req.Currency.Id == 0 {
-		req.Currency.Id = int32(rand.Int())
+	currencies, err := s.ctrl.GetCurrencies(ctx, true)
+	if err != nil {
+		log.Error("Failed to get currencies", zap.Error(err))
+		return nil, err
 	}
-	err := s.ctrl.CreateCurrency(ctx, req.Currency)
+	if req.Currency.Id == 0 {
+		var idMax int32 = 0
+		for _, currency := range currencies {
+			if currency.GetId() > idMax {
+				idMax = currency.GetId()
+			}
+		}
+		req.Currency.Id = idMax + 1
+	}
+	if req.Currency.Precision == 0 {
+		req.Currency.Precision = 2
+	}
+	req.Currency.Title = strings.TrimSpace(req.Currency.Title)
+	req.Currency.Code = strings.TrimSpace(req.Currency.Code)
+	if req.Currency.Title == "" || req.Currency.Code == "" {
+		return nil, status.Error(codes.InvalidArgument, "title and code must be provided")
+	}
+	for _, currency := range currencies {
+		if currency.GetCode() == req.Currency.Code {
+			return nil, status.Error(codes.AlreadyExists, "currency with this code already exists")
+		}
+	}
+
+	err = s.ctrl.CreateCurrency(ctx, req.Currency)
 	if err != nil {
 		log.Error("Error creating Currency", zap.Error(err))
 		return nil, err
 	}
-
 	return connect.NewResponse(&pb.CreateCurrencyResponse{}), nil
 }
 
@@ -67,16 +90,31 @@ func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.R
 	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
+
 	if req.Currency == nil {
 		return nil, status.Error(codes.InvalidArgument, "no currency provided")
 	}
+	currencies, err := s.ctrl.GetCurrencies(ctx, true)
+	if err != nil {
+		log.Error("Failed to get currencies", zap.Error(err))
+		return nil, err
+	}
+	req.Currency.Title = strings.TrimSpace(req.Currency.Title)
+	req.Currency.Code = strings.TrimSpace(req.Currency.Code)
+	if req.Currency.Title == "" || req.Currency.Code == "" {
+		return nil, status.Error(codes.InvalidArgument, "title and code must be provided")
+	}
+	for _, currency := range currencies {
+		if currency.GetCode() == req.Currency.Code {
+			return nil, status.Error(codes.AlreadyExists, "currency with this code already exists")
+		}
+	}
 
-	err := s.ctrl.UpdateCurrency(ctx, req.Currency)
+	err = s.ctrl.UpdateCurrency(ctx, req.Currency)
 	if err != nil {
 		log.Error("Error updating Currency", zap.Error(err))
 		return nil, err
 	}
-
 	return connect.NewResponse(&pb.UpdateCurrencyResponse{}), nil
 }
 
@@ -98,21 +136,16 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *conne
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	err := s.ctrl.CreateExchangeRate(ctx, *req.From, *req.To, req.Rate, req.Commission)
+	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission)
 	if err != nil {
 		log.Error("Error creating Exchange rate", zap.Error(err))
 		return connect.NewResponse(&pb.CreateExchangeRateResponse{}), err
 	}
 
-	_, _, err = s.ctrl.GetExchangeRateDirect(ctx, *req.To, *req.From)
-	if err == nil {
-		return connect.NewResponse(&pb.CreateExchangeRateResponse{}), nil
-	}
-
-	s.log.Info("Reverse rate is not set yet, setting automatically", zap.String("from", req.To.String()), zap.String("to", req.From.String()))
-	err = s.ctrl.CreateExchangeRate(ctx, *req.To, *req.From, 1/req.Rate, req.Commission)
-	if err != nil {
-		log.Error("Couldn't automatically create reverse Exchange rate", zap.Error(err))
+	_ = s.ctrl.DeleteExchangeRate(ctx, req.To, req.From)
+	if err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate, req.Commission); err != nil {
+		log.Error("Error creating reverse rate", zap.Error(err))
+		return nil, err
 	}
 
 	return connect.NewResponse(&pb.CreateExchangeRateResponse{}), nil
@@ -127,10 +160,16 @@ func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, r *conne
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	if err := s.ctrl.UpdateExchangeRate(ctx, *req.From, *req.To, req.Rate, req.Commission); err != nil {
+	if err := s.ctrl.UpdateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission); err != nil {
 		log.Error("Error updating Exchange rate", zap.Error(err))
 		return nil, err
 	}
+	_ = s.ctrl.DeleteExchangeRate(ctx, req.To, req.From)
+	if err := s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate, req.Commission); err != nil {
+		log.Error("Error updating reverse rate", zap.Error(err))
+		return nil, err
+	}
+
 	return connect.NewResponse(&pb.UpdateExchangeRateResponse{}), nil
 }
 
@@ -144,9 +183,13 @@ func (s *CurrencyServiceServer) DeleteExchangeRate(ctx context.Context, r *conne
 	}
 
 	if err := s.ctrl.DeleteExchangeRate(ctx, req.From, req.To); err != nil {
-		log.Error("Error deleting Exchange rate", zap.Error(err))
+		log.Error("Error deleting exchange rate", zap.Error(err))
 		return nil, err
 	}
+	if err := s.ctrl.DeleteExchangeRate(ctx, req.To, req.From); err != nil {
+		log.Error("Error deleting reverse rate", zap.Error(err))
+	}
+
 	return connect.NewResponse(&pb.DeleteExchangeRateResponse{}), nil
 }
 
