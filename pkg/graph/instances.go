@@ -470,6 +470,7 @@ LET account = LAST( // Find Instance owner Account
     FILTER IS_SAME_COLLECTION(node, @@accounts)
         RETURN node
     )
+FILTER account
 RETURN account`
 
 func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid string) (Account, error) {
@@ -485,17 +486,21 @@ func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid stri
 		log.Error("Error getting instance owner. Failed to execute query", zap.Error(err))
 		return Account{}, fmt.Errorf("error getting instance owner: %w", err)
 	}
+	if !cur.HasMore() {
+		return Account{}, fmt.Errorf("no instance owner")
+	}
 	var acc Account
-	_, err = cur.ReadDocument(ctx, &acc)
+	meta, err := cur.ReadDocument(ctx, &acc)
 	if err != nil {
 		log.Error("Error getting instance owner. Failed to read from cursor", zap.Error(err))
 		return Account{}, fmt.Errorf("failed to get instance owner: %w", err)
 	}
-	acc.Uuid = acc.Key
-	if acc.GetUuid() == "" {
+	log.Debug("GetInstanceOwner", zap.String("instance", uuid), zap.Any("account", acc), zap.Any("meta", meta))
+	if meta.Key == "" {
 		log.Error("Instance owner not found. Uuid is empty")
 		return Account{}, fmt.Errorf("instance owner not found. Uuid is empty")
 	}
+	acc.Uuid = meta.Key
 	return acc, nil
 }
 
@@ -558,7 +563,7 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 
 	log.Debug("period and estimate", zap.Any("period", period), zap.Any("estimate", estimate))
 	// Attempt create document
-	meta, err := ctrl.col.CreateDocument(ctx, i)
+	meta, err := ctrl.col.CreateDocument(driver.WithWaitForSync(ctx, true), i)
 	if err != nil {
 		log.Error("Failed to create Instance", zap.Error(err))
 		return "", err

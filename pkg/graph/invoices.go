@@ -23,6 +23,7 @@ type InvoicesController interface {
 	Create(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Get(ctx context.Context, uuid string) (*Invoice, error)
 	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
+	Replace(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
 	List(ctx context.Context, account string) ([]*Invoice, error)
 	Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error)
@@ -219,6 +220,15 @@ func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoi
 	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to update invoice", zap.Error(err))
+		return nil, err
+	}
+	return tx, nil
+}
+
+func (ctrl *invoicesController) Replace(ctx context.Context, tx *Invoice) (*Invoice, error) {
+	_, err := ctrl.col.ReplaceDocument(ctx, tx.GetUuid(), tx)
+	if err != nil {
+		ctrl.log.Error("Failed to update(replace) invoice", zap.Error(err))
 		return nil, err
 	}
 	return tx, nil

@@ -14,7 +14,6 @@ import (
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
-	epb "github.com/slntopp/nocloud-proto/events"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	ipb "github.com/slntopp/nocloud-proto/instances"
@@ -306,10 +305,10 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 
 func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.Request[pb.CreateInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateInvoice")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	t := req.Msg.Invoice
-	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("invoice", t), zap.String("requester", requester))
 	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
 	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
 
@@ -321,8 +320,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	rootAccess := s.ca.HasAccess(ctx, requestor, rootNs, access.Level_ROOT)
-	if has, ok := ctx.Value(invoicesAccessKey).(bool); !rootAccess && (t.Account != requestor || !ok || !has) {
+	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
+	if has, ok := ctx.Value(invoicesAccessKey).(bool); !rootAccess && (t.Account != requester || !ok || !has) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
@@ -359,15 +358,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		newTotal += price * float64(item.GetAmount())
 	}
 	t.Total = round(newTotal, precision)
-	sum := 0.0
-	if len(t.GetItems()) > 0 {
-		for _, item := range t.GetItems() {
-			sum += item.GetPrice() * float64(item.GetAmount())
-		}
-	}
-	if !compareFloat(sum, t.GetTotal(), precision+1) {
-		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-	}
 
 	now := time.Now()
 
@@ -383,26 +373,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 	tax := acc.GetTaxRate()
-
-	// Create transaction if it's balance deposit or instance start
-	if t.GetType() == pb.ActionType_BALANCE || t.GetType() == pb.ActionType_INSTANCE_START {
-		tax := t.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
-		var transactionTotal = t.GetTotal() / (1 + tax)
-		transactionTotal *= -1
-
-		newTr, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
-			Priority: pb.Priority_NORMAL,
-			Account:  acc.GetUuid(),
-			Currency: t.GetCurrency(),
-			Total:    transactionTotal,
-			Exec:     0,
-		}))
-		if err != nil {
-			log.Error("Failed to create transaction", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
-		}
-		t.Transactions = []string{newTr.Msg.Uuid}
-	}
 
 	if t.Meta == nil {
 		t.Meta = make(map[string]*structpb.Value)
@@ -435,9 +405,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	log.Debug("GATEWAY CALLBACK VALUE CREATE", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, req.Header())))
 	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice, !req.Msg.GetIsSendEmail()); err != nil {
 			//_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
@@ -445,14 +414,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	//_ = s.invoices.CommitTransaction(trCtx)
-
-	if req.Msg.GetIsSendEmail() {
-		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
-			Type: "email",
-			Uuid: t.GetAccount(),
-			Key:  "invoice_created",
-		})
-	}
 
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      r.GetUuid(),
@@ -462,7 +423,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Rc:        0,
 		Ts:        time.Now().Unix(),
 		Snapshot:  &elpb.Snapshot{},
-		Requestor: requestor,
+		Requestor: requester,
 	})
 
 	inv, err := s.invoices.Get(ctx, r.GetUuid())
@@ -477,7 +438,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *connect.Request[pb.UpdateInvoiceStatusRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("UpdateInvoiceStatus")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	t := req.Msg
 	log.Debug("UpdateInvoiceStatus request received")
@@ -487,7 +448,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -497,7 +458,11 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
-	newInv := proto.Clone(old.Invoice).(*pb.Invoice)
+	newInv := &graph.Invoice{
+		Invoice:           proto.Clone(old.Invoice).(*pb.Invoice),
+		DocumentMeta:      driver.DocumentMeta{Key: old.GetUuid()},
+		InvoiceNumberMeta: &graph.InvoiceNumberMeta{},
+	}
 
 	newStatus := t.GetStatus()
 	oldStatus := old.GetStatus()
@@ -511,9 +476,6 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	nowBeforeActions := time.Now().Unix()
 	var nowAfterActions int64
-	patch := map[string]interface{}{
-		"status": newStatus,
-	}
 	newInv.Status = newStatus
 
 	acc, err := s.accounts.Get(ctx, newInv.GetAccount())
@@ -522,11 +484,10 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	transactions := newInv.GetTransactions()
-	var resp *connect.Response[pb.Invoice]
 	var strNum string
 	var num int
 	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
+	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -537,197 +498,39 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 payment:
-	log.Info("Starting invoice payment", zap.String("invoice", newInv.GetUuid()))
 	if req.Msg.GetParams().GetPaymentDate() != 0 {
-		patch["payment"] = req.Msg.GetParams().GetPaymentDate()
 		newInv.Payment = req.Msg.GetParams().GetPaymentDate()
 	} else {
-		patch["payment"] = nowBeforeActions
 		newInv.Payment = nowBeforeActions
 	}
 
-	log.Debug("Updating transactions to perform payment.")
-	for _, trId := range newInv.GetTransactions() {
-		tr, err := s.transactions.Get(ctx, trId)
-		if err != nil {
-			log.Error("Failed to get transaction", zap.Error(err))
-			continue
-		}
-		tr.Uuid = trId
-		tr.Exec = nowBeforeActions // Setting transaction process time. Should trigger transaction process
-		_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
-		if err != nil {
-			log.Error("Failed to update transaction", zap.Error(err))
-			continue
-		}
-	}
-	log.Debug("Transactions were updated and processed.")
-
-	// Update number
 	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
 	if err != nil {
 		log.Error("Failed to get next number", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get next number")
 	}
 	newInv.Number = strNum
-	patch["number"] = strNum
-	patch["numeric_number"] = num
-	patch["number_template"] = invConf.Template
+	newInv.NumericNumber = num
+	newInv.NumberTemplate = invConf.Template
 
-	// BALANCE action was processed after transaction was processed
-	// NO_ACTION action don't need any processing
-	switch newInv.GetType() {
-	case pb.ActionType_INSTANCE_START:
-		log.Debug("Paid action: instance start")
-		for _, item := range newInv.GetItems() {
-			i := item.GetInstance()
-			log = log.With(zap.String("instance", i))
-			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
-			if err != nil {
-				log.Error("Failed to get instance to start", zap.Error(err))
-				continue
-			}
-			instOld.Uuid = instOld.Key
-			// Set auto_start to true. After next driver monitoring instance will be started
-			instNew := graph.Instance{
-				Instance: proto.Clone(instOld.Instance).(*ipb.Instance),
-			}
-			cfg := instNew.Config
-			cfg["auto_start"] = structpb.NewBoolValue(true)
-			instNew.Config = cfg
-
-			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err))
-				continue
-			}
-			log.Debug("Successfully updated auto_start for instance")
-		}
-		log.Info("Updated auto_start for instances after invoice was paid")
-
-	case pb.ActionType_INSTANCE_RENEWAL:
-		log.Debug("Paid action: instance renewal")
-		for _, item := range newInv.GetItems() {
-			i := item.GetInstance()
-			log = log.With(zap.String("instance", i))
-			if i == "" {
-				log.Debug("Instance item is empty")
-				continue
-			}
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "free_renew",
-			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err = s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to renew instance", zap.Error(err))
-				continue
-			}
-			log.Debug("Renewed instance")
-		}
-		log.Info("Renewed instances after invoice was paid")
+	if newInv, err = s.executePostPaidActions(ctx, log, newInv, currConf.Currency); err != nil {
+		log.Error("FATAL: Failed to execute postpaid actions after invoice was paid")
 	}
-
-	nowAfterActions = time.Now().Unix()
-	patch["processed"] = nowAfterActions
-	newInv.Processed = nowAfterActions
-
-	if req.Msg.GetParams().GetIsSendEmail() {
-		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
-			Type: "email",
-			Uuid: newInv.GetAccount(),
-			Key:  "invoice_paid",
-		})
-	}
-
 	goto quit
 
 returning:
-	log.Info("Starting invoice returning", zap.String("invoice", newInv.GetUuid()))
-	patch["returned"] = nowBeforeActions
 	newInv.Returned = nowBeforeActions
-	// Create same amount of transactions but rewert their total
-	// Make them urgent and set exec time to apply them to account's balance immediately
-	log.Debug("Creating rewert transactions")
-	for _, trId := range newInv.GetTransactions() {
-		tr, err := s.transactions.Get(ctx, trId)
-		if err != nil {
-			log.Error("Failed to get transaction", zap.Error(err))
-			continue
-		}
-		tr.Uuid = ""
-		tr.Priority = pb.Priority_URGENT
-		tr.Exec = nowBeforeActions
-		tr.Records = nil
-		tr.Created = nowBeforeActions
-		tr.Total = tr.Total * -1
-		t, err := s.CreateTransaction(ctx, connect.NewRequest(tr))
-		if err != nil {
-			log.Error("Failed to create rewert transaction", zap.Error(err))
-			continue
-		}
-		if t.Msg.GetUuid() == "" {
-			log.Error("Created transaction uuid is empty")
-			continue
-		}
-		transactions = append(transactions, t.Msg.GetUuid())
+	if newInv, err = s.executePostRefundActions(ctx, log, newInv); err != nil {
+		log.Error("FATAL: Failed to execute post refund actions after invoice was returned")
 	}
-	log.Debug("Patching invoice with rewert transactions")
-	if err = s.invoices.Patch(ctx, newInv.GetUuid(), map[string]interface{}{"transactions": transactions}); err != nil {
-		log.Error("Failed to patch invoice with rewert transactions", zap.Error(err))
-	}
-	log.Debug("Ended revert transactions creation")
-	log.Debug("Starting action termination")
-	// BALANCE was reverted on revert transactions
-	// NO_ACTION action don't need any reverting actions
-	switch newInv.GetType() {
-	case pb.ActionType_INSTANCE_START:
-		// Suspending instance
-		// TODO: maybe start returning should be done without suspending
-		log.Debug("Returning instance from start to suspended")
-		for _, item := range newInv.GetItems() {
-			id := item.GetInstance()
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   id,
-				Method: "suspend",
-			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err = s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to suspend instance", zap.Error(err))
-				continue
-			}
-			log.Debug("Suspended instance", zap.String("instance", id))
-		}
-
-	case pb.ActionType_INSTANCE_RENEWAL:
-		log.Debug("Returning action: instance renewal")
-		for _, item := range newInv.GetItems() {
-			i := item.GetInstance()
-			log = log.With(zap.String("instance", i))
-			if i == "" {
-				log.Debug("Instance item is empty")
-				continue
-			}
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "cancel_renew",
-			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err = s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to cancel renew instance", zap.Error(err))
-				continue
-			}
-			log.Debug("Renewed instance was canceled")
-		}
-		log.Info("Canceled renew for instances")
-	}
-	log.Debug("Finished invoice returning")
-	goto quit
 
 quit:
-	log.Debug("Patching invoice with updated data")
-	err = s.invoices.Patch(ctx, t.GetUuid(), patch)
+	nowAfterActions = time.Now().Unix()
+	newInv.Processed = nowAfterActions
+
+	_, err = s.invoices.Replace(ctx, newInv)
 	if err != nil {
-		log.Error("Failed to update status", zap.Error(err))
+		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
 	}
 
@@ -739,23 +542,17 @@ quit:
 		Rc:        0,
 		Ts:        time.Now().Unix(),
 		Snapshot:  &elpb.Snapshot{},
-		Requestor: requestor,
+		Requestor: requester,
 	})
 
-	log.Debug("GATEWAY CALLBACK VALUE UPDATE STATUS", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, req.Header())))
-	upd, err := s.invoices.Get(ctx, t.GetUuid())
-	if err != nil {
-		log.Error("Failed to get updated invoice", zap.Error(err))
-	}
-	if err == nil && !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old.Invoice); err != nil {
+	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, newInv.Invoice, old.Invoice); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
 
 	log.Info("Finished invoice update status")
-	resp = connect.NewResponse(upd.Invoice)
-	return resp, nil
+	return connect.NewResponse(newInv.Invoice), nil
 }
 
 func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Request[pb.PayWithBalanceRequest]) (*connect.Response[pb.PayWithBalanceResponse], error) {
@@ -812,7 +609,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
-	_, err = s.UpdateInvoiceStatus(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
+	resp, err := s.UpdateInvoiceStatus(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 		Uuid:   inv.GetUuid(),
 		Status: pb.BillingStatus_PAID,
 		Params: &pb.UpdateInvoiceStatusRequest_Params{
@@ -824,15 +621,18 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
 	}
 
-	_, err = s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
-		Exec:     time.Now().Unix(),
-		Priority: pb.Priority_URGENT,
-		Account:  inv.GetAccount(),
-		Total:    inv.GetTotal(),
-		Currency: invCurrency,
-	}))
+	tr, err := s.applyTransaction(ctx, inv.GetTotal(), inv.GetAccount(), invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	}
+	newInv := resp.Msg
+	if newInv.Transactions == nil {
+		newInv.Transactions = make([]string, 0)
+	}
+	newInv.Transactions = append(newInv.Transactions, tr.GetUuid())
+	if _, err = s.invoices.Update(ctx, &graph.Invoice{Invoice: newInv, DocumentMeta: driver.DocumentMeta{Key: newInv.GetUuid()}}); err != nil {
+		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
 	}
 
@@ -889,13 +689,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
 	}
 
-	_, err = s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
-		Exec:     time.Now().Unix(),
-		Priority: pb.Priority_URGENT,
-		Account:  requester,
-		Total:    float64(inv.Balance),
-		Currency: invCurrency,
-	}))
+	_, err = s.applyTransaction(ctx, float64(inv.Balance), requester, invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
@@ -1003,7 +797,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
-	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
@@ -1025,9 +818,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 	old := proto.Clone(t.Invoice).(*pb.Invoice)
 
-	newStatus := req.GetStatus()
-	oldStatus := t.GetStatus()
-
 	if req.GetPayment() != 0 && t.GetPayment() != 0 {
 		t.Payment = req.GetPayment()
 	}
@@ -1044,19 +834,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Created = req.GetCreated()
 	}
 
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-	if newStatus == pb.BillingStatus_PAID && oldStatus != pb.BillingStatus_PAID {
-		strNum, num, err := s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(t.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
-		if err != nil {
-			log.Error("Failed to get new number for invoice", zap.Error(err))
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		t.Number = strNum
-		t.NumberTemplate = invConf.Template
-		t.NumericNumber = num
-	}
-
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
@@ -1067,14 +844,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if t.Items == nil {
 		t.Items = make([]*pb.Item, 0)
 	}
-	if req.Currency == nil {
-		t.Currency = defCurr
+	if req.Currency != nil {
+		t.Currency = req.GetCurrency()
 	}
 
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
-	oldSum := old.Total
 
 	// Rounding invoice items
 	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
@@ -1090,38 +866,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		newTotal += price * float64(item.GetAmount())
 	}
 	t.Total = round(newTotal, precision)
-	sum := 0.0
-	if len(t.GetItems()) > 0 {
-		for _, item := range t.GetItems() {
-			sum += item.GetPrice() * float64(item.GetAmount())
-		}
-	}
-	if !compareFloat(sum, t.GetTotal(), precision+1) {
-		return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-	}
 
-	if t.Type == pb.ActionType_BALANCE && !compareFloat(oldSum, t.GetTotal(), precision+1) {
-		tax := t.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
-		var transactionTotal = t.GetTotal() / (1 + tax)
-		transactionTotal *= -1
-
-		if len(t.GetTransactions()) != 1 {
-			return nil, status.Error(codes.InvalidArgument, "Balance invoice must have only one transaction")
-		}
-
-		tr, err := s.transactions.Get(ctx, t.GetTransactions()[0])
-		if err != nil {
-			log.Error("Failed to get transaction to update", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to get transaction")
-		}
-		tr.Total = transactionTotal
-		if _, err := s.transactions.Update(ctx, tr); err != nil {
-			log.Error("Failed to update transaction", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to update transaction")
-		}
-	}
-
-	upd, err := s.invoices.Update(ctx, t)
+	upd, err := s.invoices.Replace(ctx, t)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
@@ -1133,19 +879,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
-	log.Debug("GATEWAY CALLBACK VALUE UPDATE", zap.Bool("val", payments.GetGatewayCallbackValue(ctx, r.Header())))
 	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
-	}
-
-	if r.Msg.GetIsSendEmail() {
-		_, _ = s.eventsClient.Publish(ctx, &epb.Event{
-			Type: "email",
-			Uuid: t.GetAccount(),
-			Key:  "invoice_updated",
-		})
 	}
 
 	return connect.NewResponse(t.Invoice), nil
@@ -1471,153 +1208,158 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 	return resp, nil
 }
 
-//func (s *BillingServiceServer) Consume(ctx context.Context) {
-//	log := s.log.Named("ExpiringInstancesConsumer")
-//init:
-//	log.Info("Trying to register instances expiring consumer")
-//
-//	ch, err := s.rbmq.Channel()
-//	if err != nil {
-//		log.Error("Failed to open a channel", zap.Error(err))
-//		time.Sleep(time.Second)
-//		goto init
-//	}
-//
-//	queue, _ := ch.QueueDeclare(
-//		"instance_expiring",
-//		true, false, false, true, nil,
-//	)
-//
-//	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
-//	if err != nil {
-//		log.Error("Failed to register a consumer", zap.Error(err))
-//		time.Sleep(time.Second)
-//		goto init
-//	}
-//
-//	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
-//	currencyConf := MakeCurrencyConf(ctx, log)
-//
-//	log.Info("Instances expiring consumer registered. Reading messages")
-//	for msg := range records {
-//		log.Debug("Received a message")
-//		var recs []*pb.Record
-//		err = json.Unmarshal(msg.Body, &recs)
-//		if err != nil {
-//			log.Error("Failed to unmarshal record", zap.Error(err))
-//			if err = msg.Ack(false); err != nil {
-//				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-//			}
-//			continue
-//		}
-//		log.Debug("Message unmarshalled", zap.Any("records", &recs))
-//		err := s.processExpiringRecords(ctx, recs, currencyConf)
-//		if err != nil {
-//			log.Error("Failed to process record", zap.Error(err))
-//		}
-//		if err = msg.Ack(false); err != nil {
-//			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-//		}
-//		continue
-//	}
-//}
+func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice, defCurr *pb.Currency) (*graph.Invoice, error) {
+	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
 
-//func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, currency CurrencyConf) error {
-//
-//	var i *graph.Instance
-//	var plan *graph.BillingPlan
-//	var sum float64
-//	for _, rec := range recs {
-//		var err error
-//		i, err = s.instances.Get(ctx, rec.GetInstance())
-//		if err != nil {
-//			return err
-//		}
-//		plan, err = s.plans.Get(ctx, i.GetBillingPlan())
-//		if err != nil {
-//			return err
-//		}
-//		if product, ok := plan.GetProducts()[rec.Product]; ok {
-//			sum += product.Price * rec.Total
-//		}
-//		// Scan each resource to find presented in current record. TODO: optimize
-//		for _, res := range plan.GetResources() {
-//			if res.Key == rec.Resource {
-//				sum += res.Price * rec.Total
-//			}
-//		}
-//	}
-//
-//	if plan == nil {
-//		return errors.New("got nil plan")
-//	}
+	c, err := s.currencies.Get(ctx, inv.GetCurrency().GetId())
+	if err != nil {
+		return inv, err
+	}
 
-//if i == nil {
-//	return errors.New("got nil instance")
-//}
-//
-//if sum == 0 {
-//	return errors.New("payment sum is zero")
-//}
-//
-//// Make sure we're not gonna send invoice twice for the same notification
-//// If it past less time than payment_period / 10 then it's considered as previous renew notification
-//// payment_period / 10 --- same in ione driver
-//now := time.Now().Unix()
-//lastInvoiceData, ok := i.Data["last_renew_invoice"]
-//if ok {
-//	period := plan.GetProducts()[i.GetProduct()].GetPeriod()
-//	lastInvoice := int64(lastInvoiceData.GetNumberValue())
-//	if now-lastInvoice <= period/10 {
-//		s.log.Info("INFO: Skipping renew invoice issuing.", zap.Int64("diff from last notify", time.Now().Unix()-lastInvoice))
-//		return nil
-//	}
-//}
-//
-//// Find owner account
-//cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
-//	"instance":    i.GetUuid(),
-//	"permissions": schema.PERMISSIONS_GRAPH.Name,
-//	"@instances":  schema.INSTANCES_COL,
-//	"@accounts":   schema.ACCOUNTS_COL,
-//})
-//if err != nil {
-//	return err
-//}
-//var acc graph.Account
-//_, err = cur.ReadDocument(ctx, &acc)
-//if err != nil {
-//	return err
-//}
+	switch inv.GetType() {
+	case pb.ActionType_BALANCE:
+		total := inv.GetTotal() / (tax + 1)
+		total = round(total, int(c.Precision))
+		tr, err := s.applyTransaction(ctx, -total, inv.GetAccount(), inv.GetCurrency())
+		if err != nil {
+			return inv, fmt.Errorf("failed to apply transaction: %w", err)
+		}
+		if inv.Transactions == nil {
+			inv.Transactions = make([]string, 0)
+		}
+		inv.Transactions = append(inv.Transactions, tr.GetUuid())
 
-//	if acc.Currency == nil {
-//		acc.Currency = currency.Currency
-//	}
-//	rate, err := s.currencies.GetExchangeRate(ctx, currency.Currency, acc.Currency)
-//	if err != nil {
-//		return err
-//	}
-//
-//	newInst := proto.Clone(i.Instance).(*ipb.Instance)
-//	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(now))
-//	if err := s.instances.Update(ctx, "", newInst, i.Instance); err != nil {
-//		s.log.Error("Failed to update instance last_renew_invoice. Skipping invoice creation", zap.Error(err))
-//		return err
-//	}
-//
-//	inv := &pb.Invoice{
-//		Exec:    time.Now().Add(time.Duration(plan.GetProducts()[i.GetProduct()].GetPeriod()) * time.Second).Unix(),
-//		Status:  pb.BillingStatus_UNPAID,
-//		Total:   sum * rate,
-//		Created: now,
-//		Type:    pb.ActionType_INSTANCE_RENEWAL,
-//		Items: []*pb.Item{
-//			{Title: i.Title + " renewal", Amount: int64(sum * rate), Instance: i.GetUuid()},
-//		},
-//		Account:  acc.GetUuid(),
-//		Currency: acc.Currency,
-//	}
-//
-//	_, err = s.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), connect.NewRequest(inv))
-//	return err
-//}
+	case pb.ActionType_INSTANCE_START:
+		for _, item := range inv.GetItems() {
+			i := item.GetInstance()
+
+			if i == "" {
+				continue
+			}
+
+			log = log.With(zap.String("instance", i))
+			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
+			if err != nil {
+				log.Error("Failed to get instance to start", zap.Error(err))
+				continue
+			}
+			instOld.Uuid = instOld.Key
+			// Set auto_start to true. After next driver monitoring instance will be started
+			instNew := graph.Instance{
+				Instance: proto.Clone(instOld.Instance).(*ipb.Instance),
+			}
+			cfg := instNew.Config
+			cfg["auto_start"] = structpb.NewBoolValue(true)
+			instNew.Config = cfg
+
+			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
+				log.Error("Failed to update instance", zap.Error(err))
+				continue
+			}
+
+			// Add balance to compensate instance first payment
+			acc, err := s.instances.GetInstanceOwner(ctx, i)
+			if err != nil {
+				return inv, err
+			}
+			cost, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
+			if err != nil {
+				return inv, fmt.Errorf("failed to get instance price: %w", err)
+			}
+			cost, err = s.currencies.Convert(ctx, defCurr, acc.GetCurrency(), cost)
+			if err != nil {
+				log.Error("Failed to convert cost", zap.Error(err))
+				return inv, fmt.Errorf("failed to convert cost: %w", err)
+			}
+			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency())
+			if err != nil {
+				return inv, fmt.Errorf("failed to apply transaction: %w", err)
+			}
+		}
+
+	case pb.ActionType_INSTANCE_RENEWAL:
+		for _, item := range inv.GetItems() {
+			i := item.GetInstance()
+			log = log.With(zap.String("instance", i))
+			if i == "" {
+				log.Debug("Instance item is empty")
+				continue
+			}
+			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
+				Uuid:   i,
+				Method: "free_renew",
+			})
+			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
+			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
+				log.Error("Failed to renew instance", zap.Error(err))
+				continue
+			}
+		}
+	}
+
+	return inv, nil
+}
+
+func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice) (*graph.Invoice, error) {
+
+	transactions := make([]string, 0)
+	if inv.Transactions == nil {
+		inv.Transactions = make([]string, 0)
+	}
+	for _, trId := range inv.GetTransactions() {
+		tr, err := s.transactions.Get(ctx, trId)
+		if err != nil {
+			log.Error("Failed to get transaction", zap.Error(err))
+			continue
+		}
+		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency()); err != nil {
+			log.Error("Failed to apply transaction", zap.Error(err))
+			continue
+		}
+		transactions = append(transactions, tr.GetUuid())
+	}
+	inv.Transactions = append(inv.Transactions, transactions...)
+
+	switch inv.GetType() {
+	case pb.ActionType_INSTANCE_START:
+		// TODO: maybe start returning should be done without suspending
+		for _, item := range inv.GetItems() {
+			id := item.GetInstance()
+
+			if id == "" {
+				continue
+			}
+
+			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
+				Uuid:   id,
+				Method: "suspend",
+			})
+			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
+			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
+				log.Error("Failed to suspend instance", zap.Error(err))
+				continue
+			}
+		}
+
+	case pb.ActionType_INSTANCE_RENEWAL:
+		for _, item := range inv.GetItems() {
+			i := item.GetInstance()
+			log = log.With(zap.String("instance", i))
+			if i == "" {
+				log.Debug("Instance item is empty")
+				continue
+			}
+			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
+				Uuid:   i,
+				Method: "cancel_renew",
+			})
+			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
+			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
+				log.Error("Failed to cancel renew instance", zap.Error(err))
+				continue
+			}
+		}
+	}
+
+	return inv, nil
+}

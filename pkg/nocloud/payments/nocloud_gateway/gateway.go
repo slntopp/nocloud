@@ -12,7 +12,7 @@ func NewNoCloudGateway() *NcGateway {
 	return &NcGateway{}
 }
 
-func (g *NcGateway) CreateInvoice(_ context.Context, _ *pb.Invoice) error {
+func (g *NcGateway) CreateInvoice(_ context.Context, _ *pb.Invoice, _ ...bool) error {
 
 	return nil
 }
