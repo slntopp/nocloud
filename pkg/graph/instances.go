@@ -496,11 +496,11 @@ func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid stri
 		return Account{}, fmt.Errorf("failed to get instance owner: %w", err)
 	}
 	log.Debug("GetInstanceOwner", zap.String("instance", uuid), zap.Any("account", acc), zap.Any("meta", meta))
-	if acc.GetUuid() == "" {
+	if meta.Key == "" {
 		log.Error("Instance owner not found. Uuid is empty")
 		return Account{}, fmt.Errorf("instance owner not found. Uuid is empty")
 	}
-	acc.Uuid = acc.Key
+	acc.Uuid = meta.Key
 	return acc, nil
 }
 
