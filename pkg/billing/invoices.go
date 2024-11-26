@@ -1298,23 +1298,25 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 
 func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice) (*graph.Invoice, error) {
 
-	switch inv.GetType() {
-	case pb.ActionType_BALANCE:
-		transactions := make([]string, 0)
-		for _, trId := range inv.GetTransactions() {
-			tr, err := s.transactions.Get(ctx, trId)
-			if err != nil {
-				log.Error("Failed to get transaction", zap.Error(err))
-				continue
-			}
-			if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency()); err != nil {
-				log.Error("Failed to apply transaction", zap.Error(err))
-				continue
-			}
-			transactions = append(transactions, tr.GetUuid())
+	transactions := make([]string, 0)
+	if inv.Transactions == nil {
+		inv.Transactions = make([]string, 0)
+	}
+	for _, trId := range inv.GetTransactions() {
+		tr, err := s.transactions.Get(ctx, trId)
+		if err != nil {
+			log.Error("Failed to get transaction", zap.Error(err))
+			continue
 		}
-		inv.Transactions = append(inv.Transactions, transactions...)
+		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency()); err != nil {
+			log.Error("Failed to apply transaction", zap.Error(err))
+			continue
+		}
+		transactions = append(transactions, tr.GetUuid())
+	}
+	inv.Transactions = append(inv.Transactions, transactions...)
 
+	switch inv.GetType() {
 	case pb.ActionType_INSTANCE_START:
 		// TODO: maybe start returning should be done without suspending
 		for _, item := range inv.GetItems() {
