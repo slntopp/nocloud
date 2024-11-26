@@ -406,7 +406,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice); err != nil {
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice, !req.Msg.GetIsSendEmail()); err != nil {
 			//_ = s.invoices.AbortTransaction(trCtx)
 			log.Error("Failed to create invoice through gateway", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")

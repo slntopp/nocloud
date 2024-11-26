@@ -96,7 +96,7 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 	return result, nil
 }
 
-func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error {
+func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEmail ...bool) error {
 	if inv.Status == pb.BillingStatus_DRAFT || inv.Status == pb.BillingStatus_TERMINATED {
 		return nil
 	}
@@ -116,7 +116,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice) error
 		return fmt.Errorf("whmcs user not found")
 	}
 
-	var sendEmail = inv.Status != pb.BillingStatus_DRAFT
+	var sendEmail = (inv.Status != pb.BillingStatus_DRAFT) || (len(noEmail) > 0 && noEmail[0])
 
 	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
 	taxed := "0"
