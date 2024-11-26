@@ -39,7 +39,7 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 		inv.Status = pb.BillingStatus_TERMINATED
 		pNote := inv.Meta["note"].GetStringValue()
 		inv.Meta["note"] = structpb.NewStringValue("DELETED ON WHMCS!\n" + pNote)
-		if _, err = s.invoices.Update(ctx, inv); err != nil {
+		if _, err = s.invoices.Replace(ctx, inv); err != nil {
 			log.Error("Error updating invoice", zap.Error(err))
 			continue
 		}
