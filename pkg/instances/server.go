@@ -65,6 +65,7 @@ type InstancesServer struct {
 	promo_ctrl graph.PromocodesController
 	acc_ctrl   graph.AccountsController
 	inv_ctrl   graph.InvoicesController
+	curr_ctrl  graph.CurrencyController
 	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -87,6 +88,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 	promo_ctrl := graph.NewPromocodesController(logger, db, rbmq)
 	acc_ctrl := graph.NewAccountsController(logger, db)
 	inv_ctrl := graph.NewInvoicesController(logger, db)
+	curr_ctrl := graph.NewCurrencyController(logger, db)
 	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
@@ -124,6 +126,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		promo_ctrl: promo_ctrl,
 		acc_ctrl:   acc_ctrl,
 		inv_ctrl:   inv_ctrl,
+		curr_ctrl:  curr_ctrl,
 		ca:         ca,
 		drivers:    make(map[string]driverpb.DriverServiceClient),
 		rdb:        rdb,
@@ -1082,6 +1085,7 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 		return nil, err
 	}
 
+	conv := graph.NewConverter(_req.Header(), s.curr_ctrl)
 	wg := &go_sync.WaitGroup{}
 	for _, value := range result.Pool {
 		value := value
@@ -1097,12 +1101,15 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 				oneTime = true
 			}
 			value.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(value.Instance, oneTime)
+			conv.ConvertObjectPrices(value.Instance)
 		}()
 	}
 	wg.Wait()
 
 	log.Debug("Result", zap.Any("result", &result))
-	return connect.NewResponse(&result), nil
+	resp := connect.NewResponse(&result)
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
 const countInstancesQuery = `
@@ -1344,8 +1351,11 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 		}
 		result.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(result.Instance, oneTime)
 	}
+	conv := graph.NewConverter(_req.Header(), s.curr_ctrl)
 
-	return connect.NewResponse(&result), nil
+	resp := connect.NewResponse(&result)
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
 func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {

@@ -27,6 +27,7 @@ type CurrencyController interface {
 	GetCurrencies(ctx context.Context, isAdmin bool, mustFetch ...int32) ([]*pb.Currency, error)
 	GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error)
 	Get(ctx context.Context, id int32) (Currency, error)
+	GetByCode(ctx context.Context, code string) (Currency, error)
 }
 
 type Currency struct {
@@ -152,6 +153,28 @@ func (c *сurrencyController) Get(ctx context.Context, id int32) (Currency, erro
 	currency := Currency{}
 	_, err := c.col.ReadDocument(ctx, key, &currency)
 	return currency, err
+}
+
+const getCurrencyByCode = `
+FOR c IN @@currencies
+FILTER TO_STRING(c.code) == TO_STRING(@code)
+RETURN c
+`
+
+func (c *сurrencyController) GetByCode(ctx context.Context, code string) (Currency, error) {
+	var cur Currency
+	cursor, err := c.db.Query(ctx, getCurrencyByCode, map[string]interface{}{
+		"@currencies": schema.CUR_COL,
+		"code":        code,
+	})
+	if err != nil {
+		return cur, err
+	}
+	defer cursor.Close()
+	if _, err = cursor.ReadDocument(ctx, &cur); err != nil {
+		return cur, err
+	}
+	return cur, nil
 }
 
 func (c *сurrencyController) UpdateCurrency(ctx context.Context, currency *pb.Currency) error {

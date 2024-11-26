@@ -826,6 +826,7 @@ func (s *ServicesServer) Get(ctx context.Context, _request *connect.Request[pb.G
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
+	conv := graph.NewConverter(_request.Header(), s.cur_ctrl)
 	for _, group := range service.GetInstancesGroups() {
 		for _, instance := range group.GetInstances() {
 			if instance == nil {
@@ -837,10 +838,13 @@ func (s *ServicesServer) Get(ctx context.Context, _request *connect.Request[pb.G
 				oneTime = true
 			}
 			instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, oneTime)
+			conv.ConvertObjectPrices(instance)
 		}
 	}
 
-	return connect.NewResponse(service), nil
+	resp := connect.NewResponse(service)
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
 func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.ListRequest]) (response *connect.Response[pb.Services], err error) {
@@ -857,6 +861,7 @@ func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
+	conv := graph.NewConverter(_request.Header(), s.cur_ctrl)
 	wg := &sync.WaitGroup{}
 	for _, service := range r.Result {
 		service := service
@@ -877,15 +882,18 @@ func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.
 						oneTime = true
 					}
 					instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, oneTime)
+					conv.ConvertObjectPrices(instance)
 				}
 			}
 		}()
 	}
 	wg.Wait()
 
-	return connect.NewResponse(&pb.Services{
+	resp := connect.NewResponse(&pb.Services{
 		Pool: r.Result, Count: int64(r.Count),
-	}), nil
+	})
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
 func (s *ServicesServer) Delete(ctx context.Context, _request *connect.Request[pb.DeleteRequest]) (response *connect.Response[pb.DeleteResponse], err error) {

@@ -24,11 +24,12 @@ type AddonsServer struct {
 
 	addons graph.AddonsController
 	nss    graph.NamespacesController
+	curr   graph.CurrencyController
 	ca     graph.CommonActionsController
 }
 
 func NewAddonsServer(logger *zap.Logger, db driver.Database,
-	addons graph.AddonsController, nss graph.NamespacesController, ca graph.CommonActionsController) *AddonsServer {
+	addons graph.AddonsController, nss graph.NamespacesController, curr graph.CurrencyController, ca graph.CommonActionsController) *AddonsServer {
 	log := logger.Named("AddonsServer")
 	return &AddonsServer{
 		log:    log,
@@ -36,6 +37,7 @@ func NewAddonsServer(logger *zap.Logger, db driver.Database,
 		addons: addons,
 		nss:    nss,
 		ca:     ca,
+		curr:   curr,
 	}
 }
 
@@ -181,8 +183,15 @@ func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddon
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
+
+	conv := graph.NewConverter(r.Header(), s.curr)
+	for _, val := range addons {
+		conv.ConvertObjectPrices(val)
+	}
+
 	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: addons})
+		conv.SetResponseHeader(resp.Header())
 		return resp, nil
 	}
 
@@ -193,7 +202,9 @@ func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddon
 			filteredAddons = append(filteredAddons, val)
 		}
 	}
+
 	resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: filteredAddons})
+	conv.SetResponseHeader(resp.Header())
 	return resp, nil
 }
 
