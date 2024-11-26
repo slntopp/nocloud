@@ -19,6 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"math"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -48,6 +50,16 @@ type Node struct {
 
 type Accessible interface {
 	GetAccess() *access.Access
+}
+
+func Round(amount float64, precision int32, mode pb.Rounding) float64 {
+	if mode == pb.Rounding_ROUND_HALF {
+		return math.Round(amount*math.Pow10(int(precision))) / math.Pow10(int(precision))
+	} else if mode == pb.Rounding_ROUND_UP {
+		return math.Ceil(amount*math.Pow10(int(precision))) / math.Pow10(int(precision))
+	} else {
+		return math.Floor(amount*math.Pow10(int(precision))) / math.Pow10(int(precision))
+	}
 }
 
 func deleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {

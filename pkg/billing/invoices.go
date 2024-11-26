@@ -31,10 +31,6 @@ func compareFloat(a, b float64, precisionDigits int) bool {
 	return math.Abs(a-b) < math.Pow10(-precisionDigits)
 }
 
-func round(f float64, precisionDigits int) float64 {
-	return math.Round(f*math.Pow10(precisionDigits)) / math.Pow10(precisionDigits)
-}
-
 type pair[T any] struct {
 	f T
 	s T
@@ -340,14 +336,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		log.Error("Failed to get currency", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get currency")
 	}
-	precision := int(cur.Precision)
 	var newTotal float64
 	for _, item := range t.GetItems() {
-		price := round(item.GetPrice(), precision)
+		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 		item.Price = price
 		newTotal += price * float64(item.GetAmount())
 	}
-	t.Total = round(newTotal, precision)
+	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 
 	now := time.Now()
 
@@ -850,14 +845,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get currency", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get currency")
 	}
-	precision := int(cur.Precision)
 	var newTotal float64
 	for _, item := range t.GetItems() {
-		price := round(item.GetPrice(), precision)
+		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 		item.Price = price
 		newTotal += price * float64(item.GetAmount())
 	}
-	t.Total = round(newTotal, precision)
+	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 
 	upd, err := s.invoices.Replace(ctx, t)
 	if err != nil {
@@ -1211,7 +1205,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 	switch inv.GetType() {
 	case pb.ActionType_BALANCE:
 		total := inv.GetTotal() / (tax + 1)
-		total = round(total, int(c.Precision))
+		total = graph.Round(total, c.Precision, c.Rounding)
 		tr, err := s.applyTransaction(ctx, -total, inv.GetAccount(), inv.GetCurrency())
 		if err != nil {
 			return inv, fmt.Errorf("failed to apply transaction: %w", err)

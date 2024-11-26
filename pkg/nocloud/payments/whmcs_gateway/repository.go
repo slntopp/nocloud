@@ -12,8 +12,6 @@ import (
 const invoiceIdField = "whmcs_invoice_id"
 const userIdField = "whmcs_id"
 
-var errNotFound = fmt.Errorf("not found")
-
 func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, error) {
 	invoices, err := g.invMan.InvoicesController().List(context.Background(), "")
 	if err != nil {
@@ -28,7 +26,7 @@ func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, err
 			return inv.Invoice, nil
 		}
 	}
-	return nil, errNotFound
+	return nil, ErrNotFound
 }
 
 func (g *WhmcsGateway) GetAccountByWhmcsId(whmcsUserId int) (*rpb.Account, error) {
@@ -39,7 +37,7 @@ func (g *WhmcsGateway) GetAccountByWhmcsId(whmcsUserId int) (*rpb.Account, error
 		return nil, err
 	}
 	if len(acc) == 0 {
-		return nil, errNotFound
+		return nil, ErrNotFound
 	}
 	if len(acc) > 1 {
 		return nil, fmt.Errorf("multiple accounts found")

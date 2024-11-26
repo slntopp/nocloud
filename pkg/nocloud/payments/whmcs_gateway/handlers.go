@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/structpb"
-	"math"
 	"strings"
 	"time"
 )
@@ -24,7 +22,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		log.Info("Invoice already exists in NoCloud", zap.Int("invoice_id", data.InvoiceId))
 		return nil
 	}
-	if !errors.Is(err, errNotFound) {
+	if !errors.Is(err, ErrNotFound) {
 		log.Error("Error getting invoice", zap.Error(err))
 		return err
 	}
@@ -41,11 +39,10 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		return err
 	}
 
-	curr, err := g.currencies.Get(ctx, acc.GetCurrency().GetId())
+	cur, err := g.currencies.Get(ctx, acc.GetCurrency().GetId())
 	if err != nil {
 		return err
 	}
-	precision := int(curr.Precision)
 
 	inv := &pb.Invoice{
 		Status:       statusToNoCloud(whmcsInv.Status),
@@ -72,7 +69,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		} else {
 			price = whmcsAmount
 		}
-		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		price = graph.Round(price, cur.Precision, cur.Rounding)
 		total += price
 
 		newItems = append(newItems, &pb.Item{
@@ -83,7 +80,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		})
 	}
 	inv.Items = newItems
-	total = math.Round(total*math.Pow10(precision)) / math.Pow10(precision)
+	total = graph.Round(total, cur.Precision, cur.Rounding)
 	inv.Total = total
 
 	if !strings.Contains(whmcsInv.DatePaid, "0000-00-00") {
@@ -114,30 +111,6 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		return err
 	}
 
-	return nil
-}
-
-func (g *WhmcsGateway) invoiceDeletedHandler(ctx context.Context, log *zap.Logger, data InvoiceDeleted) error {
-	log.Info("Got invoiceCreated event. Got data", zap.Any("data", data))
-	var err error
-	inv, err := g.getInvoiceByWhmcsId(data.InvoiceId)
-	if err != nil {
-		if errors.Is(err, errNotFound) {
-			log.Info("Invoice not found in NoCloud", zap.Int("invoice_id", data.InvoiceId))
-			return nil
-		}
-		return err
-	}
-	if inv, err = g.invMan.UpdateInvoiceStatus(ctx, inv.GetUuid(), pb.BillingStatus_TERMINATED); err != nil {
-		log.Error("Error updating invoice status to terminated", zap.Error(err))
-		return err
-	}
-	delete(inv.Meta, invoiceIdField)
-	inv.Meta["note"] = structpb.NewStringValue(fmt.Sprintf("DELETED THROUGH WHMCS %d\n", data.InvoiceId) + inv.Meta["note"].GetStringValue())
-	if _, err = g.invMan.InvoicesController().Update(ctx, &graph.Invoice{Invoice: inv, DocumentMeta: driver.DocumentMeta{Key: inv.GetUuid()}}); err != nil {
-		log.Error("Error updating invoice", zap.Error(err))
-		return err
-	}
 	return nil
 }
 
@@ -228,14 +201,6 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.invoiceCreatedHandler(ctx, log, data)
-	case "InvoiceDeleted":
-		data, err := unmarshal[InvoiceDeleted](body)
-		if err != nil {
-			log.Error("Error decoding request", zap.Error(err))
-			return
-		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
-		innerErr = g.invoiceDeletedHandler(ctx, log, data)
 	default:
 		log.Error("Unknown event", zap.String("event", resp.Event))
 		return

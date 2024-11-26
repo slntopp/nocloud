@@ -132,11 +132,10 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 		taxed = "1"
 	}
 
-	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	cur, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
 	if err != nil {
 		return err
 	}
-	precision := int(curr.Precision)
 
 	oldNote := inv.GetMeta()["note"].GetStringValue()
 	newNote := oldNote
@@ -152,7 +151,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 		} else {
 			price = item.GetPrice() * float64(item.GetAmount())
 		}
-		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		price = graph.Round(price, cur.Precision, cur.Rounding)
 
 		q.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
 		q.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", price))
@@ -219,11 +218,10 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		return err
 	}
 
-	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	cur, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
 	if err != nil {
 		return err
 	}
-	precision := int(curr.Precision)
 
 	if inv.Payment > 0 {
 		body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
@@ -273,15 +271,12 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		} else {
 			price = item.GetPrice() * float64(item.GetAmount())
 		}
-		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		price = graph.Round(price, cur.Precision, cur.Rounding)
 
 		description[i] = item.GetDescription()
 		amount[i] = floatAsString(price)
 		taxed[i] = isTaxed
 	}
-	//body.NewItemDescription = description
-	//body.NewItemAmount = amount
-	//body.NewItemTaxed = isTaxed
 
 	q, err := query.Values(body)
 	if err != nil {
@@ -423,11 +418,10 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 
-	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	cur, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
 	if err != nil {
 		return err
 	}
-	precision := int(curr.Precision)
 
 	if inv.Status == pb.BillingStatus_TERMINATED && whmcsInv.Status == statusToWhmcs(pb.BillingStatus_CANCELED) {
 		goto skipStatus
@@ -494,14 +488,14 @@ skipStatus:
 		} else {
 			price = whmcsAmount
 		}
-		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		price = graph.Round(price, cur.Precision, cur.Rounding)
 
 		found := false
 		index := 0
 		for i, ncItem := range ncItems {
 			ncPrice := ncItem.Price * float64(ncItem.Amount)
-			ncPrice = math.Round(ncPrice*math.Pow10(precision)) / math.Pow10(precision)
-			if item.Description == ncItem.Description && compareFloat(price, ncPrice, precision) {
+			ncPrice = graph.Round(ncPrice, cur.Precision, cur.Rounding)
+			if item.Description == ncItem.Description && compareFloat(price, ncPrice, int(cur.Precision)) {
 				found = true
 				index = i
 				break
@@ -528,7 +522,7 @@ skipStatus:
 			Instance:    inst,
 		})
 	}
-	total = math.Round(total*math.Pow10(precision)) / math.Pow10(precision)
+	total = graph.Round(total, cur.Precision, cur.Rounding)
 
 	var warning string
 	if !synced {

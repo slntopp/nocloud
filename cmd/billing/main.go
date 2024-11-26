@@ -245,7 +245,7 @@ func main() {
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
 		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw)
-	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, caCtrl)
+	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 	log.Info("Starting Currencies Service")
 
 	log.Info("Check settings server")
