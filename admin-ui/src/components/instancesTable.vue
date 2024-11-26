@@ -298,7 +298,7 @@ const headers = computed(() => {
     { text: "RAM", value: "resources.ram" },
     { text: "Disk", value: "resources.drive_size" },
     { text: "OS", value: "config.template_id" },
-    { text: "Domain", value: "resources.domain" },
+    { text: "Domain", value: "config.domain" },
     { text: "DCV", value: "resources.dcv" },
     { text: "Approver email", value: "resources.approver_email" },
     {
@@ -485,7 +485,7 @@ const searchFields = computed(() => [
   { title: "RAM", key: "resources.ram", type: "number-range" },
   { title: "Disk", key: "resources.drive_size", type: "number-range" },
   { title: "OS", key: "config.template_id", type: "input" },
-  { title: "Domain", key: "resources.domain", type: "input" },
+  { title: "Domain", key: "config.domain", type: "input" },
   { title: "DCV", key: "resources.dcv", type: "input" },
   {
     title: "Approver email",
