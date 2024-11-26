@@ -57,7 +57,7 @@
     </template>
 
     <template v-if="showDelete" v-slot:[`item.total`]="{ item }">
-      <span>{{ (item.price * item.amount).toFixed(2) }}</span>
+      <span>{{ (item.price * item.amount || 0).toFixed(2) }}</span>
     </template>
 
     <template v-if="items.length" v-slot:body.append>
@@ -69,7 +69,10 @@
         <td>
           {{
             items
-              .reduce((acc, item) => acc + item.amount * item.price, 0)
+              .reduce(
+                (acc, item) => acc + (item.amount || 0) * (item.price || 0),
+                0
+              )
               .toFixed(2)
           }}
         </td>
@@ -100,7 +103,7 @@ const emit = defineEmits("click:delete");
 
 const store = useStore();
 
-const generalRule = ref([(v) => !!v || "This field is required!"]);
+const generalRule = ref([(v) => !!v || v===0 || "This field is required!"]);
 const unitItems = ref(["Pcs", "Szt", "Hour`s"]);
 
 const headers = computed(() =>
