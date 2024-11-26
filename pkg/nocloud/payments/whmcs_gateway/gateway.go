@@ -42,6 +42,10 @@ type WhmcsGateway struct {
 	taxExcluded bool
 }
 
+var ErrNotFound = fmt.Errorf("not found")
+
+const invoiceNotFoundApiMsg = "Invoice ID Not Found"
+
 func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool) *WhmcsGateway {
 	return &WhmcsGateway{
 		m:           &sync.Mutex{},
@@ -84,7 +88,11 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 		return result, fmt.Errorf("failed to unmarshal response to result checker struct: %w. Body: %s", err, string(b))
 	}
 	if resp.StatusCode != 200 || resultChecker.Result != "success" {
-		return result, fmt.Errorf("failed to perform action: %s. Response body: %+v", resp.Status, resultChecker)
+		err = fmt.Errorf("failed to perform action: %s. Response body: %+v", resp.Status, resultChecker)
+		if resultChecker.Message == invoiceNotFoundApiMsg {
+			err = fmt.Errorf("%w. Embedded error: %w", err, ErrNotFound)
+		}
+		return result, err
 	}
 
 	// Result
@@ -372,6 +380,33 @@ func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invo
 	}
 
 	return invResp, nil
+}
+
+func (g *WhmcsGateway) GetInvoices(_ context.Context) ([]Invoice, error) {
+	res := make([]Invoice, 0)
+
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return res, err
+	}
+
+	body := g.buildGetInvoicesQueryBase()
+	body.LimitNum = ptr(math.MaxInt32)
+	q, err := query.Values(body)
+	if err != nil {
+		return res, err
+	}
+
+	invResp, err := sendRequestToWhmcs[GetInvoicesResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return res, err
+	}
+
+	if invResp.Invoices.Invoice == nil {
+		return res, nil
+	}
+
+	return invResp.Invoices.Invoice, nil
 }
 
 func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {

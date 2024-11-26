@@ -88,6 +88,19 @@ type GetInvoiceQuery struct {
 	Password     string `url:"password"` // md5 hash
 }
 
+type GetInvoicesQuery struct {
+	Action       string  `url:"action"`
+	ResponseType string  `url:"responsetype"`
+	Username     string  `url:"username"`
+	Password     string  `url:"password"` // md5 hash
+	LimitStart   *int    `url:"limitstart"`
+	LimitNum     *int    `url:"limitnum"`
+	UserID       *int    `url:"userid"`
+	Status       *string `url:"status"`
+	OrderBy      *string `url:"orderby"`
+	Order        *string `url:"order"`
+}
+
 type Item struct {
 	Id          int           `json:"id"`
 	Type        string        `json:"type"`
@@ -123,6 +136,19 @@ type Invoice struct {
 	CcGateway     bool          `json:"ccgateway"` // Whether the payment method is a credit card gateway that can be submitted to attempt capture.
 	Items         ItemHolder    `json:"items"`
 	//Transactions  string        `json:"transactions"`
+}
+
+type GetInvoicesResponse struct {
+	Result       string         `json:"result"`
+	Message      string         `json:"message"`
+	TotalResults int            `json:"totalresults"`
+	StartNumber  int            `json:"startnumber"`
+	NumReturned  int            `json:"numreturned"`
+	Invoices     InvoicesHolder `json:"invoices"`
+}
+
+type InvoicesHolder struct {
+	Invoice []Invoice `json:"invoice"`
 }
 
 type InvoiceResponse struct {
