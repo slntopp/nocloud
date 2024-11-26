@@ -1232,6 +1232,11 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 	case pb.ActionType_INSTANCE_START:
 		for _, item := range inv.GetItems() {
 			i := item.GetInstance()
+
+			if i == "" {
+				continue
+			}
+
 			log = log.With(zap.String("instance", i))
 			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
 			if err != nil {
@@ -1320,6 +1325,11 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 		// TODO: maybe start returning should be done without suspending
 		for _, item := range inv.GetItems() {
 			id := item.GetInstance()
+
+			if id == "" {
+				continue
+			}
+
 			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
 				Uuid:   id,
 				Method: "suspend",

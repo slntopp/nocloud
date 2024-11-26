@@ -470,6 +470,7 @@ LET account = LAST( // Find Instance owner Account
     FILTER IS_SAME_COLLECTION(node, @@accounts)
         RETURN node
     )
+FILTER account
 RETURN account`
 
 func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid string) (Account, error) {
@@ -484,6 +485,9 @@ func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid stri
 	if err != nil {
 		log.Error("Error getting instance owner. Failed to execute query", zap.Error(err))
 		return Account{}, fmt.Errorf("error getting instance owner: %w", err)
+	}
+	if !cur.HasMore() {
+		return Account{}, fmt.Errorf("no instance owner")
 	}
 	var acc Account
 	_, err = cur.ReadDocument(ctx, &acc)
