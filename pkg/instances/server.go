@@ -803,8 +803,9 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			query += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s")
 || acc.data.email LIKE "%s"
 || acc._key LIKE "%s"
-|| node._key LIKE "%s"`,
-				"%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
+|| node._key LIKE "%s"
+|| node.config.domain LIKE "%s"`,
+				"%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
 		} else if key == "email" {
 			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
 		} else if key == "title" {
@@ -969,6 +970,8 @@ func getSortQuery(field, order string, customOrder []interface{}, bindVars map[s
 		query += fmt.Sprintf(" SORT bp.title %s", order)
 	} else if field == "sp" {
 		query += fmt.Sprintf(" SORT sp.title %s", order)
+	} else if field == "config.domain" {
+		query += fmt.Sprintf(" SORT node.config.domain %s", order)
 	} else if field == "state.state" {
 		bindKey := "customOrder"
 		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) DESC", bindKey)
