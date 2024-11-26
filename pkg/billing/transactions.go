@@ -187,42 +187,6 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 
-	/*var baseRec, prevRec string
-
-	if t.Base != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &baseRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}
-
-	if t.Previous != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &prevRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}*/
-
 	recBody := &pb.Record{
 		Start:     time.Now().Unix(),
 		End:       time.Now().Unix() + 1,
