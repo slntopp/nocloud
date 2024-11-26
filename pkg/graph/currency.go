@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -25,7 +26,7 @@ type CurrencyController interface {
 	UpdateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error
 	DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error
 	Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error)
-	GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error)
+	GetCurrencies(ctx context.Context, isAdmin bool, mustFetch ...int32) ([]*pb.Currency, error)
 	GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error)
 	Get(ctx context.Context, id int32) (Currency, error)
 }
@@ -294,7 +295,7 @@ func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to
 	return amount * rate, nil
 }
 
-func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error) {
+func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool, mustFetch ...int32) ([]*pb.Currency, error) {
 	currencies := []*pb.Currency{}
 
 	cursor, err := c.db.Query(ctx, getCurrenciesQuery, map[string]interface{}{
@@ -320,14 +321,13 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 			return currencies, err
 		}
 
-		// specify bitsize to parse int32 exactly
 		id, err := strconv.ParseInt(doc.Key, 10, 32)
 		if err != nil {
 			return currencies, err
 		}
 
 		// Ignore private currency
-		if !isAdmin && !doc.Public {
+		if !isAdmin && !doc.Public && !slices.Contains(mustFetch, int32(id)) {
 			continue
 		}
 

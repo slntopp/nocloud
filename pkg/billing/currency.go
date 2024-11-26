@@ -19,18 +19,20 @@ import (
 type CurrencyServiceServer struct {
 	log *zap.Logger
 
-	ctrl graph.CurrencyController
-	ca   graph.CommonActionsController
+	ctrl     graph.CurrencyController
+	accounts graph.AccountsController
+	ca       graph.CommonActionsController
 
 	db driver.Database
 }
 
-func NewCurrencyServiceServer(log *zap.Logger, db driver.Database, currencies graph.CurrencyController, ca graph.CommonActionsController) *CurrencyServiceServer {
+func NewCurrencyServiceServer(log *zap.Logger, db driver.Database, currencies graph.CurrencyController, accounts graph.AccountsController, ca graph.CommonActionsController) *CurrencyServiceServer {
 	return &CurrencyServiceServer{
-		log:  log.Named("CurrencyServer"),
-		db:   db,
-		ctrl: currencies,
-		ca:   ca,
+		log:      log.Named("CurrencyServer"),
+		db:       db,
+		ctrl:     currencies,
+		ca:       ca,
+		accounts: accounts,
 	}
 }
 
@@ -213,7 +215,19 @@ func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Re
 		isAdmin = s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	}
 
-	currencies, err := s.ctrl.GetCurrencies(ctx, isAdmin)
+	mustFetch := make([]int32, 0)
+	if !isAdmin {
+		acc, err := s.accounts.Get(ctx, requester)
+		if err == nil {
+			if acc.Currency == nil {
+				mustFetch = append(mustFetch, schema.DEFAULT_CURRENCY_ID)
+			} else {
+				mustFetch = append(mustFetch, acc.Currency.GetId())
+			}
+		}
+	}
+
+	currencies, err := s.ctrl.GetCurrencies(ctx, isAdmin, mustFetch...)
 	if err != nil {
 		log.Error("Error getting Currencies", zap.Error(err))
 		return nil, err
