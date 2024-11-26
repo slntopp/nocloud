@@ -490,11 +490,12 @@ func (ctrl *instancesController) GetInstanceOwner(ctx context.Context, uuid stri
 		return Account{}, fmt.Errorf("no instance owner")
 	}
 	var acc Account
-	_, err = cur.ReadDocument(ctx, &acc)
+	meta, err := cur.ReadDocument(ctx, &acc)
 	if err != nil {
 		log.Error("Error getting instance owner. Failed to read from cursor", zap.Error(err))
 		return Account{}, fmt.Errorf("failed to get instance owner: %w", err)
 	}
+	log.Debug("GetInstanceOwner", zap.String("instance", uuid), zap.Any("account", acc), zap.Any("meta", meta))
 	if acc.GetUuid() == "" {
 		log.Error("Instance owner not found. Uuid is empty")
 		return Account{}, fmt.Errorf("instance owner not found. Uuid is empty")
