@@ -1251,14 +1251,13 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				log.Error("Failed to update instance", zap.Error(err))
 				continue
 			}
-			instance := instNew
 
 			// Add balance to compensate instance first payment
-			acc, err := s.instances.GetInstanceOwner(ctx, instance.GetUuid())
+			acc, err := s.instances.GetInstanceOwner(ctx, i)
 			if err != nil {
 				return inv, err
 			}
-			cost, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true, true)
+			cost, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
 			if err != nil {
 				return inv, fmt.Errorf("failed to get instance price: %w", err)
 			}
