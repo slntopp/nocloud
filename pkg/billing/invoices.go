@@ -275,17 +275,6 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 	}
 
 	log.Debug("Invoices retrieved", zap.Any("invoices", invoices))
-
-	for _, inv := range invoices {
-		if isAdmin {
-			continue
-		}
-		if !strings.Contains(inv.GetCurrency().GetTitle(), "EUR") {
-			continue
-		}
-		inv.Currency.Title = "EUR"
-	}
-
 	resp := connect.NewResponse(&pb.Invoices{Pool: invoices})
 	return resp, nil
 }

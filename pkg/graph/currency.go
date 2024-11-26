@@ -3,11 +3,9 @@ package graph
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"slices"
 	"strconv"
-	"strings"
-
-	"github.com/slntopp/nocloud/pkg/graph/migrations"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -340,16 +338,6 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool, m
 			Rounding:  doc.Rounding,
 			Code:      doc.Code,
 		})
-	}
-
-	for _, currency := range currencies {
-		if isAdmin {
-			continue
-		}
-		if !strings.Contains(currency.GetTitle(), "EUR") {
-			continue
-		}
-		currency.Title = "EUR"
 	}
 
 	return currencies, nil
