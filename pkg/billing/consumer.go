@@ -72,7 +72,6 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		accCurrency = acc.Currency
 	}
 	initCost, _ := s.instances.CalculateInstanceEstimatePrice(instance.Instance, true)
-	costNoOneTime, _ := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true, true)
 	cost, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)
 	if err != nil {
 		log.Error("Failed to calculate instance cost", zap.Error(err))
@@ -130,48 +129,6 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		return fmt.Errorf("failed to create invoice: %w", err)
 	}
 	log.Info("Created invoice", zap.String("uuid", invResp.Msg.GetUuid()))
-
-	// Create fixing transaction
-	delta := costNoOneTime - cost
-	if delta == 0 {
-		return nil
-	}
-	if delta < 0 {
-		log.Warn("Delta is less than 0. Price after promocode is higher than before promocode", zap.Float64("delta", delta))
-		return nil
-	}
-	log.Info("Creating fixing transaction")
-	delta, err = s.currencies.Convert(ctx, currencyConf.Currency, accCurrency, delta)
-	if err != nil {
-		log.Error("Failed to convert cost to create fixing transaction", zap.Error(err))
-		return fmt.Errorf("failed to convert cost to create fixing transaction: %w", err)
-	}
-	newInv, err := s.invoices.Get(ctxWithRoot(ctx), invResp.Msg.GetUuid())
-	if err != nil {
-		log.Error("Failed to get invoice", zap.Error(err))
-		return fmt.Errorf("failed to get invoice to create fixing transaction: %w", err)
-	}
-	newTr, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&bpb.Transaction{
-		Priority: bpb.Priority_NORMAL,
-		Account:  acc.GetUuid(),
-		Currency: accCurrency,
-		Total:    -delta,
-		Exec:     0,
-	}))
-	if err != nil {
-		log.Error("Failed to create transaction", zap.Error(err))
-		return fmt.Errorf("failed to create fixing transaction: %w", err)
-	}
-	if newInv.Transactions == nil {
-		newInv.Transactions = []string{}
-	}
-	newInv.Transactions = append(newInv.Transactions, newTr.Msg.GetUuid())
-	_, err = s.invoices.Update(ctxWithRoot(ctx), newInv)
-	if err != nil {
-		log.Error("Failed to update invoice to save fixing transaction", zap.Error(err))
-		return fmt.Errorf("failed to update invoice to save fixing transaction: %w", err)
-	}
-	log.Info("Successfully created fixing transaction")
 	return nil
 }
 

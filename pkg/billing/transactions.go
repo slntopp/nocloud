@@ -690,3 +690,24 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	resp := connect.NewResponse(&pb.Transactions{Pool: transactions})
 	return resp, nil
 }
+
+func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency) (*pb.Transaction, error) {
+	if amount == 0 {
+		return nil, nil
+	}
+	if curr == nil {
+		conf := MakeCurrencyConf(ctx, s.log, &s.settingsClient)
+		curr = conf.Currency
+	}
+	resp, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+		Exec:     time.Now().Unix(),
+		Priority: pb.Priority_URGENT,
+		Account:  account,
+		Total:    amount,
+		Currency: curr,
+	}))
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg, nil
+}
