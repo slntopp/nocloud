@@ -611,7 +611,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
 	}
 
-	tr, err := s.applyTransaction(ctx, inv.GetTotal(), inv.GetAccount(), invCurrency)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(ctx), inv.GetTotal(), inv.GetAccount(), invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
@@ -679,7 +679,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
 	}
 
-	_, err = s.applyTransaction(ctx, float64(inv.Balance), requester, invCurrency)
+	_, err = s.applyTransaction(ctxWithInternalAccess(ctx), float64(inv.Balance), requester, invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
