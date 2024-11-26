@@ -616,14 +616,16 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
 	}
-	newInv := resp.Msg
-	if newInv.Transactions == nil {
-		newInv.Transactions = make([]string, 0)
-	}
-	newInv.Transactions = append(newInv.Transactions, tr.GetUuid())
-	if _, err = s.invoices.Update(ctx, &graph.Invoice{Invoice: newInv, DocumentMeta: driver.DocumentMeta{Key: newInv.GetUuid()}}); err != nil {
-		log.Error("Failed to update invoice", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	if tr != nil {
+		newInv := resp.Msg
+		if newInv.Transactions == nil {
+			newInv.Transactions = make([]string, 0)
+		}
+		newInv.Transactions = append(newInv.Transactions, tr.GetUuid())
+		if _, err = s.invoices.Update(ctx, &graph.Invoice{Invoice: newInv, DocumentMeta: driver.DocumentMeta{Key: newInv.GetUuid()}}); err != nil {
+			log.Error("Failed to update invoice", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+		}
 	}
 
 	return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
@@ -1217,7 +1219,9 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		if inv.Transactions == nil {
 			inv.Transactions = make([]string, 0)
 		}
-		inv.Transactions = append(inv.Transactions, tr.GetUuid())
+		if tr != nil {
+			inv.Transactions = append(inv.Transactions, tr.GetUuid())
+		}
 
 	case pb.ActionType_INSTANCE_START:
 		for _, item := range inv.GetItems() {
@@ -1306,7 +1310,9 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 			log.Error("Failed to apply transaction", zap.Error(err))
 			continue
 		}
-		transactions = append(transactions, tr.GetUuid())
+		if tr != nil {
+			transactions = append(transactions, tr.GetUuid())
+		}
 	}
 	inv.Transactions = append(inv.Transactions, transactions...)
 
