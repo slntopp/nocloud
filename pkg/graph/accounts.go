@@ -372,7 +372,6 @@ func (ctrl *accountsController) Authorize(ctx context.Context, auth_type string,
 		log.Debug("Coudn't authorize", zap.String("type", auth_type), zap.Error(err))
 		return Account{}, false
 	}
-	log.Debug("Found credentials", zap.Any("credentials", credentials))
 
 	account, ok := authorisable(ctx, &credentials, ctrl.col.Database())
 	ctrl.log.Debug("Authorized account", zap.Bool("result", ok), zap.Any("account", account))
