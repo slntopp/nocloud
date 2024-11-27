@@ -315,7 +315,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			Account:   acc.GetUuid(),
 			Currency:  acc.Currency,
 			Meta: map[string]*structpb.Value{
-				"creator":               structpb.NewStringValue(schema.ROOT_ACCOUNT_KEY),
+				"creator":               structpb.NewStringValue("system"),
 				graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 			},
 		},
@@ -343,9 +343,9 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		cost *= rate // Convert from NCU to  account's currency
 		cost = cost + (cost * tax)
 		initCost *= rate
+		totalNoDiscount += initCost
 		initCost = initCost + (initCost * tax)
 		total += cost
-		totalNoDiscount += initCost
 
 		expireDate := time.Unix(d.ExpireAt, 0)
 		var untilDate time.Time

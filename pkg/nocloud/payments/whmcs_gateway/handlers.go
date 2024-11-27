@@ -53,6 +53,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 			"note":                  structpb.NewStringValue(""),
 			invoiceIdField:          structpb.NewNumberValue(float64(data.InvoiceId)),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(float64(whmcsInv.TaxRate / 100)),
+			"creator":               structpb.NewStringValue("whmcs-gateway"),
 		},
 		Currency: acc.GetCurrency(),
 		Type:     pb.ActionType_WHMCS_INVOICE,

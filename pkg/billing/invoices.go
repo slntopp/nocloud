@@ -355,6 +355,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Meta[graph.InvoiceTaxMetaKey] == nil {
 		t.Meta[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 	}
+	if t.Meta["creator"] == nil {
+		t.Meta["creator"] = structpb.NewStringValue(requester)
+	}
 
 	t.Number = strNum
 	t.Created = now.Unix()
