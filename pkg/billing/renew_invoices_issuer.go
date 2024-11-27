@@ -46,8 +46,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Conte
 	invoices := make([]*graph.Invoice, 0)
 	const days15 = int64(3600 * 24 * 15)
 	const days10 = int64(3600 * 24 * 10)
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 	var expiringPercentage = 0.9
 	if invConf.IssueRenewalInvoiceAfter > 0 && invConf.IssueRenewalInvoiceAfter <= 1 {
 		expiringPercentage = invConf.IssueRenewalInvoiceAfter

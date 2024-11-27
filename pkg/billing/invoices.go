@@ -279,8 +279,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requester", requester))
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	defCurr := MakeCurrencyConf(log, &s.settingsClient).Currency
 
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
@@ -441,8 +441,8 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	var strNum string
 	var num int
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -541,7 +541,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		log.Warn("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Account not found")
 	}
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	balance := acc.GetBalance()
 	accCurrency := acc.Currency
@@ -621,7 +621,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	if inv.UserId != clientId {
 		return nil, status.Error(codes.PermissionDenied, "No access to this invoice")
 	}
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	balance := acc.GetBalance()
 	accCurrency := acc.Currency
@@ -976,7 +976,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	log = log.With(zap.String("instance", req.GetInstance()), zap.String("requester", requester))
 	log.Debug("Request received")
 
-	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.INSTANCES_COL, req.GetInstance()), access.Level_ADMIN) {
 		log.Warn("Not enough access rights")

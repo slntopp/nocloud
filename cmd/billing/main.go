@@ -240,6 +240,7 @@ func main() {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	billing.SetupSettingsContext(ctx)
 
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
