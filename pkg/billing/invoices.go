@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"math"
-	"math/rand/v2"
 	"slices"
 	"strings"
 	"time"
@@ -394,7 +393,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 }
 
 func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *connect.Request[pb.UpdateInvoiceStatusRequest]) (*connect.Response[pb.Invoice], error) {
-	log := s.log.Named("UpdateInvoiceStatus").With(zap.String("correlation_id", fmt.Sprintf("%d", rand.Int32())))
+	log := s.log.Named("UpdateInvoiceStatus")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	t := req.Msg
 	log.Debug("UpdateInvoiceStatus request received")
