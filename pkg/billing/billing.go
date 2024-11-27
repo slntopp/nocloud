@@ -51,6 +51,21 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+const internalAccessKey = nocloud.ContextKey("billing-internal-access")
+
+func ctxWithRoot(ctx context.Context) context.Context {
+	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
+}
+
+func ctxWithInternalAccess(ctx context.Context) context.Context {
+	return context.WithValue(ctx, internalAccessKey, true)
+}
+
+func hasInternalAccess(ctx context.Context) bool {
+	v, _ := ctx.Value(internalAccessKey).(bool)
+	return v
+}
+
 type BillingServiceServer struct {
 	log *zap.Logger
 
@@ -603,7 +618,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	if req.GetUuid() != "" {
-		return s._HandleGetSinglePlan(ctx, requestor, req.GetUuid(), req.GetAnonymously())
+		return s._HandleGetSinglePlan(ctx, r)
 	}
 
 	query, vars := buildPlansListQuery(req, ok)
@@ -695,7 +710,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
-			rate, _, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
+			rate, _, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
@@ -704,25 +719,23 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 
 		for planIndex := range plans {
 			plan := plans[planIndex]
-
-			products := plan.GetProducts()
-			for key := range products {
-				products[key].Price *= rate
-			}
-			plan.Products = products
-
-			resources := plan.GetResources()
-			for index := range resources {
-				resources[index].Price *= rate
-			}
-			plan.Resources = resources
-
-			plans[planIndex] = plan
+			graph.ConvertPlan(plan, rate, cur.Precision, cur.Rounding)
 		}
+
+		log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
+		resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
+		graph.ExplicitSetPrimaryCurrencyHeader(resp.Header(), cur.Code)
+		return resp, nil
+	}
+
+	conv := graph.NewConverter(r.Header(), s.currencies)
+	for _, plan := range plans {
+		conv.ConvertObjectPrices(plan)
 	}
 
 	log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
 	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
+	conv.SetResponseHeader(resp.Header())
 	return resp, nil
 }
 
@@ -874,16 +887,24 @@ FOR inst in Instances
 	RETURN inst.billing_plan.uuid
 `
 
-func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, acc, uuid string, anonymously bool) (*connect.Response[pb.ListResponse], error) {
-	p, err := s.plans.Get(ctx, &pb.Plan{Uuid: uuid})
+func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, r *connect.Request[pb.ListRequest]) (*connect.Response[pb.ListResponse], error) {
+	var requester string
+	if !r.Msg.GetAnonymously() {
+		requester = ctx.Value(nocloud.NoCloudAccount).(string)
+	}
+
+	p, err := s.plans.Get(ctx, &pb.Plan{Uuid: r.Msg.GetUuid()})
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "Plan doesn't exist")
 	}
 
-	ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
-	if anonymously && p.Public {
+	conv := graph.NewConverter(r.Header(), s.currencies)
+	conv.ConvertObjectPrices(p)
+	if r.Msg.GetAnonymously() && p.Public {
 		resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
+		conv.SetResponseHeader(resp.Header())
 		return resp, nil
 	}
 
@@ -892,6 +913,7 @@ func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, acc, uu
 	}
 
 	resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
+	conv.SetResponseHeader(resp.Header())
 	return resp, nil
 }
 

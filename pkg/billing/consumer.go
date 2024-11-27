@@ -23,8 +23,16 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	log = log.With(zap.String("instance", event.Uuid))
 	rootId := driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY)
 
+	retryCount := 0
+retry:
 	instance, err := s.instances.GetWithAccess(ctx, rootId, event.GetUuid())
 	if err != nil {
+		if retryCount <= 1 {
+			retryCount++
+			log.Error("Retrying...")
+			time.Sleep(time.Duration(3) * time.Second)
+			goto retry
+		}
 		log.Error("Failed to get instance", zap.Error(err))
 		return err
 	}

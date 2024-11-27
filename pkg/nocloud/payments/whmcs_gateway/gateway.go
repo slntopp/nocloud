@@ -42,6 +42,10 @@ type WhmcsGateway struct {
 	taxExcluded bool
 }
 
+var ErrNotFound = fmt.Errorf("not found")
+
+const invoiceNotFoundApiMsg = "Invoice ID Not Found"
+
 func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool) *WhmcsGateway {
 	return &WhmcsGateway{
 		m:           &sync.Mutex{},
@@ -84,7 +88,11 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 		return result, fmt.Errorf("failed to unmarshal response to result checker struct: %w. Body: %s", err, string(b))
 	}
 	if resp.StatusCode != 200 || resultChecker.Result != "success" {
-		return result, fmt.Errorf("failed to perform action: %s. Response body: %+v", resp.Status, resultChecker)
+		err = fmt.Errorf("failed to perform action: %s. Response body: %+v", resp.Status, resultChecker)
+		if resultChecker.Message == invoiceNotFoundApiMsg {
+			err = fmt.Errorf("%w. Embedded error: %w", err, ErrNotFound)
+		}
+		return result, err
 	}
 
 	// Result
@@ -124,11 +132,10 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 		taxed = "1"
 	}
 
-	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	cur, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
 	if err != nil {
 		return err
 	}
-	precision := int(curr.Precision)
 
 	oldNote := inv.GetMeta()["note"].GetStringValue()
 	newNote := oldNote
@@ -144,7 +151,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 		} else {
 			price = item.GetPrice() * float64(item.GetAmount())
 		}
-		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		price = graph.Round(price, cur.Precision, cur.Rounding)
 
 		q.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
 		q.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", price))
@@ -211,11 +218,10 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		return err
 	}
 
-	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	cur, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
 	if err != nil {
 		return err
 	}
-	precision := int(curr.Precision)
 
 	if inv.Payment > 0 {
 		body.DatePaid = ptr(time.Unix(inv.Payment, 0).Format("2006-01-02 15:04:05"))
@@ -265,15 +271,12 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		} else {
 			price = item.GetPrice() * float64(item.GetAmount())
 		}
-		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		price = graph.Round(price, cur.Precision, cur.Rounding)
 
 		description[i] = item.GetDescription()
 		amount[i] = floatAsString(price)
 		taxed[i] = isTaxed
 	}
-	//body.NewItemDescription = description
-	//body.NewItemAmount = amount
-	//body.NewItemTaxed = isTaxed
 
 	q, err := query.Values(body)
 	if err != nil {
@@ -374,6 +377,33 @@ func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invo
 	return invResp, nil
 }
 
+func (g *WhmcsGateway) GetInvoices(_ context.Context) ([]Invoice, error) {
+	res := make([]Invoice, 0)
+
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return res, err
+	}
+
+	body := g.buildGetInvoicesQueryBase()
+	body.LimitNum = ptr(math.MaxInt32)
+	q, err := query.Values(body)
+	if err != nil {
+		return res, err
+	}
+
+	invResp, err := sendRequestToWhmcs[GetInvoicesResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return res, err
+	}
+
+	if invResp.Invoices.Invoice == nil {
+		return res, nil
+	}
+
+	return invResp.Invoices.Invoice, nil
+}
+
 func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {
 	return g.syncWhmcsInvoice(ctx, invoiceId)
 }
@@ -388,11 +418,10 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 
-	curr, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
+	cur, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())
 	if err != nil {
 		return err
 	}
-	precision := int(curr.Precision)
 
 	if inv.Status == pb.BillingStatus_TERMINATED && whmcsInv.Status == statusToWhmcs(pb.BillingStatus_CANCELED) {
 		goto skipStatus
@@ -459,14 +488,14 @@ skipStatus:
 		} else {
 			price = whmcsAmount
 		}
-		price = math.Round(price*math.Pow10(precision)) / math.Pow10(precision)
+		price = graph.Round(price, cur.Precision, cur.Rounding)
 
 		found := false
 		index := 0
 		for i, ncItem := range ncItems {
 			ncPrice := ncItem.Price * float64(ncItem.Amount)
-			ncPrice = math.Round(ncPrice*math.Pow10(precision)) / math.Pow10(precision)
-			if item.Description == ncItem.Description && compareFloat(price, ncPrice, precision) {
+			ncPrice = graph.Round(ncPrice, cur.Precision, cur.Rounding)
+			if item.Description == ncItem.Description && compareFloat(price, ncPrice, int(cur.Precision)) {
 				found = true
 				index = i
 				break
@@ -493,7 +522,7 @@ skipStatus:
 			Instance:    inst,
 		})
 	}
-	total = math.Round(total*math.Pow10(precision)) / math.Pow10(precision)
+	total = graph.Round(total, cur.Precision, cur.Rounding)
 
 	var warning string
 	if !synced {

@@ -27,22 +27,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-const invoicesAccessKey = nocloud.ContextKey("invoices-internal-access")
-
-func ctxWithRoot(ctx context.Context) context.Context {
-	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
-}
-
-func ctxWithInvoicesAccess(ctx context.Context) context.Context {
-	return context.WithValue(ctx, invoicesAccessKey, true)
-}
-
 func compareFloat(a, b float64, precisionDigits int) bool {
 	return math.Abs(a-b) < math.Pow10(-precisionDigits)
-}
-
-func round(f float64, precisionDigits int) float64 {
-	return math.Round(f*math.Pow10(precisionDigits)) / math.Pow10(precisionDigits)
 }
 
 type pair[T any] struct {
@@ -168,11 +154,6 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		return s._HandleGetSingleInvoice(ctx, acc, req.GetUuid())
 	}
 
-	var isAdmin bool
-	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
-		isAdmin = true
-	}
-
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
@@ -288,17 +269,6 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 	}
 
 	log.Debug("Invoices retrieved", zap.Any("invoices", invoices))
-
-	for _, inv := range invoices {
-		if isAdmin {
-			continue
-		}
-		if !strings.Contains(inv.GetCurrency().GetTitle(), "EUR") {
-			continue
-		}
-		inv.Currency.Title = "EUR"
-	}
-
 	resp := connect.NewResponse(&pb.Invoices{Pool: invoices})
 	return resp, nil
 }
@@ -321,7 +291,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
-	if has, ok := ctx.Value(invoicesAccessKey).(bool); !rootAccess && (t.Account != requester || !ok || !has) {
+	if !rootAccess && (t.Account != requester || !hasInternalAccess(ctx)) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
@@ -340,9 +310,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Transactions == nil {
 		t.Transactions = []string{}
 	}
-	if t.Deadline != 0 && t.Deadline < time.Now().Unix() {
-		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
-	}
 
 	// Rounding invoice items
 	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
@@ -350,14 +317,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		log.Error("Failed to get currency", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get currency")
 	}
-	precision := int(cur.Precision)
 	var newTotal float64
 	for _, item := range t.GetItems() {
-		price := round(item.GetPrice(), precision)
+		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 		item.Price = price
 		newTotal += price * float64(item.GetAmount())
 	}
-	t.Total = round(newTotal, precision)
+	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 
 	now := time.Now()
 
@@ -381,12 +347,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Meta[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 	}
 
-	//trCtx, err := s.invoices.BeginTransaction(ctx)
-	//if err != nil {
-	//	log.Error("Failed to begin transaction", zap.Error(err))
-	//	return nil, status.Error(codes.Internal, "Failed to begin transaction")
-	//}
-
 	t.Number = strNum
 	t.Created = now.Unix()
 	t.Payment = 0
@@ -400,20 +360,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		},
 	})
 	if err != nil {
-		_ = s.invoices.AbortTransaction(ctx)
 		log.Error("Failed to create invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
-
-	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice, !req.Msg.GetIsSendEmail()); err != nil {
-			//_ = s.invoices.AbortTransaction(trCtx)
-			log.Error("Failed to create invoice through gateway", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
-		}
-	}
-
-	//_ = s.invoices.CommitTransaction(trCtx)
 
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      r.GetUuid(),
@@ -425,6 +374,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Snapshot:  &elpb.Snapshot{},
 		Requestor: requester,
 	})
+
+	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
+		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice, !req.Msg.GetIsSendEmail()); err != nil {
+			log.Error("Failed to create invoice through gateway", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
+		}
+	}
 
 	inv, err := s.invoices.Get(ctx, r.GetUuid())
 	if err != nil {
@@ -439,7 +395,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *connect.Request[pb.UpdateInvoiceStatusRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("UpdateInvoiceStatus")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-
 	t := req.Msg
 	log.Debug("UpdateInvoiceStatus request received")
 
@@ -523,6 +478,7 @@ returning:
 	if newInv, err = s.executePostRefundActions(ctx, log, newInv); err != nil {
 		log.Error("FATAL: Failed to execute post refund actions after invoice was returned")
 	}
+	goto quit
 
 quit:
 	nowAfterActions = time.Now().Unix()
@@ -621,19 +577,21 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
 	}
 
-	tr, err := s.applyTransaction(ctx, inv.GetTotal(), inv.GetAccount(), invCurrency)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(ctx), inv.GetTotal(), inv.GetAccount(), invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
 	}
-	newInv := resp.Msg
-	if newInv.Transactions == nil {
-		newInv.Transactions = make([]string, 0)
-	}
-	newInv.Transactions = append(newInv.Transactions, tr.GetUuid())
-	if _, err = s.invoices.Update(ctx, &graph.Invoice{Invoice: newInv, DocumentMeta: driver.DocumentMeta{Key: newInv.GetUuid()}}); err != nil {
-		log.Error("Failed to update invoice", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	if tr != nil {
+		newInv := resp.Msg
+		if newInv.Transactions == nil {
+			newInv.Transactions = make([]string, 0)
+		}
+		newInv.Transactions = append(newInv.Transactions, tr.GetUuid())
+		if _, err = s.invoices.Update(ctx, &graph.Invoice{Invoice: newInv, DocumentMeta: driver.DocumentMeta{Key: newInv.GetUuid()}}); err != nil {
+			log.Error("Failed to update invoice", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+		}
 	}
 
 	return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
@@ -689,7 +647,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
 	}
 
-	_, err = s.applyTransaction(ctx, float64(inv.Balance), requester, invCurrency)
+	_, err = s.applyTransaction(ctxWithInternalAccess(ctx), float64(inv.Balance), requester, invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
@@ -700,11 +658,11 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 
 func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.Request[pb.GetInvoicesCountRequest]) (*connect.Response[pb.GetInvoicesCountResponse], error) {
 	log := s.log.Named("GetInvoicesCount")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
-	acc := requestor
+	acc := requester
 
 	query := `FOR t IN @@invoices`
 	vars := map[string]interface{}{
@@ -714,13 +672,13 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) && requestor != req.GetAccount() {
+		if !s.ca.HasAccess(ctx, requester, node, access.Level_ADMIN) && requester != req.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
 	} else {
-		if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 			query += ` FILTER t.account == @acc && t.status != @statusDraft && t.status != @statusTerm`
 			vars["acc"] = acc
 			vars["statusDraft"] = pb.BillingStatus_DRAFT
@@ -794,9 +752,9 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 
 func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Request[pb.UpdateInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("UpdateInvoice")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
-	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("invoice", req), zap.String("requester", requester))
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
@@ -806,7 +764,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -858,14 +816,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get currency", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get currency")
 	}
-	precision := int(cur.Precision)
 	var newTotal float64
 	for _, item := range t.GetItems() {
-		price := round(item.GetPrice(), precision)
+		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 		item.Price = price
 		newTotal += price * float64(item.GetAmount())
 	}
-	t.Total = round(newTotal, precision)
+	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 
 	upd, err := s.invoices.Replace(ctx, t)
 	if err != nil {
@@ -890,12 +847,12 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("GetInvoice")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("invoice", req), zap.String("requester", requester))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -908,7 +865,7 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 	return connect.NewResponse(t.Invoice), nil
 }
 
-func (s *BillingServiceServer) GetInvoiceSettingsTemplateExample(ctx context.Context, _req *connect.Request[pb.GetInvoiceSettingsTemplateExampleRequest]) (*connect.Response[pb.GetInvoiceSettingsTemplateExampleResponse], error) {
+func (s *BillingServiceServer) GetInvoiceSettingsTemplateExample(_ context.Context, _req *connect.Request[pb.GetInvoiceSettingsTemplateExampleRequest]) (*connect.Response[pb.GetInvoiceSettingsTemplateExampleResponse], error) {
 	log := s.log.Named("GetInvoiceSettingsTemplateExample")
 	req := _req.Msg
 	log.Debug("Request received")
@@ -1005,7 +962,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		ivnToCreate.Currency = acc.Currency
 	}
 
-	return s.CreateInvoice(ctxWithInvoicesAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
+	return s.CreateInvoice(ctxWithInternalAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
 		IsSendEmail: true,
 		Invoice:     ivnToCreate,
 	}))
@@ -1185,7 +1142,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		inv.Status = pb.BillingStatus_DRAFT
 	}
 
-	return s.CreateInvoice(ctxWithInvoicesAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
+	return s.CreateInvoice(ctxWithInternalAccess(ctx), connect.NewRequest(&pb.CreateInvoiceRequest{
 		IsSendEmail: true,
 		Invoice:     inv,
 	}))
@@ -1219,7 +1176,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 	switch inv.GetType() {
 	case pb.ActionType_BALANCE:
 		total := inv.GetTotal() / (tax + 1)
-		total = round(total, int(c.Precision))
+		total = graph.Round(total, c.Precision, c.Rounding)
 		tr, err := s.applyTransaction(ctx, -total, inv.GetAccount(), inv.GetCurrency())
 		if err != nil {
 			return inv, fmt.Errorf("failed to apply transaction: %w", err)
@@ -1227,17 +1184,18 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		if inv.Transactions == nil {
 			inv.Transactions = make([]string, 0)
 		}
-		inv.Transactions = append(inv.Transactions, tr.GetUuid())
+		if tr != nil {
+			inv.Transactions = append(inv.Transactions, tr.GetUuid())
+		}
 
 	case pb.ActionType_INSTANCE_START:
 		for _, item := range inv.GetItems() {
 			i := item.GetInstance()
-
 			if i == "" {
 				continue
 			}
+			log := log.With(zap.String("instance", i))
 
-			log = log.With(zap.String("instance", i))
 			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
 			if err != nil {
 				log.Error("Failed to get instance to start", zap.Error(err))
@@ -1251,12 +1209,10 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			cfg := instNew.Config
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
-
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
 				log.Error("Failed to update instance", zap.Error(err))
 				continue
 			}
-
 			// Add balance to compensate instance first payment
 			acc, err := s.instances.GetInstanceOwner(ctx, i)
 			if err != nil {
@@ -1280,11 +1236,12 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 	case pb.ActionType_INSTANCE_RENEWAL:
 		for _, item := range inv.GetItems() {
 			i := item.GetInstance()
-			log = log.With(zap.String("instance", i))
 			if i == "" {
 				log.Debug("Instance item is empty")
 				continue
 			}
+			log := log.With(zap.String("instance", i))
+
 			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
 				Uuid:   i,
 				Method: "free_renew",
@@ -1302,6 +1259,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 
 func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice) (*graph.Invoice, error) {
 
+	// Reverting invoice transactions
 	transactions := make([]string, 0)
 	if inv.Transactions == nil {
 		inv.Transactions = make([]string, 0)
@@ -1316,19 +1274,20 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 			log.Error("Failed to apply transaction", zap.Error(err))
 			continue
 		}
-		transactions = append(transactions, tr.GetUuid())
+		if tr != nil {
+			transactions = append(transactions, tr.GetUuid())
+		}
 	}
 	inv.Transactions = append(inv.Transactions, transactions...)
 
 	switch inv.GetType() {
 	case pb.ActionType_INSTANCE_START:
-		// TODO: maybe start returning should be done without suspending
 		for _, item := range inv.GetItems() {
 			id := item.GetInstance()
-
 			if id == "" {
 				continue
 			}
+			log := log.With(zap.String("instance", id))
 
 			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
 				Uuid:   id,
@@ -1344,11 +1303,12 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 	case pb.ActionType_INSTANCE_RENEWAL:
 		for _, item := range inv.GetItems() {
 			i := item.GetInstance()
-			log = log.With(zap.String("instance", i))
 			if i == "" {
 				log.Debug("Instance item is empty")
 				continue
 			}
+			log := log.With(zap.String("instance", i))
+
 			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
 				Uuid:   i,
 				Method: "cancel_renew",

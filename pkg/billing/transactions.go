@@ -172,13 +172,13 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 
 func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *connect.Request[pb.Transaction]) (*connect.Response[pb.Transaction], error) {
 	log := s.log.Named("CreateTransaction")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	t := req.Msg
-	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("transaction", t), zap.String("requester", requester))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
-	if !ok {
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
+	if !ok && !hasInternalAccess(ctx) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
@@ -186,42 +186,6 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		t.Meta = map[string]*structpb.Value{}
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
-
-	/*var baseRec, prevRec string
-
-	if t.Base != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &baseRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}
-
-	if t.Previous != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &prevRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}*/
 
 	recBody := &pb.Record{
 		Start:     time.Now().Unix(),
@@ -261,7 +225,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
 
-	s.eventsClient.Publish(ctx, &epb.Event{
+	_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 		Type: "email",
 		Uuid: t.GetAccount(),
 		Key:  "transaction_created",
@@ -440,12 +404,12 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *conn
 
 func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect.Request[pb.Transaction]) (*connect.Response[pb.UpdateTransactionResponse], error) {
 	log := s.log.Named("UpdateTransaction")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("transaction", req), zap.String("requester", requester))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}

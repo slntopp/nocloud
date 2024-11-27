@@ -3,10 +3,9 @@ package graph
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
-
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
+	"slices"
+	"strconv"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -19,15 +18,16 @@ import (
 type CurrencyController interface {
 	CreateCurrency(ctx context.Context, currency *pb.Currency) error
 	UpdateCurrency(ctx context.Context, currency *pb.Currency) error
-	GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error)
+	GetExchangeRateDirect(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error)
 	GetExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error)
-	CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error
-	UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error
+	CreateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error
+	UpdateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error
 	DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error
 	Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error)
-	GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error)
+	GetCurrencies(ctx context.Context, isAdmin bool, mustFetch ...int32) ([]*pb.Currency, error)
 	GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error)
 	Get(ctx context.Context, id int32) (Currency, error)
+	GetByCode(ctx context.Context, code string) (Currency, error)
 }
 
 type Currency struct {
@@ -37,6 +37,7 @@ type Currency struct {
 	Precision int32       `json:"precision"`
 	Format    string      `json:"format"`
 	Rounding  pb.Rounding `json:"rounding"`
+	Code      string      `json:"code"`
 	driver.DocumentMeta
 }
 
@@ -53,6 +54,7 @@ func CurrencyFromPb(currency *pb.Currency) Currency {
 		Precision: currency.GetPrecision(),
 		Format:    currency.GetFormat(),
 		Rounding:  currency.GetRounding(),
+		Code:      currency.GetCode(),
 	}
 }
 
@@ -94,8 +96,8 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	log.Info("Migrating old currency template to dynamic")
 	ctrl.migrateToDynamic()
 
-	log.Info("Ensuring hash index on currency title")
-	_, _, err := col.EnsureHashIndex(ctx, []string{"title"}, &driver.EnsureHashIndexOptions{Unique: true})
+	log.Info("Ensuring hash index on currency code")
+	_, _, err := col.EnsureHashIndex(ctx, []string{"code"}, &driver.EnsureHashIndexOptions{Unique: true})
 	if err != nil {
 		panic(err)
 	}
@@ -153,6 +155,28 @@ func (c *сurrencyController) Get(ctx context.Context, id int32) (Currency, erro
 	return currency, err
 }
 
+const getCurrencyByCode = `
+FOR c IN @@currencies
+FILTER TO_STRING(c.code) == TO_STRING(@code)
+RETURN c
+`
+
+func (c *сurrencyController) GetByCode(ctx context.Context, code string) (Currency, error) {
+	var cur Currency
+	cursor, err := c.db.Query(ctx, getCurrencyByCode, map[string]interface{}{
+		"@currencies": schema.CUR_COL,
+		"code":        code,
+	})
+	if err != nil {
+		return cur, err
+	}
+	defer cursor.Close()
+	if _, err = cursor.ReadDocument(ctx, &cur); err != nil {
+		return cur, err
+	}
+	return cur, nil
+}
+
 func (c *сurrencyController) UpdateCurrency(ctx context.Context, currency *pb.Currency) error {
 	_, err := c.col.ReplaceDocument(ctx, fmt.Sprintf("%d", currency.GetId()), CurrencyFromPb(currency))
 	return err
@@ -163,7 +187,11 @@ FOR CURRENCY in @@currencies
 	return CURRENCY
 `
 
-func (c *сurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error) {
+func (c *сurrencyController) GetExchangeRateDirect(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, float64, error) {
+	if from == nil || to == nil {
+		return 0, 0, fmt.Errorf("currency is nil")
+	}
+
 	edge := map[string]interface{}{}
 	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from.GetId(), to.GetId()), &edge)
 	if err != nil {
@@ -231,13 +259,17 @@ func (c *сurrencyController) GetExchangeRate(ctx context.Context, from *pb.Curr
 	return totalRate, totalCommission, nil
 }
 
-func (c *сurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
+func (c *сurrencyController) CreateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error {
+	if from == nil || to == nil {
+		return fmt.Errorf("currency is nil")
+	}
+
 	edge := map[string]interface{}{
 		"_key":       fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
 		"_from":      fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
 		"_to":        fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
-		"from":       CurrencyFromPb(&from),
-		"to":         CurrencyFromPb(&to),
+		"from":       CurrencyFromPb(from),
+		"to":         CurrencyFromPb(to),
 		"rate":       rate,
 		"commission": commission,
 	}
@@ -246,7 +278,11 @@ func (c *сurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cu
 	return err
 }
 
-func (c *сurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
+func (c *сurrencyController) UpdateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error {
+	if from == nil || to == nil {
+		return fmt.Errorf("currency is nil")
+	}
+
 	key := fmt.Sprintf("%d-%d", from.GetId(), to.GetId())
 
 	edge := map[string]interface{}{
@@ -280,7 +316,7 @@ func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to
 	return amount * rate, nil
 }
 
-func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) ([]*pb.Currency, error) {
+func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool, mustFetch ...int32) ([]*pb.Currency, error) {
 	currencies := []*pb.Currency{}
 
 	cursor, err := c.db.Query(ctx, getCurrenciesQuery, map[string]interface{}{
@@ -299,20 +335,20 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 			Precision int32       `json:"precision"`
 			Format    string      `json:"format"`
 			Rounding  pb.Rounding `json:"rounding"`
+			Code      string      `json:"code"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
 			return currencies, err
 		}
 
-		// specify bitsize to parse int32 exactly
 		id, err := strconv.ParseInt(doc.Key, 10, 32)
 		if err != nil {
 			return currencies, err
 		}
 
 		// Ignore private currency
-		if !isAdmin && !doc.Public {
+		if !isAdmin && !doc.Public && !slices.Contains(mustFetch, int32(id)) {
 			continue
 		}
 
@@ -323,17 +359,8 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool) (
 			Precision: doc.Precision,
 			Format:    doc.Format,
 			Rounding:  doc.Rounding,
+			Code:      doc.Code,
 		})
-	}
-
-	for _, currency := range currencies {
-		if isAdmin {
-			continue
-		}
-		if !strings.Contains(currency.GetTitle(), "EUR") {
-			continue
-		}
-		currency.Title = "EUR"
 	}
 
 	return currencies, nil

@@ -65,6 +65,7 @@ type InstancesServer struct {
 	promo_ctrl graph.PromocodesController
 	acc_ctrl   graph.AccountsController
 	inv_ctrl   graph.InvoicesController
+	curr_ctrl  graph.CurrencyController
 	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -87,6 +88,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 	promo_ctrl := graph.NewPromocodesController(logger, db, rbmq)
 	acc_ctrl := graph.NewAccountsController(logger, db)
 	inv_ctrl := graph.NewInvoicesController(logger, db)
+	curr_ctrl := graph.NewCurrencyController(logger, db)
 	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
@@ -124,6 +126,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		promo_ctrl: promo_ctrl,
 		acc_ctrl:   acc_ctrl,
 		inv_ctrl:   inv_ctrl,
+		curr_ctrl:  curr_ctrl,
 		ca:         ca,
 		drivers:    make(map[string]driverpb.DriverServiceClient),
 		rdb:        rdb,
@@ -803,8 +806,9 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			query += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s")
 || acc.data.email LIKE "%s"
 || acc._key LIKE "%s"
-|| node._key LIKE "%s"`,
-				"%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
+|| node._key LIKE "%s"
+|| node.config.domain LIKE "%s"`,
+				"%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
 		} else if key == "email" {
 			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
 		} else if key == "title" {
@@ -962,13 +966,15 @@ func getSortQuery(field, order string, customOrder []interface{}, bindVars map[s
 	} else if field == "email" {
 		query += fmt.Sprintf(" SORT acc.data.email %s", order)
 	} else if field == "balance" {
-		query += fmt.Sprintf(" SORT acc.balance %s", order)
+		query += fmt.Sprintf(" SORT TO_NUMBER(acc.balance) %s", order)
 	} else if field == "type" {
 		query += fmt.Sprintf(" SORT bp.type %s", order)
 	} else if field == "billing_plan" {
 		query += fmt.Sprintf(" SORT bp.title %s", order)
 	} else if field == "sp" {
 		query += fmt.Sprintf(" SORT sp.title %s", order)
+	} else if field == "config.domain" {
+		query += fmt.Sprintf(" SORT node.config.domain %s", order)
 	} else if field == "state.state" {
 		bindKey := "customOrder"
 		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) DESC", bindKey)
@@ -1079,6 +1085,7 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 		return nil, err
 	}
 
+	conv := graph.NewConverter(_req.Header(), s.curr_ctrl)
 	wg := &go_sync.WaitGroup{}
 	for _, value := range result.Pool {
 		value := value
@@ -1094,12 +1101,15 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 				oneTime = true
 			}
 			value.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(value.Instance, oneTime)
+			conv.ConvertObjectPrices(value.Instance)
 		}()
 	}
 	wg.Wait()
 
 	log.Debug("Result", zap.Any("result", &result))
-	return connect.NewResponse(&result), nil
+	resp := connect.NewResponse(&result)
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
 const countInstancesQuery = `
@@ -1333,6 +1343,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 		return nil, err
 	}
 
+	conv := graph.NewConverter(_req.Header(), s.curr_ctrl)
 	if result.Instance != nil {
 		var oneTime bool
 		result.Instance.Period, _ = s.ctrl.GetInstancePeriod(result.Instance)
@@ -1340,9 +1351,12 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 			oneTime = true
 		}
 		result.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(result.Instance, oneTime)
+		conv.ConvertObjectPrices(result.Instance)
 	}
 
-	return connect.NewResponse(&result), nil
+	resp := connect.NewResponse(&result)
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
 func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {
