@@ -307,12 +307,13 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 
 	inv := &graph.Invoice{
 		Invoice: &pb.Invoice{
-			Status:   pb.BillingStatus_UNPAID,
-			Items:    []*pb.Item{},
-			Type:     pb.ActionType_INSTANCE_RENEWAL,
-			Created:  now,
-			Account:  acc.GetUuid(),
-			Currency: acc.Currency,
+			Status:    pb.BillingStatus_UNPAID,
+			Items:     []*pb.Item{},
+			Instances: make([]string, 0),
+			Type:      pb.ActionType_INSTANCE_RENEWAL,
+			Created:   now,
+			Account:   acc.GetUuid(),
+			Currency:  acc.Currency,
 			Meta: map[string]*structpb.Value{
 				"creator":               structpb.NewStringValue(schema.ROOT_ACCOUNT_KEY),
 				graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
@@ -378,9 +379,9 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			Amount:      1,
 			Unit:        "Pcs",
 			Price:       cost,
-			Instance:    d.Instance.GetUuid(),
 		}
 		inv.Items = append(inv.Items, item)
+		inv.Instances = append(inv.Instances, d.Instance.GetUuid())
 		expirations = append(expirations, d.ExpireAt)
 	}
 	inv.SetBillingData(&billingData)

@@ -310,6 +310,15 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Transactions == nil {
 		t.Transactions = []string{}
 	}
+	if t.Instances == nil {
+		t.Instances = []string{}
+	}
+	for _, i := range t.GetInstances() {
+		if exists, err := s.instances.Exists(ctx, i); err != nil || !exists {
+			log.Error("Given linked instance dont exists", zap.String("instance", i), zap.Error(err))
+			return nil, status.Error(codes.InvalidArgument, "Instance you want to link do not exist")
+		}
+	}
 
 	// Rounding invoice items
 	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
@@ -792,6 +801,18 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Created = req.GetCreated()
 	}
 
+	if req.Instances == nil {
+		req.Instances = make([]string, 0)
+	}
+	if !slices.Equal(t.GetInstances(), req.GetInstances()) {
+		for _, i := range req.GetInstances() {
+			if exists, err := s.instances.Exists(ctx, i); err != nil || !exists {
+				log.Error("Given linked instance dont exists", zap.String("instance", i), zap.Error(err))
+				return nil, status.Error(codes.InvalidArgument, "Instance you want to link do not exist")
+			}
+		}
+	}
+
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
@@ -799,6 +820,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Total = req.GetTotal()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
+	t.Instances = req.GetInstances()
 	if t.Items == nil {
 		t.Items = make([]*pb.Item, 0)
 	}
@@ -1122,15 +1144,15 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       cost,
-				Instance:    inst.GetUuid(),
 			},
 		},
-		Total:    cost,
-		Type:     pb.ActionType_INSTANCE_RENEWAL,
-		Created:  now,
-		Deadline: dueDate, // Until when invoice should be paid
-		Account:  acc.GetUuid(),
-		Currency: acc.Currency,
+		Total:     cost,
+		Type:      pb.ActionType_INSTANCE_RENEWAL,
+		Instances: []string{inst.GetUuid()},
+		Created:   now,
+		Deadline:  dueDate, // Until when invoice should be paid
+		Account:   acc.GetUuid(),
+		Currency:  acc.Currency,
 		Meta: map[string]*structpb.Value{
 			"creator":               structpb.NewStringValue(requester),
 			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
@@ -1189,8 +1211,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		}
 
 	case pb.ActionType_INSTANCE_START:
-		for _, item := range inv.GetItems() {
-			i := item.GetInstance()
+		for _, i := range inv.GetInstances() {
 			if i == "" {
 				continue
 			}
@@ -1234,10 +1255,8 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
-		for _, item := range inv.GetItems() {
-			i := item.GetInstance()
+		for _, i := range inv.GetInstances() {
 			if i == "" {
-				log.Debug("Instance item is empty")
 				continue
 			}
 			log := log.With(zap.String("instance", i))
@@ -1282,15 +1301,14 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 
 	switch inv.GetType() {
 	case pb.ActionType_INSTANCE_START:
-		for _, item := range inv.GetItems() {
-			id := item.GetInstance()
-			if id == "" {
+		for _, i := range inv.GetInstances() {
+			if i == "" {
 				continue
 			}
-			log := log.With(zap.String("instance", id))
+			log := log.With(zap.String("instance", i))
 
 			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   id,
+				Uuid:   i,
 				Method: "suspend",
 			})
 			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
@@ -1301,10 +1319,8 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
-		for _, item := range inv.GetItems() {
-			i := item.GetInstance()
+		for _, i := range inv.GetInstances() {
 			if i == "" {
-				log.Debug("Instance item is empty")
 				continue
 			}
 			log := log.With(zap.String("instance", i))

@@ -48,6 +48,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		Status:       statusToNoCloud(whmcsInv.Status),
 		Account:      acc.GetUuid(),
 		Transactions: make([]string, 0),
+		Instances:    make([]string, 0),
 		Meta: map[string]*structpb.Value{
 			"note":                  structpb.NewStringValue(""),
 			invoiceIdField:          structpb.NewNumberValue(float64(data.InvoiceId)),

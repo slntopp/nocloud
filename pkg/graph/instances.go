@@ -57,6 +57,7 @@ type InstancesController interface {
 	GetInstancePeriod(i *pb.Instance) (*int64, error)
 	Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error)
 	Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error
+	Exists(ctx context.Context, uuid string) (bool, error)
 	UpdateNotes(ctx context.Context, inst *pb.Instance) error
 	Delete(ctx context.Context, group string, i *pb.Instance) error
 	Get(ctx context.Context, uuid string) (*Instance, error)
@@ -528,6 +529,10 @@ func (ctrl *instancesController) GetWithAccess(ctx context.Context, from driver.
 	}
 
 	return o, nil
+}
+
+func (ctrl *instancesController) Exists(ctx context.Context, uuid string) (bool, error) {
+	return ctrl.col.DocumentExists(ctx, uuid)
 }
 
 func (ctrl *instancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error) {
