@@ -270,7 +270,7 @@ export function getSecondsByDays(days) {
 }
 
 export function getState(item) {
-  if (!item.state) return "ERROR";
+  if (!item.state) return item?.data?.is_monitored ? "ERROR" : "LCM_INIT";
 
   return item.state.state;
 }
@@ -289,8 +289,8 @@ export function toPascalCase(text) {
 }
 
 export function formatSecondsToDate(timestamp, withTime, sep = ".") {
-  if (!timestamp || !+timestamp) return;
-  const date = new Date(timestamp * 1000);
+  if (!timestamp || !Number(timestamp)) return;
+  const date = new Date(Number(timestamp) * 1000);
   const time = date
     .toLocaleString(undefined, {
       hourCycle: "h24",
@@ -340,7 +340,11 @@ export function getTimestamp({ day, month, year, quarter, week, time }) {
   seconds += getSecondsByDays(7 * week);
   seconds += getSecondsByDays(365 * year);
   seconds += getSecondsByDays(day);
-  seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
+  seconds +=
+    new Date("1970-01-01T" + time + "Z").getTime() / 1000
+      ? new Date("1970-01-01T" + time + "Z").getTime() / 1000
+      : 0;
+
   return seconds;
 }
 
@@ -360,6 +364,7 @@ export function getOvhPrice(instance) {
 }
 
 export function getFullDate(period) {
+  period = +period;
   const dayEqualent = 86400;
   const result = {
     day: 0,
@@ -439,7 +444,7 @@ export function getMarginedValue(fee, val) {
     percent = range.factor / 100 + 1;
   }
 
-  return Math[round](val * percent * n) / n;
+  return Math[round](val * percent * n) / n || 0;
 }
 
 export async function getClientIP() {
@@ -480,7 +485,9 @@ function fetchMDIIconsHash() {
 export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
-  if (+period === 0) {
+  period = Number(period);
+
+  if (period === 0) {
     return "One time";
   }
 
@@ -701,71 +708,6 @@ export function downloadPlanXlsx(plans) {
       };
     })
   );
-}
-
-export function getInstancePrice(inst) {
-  switch (inst.type) {
-    case "goget": {
-      const key = `${inst.resources.period} ${inst.resources.id}`;
-
-      return inst.billingPlan.products[key]?.price ?? 0;
-    }
-    case "ovh": {
-      return getOvhPrice(inst);
-    }
-    case "empty": {
-      const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
-      return inst.billingPlan.resources
-        .filter(({ key }) => inst.config?.addons?.find((a) => a === key))
-        ?.reduce((acc, r) => acc + +r?.price, initialPrice);
-    }
-    case "keyweb": {
-      const key = inst.product;
-      const tariff = inst.billingPlan.products[key];
-
-      const getAddonKey = (key, metaKey) =>
-        tariff.meta?.[metaKey]?.find(
-          (a) =>
-            key === a.type && a.key.startsWith(inst.config?.configurations[key])
-        )?.key;
-
-      const addons =
-        Object.keys(inst.config?.configurations || {}).map((key) =>
-          inst.billingPlan?.resources?.find((r) => {
-            return (
-              r.key === getAddonKey(key, "addons") ||
-              r.key === getAddonKey(key, "os")
-            );
-          })
-        ) || [];
-
-      return (
-        (+tariff?.price || 0) +
-        (addons.reduce((acc, a) => acc + a?.price, 0) || 0)
-      );
-    }
-    case "ione":
-    case "cpanel": {
-      const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
-
-      const countedResources = new Map();
-      return +inst.billingPlan.resources?.reduce((prev, curr) => {
-        if (countedResources.has(curr.key)) {
-          return prev;
-        }
-
-        countedResources.set(curr.key, true);
-        if (curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`) {
-          return prev + (curr?.price * inst.resources.drive_size) / 1024;
-        } else if (curr.key === "ram") {
-          return prev + (curr?.price * inst.resources.ram) / 1024;
-        } else if (inst.resources[curr.key]) {
-          return prev + curr?.price * inst.resources[curr.key];
-        }
-        return prev;
-      }, initialPrice);
-    }
-  }
 }
 
 export function isInstancePayg(inst) {

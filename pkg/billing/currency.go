@@ -1,12 +1,14 @@
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"strings"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -15,99 +17,230 @@ import (
 )
 
 type CurrencyServiceServer struct {
-	pb.UnimplementedCurrencyServiceServer
 	log *zap.Logger
 
-	ctrl graph.CurrencyController
+	ctrl     graph.CurrencyController
+	accounts graph.AccountsController
+	ca       graph.CommonActionsController
 
 	db driver.Database
 }
 
-func NewCurrencyServiceServer(log *zap.Logger, db driver.Database) *CurrencyServiceServer {
+func NewCurrencyServiceServer(log *zap.Logger, db driver.Database, currencies graph.CurrencyController, accounts graph.AccountsController, ca graph.CommonActionsController) *CurrencyServiceServer {
 	return &CurrencyServiceServer{
-		log:  log.Named("CurrencyServer"),
-		db:   db,
-		ctrl: graph.NewCurrencyController(log, db),
+		log:      log.Named("CurrencyServer"),
+		db:       db,
+		ctrl:     currencies,
+		ca:       ca,
+		accounts: accounts,
 	}
 }
 
-func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *pb.GetExchangeRateRequest) (*pb.GetExchangeRateResponse, error) {
-	rate, commission, err := s.ctrl.GetExchangeRate(ctx, req.From, req.To)
+func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.Request[pb.CreateCurrencyRequest]) (*connect.Response[pb.CreateCurrencyResponse], error) {
+	log := s.log.Named("CreateCurrency")
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+
+	if req.Currency == nil {
+		return nil, status.Error(codes.InvalidArgument, "no currency provided")
+	}
+	currencies, err := s.ctrl.GetCurrencies(ctx, true)
+	if err != nil {
+		log.Error("Failed to get currencies", zap.Error(err))
+		return nil, err
+	}
+	if req.Currency.Id == 0 {
+		var idMax int32 = 0
+		for _, currency := range currencies {
+			if currency.GetId() > idMax {
+				idMax = currency.GetId()
+			}
+		}
+		req.Currency.Id = idMax + 1
+	}
+	if req.Currency.Precision == 0 {
+		req.Currency.Precision = 2
+	}
+	req.Currency.Title = strings.TrimSpace(req.Currency.Title)
+	req.Currency.Code = strings.TrimSpace(req.Currency.Code)
+	if req.Currency.Title == "" || req.Currency.Code == "" {
+		return nil, status.Error(codes.InvalidArgument, "title and code must be provided")
+	}
+	for _, currency := range currencies {
+		if currency.GetCode() == req.Currency.Code {
+			return nil, status.Error(codes.AlreadyExists, "currency with this code already exists")
+		}
+	}
+
+	err = s.ctrl.CreateCurrency(ctx, req.Currency)
+	if err != nil {
+		log.Error("Error creating Currency", zap.Error(err))
+		return nil, err
+	}
+	return connect.NewResponse(&pb.CreateCurrencyResponse{}), nil
+}
+
+func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.Request[pb.UpdateCurrencyRequest]) (*connect.Response[pb.UpdateCurrencyResponse], error) {
+	log := s.log.Named("UpdateCurrency")
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+
+	if req.Currency == nil {
+		return nil, status.Error(codes.InvalidArgument, "no currency provided")
+	}
+	currencies, err := s.ctrl.GetCurrencies(ctx, true)
+	if err != nil {
+		log.Error("Failed to get currencies", zap.Error(err))
+		return nil, err
+	}
+	req.Currency.Title = strings.TrimSpace(req.Currency.Title)
+	req.Currency.Code = strings.TrimSpace(req.Currency.Code)
+	if req.Currency.Title == "" || req.Currency.Code == "" {
+		return nil, status.Error(codes.InvalidArgument, "title and code must be provided")
+	}
+	for _, currency := range currencies {
+		if currency.GetCode() == req.Currency.Code {
+			return nil, status.Error(codes.AlreadyExists, "currency with this code already exists")
+		}
+	}
+
+	err = s.ctrl.UpdateCurrency(ctx, req.Currency)
+	if err != nil {
+		log.Error("Error updating Currency", zap.Error(err))
+		return nil, err
+	}
+	return connect.NewResponse(&pb.UpdateCurrencyResponse{}), nil
+}
+
+func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *connect.Request[pb.GetExchangeRateRequest]) (*connect.Response[pb.GetExchangeRateResponse], error) {
+	rate, commission, err := s.ctrl.GetExchangeRate(ctx, req.Msg.GetFrom(), req.Msg.GetTo())
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.GetExchangeRateResponse{Rate: rate, Commission: commission}, nil
+	return connect.NewResponse(&pb.GetExchangeRateResponse{Rate: rate, Commission: commission}), nil
 }
 
-func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.CreateExchangeRateRequest) (*pb.CreateExchangeRateResponse, error) {
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *connect.Request[pb.CreateExchangeRateRequest]) (*connect.Response[pb.CreateExchangeRateResponse], error) {
+	log := s.log.Named("CreateExchangeRate")
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
 	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission)
 	if err != nil {
-		return &pb.CreateExchangeRateResponse{}, err
+		log.Error("Error creating Exchange rate", zap.Error(err))
+		return connect.NewResponse(&pb.CreateExchangeRateResponse{}), err
 	}
 
-	_, _, err = s.ctrl.GetExchangeRateDirect(ctx, req.To, req.From)
-	if err == nil {
-		return &pb.CreateExchangeRateResponse{}, nil
+	_ = s.ctrl.DeleteExchangeRate(ctx, req.To, req.From)
+	if err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate, req.Commission); err != nil {
+		log.Error("Error creating reverse rate", zap.Error(err))
+		return nil, err
 	}
 
-	s.log.Info("Reverse rate is not set yet, setting automatically", zap.String("from", req.To.String()), zap.String("to", req.From.String()))
-	err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate, req.Commission)
-	if err != nil {
-		s.log.Warn("Couldn't automatically create reverse Exchange rate", zap.Error(err))
-	}
-
-	return &pb.CreateExchangeRateResponse{}, nil
+	return connect.NewResponse(&pb.CreateExchangeRateResponse{}), nil
 }
 
-func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, req *pb.UpdateExchangeRateRequest) (*pb.UpdateExchangeRateResponse, error) {
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, r *connect.Request[pb.UpdateExchangeRateRequest]) (*connect.Response[pb.UpdateExchangeRateResponse], error) {
+	log := s.log.Named("UpdateExchangeRate")
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	err := s.ctrl.UpdateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission)
-	return &pb.UpdateExchangeRateResponse{}, err
+	if err := s.ctrl.UpdateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission); err != nil {
+		log.Error("Error updating Exchange rate", zap.Error(err))
+		return nil, err
+	}
+	_ = s.ctrl.DeleteExchangeRate(ctx, req.To, req.From)
+	if err := s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate, req.Commission); err != nil {
+		log.Error("Error updating reverse rate", zap.Error(err))
+		return nil, err
+	}
+
+	return connect.NewResponse(&pb.UpdateExchangeRateResponse{}), nil
 }
 
-func (s *CurrencyServiceServer) DeleteExchangeRate(ctx context.Context, req *pb.DeleteExchangeRateRequest) (*pb.DeleteExchangeRateResponse, error) {
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+func (s *CurrencyServiceServer) DeleteExchangeRate(ctx context.Context, r *connect.Request[pb.DeleteExchangeRateRequest]) (*connect.Response[pb.DeleteExchangeRateResponse], error) {
+	log := s.log.Named("DeleteExchangeRate")
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	err := s.ctrl.DeleteExchangeRate(ctx, req.From, req.To)
-	return &pb.DeleteExchangeRateResponse{}, err
+	if err := s.ctrl.DeleteExchangeRate(ctx, req.From, req.To); err != nil {
+		log.Error("Error deleting exchange rate", zap.Error(err))
+		return nil, err
+	}
+	if err := s.ctrl.DeleteExchangeRate(ctx, req.To, req.From); err != nil {
+		log.Error("Error deleting reverse rate", zap.Error(err))
+	}
+
+	return connect.NewResponse(&pb.DeleteExchangeRateResponse{}), nil
 }
 
-func (s *CurrencyServiceServer) Convert(ctx context.Context, req *pb.ConversionRequest) (*pb.ConversionResponse, error) {
+func (s *CurrencyServiceServer) Convert(ctx context.Context, r *connect.Request[pb.ConversionRequest]) (*connect.Response[pb.ConversionResponse], error) {
+	req := r.Msg
 	amount, err := s.ctrl.Convert(ctx, req.From, req.To, req.Amount)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.ConversionResponse{Amount: amount}, nil
+	return connect.NewResponse(&pb.ConversionResponse{Amount: amount}), nil
 }
 
-func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, req *pb.GetCurrenciesRequest) (*pb.GetCurrenciesResponse, error) {
-	currencies, err := s.ctrl.GetCurrencies(ctx)
+func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Request[pb.GetCurrenciesRequest]) (*connect.Response[pb.GetCurrenciesResponse], error) {
+	log := s.log.Named("GetCurrencies")
+	log.Debug("Request received")
+
+	var isAdmin bool
+	requester, ok := ctx.Value(nocloud.NoCloudAccount).(string)
+	if ok {
+		isAdmin = s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
+	}
+
+	mustFetch := make([]int32, 0)
+	if !isAdmin && ok {
+		acc, err := s.accounts.Get(ctx, requester)
+		if err == nil {
+			if acc.Currency == nil {
+				mustFetch = append(mustFetch, schema.DEFAULT_CURRENCY_ID)
+			} else {
+				mustFetch = append(mustFetch, acc.Currency.GetId())
+			}
+		}
+	}
+
+	currencies, err := s.ctrl.GetCurrencies(ctx, isAdmin, mustFetch...)
 	if err != nil {
+		log.Error("Error getting Currencies", zap.Error(err))
 		return nil, err
 	}
 
-	return &pb.GetCurrenciesResponse{Currencies: currencies}, nil
+	return connect.NewResponse(&pb.GetCurrenciesResponse{Currencies: currencies}), nil
 }
 
-func (s *CurrencyServiceServer) GetExchangeRates(ctx context.Context, req *pb.GetExchangeRatesRequest) (*pb.GetExchangeRatesResponse, error) {
+func (s *CurrencyServiceServer) GetExchangeRates(ctx context.Context, r *connect.Request[pb.GetExchangeRatesRequest]) (*connect.Response[pb.GetExchangeRatesResponse], error) {
 	rates, err := s.ctrl.GetExchangeRates(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.GetExchangeRatesResponse{Rates: rates}, nil
+	return connect.NewResponse(&pb.GetExchangeRatesResponse{Rates: rates}), nil
 }

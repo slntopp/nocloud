@@ -16,15 +16,17 @@ limitations under the License.
 package services
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
-	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -47,10 +49,14 @@ import (
 
 type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
-	db      driver.Database
-	ctrl    graph.ServicesController
-	sp_ctrl graph.ServicesProvidersController
-	ns_ctrl graph.NamespacesController
+	db        driver.Database
+	ctrl      graph.ServicesController
+	sp_ctrl   graph.ServicesProvidersController
+	ns_ctrl   graph.NamespacesController
+	acc_ctrl  graph.AccountsController
+	cur_ctrl  graph.CurrencyController
+	instances graph.InstancesController
+	ca        graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -61,16 +67,20 @@ type ServicesServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, conn *amqp091.Connection) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, conn rabbitmq.Connection) *ServicesServer {
 	log := _log.Named("ServicesServer")
 	log.Debug("New Services Server Creating")
 
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db, conn),
-		sp_ctrl: graph.NewServicesProvidersController(log, db),
-		ns_ctrl: graph.NewNamespacesController(log, db),
-		drivers: make(map[string]driverpb.DriverServiceClient),
-		ps:      ps,
+		sp_ctrl:   graph.NewServicesProvidersController(log, db),
+		ns_ctrl:   graph.NewNamespacesController(log, db),
+		acc_ctrl:  graph.NewAccountsController(log, db),
+		cur_ctrl:  graph.NewCurrencyController(log, db),
+		instances: graph.NewInstancesController(log, db, conn),
+		ca:        graph.NewCommonActionsController(log, db),
+		drivers:   make(map[string]driverpb.DriverServiceClient),
+		ps:        ps,
 	}
 }
 
@@ -292,8 +302,9 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 	return response, nil
 }
 
-func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
+func (s *ServicesServer) TestConfig(ctx context.Context, _request *connect.Request[pb.CreateRequest]) (*connect.Response[pb.TestConfigResponse], error) {
 	log := s.log.Named("TestServiceConfig")
+	request := _request.Msg
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -303,17 +314,18 @@ func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateReque
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
 	response, err := s.DoTestServiceConfig(ctx, log, request.GetService())
-	return response, err
+	return connect.NewResponse(response), err
 }
 
-func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
+func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[pb.CreateRequest]) (*connect.Response[pb.Service], error) {
 	log := s.log.Named("CreateService")
+	request := _request.Msg
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -331,7 +343,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -398,11 +410,12 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		log.Debug("Created Group", zap.Any("group", group))
 	}
 
-	return service, nil
+	return connect.NewResponse(service), nil
 }
 
-func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.Service, error) {
+func (s *ServicesServer) Update(ctx context.Context, _service *connect.Request[pb.Service]) (*connect.Response[pb.Service], error) {
 	log := s.log.Named("UpdateService")
+	service := _service.Msg
 	log.Debug("Request received", zap.Any("service", service))
 
 	testResult, err := s.DoTestServiceConfig(ctx, log, service)
@@ -417,8 +430,8 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
-	okAdmin := graph.HasAccess(ctx, s.db, requestor, docID, access.Level_ADMIN)
-	okRoot := graph.HasAccess(ctx, s.db, requestor, docID, access.Level_ROOT)
+	okAdmin := s.ca.HasAccess(ctx, requestor, docID, access.Level_ADMIN)
+	okRoot := s.ca.HasAccess(ctx, requestor, docID, access.Level_ROOT)
 
 	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)
@@ -442,11 +455,12 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 		log.Debug("Error getting Service from DB after Patch", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB after Patch")
 	}
-	return service, nil
+	return connect.NewResponse(service), nil
 }
 
-func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
+func (s *ServicesServer) Up(ctx context.Context, _request *connect.Request[pb.UpRequest]) (*connect.Response[pb.UpResponse], error) {
 	log := s.log.Named("Up")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -567,11 +581,12 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.UpResponse{}, nil
+	return connect.NewResponse(&pb.UpResponse{}), nil
 }
 
-func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest) (*pb.SuspendResponse, error) {
+func (s *ServicesServer) Suspend(ctx context.Context, _request *connect.Request[pb.SuspendRequest]) (*connect.Response[pb.SuspendResponse], error) {
 	log := s.log.Named("Suspend")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -625,11 +640,12 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.SuspendResponse{}, nil
+	return connect.NewResponse(&pb.SuspendResponse{}), nil
 }
 
-func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendRequest) (*pb.UnsuspendResponse, error) {
+func (s *ServicesServer) Unsuspend(ctx context.Context, _request *connect.Request[pb.UnsuspendRequest]) (*connect.Response[pb.UnsuspendResponse], error) {
 	log := s.log.Named("Unsuspend")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -682,11 +698,12 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.UnsuspendResponse{}, nil
+	return connect.NewResponse(&pb.UnsuspendResponse{}), nil
 }
 
-func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
+func (s *ServicesServer) Down(ctx context.Context, _request *connect.Request[pb.DownRequest]) (*connect.Response[pb.DownResponse], error) {
 	log := s.log.Named("Down")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -788,11 +805,12 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return &pb.DownResponse{}, nil
+	return connect.NewResponse(&pb.DownResponse{}), nil
 }
 
-func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
+func (s *ServicesServer) Get(ctx context.Context, _request *connect.Request[pb.GetRequest]) (res *connect.Response[pb.Service], err error) {
 	log := s.log.Named("Get")
+	request := _request.Msg
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -808,11 +826,30 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	return service, nil
+	conv := graph.NewConverter(_request.Header(), s.cur_ctrl)
+	for _, group := range service.GetInstancesGroups() {
+		for _, instance := range group.GetInstances() {
+			if instance == nil {
+				continue
+			}
+			var oneTime bool
+			instance.Period, _ = s.instances.GetInstancePeriod(instance)
+			if instance.Period != nil && *instance.Period == 0 {
+				oneTime = true
+			}
+			instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, oneTime)
+			conv.ConvertObjectPrices(instance)
+		}
+	}
+
+	resp := connect.NewResponse(service)
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
-func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.Services, err error) {
+func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.ListRequest]) (response *connect.Response[pb.Services], err error) {
 	log := s.log.Named("List")
+	request := _request.Msg
 	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.Bool("show_deleted", request.GetShowDeleted()))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -824,11 +861,44 @@ func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (res
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	return &pb.Services{Pool: r.Result, Count: int64(r.Count)}, nil
+	conv := graph.NewConverter(_request.Header(), s.cur_ctrl)
+	wg := &sync.WaitGroup{}
+	for _, service := range r.Result {
+		service := service
+		if service == nil {
+			continue
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for _, group := range service.GetInstancesGroups() {
+				for _, instance := range group.GetInstances() {
+					if instance == nil {
+						continue
+					}
+					var oneTime bool
+					instance.Period, _ = s.instances.GetInstancePeriod(instance)
+					if instance.Period != nil && *instance.Period == 0 {
+						oneTime = true
+					}
+					instance.Estimate, _ = s.instances.CalculateInstanceEstimatePrice(instance, oneTime)
+					conv.ConvertObjectPrices(instance)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	resp := connect.NewResponse(&pb.Services{
+		Pool: r.Result, Count: int64(r.Count),
+	})
+	conv.SetResponseHeader(resp.Header())
+	return resp, nil
 }
 
-func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
+func (s *ServicesServer) Delete(ctx context.Context, _request *connect.Request[pb.DeleteRequest]) (response *connect.Response[pb.DeleteResponse], err error) {
 	log := s.log.Named("Delete")
+	request := _request.Msg
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
@@ -845,20 +915,24 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 	err = s.ctrl.Delete(ctx, service)
 	if err != nil {
 		log.Error("Error Deleting Service", zap.Error(err))
-		return &pb.DeleteResponse{Result: false, Error: err.Error()}, nil
+		return connect.NewResponse(&pb.DeleteResponse{
+			Result: false,
+			Error:  err.Error(),
+		}), nil
 	}
 
-	return &pb.DeleteResponse{Result: true}, nil
+	return connect.NewResponse(&pb.DeleteResponse{Result: true}), nil
 }
 
-func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_StreamServer) (err error) {
+func (s *ServicesServer) Stream(ctx context.Context, _req *connect.Request[pb.StreamRequest], srv *connect.ServerStream[spb.ObjectState]) error {
 	log := s.log.Named("stream")
+	req := _req.Msg
 	log.Debug("Request received", zap.Any("req", req))
-	requestor := srv.Context().Value(nocloud.NoCloudAccount).(string)
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	messages := make(chan interface{}, 10)
 
-	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < access.Level_READ {
+	if service, err := s.ctrl.Get(ctx, requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < access.Level_READ {
 		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
 		return errors.New("failed access check")
 	}

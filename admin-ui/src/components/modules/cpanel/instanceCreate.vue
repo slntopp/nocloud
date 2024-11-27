@@ -16,16 +16,17 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
-            :items="plans"
+          <plans-autocomplete
             :value="billingPlanId"
-            @change="setValue('billingPlan', $event)"
-            item-text="title"
+            :custom-params="{
+              filters: { type: ['cpanel'] },
+              anonymously: true,
+            }"
+            @input="setValue('billing_plan', $event)"
             return-object
             label="Price model"
             :rules="planRules"
-            item-value="uuid"
-          ></v-select>
+          />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
@@ -62,11 +63,40 @@
             @change="setValue('config.password', $event)"
           />
         </v-col>
+        <v-col cols="6" v-if="tarrifAddons.length > 0">
+          <v-autocomplete
+            @change="(newVal) => setValue('addons', newVal)"
+            label="Addons"
+            :value="instance.addons"
+            :items="isAddonsLoading ? [] : getAvailableAddons()"
+            :loading="isAddonsLoading"
+            item-value="uuid"
+            item-text="title"
+            multiple
+          />
+        </v-col>
       </v-row>
     </v-card>
   </div>
 </template>
-<script>
+
+<script setup>
+import { computed, onMounted, ref, toRefs } from "vue";
+import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
+
+const props = defineProps(["instance", "planRules", "spUuid"]);
+const { instance, planRules } = toRefs(props);
+
+const emit = defineEmits(["set-instance", "set-value"]);
+
+const { tarrifAddons, setTariffAddons, getAvailableAddons, isAddonsLoading } =
+  useInstanceAddons(instance, (key, value) => setValue(key, value));
+
+const rules = ref({
+  req: [(v) => !!v || "required field"],
+});
+
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
@@ -74,54 +104,44 @@ const getDefaultInstance = () => ({
     email: "",
     password: "",
   },
+  addons: [],
   resources: {
     plan: "",
   },
-  billingPlan: {},
+  billing_plan: {},
 });
+
+onMounted(() => {
+  emit("set-instance", getDefaultInstance());
+});
+
+const billingPlanId = computed(() => {
+  return instance.value.billing_plan.uuid;
+});
+const products = computed(() => {
+  const plan = instance.value.billing_plan;
+  return Object.keys(plan?.products || {}).map((key) => ({
+    ...plan.products[key],
+    key,
+  }));
+});
+
+const setValue = (key, value) => {
+  if (key === "resources.plan") {
+    setValue("product", value);
+    const product = products.value.find((p) => p.key === value);
+    Object.keys(product.resources || {}).forEach((key) => {
+      setValue("resources." + key, product.resources[key]);
+    });
+    setTariffAddons();
+  }
+
+  emit("set-value", { key, value });
+};
+</script>
+
+<script>
 export default {
   name: "instance-cpanel-create",
-  props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({
-    rules: {
-      req: [(v) => !!v || "required field"],
-    },
-  }),
-  mounted() {
-    if (!this.isEdit) {
-      this.$emit("set-instance", getDefaultInstance());
-    } else {
-      const plan = this.plans.find(
-        (p) => p.uuid == this.instance.billing_plan
-      );
-      this.setValue("billingPlan", plan);
-      this.setValue("billing_plan", undefined);
-    }
-  },
-  computed: {
-    billingPlanId() {
-      return this.instance.billing_plan || this.instance.billingPlan.uuid;
-    },
-    products() {
-      const plan = this.plans.find((p) => p.uuid == this.billingPlanId);
-      return Object.keys(plan?.products || {}).map((key) => ({
-        ...plan.products[key],
-        key,
-      }));
-    },
-  },
-  methods: {
-    setValue(key, value) {
-      if (key === "resources.plan") {
-        this.setValue("product", value);
-        const product = this.products.find((p) => p.key === value);
-        Object.keys(product.resources || {}).forEach((key) => {
-          this.setValue("resources." + key, product.resources[key]);
-        });
-      }
-
-      this.$emit("set-value", { key, value });
-    },
-  },
 };
 </script>

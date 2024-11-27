@@ -17,6 +17,7 @@ package states
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"log"
 	"time"
 
@@ -37,10 +38,10 @@ var (
 type StatesPubSub struct {
 	log  *zap.Logger
 	db   *driver.Database
-	rbmq *amqp.Connection
+	rbmq rabbitmq.Connection
 }
 
-func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatesPubSub {
+func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq rabbitmq.Connection) *StatesPubSub {
 	sps := &StatesPubSub{
 		log: log.Named("StatesPubSub"), rbmq: rbmq,
 	}
@@ -50,7 +51,7 @@ func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection
 	return sps
 }
 
-func (s *StatesPubSub) Channel() *amqp.Channel {
+func (s *StatesPubSub) Channel() rabbitmq.Channel {
 	log := s.log.Named("Channel")
 
 	ch, err := s.rbmq.Channel()
@@ -60,7 +61,7 @@ func (s *StatesPubSub) Channel() *amqp.Channel {
 	return ch
 }
 
-func (s *StatesPubSub) TopicExchange(ch *amqp.Channel, name string) {
+func (s *StatesPubSub) TopicExchange(ch rabbitmq.Channel, name string) {
 	err := ch.ExchangeDeclare(
 		name, "topic", true, false, false, false, nil,
 	)
@@ -69,7 +70,7 @@ func (s *StatesPubSub) TopicExchange(ch *amqp.Channel, name string) {
 	}
 }
 
-func (s *StatesPubSub) StatesConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
+func (s *StatesPubSub) StatesConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col string) {
 	if s.db == nil {
 		log.Fatal("Failed to initialize states consumer, database is not set")
 	}
@@ -125,33 +126,53 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			ps.Pub(&req, topic)
 		}
 
-		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
+		db := *s.db
+		ctx := context.Background()
+		trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: []string{col},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			log.Error("Failed to start transaction to update state", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while start transaction to update state", zap.Error(err))
+			}
+			continue
+		}
+		ctx = driver.WithTransactionID(ctx, trID)
+		c, err := db.Query(ctx, updateStateQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
 			"state":       req.State,
 		})
 		if err != nil {
+			_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 			log.Error("Failed to update state", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
 				log.Warn("Failed to Negatively Acknowledge the delivery while Update db", zap.Error(err))
 			}
 			continue
 		}
-
-		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		if err := db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+			log.Error("Failed to commit transaction to update state", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while commit transaction to update state", zap.Error(err))
+			}
+			continue
 		}
 
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		if err = c.Close(); err != nil {
 			log.Warn("Failed to close database cursor connection", zap.Error(err))
 		}
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
 	}
 }
 
 type Pub func(msg *pb.ObjectState) (int, error)
 
-func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
+func (s *StatesPubSub) Publisher(ch rabbitmq.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectState) (int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

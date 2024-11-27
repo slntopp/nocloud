@@ -19,6 +19,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/showcases"
 	"net"
 
@@ -29,7 +31,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -38,7 +39,6 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -47,6 +47,7 @@ var (
 
 	arangodbHost string
 	arangodbCred string
+	arangodbName string
 	redisHost    string
 	drivers      []string
 	ext_servers  []string
@@ -62,6 +63,7 @@ func init() {
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DB_NAME", schema.DB_NAME)
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
@@ -72,6 +74,7 @@ func init() {
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	arangodbName = viper.GetString("DB_NAME")
 	redisHost = viper.GetString("REDIS_HOST")
 	drivers = viper.GetStringSlice("DRIVERS")
 	ext_servers = viper.GetStringSlice("EXTENTION_SERVERS")
@@ -85,7 +88,7 @@ func main() {
 	}()
 
 	log.Info("Setting up DB Connection")
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	log.Info("DB connection established")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
@@ -97,6 +100,10 @@ func main() {
 		Addr: redisHost,
 		DB:   0,
 	})
+	if status := rdb.Ping(context.Background()); status.Err() != nil {
+		log.Fatal("Failed to connect to redis", zap.Error(status.Err()))
+	}
+	log.Info("Redis connection established")
 
 	auth.SetContext(log, rdb, SIGNING_KEY)
 	s := grpc.NewServer(
@@ -112,8 +119,9 @@ func main() {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer rbmq.Close()
+	log.Info("RabbitMQ connection established")
 
-	server := sp.NewServicesProviderServer(log, db, rbmq)
+	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq), rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
@@ -147,13 +155,6 @@ func main() {
 		server.RegisterExtentionServer(ext_srv_type.GetType(), client)
 		log.Info("Registered Extention Server", zap.String("ext_server", ext_server), zap.String("type", ext_srv_type.GetType()))
 	}
-
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
-	if err != nil {
-		log.Fatal("Can't generate token", zap.Error(err))
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
-	go server.MonitoringRoutine(ctx)
 	sppb.RegisterServicesProvidersServiceServer(s, server)
 	sppb.RegisterShowcasesServiceServer(s, s_server)
 

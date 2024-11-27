@@ -18,19 +18,30 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
+
+type TransactionsController interface {
+	Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error)
+	Get(ctx context.Context, uuid string) (*pb.Transaction, error)
+	Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error)
+	Transfer(ctx context.Context, uuid string, account string) error
+}
 
 type Transaction struct {
 	*pb.Transaction
 	driver.DocumentMeta
 }
 
-type TransactionsController struct {
+type transactionsController struct {
 	col driver.Collection // Billing Plans collection
+
+	records RecordsController
 
 	log *zap.Logger
 }
@@ -39,17 +50,21 @@ func NewTransactionsController(logger *zap.Logger, db driver.Database) Transacti
 	ctx := context.TODO()
 	log := logger.Named("TransactionsController")
 	col := GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL)
-	return TransactionsController{
-		log: log, col: col,
+
+	log.Info("Creating Transaction controller")
+
+	records := NewRecordsController(log, db)
+
+	migrations.UpdateNumericCurrencyToDynamic(log, col)
+
+	return &transactionsController{
+		log: log, col: col, records: records,
 	}
 }
 
-func (ctrl *TransactionsController) Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error) {
+func (ctrl *transactionsController) Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error) {
 	if tx.GetAccount() == "" {
 		return nil, errors.New("account is required")
-	}
-	if tx.Total == 0 {
-		return nil, errors.New("total is required")
 	}
 	meta, err := ctrl.col.CreateDocument(ctx, tx)
 	if err != nil {
@@ -60,21 +75,44 @@ func (ctrl *TransactionsController) Create(ctx context.Context, tx *pb.Transacti
 	return &Transaction{tx, meta}, nil
 }
 
-func (ctrl *TransactionsController) Get(ctx context.Context, uuid string) (*pb.Transaction, error) {
+func (ctrl *transactionsController) Get(ctx context.Context, uuid string) (*pb.Transaction, error) {
 	var tx pb.Transaction
-	_, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
+	meta, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
 	if err != nil {
 		ctrl.log.Error("Failed to read transaction", zap.Error(err))
 		return nil, err
 	}
+	tx.Uuid = meta.Key
 	return &tx, nil
 }
 
-func (ctrl *TransactionsController) Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error) {
+func (ctrl *transactionsController) Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error) {
 	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
 	if err != nil {
 		ctrl.log.Error("Failed to update transaction", zap.Error(err))
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (ctrl *transactionsController) Transfer(ctx context.Context, uuid string, account string) error {
+	tr, err := ctrl.Get(ctx, uuid)
+	if err != nil {
+		return fmt.Errorf("failed to get transaction: %w", err)
+	}
+	tr.Account = account
+	if _, err = ctrl.Update(ctx, tr); err != nil {
+		return fmt.Errorf("failed to update transaction: %w", err)
+	}
+	recs, err := ctrl.records.Get(ctx, uuid)
+	if err != nil {
+		return fmt.Errorf("failed to get records: %w", err)
+	}
+	for _, rec := range recs {
+		rec.Account = account
+		if err = ctrl.records.Update(ctx, rec); err != nil {
+			return fmt.Errorf("failed to update record: %w", err)
+		}
+	}
+	return err
 }

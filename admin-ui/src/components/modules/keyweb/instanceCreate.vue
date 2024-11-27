@@ -41,16 +41,23 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-autocomplete
-            :filter="defaultFilterObject"
-            label="Price model"
-            item-text="title"
-            item-value="uuid"
-            return-object
+          <plans-autocomplete
             :value="instance.billing_plan"
-            @change="setValue('billing_plan', $event)"
-            :items="plans"
+            :custom-params="{
+              filters: { type: ['keyweb'] },
+              anonymously: true,
+            }"
+            @input="setValue('billing_plan', $event)"
+            return-object
+            label="Price model"
             :rules="planRules"
+          />
+        </v-col>
+        <v-col cols="6">
+          <v-select
+            v-model="duration"
+            label="Duration"
+            :items="Object.keys(durations)"
           />
         </v-col>
         <v-col cols="6">
@@ -64,6 +71,29 @@
             item-value="key"
           />
         </v-col>
+        <v-col cols="6">
+          <v-autocomplete
+            label="OS"
+            item-text="title"
+            return-object
+            v-model="selectedOs"
+            :items="os"
+            :rules="planRules"
+          />
+        </v-col>
+        <v-col cols="6" v-for="type in addonsTypes" :key="type">
+          <v-autocomplete
+            :label="type || 'Custom'"
+            v-model="selectedAddons"
+            :items="configurationAddons.filter((a) => a?.meta?.type === type)"
+            :loading="isAddonsLoading"
+            multiple
+            item-text="title"
+            return-object
+            :rules="planRules"
+          />
+        </v-col>
+
         <v-col cols="6" class="d-flex align-center">
           Existing:
           <v-switch
@@ -82,46 +112,15 @@
             @change="setValue(`data.serviceId`, +$event)"
           />
         </v-col>
-        <v-col cols="6">
-          <v-autocomplete
-            label="OS"
-            item-text="title"
-            return-object
-            :value="instance.config.configurations?.[os[0]?.type]"
-            @change="
-              setValue(
-                'config.configurations.' + $event.type,
-                $event.key?.split('$')?.[0]
-              )
-            "
-            :items="os"
-            :rules="planRules"
-          />
-        </v-col>
-        <v-col cols="6" v-for="type in addonsTypes" :key="type">
-          <v-autocomplete
-            :label="Type"
-            item-text="title"
-            return-object
-            :value="instance.config.configurations?.[type]"
-            @change="
-              setValue(
-                'config.configurations.' + $event.type,
-                $event.key?.split('$')?.[0]
-              )
-            "
-            :items="addons.filter((a) => a.type === type)"
-            :rules="planRules"
-          />
-        </v-col>
       </v-row>
     </v-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, toRefs, ref } from "vue";
-import { defaultFilterObject } from "@/functions";
+import { computed, onMounted, toRefs, ref, watch } from "vue";
+import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
 const getDefaultInstance = () => ({
   title: "instance",
@@ -131,65 +130,53 @@ const getDefaultInstance = () => ({
   resources: {},
   data: { existing: false },
   billing_plan: {},
+  addons: [],
 });
 
-const props = defineProps([
-  "plans",
-  "instance",
-  "planRules",
-  "spUuid",
-  "isEdit",
-]);
-const { plans, instance, planRules } = toRefs(props);
+const props = defineProps(["instance", "planRules", "spUuid", "isEdit"]);
+const { instance, planRules } = toRefs(props);
 const emits = defineEmits(["set-instance", "set-value"]);
+
+const osTypeKey = "VM Template|OS";
+
+const { setTariffAddons, getAvailableAddons, isAddonsLoading } =
+  useInstanceAddons(instance, (key, value) => setValue(key, value));
 
 const product = ref("");
 const rules = ref({
   req: [(v) => !!v || "required field"],
 });
+const addons = ref([]);
+const selectedAddons = ref([]);
+const selectedOs = ref();
+const duration = ref("Monthly");
+const durations = { Monthly: 2592000, Yearly: 31536000 };
 
-const billingPlan = computed(() =>
-  instance.value.billing_plan.uuid
-    ? instance.value.billing_plan
-    : plans.value.find((p) => p.uuid === instance.value.billing_plan)
-);
+const billingPlan = computed(() => instance.value.billing_plan);
 
 const fullProduct = computed(() => billingPlan.value?.products[product.value]);
-
-const addons = computed(() => {
-  const addons = [];
-  fullProduct.value?.meta.addons?.forEach((addonKey) => {
-    const addon = billingPlan.value.resources.find((r) => r.key === addonKey);
-    addons.push({
-      title: addon.title,
-      type: addon.meta.type,
-      key: addon.key,
-    });
-  });
-
-  return addons;
-});
 const addonsTypes = computed(() => {
-  return [...new Set(addons.value.map((a) => a.type))];
+  return [...new Set(configurationAddons.value.map((a) => a.meta?.type))];
+});
+
+const configurationAddons = computed(() => {
+  return addons.value.filter((a) => a.meta?.type !== osTypeKey);
 });
 
 const os = computed(() => {
-  const oss = [];
-  fullProduct.value?.meta.os?.forEach((osKey) => {
-    const os = billingPlan.value.resources.find((r) => r.key === osKey);
-    oss.push({
-      title: os.title,
-      type: os.meta.type,
-      key: os.key,
-    });
-  });
-
-  return oss;
+  return addons.value.filter((a) => a.meta?.type === osTypeKey);
 });
 
 const products = computed(() => {
   const products = [];
   Object.keys(billingPlan.value?.products || {}).forEach((key) => {
+    if (
+      Number(billingPlan.value?.products[key]?.period) !==
+      durations[duration.value]
+    ) {
+      return;
+    }
+
     products.push({ ...billingPlan.value?.products[key], key });
   });
 
@@ -219,6 +206,40 @@ const setValue = (key, value) => {
   }
   /* eslint-enable */
 };
+
+const setAddons = () => {
+  const addons = [];
+
+  selectedAddons.value.concat(selectedOs.value).map((addon) => {
+    if (!addon) {
+      return;
+    }
+
+    if (addon?.meta?.type) {
+      setValue(
+        "config.configurations." + addon?.meta?.type,
+        addon.meta.key?.split("$")?.[0]
+      );
+    }
+
+    addons.push(addon.uuid);
+
+    setValue("addons", addons);
+  });
+};
+
+watch(product, () => {
+  setTariffAddons();
+});
+
+watch(isAddonsLoading, (value) => {
+  if (!value) {
+    addons.value = getAvailableAddons() || [];
+  }
+});
+
+watch(selectedOs, setAddons);
+watch(selectedAddons, setAddons);
 </script>
 
 <script>

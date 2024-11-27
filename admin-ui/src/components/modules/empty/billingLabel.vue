@@ -3,41 +3,45 @@
     :due-date="dueDate"
     :tariff-price="instancePrice"
     :template="template"
-    :addons-price="addonsPrice"
+    :addons-price="addonsPrices"
     :account="account"
     @update="emit('update', $event)"
   />
 </template>
 
 <script setup>
-import { computed, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import billingLabel from "@/components/ui/billingLabel.vue";
 
-const props = defineProps(["template", "account"]);
+const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["update"]);
 
-const { template } = toRefs(props);
+const { template, addons } = toRefs(props);
 
 const dueDate = computed(() => {
   return formatSecondsToDate(+props.template?.data?.next_payment_date);
 });
 
-const instancePrice = computed(() => {
-  const key = props.template.product;
+const instancePrice = ref(0);
+const addonsPrices = ref({});
 
-  return props.template.billingPlan.products[key]?.price ?? 0;
-});
+onMounted(() => {
+  const prices = {};
 
-const addonsPrice = computed(() => {
-  const addons = {};
+  addons.value.forEach(
+    (a) =>
+      (prices[a.uuid] =
+        a.periods[
+          template.value.billingPlan.products[template.value.product]?.period
+        ])
+  );
 
-  props.template.config?.addons?.forEach((a) => {
-    const r = props.template.billingPlan?.resources?.find((r) => r.key === a);
-    addons[r?.title || a] = r?.price || 0;
-  });
+  addonsPrices.value = prices;
 
-  return addons;
+  instancePrice.value =
+    (template.value.estimate || 0) -
+    Object.keys(prices).reduce((acc, key) => acc + prices[key], 0);
 });
 </script>
 

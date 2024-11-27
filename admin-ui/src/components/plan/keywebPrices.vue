@@ -31,53 +31,99 @@
           >Disable all</v-btn
         >
       </div>
-      <nocloud-table
-        :headers="headers"
-        class="pa-4"
-        :loading="isLoading"
-        item-key="key"
-        :show-select="false"
-        :expanded.sync="expanded"
-        show-expand
-        :items="tariffs"
+
+      <v-tabs
+        class="rounded-t-lg"
+        v-model="tabsIndex"
+        background-color="background-light"
       >
-        <template v-slot:expanded-item="{ headers, item }">
-          <td :colspan="headers.length">
-            <rich-editor v-model="item.description" />
-          </td>
-        </template>
+        <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
+      </v-tabs>
 
-        <template v-slot:[`item.price`]="{ item }">
-          <v-text-field v-model.number="item.price" type="number" />
-        </template>
-        <template v-slot:[`item.name`]="{ item }">
-          <v-text-field v-model="item.name" />
-        </template>
-        <template v-slot:[`item.sell`]="{ item }">
-          <v-switch v-model.number="item.sell" />
-        </template>
+      <v-tabs-items
+        v-model="tabsIndex"
+        style="background: var(--v-background-light-base)"
+        class="rounded-b-lg"
+      >
+        <v-tab-item v-for="tab in tabs" :key="tab">
+          <div v-if="tab === 'Tariffs'">
+            <nocloud-table
+              :headers="headers"
+              class="pa-4"
+              :loading="isLoading"
+              item-key="key"
+              :show-select="false"
+              :expanded.sync="expanded"
+              show-expand
+              :items="tariffs"
+            >
+              <template v-slot:expanded-item="{ headers, item }">
+                <td :colspan="headers.length">
+                  <rich-editor v-model="item.description" />
+                </td>
+              </template>
 
-        <template v-slot:[`item.os`]="{ item }">
-          <v-btn icon @click="openOs(item)">
-            <v-icon> mdi-menu-open </v-icon>
-          </v-btn>
-        </template>
-        <template v-slot:[`item.addons`]="{ item }">
-          <v-btn icon @click="openAddons(item)">
-            <v-icon> mdi-menu-open </v-icon>
-          </v-btn>
-        </template>
-      </nocloud-table>
+              <template v-slot:[`item.price`]="{ item }">
+                <v-text-field v-model.number="item.price" type="number" />
+              </template>
+              <template v-slot:[`item.name`]="{ item }">
+                <v-text-field v-model="item.name" />
+              </template>
+              <template v-slot:[`item.sell`]="{ item }">
+                <v-switch v-model.number="item.sell" />
+              </template>
+
+              <template v-slot:[`item.addons`]="{ item }">
+                <v-btn icon @click="openAddons(item)">
+                  <v-icon> mdi-menu-open </v-icon>
+                </v-btn>
+              </template>
+            </nocloud-table>
+          </div>
+
+          <div class="os-tab__card" v-else-if="tab === 'Os'">
+            <nocloud-table
+              item-key="key"
+              :show-select="false"
+              :items="allOs"
+              :headers="osHeaders"
+              :loading="isLoading"
+            >
+              <template v-slot:[`item.name`]="{ item }">
+                <v-text-field v-model="item.name" />
+              </template>
+              <template v-slot:[`item.price`]="{ item }">
+                <v-text-field v-model.number="item.price" type="number" />
+              </template>
+              <template v-slot:[`item.sell`]="{ item }">
+                <v-switch v-model.number="item.sell" />
+              </template>
+            </nocloud-table>
+          </div>
+
+          <div v-else>
+            <plan-addons-table
+              @change:addons="planAddons = $event"
+              :addons="template.addons"
+            />
+          </div>
+        </v-tab-item>
+      </v-tabs-items>
     </div>
 
     <v-dialog max-width="70vw" v-model="isAddonsOpen">
       <v-card color="background-light">
         <v-card-title
           >Addons
-          <v-btn class="ml-3 mr-2" small @click="setSellToAllAddons(true)"
+          <v-btn
+            class="ml-3 mr-2"
+            small
+            @click="setSellToSelectedTariffAddons(true)"
             >Enable all</v-btn
           >
-          <v-btn small @click="setSellToAllAddons(false)">Disable all</v-btn>
+          <v-btn small @click="setSellToSelectedTariffAddons(false)"
+            >Disable all</v-btn
+          >
         </v-card-title>
         <nocloud-table
           :show-select="false"
@@ -100,32 +146,6 @@
         </nocloud-table>
       </v-card>
     </v-dialog>
-    <v-dialog max-width="70vw" v-model="isOsOpen">
-      <v-card color="background-light">
-        <v-card-title
-          >Os
-          <v-btn class="ml-3 mr-2" small @click="setSellToAllOs(true)"
-            >Enable all</v-btn
-          >
-          <v-btn small @click="setSellToAllOs(false)">Disable all</v-btn>
-        </v-card-title>
-        <nocloud-table
-          :show-select="false"
-          :items="selectedTariff?.os"
-          :headers="osHeaders"
-        >
-          <template v-slot:[`item.name`]="{ item }">
-            <v-text-field v-model="item.name" />
-          </template>
-          <template v-slot:[`item.price`]="{ item }">
-            <v-text-field v-model.number="item.price" type="number" />
-          </template>
-          <template v-slot:[`item.sell`]="{ item }">
-            <v-switch v-model.number="item.sell" />
-          </template>
-        </nocloud-table>
-      </v-card>
-    </v-dialog>
 
     <v-card-actions class="d-flex justify-end">
       <v-btn @click="save" :loading="isSaveLoading">save</v-btn>
@@ -135,7 +155,7 @@
 
 <script setup>
 import nocloudTable from "@/components/table.vue";
-import { ref, defineProps, onMounted, computed } from "vue";
+import { ref, defineProps, onMounted, computed, toRefs } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
@@ -143,8 +163,14 @@ import confirmDialog from "@/components/confirmDialog.vue";
 import { getMarginedValue } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
+import {
+  Addon,
+  ListAddonsRequest,
+} from "nocloud-proto/proto/es/billing/addons/addons_pb";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 
 const props = defineProps(["template"]);
+const { template } = toRefs(props);
 
 const store = useStore();
 const { convertFrom } = useCurrency();
@@ -152,18 +178,20 @@ const { convertFrom } = useCurrency();
 const isLoading = ref(false);
 const isSaveLoading = ref(false);
 const isAddonsOpen = ref(false);
-const isOsOpen = ref(false);
 const isValid = ref(false);
 const selectedTariff = ref({});
 const tariffs = ref([]);
-const fee = ref({});
+const fee = ref(template.value.fee || {});
 const expanded = ref([]);
+const tabs = ref(["Tariffs", "Os", "Custom addons"]);
+const tabsIndex = ref(0);
+const allOs = ref([]);
+const planAddons = ref([]);
 
 const headers = ref([
   { text: "Key", value: "key" },
   { text: "Title", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
-  { text: "Os", value: "os", width: "50" },
   { text: "Addons", value: "addons", width: "50" },
   { text: "Incoming price", value: "basePrice", width: "75" },
   { text: "Sale price", value: "price", width: "200" },
@@ -189,8 +217,16 @@ const osHeaders = ref([
 ]);
 
 onMounted(async () => {
+  planAddons.value = template.value.addons;
+
   isLoading.value = true;
   try {
+    const addonsPromise = addonsClient.value.list(
+      ListAddonsRequest.fromJson({
+        filters: { group: [template.value.uuid] },
+      })
+    );
+
     await store.dispatch("servicesProviders/fetch", { anonymously: false });
     const spUuid = sps.value.find((sp) =>
       sp.meta?.plans?.includes(props.template.uuid)
@@ -200,7 +236,11 @@ onMounted(async () => {
       action: "list_products",
       uuid: spUuid,
     });
+
+    const { addons = [] } = (await addonsPromise).toJson();
+
     const products = [];
+    const oss = [];
     meta.products.forEach((p) => {
       const data = {
         name: [p.integration, p.name].join(" "),
@@ -208,8 +248,8 @@ onMounted(async () => {
       };
 
       const keys = {
-        monthly: `${p.integration}_${p.name}-monthly`,
-        yearly: `${p.integration}_${p.name}-yearly`,
+        monthly: `${p.integration}_${p.name}&monthly`,
+        yearly: `${p.integration}_${p.name}&yearly`,
       };
 
       const realProducts = {
@@ -229,13 +269,17 @@ onMounted(async () => {
       Object.keys(addonsAnnotations).forEach((key) => {
         const metaKey = addonsAnnotations[key];
         p.configOptions[metaKey]?.configurableSubOptions.forEach((c) => {
+          if(!p.pricing?.configOptions?.[metaKey]?.[c.optionname]){
+            return;
+          }
+
           const basePriceYearly = convertFrom(
             +p.pricing.configOptions[metaKey][c.optionname].annually,
-            "EUR"
+            { title: "EUR" }
           );
           const basePriceMonthly = convertFrom(
             +p.pricing.configOptions[metaKey][c.optionname].monthly,
-            "EUR"
+            { title: "EUR" }
           );
 
           const data = {
@@ -244,6 +288,7 @@ onMounted(async () => {
             type: metaKey,
             baseName: c.optionname,
           };
+
           addonsValues[key].push({
             ...data,
             price: basePriceYearly,
@@ -259,21 +304,35 @@ onMounted(async () => {
         });
       });
 
-      const getTariffAddons = (subKey, duration) => {
+      addonsValues.os.forEach((os) => {
+        os.key = os.baseName + "&" + os.duration;
+
+        if (oss.find((existed) => os.baseName === existed.meta?.key)) {
+          return;
+        }
+
+        oss.push(os);
+      });
+
+      const getTariffAddons = (duration) => {
+        const subKey = "backup";
+
         return addonsValues[subKey]
-          .filter((a) => a.duration === duration)
-          .map((a) => {
-            a.key = a.baseName + "$" + keys[duration];
-            const realAddon = props.template.resources.find(
-              (r) => r.key === a.key
+          .filter((addon) => addon.duration === duration)
+          .map((addon) => {
+            addon.key = addon.baseName + "$" + keys[duration];
+            const realAddon = addons.find(
+              (realAddon) => realAddon.meta?.key === addon.key.split("&")[0]
             );
+
             if (realAddon) {
-              a.price = realAddon?.price;
-              a.name = realAddon?.title;
-              a.sell = true;
+              addon.price = realAddon.periods[getPeriod(addon.duration)];
+              addon.name = realAddon.title;
+              addon.sell = realAddon.public;
+              addon.uuid = realAddon.uuid;
             }
 
-            return a;
+            return addon;
           });
       };
 
@@ -282,7 +341,7 @@ onMounted(async () => {
           p.pricing.productrenew[
             duration === "yearly" ? "annually" : "monthly"
           ],
-          "EUR"
+          { title: "EUR" }
         );
 
         return {
@@ -290,8 +349,8 @@ onMounted(async () => {
           name: realProducts[duration]?.title || data.name,
           key: keys[duration],
           duration: duration,
-          os: getTariffAddons("os", duration),
-          addons: getTariffAddons("backup", duration),
+          os: addonsValues.os.map((os) => os.key),
+          addons: getTariffAddons(duration),
           price: realProducts[duration]?.price || basePrice,
           basePrice,
           description: realProducts[duration]?.meta?.description,
@@ -301,6 +360,27 @@ onMounted(async () => {
 
       products.push(getProduct("monthly"));
       products.push(getProduct("yearly"));
+    });
+
+    const osMap = new Map();
+    oss.forEach((os) => {
+      const realAddon = addons.find(
+        (realAddon) => realAddon.meta?.key === os.baseName
+      );
+
+      if (realAddon) {
+        os.price = realAddon.periods[getPeriod(os.duration)];
+        os.name = realAddon.title;
+        os.sell = realAddon.public;
+        os.uuid = realAddon.uuid;
+      }
+
+      if (osMap.has(os.key)) {
+        return;
+      }
+
+      osMap.set(os.key, true);
+      allOs.value.push(os);
     });
 
     tariffs.value = products;
@@ -315,94 +395,152 @@ onMounted(async () => {
 });
 
 const sps = computed(() => store.getters["servicesProviders/all"]);
+const addonsClient = computed(() => store.getters["addons/addonsClient"]);
 
-const openOs = (item) => {
-  isOsOpen.value = true;
-  selectedTariff.value = item;
-};
 const openAddons = (item) => {
   isAddonsOpen.value = true;
   selectedTariff.value = item;
 };
 
-const setSellToAllOs = (value) => {
-  selectedTariff.value.os = selectedTariff.value.os.map((os) => ({
-    ...os,
-    sell: value,
-  }));
-};
-
-const setSellToAllAddons = (value) => {
-  selectedTariff.value.addons = selectedTariff.value.addons.map((os) => ({
-    ...os,
+const setSellToSelectedTariffAddons = (value) => {
+  selectedTariff.value.addons = selectedTariff.value.addons.map((addon) => ({
+    ...addon,
     sell: value,
   }));
 };
 
 const setSellToAllTariffs = (value) => {
-  tariffs.value = tariffs.value.map((t) => {
-    t.sell = value;
-    t.os = t.os.map((os) => ({ ...os, sell: value }));
-    t.addons = t.addons.map((a) => ({ ...a, sell: value }));
-    return t;
-  });
+  if (tabsIndex.value === 0) {
+    tariffs.value = tariffs.value.map((t) => {
+      t.sell = value;
+      t.addons = t.addons.map((a) => ({ ...a, sell: value }));
+      return t;
+    });
+  } else if (tabsIndex.value === 1) {
+    allOs.value = allOs.value.map((os) => ({ ...os, sell: value }));
+  }
 };
 
 const save = async () => {
   const products = {};
   const resources = [];
 
-  const enabledTariffs = tariffs.value.filter((t) => t.sell);
-
-  enabledTariffs.forEach((t) => {
-    const period = t.duration === "monthly" ? 3600 * 24 * 30 : 3600 * 24 * 365;
-    const kind = "PREPAID";
-
-    const enabledAddons = t.addons.filter((a) => a.sell);
-    const enabledOs = t.os.filter((os) => os.sell);
-    enabledOs.concat(enabledAddons).forEach((r) => {
-      if (r.virtual) {
-        return;
-      }
-      resources.push({
-        key: r.key,
-        kind,
-        price: r.price,
-        title: r.name,
-        public: true,
-        meta: {
-          type: r.type,
-        },
-        period,
-      });
-    });
-
-    products[t.key] = {
-      kind,
-      period,
-      price: t.price,
-      title: t.name,
-      public: true,
-      meta: {
-        addons: enabledAddons.map((a) => a.key),
-        os: enabledOs.map((a) => a.key),
-        keywebId: t.id,
-        description: t.description,
-      },
-    };
-  });
-
   isSaveLoading.value = true;
   try {
+    let addonsForUpdate = [];
+    let addonsForCreate = [];
+
+    const allAddons = [];
+
+    tariffs.value.forEach((t) => {
+      t.os
+        .map((osKey) => allOs.value.find((os) => os.key === osKey))
+        .concat(t.addons)
+        .forEach((addon) => {
+          const originalName = addon.key.split("&")[0];
+          const indexOfAddon = allAddons.findIndex(
+            (a) => a.meta.key === originalName
+          );
+
+          const period = getPeriod(addon.duration || t.duration);
+          if (indexOfAddon !== -1) {
+            allAddons[indexOfAddon].periods[period] = addon.price;
+          } else {
+            allAddons.push({
+              group: template.value.uuid,
+              uuid: addon.uuid || "",
+              title: addon.name,
+              public: !!addon.sell,
+              system: true,
+              meta: {
+                type: addon.type,
+                key: originalName,
+              },
+              kind: "PREPAID",
+              periods: {
+                [period]: addon.price,
+              },
+            });
+          }
+        });
+    });
+
+    allAddons.forEach((addon) => {
+      const data = Addon.fromJson(addon);
+      if (addon.uuid) {
+        data.uuid = addon.uuid;
+        addonsForUpdate.push(data);
+      } else {
+        addonsForCreate.push(data);
+      }
+    });
+
+    if (addonsForCreate.length) {
+      const createdAddons = await addonsClient.value.createBulk({
+        addons: addonsForCreate,
+      });
+
+      addonsForCreate = createdAddons.toJson().addons;
+    }
+
+    if (addonsForUpdate.length) {
+      const updatedAddons = await addonsClient.value.updateBulk({
+        addons: addonsForUpdate,
+      });
+
+      addonsForUpdate = updatedAddons.toJson().addons;
+    }
+
+    tariffs.value.forEach((t) => {
+      const period = getPeriod(t.duration);
+      const kind = "PREPAID";
+
+      const addons = new Set();
+
+      t.addons.forEach((addon) => {
+        addons.add(
+          addon.uuid
+            ? addon.uuid
+            : addonsForCreate.find(
+                (newAddon) => newAddon.meta.key === addon.key.split("&")[0]
+              )?.uuid
+        );
+      });
+      t.os.forEach((osKey) => {
+        const key = osKey.split("&")[0];
+
+        addons.add(
+          addonsForCreate.find((newAddon) => newAddon.meta.key === key)?.uuid ||
+            addonsForUpdate.find((newAddon) => newAddon.meta.key === key)?.uuid
+        );
+      });
+
+      products[t.key] = {
+        kind,
+        period,
+        price: t.price,
+        title: t.name,
+        public: t.sell,
+        addons: [...addons.values()],
+        meta: {
+          keywebId: t.id,
+          description: t.description,
+        },
+      };
+    });
+
     await api.plans.update(props.template.uuid, {
       ...props.template,
       products,
       resources,
+      fee: fee.value,
+      addons: planAddons.value,
     });
     store.commit("snackbar/showSnackbarSuccess", {
       message: "Price model edited successfully",
     });
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during save prices",
     });
@@ -415,13 +553,16 @@ const changeFee = (value) => {
   fee.value = JSON.parse(JSON.stringify(value));
 };
 
+const getPeriod = (duration = "monthly") => {
+  return duration === "monthly" ? 3600 * 24 * 30 : 3600 * 24 * 365;
+};
+
 const setFee = () => {
+  allOs.value.forEach((os) => {
+    os.price = getMarginedValue(fee.value, os.basePrice);
+  });
   tariffs.value.forEach((t) => {
     t.price = getMarginedValue(fee.value, t.basePrice);
-    t.os = t.os.map((os) => ({
-      ...os,
-      price: getMarginedValue(fee.value, os.basePrice),
-    }));
     t.addons = t.addons.map((a) => ({
       ...a,
       price: getMarginedValue(fee.value, a.basePrice),

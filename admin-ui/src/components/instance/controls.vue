@@ -66,12 +66,12 @@
     </instance-control-btn>
 
     <instance-control-btn
-      :hint="template.data.lock ? 'User unlock' : 'User lock'"
+      :hint="template.data?.lock ? 'User unlock' : 'User lock'"
     >
       <confirm-dialog @confirm="lockInstance" :disabled="isDeleted">
         <v-btn :loading="isLockLoading" class="ma-1" :disabled="isDeleted">
           <v-icon>
-            {{ template.data.lock ? "mdi-lock-off" : "mdi-lock" }}
+            {{ template.data?.lock ? "mdi-lock-off" : "mdi-lock" }}
           </v-icon>
         </v-btn>
       </confirm-dialog>
@@ -120,12 +120,12 @@
               </v-btn>
               <v-btn
                 class="mr-2"
-                :loading="isDeleteLoading"
+                :loading="isSaveLoading"
                 @click="save(true)"
               >
                 Create
               </v-btn>
-              <v-btn :loading="isDeleteLoading" @click="save(false)">
+              <v-btn :loading="isSaveLoading" @click="save(false)">
                 Edit
               </v-btn>
             </v-card-actions>
@@ -143,6 +143,7 @@ import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
 import PluginIframe from "@/components/plugin/iframe.vue";
 import InstanceControlBtn from "@/components/ui/hintBtn.vue";
+import { Addon } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 export default {
   name: "instance-actions",
@@ -153,6 +154,8 @@ export default {
     account: { type: Object, required: true },
     copyTemplate: { type: Object },
     sp: { type: Object },
+    addons: { type: Array, required: true },
+    copyAddons: { type: Array, required: true },
   },
   data: () => ({
     isDeleteLoading: false,
@@ -213,7 +216,7 @@ export default {
       }
     },
     lockInstance() {
-      const lock = !this.template.data.lock;
+      const lock = !this.template.data?.lock;
 
       const tempService = JSON.parse(JSON.stringify(this.service));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -225,7 +228,7 @@ export default {
 
       tempService.instancesGroups[igIndex].instances[instanceIndex] = {
         ...this.template,
-        data: { ...this.template.data, lock },
+        data: { ...(this.template.data || {}), lock },
       };
 
       this.isLockLoading = true;
@@ -254,22 +257,8 @@ export default {
         this.save();
       }
     },
-    async save(createNewPlan = false, instance) {
-      if (!instance) {
-        instance = JSON.parse(JSON.stringify(this.copyTemplate));
-      }
-
-      const tempService = JSON.parse(JSON.stringify(this.service));
-      const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
-      );
-      const instanceIndex = tempService.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === this.template.uuid);
-
-      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-
-      if (this.isBillingChange && createNewPlan) {
+    async updateBillingPlan(createNewPlan) {
+      if (createNewPlan) {
         const title = this.getPlanTitle(this.template);
         const billingPlan = {
           ...this.copyTemplate.billingPlan,
@@ -286,26 +275,13 @@ export default {
           public: false,
         };
         delete billingPlan.uuid;
-        this.isSaveLoading = true;
 
-        try {
-          const data = await api.plans.create(billingPlan);
-          await api.servicesProviders.bindPlan(this.sp.uuid, [data.uuid]);
-          tempService.instancesGroups[igIndex].instances[
-            instanceIndex
-          ].billingPlan = data;
-        } catch (e) {
-          this.$store.commit("snackbar/showSnackbarError", {
-            message:
-              e.response?.data?.message ||
-              "Error during create individual plan",
-          });
-        }
-      } else if (this.isBillingChange) {
+        const data = await api.plans.create(billingPlan);
+        await api.servicesProviders.bindPlan(this.sp.uuid, [data.uuid]);
+        return data;
+      } else {        
         const title = this.getPlanTitle(this.template);
-        const ogPlan = this.$store.getters["plans/all"].find(
-          (p) => p.uuid === this.copyTemplate.billingPlan.uuid
-        );
+        const ogPlan = this.$store.getters["plans/one"];
         const updatedPlan = {
           ...ogPlan,
           ...this.copyTemplate.billingPlan,
@@ -320,35 +296,75 @@ export default {
           title,
         };
 
-        this.isSaveLoading = true;
-        try {
-          const data = await api.plans.update(updatedPlan.uuid, updatedPlan);
-          tempService.instancesGroups[igIndex].instances[
-            instanceIndex
-          ].billingPlan = data;
-        } catch (e) {
-          this.$store.commit("snackbar/showSnackbarError", {
-            message: e.response?.data?.message || "Error during update plan",
-          });
-        }
+        const data = await api.plans.update(updatedPlan.uuid, updatedPlan);
+        return data;
+      }
+    },
+    updateAddons() {
+      return Promise.all(
+        this.copyAddons.map((addon) => {
+          if (addon.meta?.individual) {
+            return this.$store.getters["addons/addonsClient"].update(
+              Addon.fromJson(addon)
+            );
+          }
+          delete addon.uuid;
+
+          return this.$store.getters["addons/addonsClient"].create(
+            Addon.fromJson({
+              ...addon,
+              title: "IND_" + addon.title,
+              meta: { ...(addon.meta || {}), individual: true },
+            })
+          );
+        })
+      );
+    },
+    async save(createNewPlan = false, instance) {
+      if (!instance) {
+        instance = JSON.parse(JSON.stringify(this.copyTemplate));
       }
 
-      this.isSaveLoading = true;
-      api.services
-        ._update(tempService)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Instance saved successfully",
-          });
+      const tempService = JSON.parse(JSON.stringify(this.service));
+      const igIndex = tempService.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = tempService.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
 
-          this.$emit("refresh");
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isSaveLoading = false;
+      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
+
+      this.isSaveLoading = true;
+
+      try {
+        if (this.isBillingChange) {
+          const billingPlan = await this.updateBillingPlan(createNewPlan);
+
+          tempService.instancesGroups[igIndex].instances[
+            instanceIndex
+          ].billingPlan = billingPlan;
+        }
+
+        if (this.isAddonsChanged) {
+          const addons = await this.updateAddons();
+
+          tempService.instancesGroups[igIndex].instances[instanceIndex].addons =
+            addons.map((a) => a.uuid);
+        }
+
+        await api.services._update(tempService);
+        this.showSnackbarSuccess({
+          message: "Instance saved successfully",
         });
+        console.log('refresh');
+        
+        this.$emit("refresh");
+      } catch (err) {
+        this.showSnackbarError({ message: err.message });
+      } finally {
+        this.isSaveLoading = false;
+      }
     },
     async startInstance(instance) {
       if (!instance) {
@@ -768,7 +784,7 @@ export default {
         };
       const isRebootDisabled =
         this.template.state.state === "SUSPENDED" ||
-        this.template.state.meta.state === "BUILD" ||
+        this.template.state.meta?.state === "BUILD" ||
         this.template.state.state === "STOPPED";
 
       return {
@@ -888,10 +904,16 @@ export default {
         (s) => s.uuid == this.template.service
       );
     },
-    isChanged() {
+    isInstanceChanged() {
       return (
         JSON.stringify(this.template) !== JSON.stringify(this.copyTemplate)
       );
+    },
+    isAddonsChanged() {
+      return JSON.stringify(this.addons) !== JSON.stringify(this.copyAddons);
+    },
+    isChanged() {
+      return this.isInstanceChanged || this.isAddonsChanged;
     },
     isBillingChange() {
       return (
@@ -903,7 +925,7 @@ export default {
       return this.template?.status?.toLowerCase() === "detached";
     },
     isFreezed() {
-      return this.template.data.freeze;
+      return this.template.data?.freeze;
     },
     product() {
       switch (this.template.type) {
@@ -950,11 +972,6 @@ export default {
     },
     isOperated() {
       return this.template.state.state === "OPERATION";
-    },
-    namespace() {
-      return this.$store.getters["namespaces/all"].find(
-        (n) => n.uuid === this.template.access.namespace
-      );
     },
     whmcsApi() {
       return this.$store.getters["settings/whmcsApi"];

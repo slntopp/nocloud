@@ -6,8 +6,8 @@
     :color="colorChip"
     :small="small"
   >
-    {{ title }}{{ balance }}
-    {{ (!hideCurrency && (currency || defaultCurrency)) || "" }}
+    {{ title }}{{ abs ? Math.abs(balance) : balance }}
+    {{ (!hideCurrency && (currency?.title || defaultCurrency?.title)) || "" }}
   </v-chip>
 </template>
 
@@ -23,6 +23,7 @@ export default {
     hideCurrency: {},
     logedInUser: { type: Boolean, default: false },
     small: { type: Boolean, default: false },
+    abs: { type: Boolean, default: false },
   },
   computed: {
     balance() {

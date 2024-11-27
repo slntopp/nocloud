@@ -83,8 +83,13 @@ const expanded = ref([]);
 const options = ref({});
 const scopeItems = ref([]);
 const actionItems = ref([]);
+
 const isAccountsLoading = ref(false);
 const accounts = ref({});
+
+const invoices = ref({});
+
+const plans = ref({});
 
 const store = useStore();
 
@@ -145,6 +150,20 @@ const getEntityByUuid = (item) => {
         route: { name: "Instance", params: { instanceId: item.uuid } },
         item: getInstance(item.uuid),
         type: "Instance",
+      };
+    }
+    case "Accounts": {
+      return {
+        route: { name: "Account", params: { accountId: item.uuid } },
+        item: getAccount(item.uuid),
+        type: "Account",
+      };
+    }
+    case "Invoices": {
+      return {
+        route: { name: "Invoice page", params: { uuid: item.uuid } },
+        item: getInvoice(item.uuid),
+        type: "Invoice",
       };
     }
     case "Services": {
@@ -223,6 +242,10 @@ const getAccount = (uuid) => {
   return accounts.value[uuid] || uuid;
 };
 
+const getInvoice = (uuid) => {
+  return invoices.value[uuid]?.number || uuid;
+};
+
 const getInstance = (uuid) => {
   return instances.value.find((i) => i.uuid === uuid) || uuid;
 };
@@ -236,7 +259,7 @@ const getServiceProvider = (uuid) => {
 };
 
 const getBillingPlan = (uuid) => {
-  return plans.value.find((s) => s.uuid === uuid) || uuid;
+  return plans.value[uuid] || uuid;
 };
 
 const isLoading = computed(() => {
@@ -272,7 +295,6 @@ const searchFields = computed(() => {
 
 const services = computed(() => store.getters["services/all"]);
 const sps = computed(() => store.getters["servicesProviders/all"]);
-const plans = computed(() => store.getters["plans/all"]);
 const instances = computed(() => store.getters["services/getInstances"]);
 const filter = computed(() => store.getters["appSearch/filter"]);
 const path = computed(() => filter.value.path || undefined);
@@ -303,5 +325,37 @@ watch(logs, () => {
       );
     }
   });
+
+  logs.value
+    .filter((log) => log.entity === "BillingPlans")
+    .forEach(async ({ uuid }) => {
+      try {
+        if (!plans.value[uuid]) {
+          plans.value[uuid] = store.getters["plans/plansClient"].getPlan({
+            uuid,
+          });
+          plans.value[uuid] = await plans.value[uuid];
+        }
+      } catch {
+        plans.value[uuid] = undefined;
+      }
+    });
+
+  logs.value
+    .filter((log) => log.entity === "Invoices")
+    .forEach(async ({ uuid }) => {
+      try {
+        if (!invoices.value[uuid]) {
+          invoices.value[uuid] = store.getters[
+            "invoices/invoicesClient"
+          ].getInvoice({
+            uuid,
+          });
+          invoices.value[uuid] = await invoices.value[uuid];
+        }
+      } catch {
+        invoices.value[uuid] = undefined;
+      }
+    });
 });
 </script>

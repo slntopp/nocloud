@@ -21,6 +21,10 @@ import snackbar from "./snackbar";
 import actions from "./actions";
 import showcases from "./showcases";
 import chats from "./chats";
+import addons from "./addons";
+import invoices from "./invoices";
+import descriptions from "./descriptions";
+import instances from "./instances";
 
 Vue.use(Vuex);
 
@@ -48,6 +52,10 @@ const store = new Vuex.Store({
     actions,
     showcases,
     chats,
+    addons,
+    invoices,
+    descriptions,
+    instances
   },
 });
 

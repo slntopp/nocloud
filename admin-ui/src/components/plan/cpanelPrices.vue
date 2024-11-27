@@ -22,43 +22,74 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <div class="mt-4" v-if="!isPricesLoading">
-      <v-btn class="mx-1" @click="setSellToAllTariffs(true)">Enable all</v-btn>
-      <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
-        >Disable all</v-btn
-      >
-    </div>
+    <v-tabs
+      class="rounded-t-lg"
+      v-model="tabsIndex"
+      background-color="background-light"
+    >
+      <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
+    </v-tabs>
 
-    <div>
-      <nocloud-table
-        :loading="isPricesLoading"
-        table-name="cpanel-prices"
-        class="pa-4"
-        item-key="key"
-        :show-select="false"
-        :items="prices"
-        :headers="headers"
-      >
-        <template v-slot:[`item.enabled`]="{ item }">
-          <v-switch v-model="item.enabled" />
-        </template>
-        <template v-slot:[`item.name`]="{ item }">
-          <v-text-field v-model="item.name" />
-        </template>
-        <template v-slot:[`item.price`]="{ item }">
-          <v-text-field type="number" v-model.number="item.price" />
-        </template>
-        <template v-slot:[`item.sorter`]="{ item }">
-          <v-text-field type="number" v-model.number="item.sorter" />
-        </template>
-        <template v-slot:[`item.period`]="{ item }">
-          <date-field
-            :period="item.period"
-            @changeDate="item.period = $event"
+    <v-tabs-items
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
+    >
+      <v-tab-item v-for="tab in tabs" :key="tab">
+        <div v-if="tab === 'Prices'">
+          <div class="mt-4" v-if="!isPricesLoading">
+            <v-btn class="mx-1" @click="setSellToAllTariffs(true)"
+              >Enable all</v-btn
+            >
+            <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
+              >Disable all</v-btn
+            >
+          </div>
+          <nocloud-table
+            :loading="isPricesLoading"
+            table-name="cpanel-prices"
+            class="pa-4"
+            item-key="key"
+            :show-select="false"
+            :items="prices"
+            :headers="headers"
+          >
+            <template v-slot:[`item.enabled`]="{ item }">
+              <v-switch v-model="item.enabled" />
+            </template>
+            <template v-slot:[`item.name`]="{ item }">
+              <v-text-field v-model="item.name" />
+            </template>
+            <template v-slot:[`item.price`]="{ item }">
+              <v-text-field type="number" v-model.number="item.price" />
+            </template>
+            <template v-slot:[`item.addons`]="{ item }">
+              <product-addons-dialog
+                @change:addons="item.addons = $event"
+                :addons="item.addons"
+              />
+            </template>
+            <template v-slot:[`item.sorter`]="{ item }">
+              <v-text-field type="number" v-model.number="item.sorter" />
+            </template>
+            <template v-slot:[`item.period`]="{ item }">
+              <date-field
+                :period="item.period"
+                @changeDate="item.period = $event"
+                @changePeriodKind="item.periodKind = $event"
+              />
+            </template>
+          </nocloud-table>
+        </div>
+
+        <div class="os-tab__card" v-else>
+          <plan-addons-table
+            @change:addons="planAddons = $event"
+            :addons="template.addons"
           />
-        </template>
-      </nocloud-table>
-    </div>
+        </div>
+      </v-tab-item>
+    </v-tabs-items>
     <v-card-actions class="d-flex justify-end">
       <v-btn
         :loading="isSaveLoading"
@@ -75,10 +106,11 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import DateField from "@/components/date.vue";
-import { getMarginedValue, getTimestamp } from "@/functions";
+import { getMarginedValue } from "@/functions";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import { getFullDate } from "@/functions";
+import planAddonsTable from "@/components/planAddonsTable.vue";
+import productAddonsDialog from "@/components/product_addons_dialog.vue";
 
 export default {
   name: "plan-prices",
@@ -87,10 +119,15 @@ export default {
     PlanOpensrs,
     DateField,
     nocloudTable,
+    planAddonsTable,
+    productAddonsDialog,
   },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
+    tabs: ["Prices", "Addons"],
+    tabsIndex: 0,
+    planAddons: [],
     prices: [],
     fee: {},
     products: [],
@@ -128,6 +165,7 @@ export default {
       { text: "lve_cpu", value: "lve_cpu" },
       { text: "lve_pmem", value: "lve_pmem" },
       { text: "Sorter", value: "sorter" },
+      { text: "Addons", value: "addons" },
       { text: "Period", value: "period", width: 220 },
       { text: "Price", value: "price", width: 150 },
       { text: "Enabled", value: "enabled" },
@@ -160,10 +198,8 @@ export default {
         price.price = product?.price || 0;
         price.period = product?.period || 3600 * 24 * 30;
         price.sorter = product?.sorter || 0;
+        price.addons = product?.addons || [];
         price.enabled = !!product;
-
-        price.period = getFullDate(price.period);
-
         return price;
       });
       this.isPricesLoading = false;
@@ -192,8 +228,9 @@ export default {
             title: item.name,
             kind: "PREPAID",
             price: item.price,
-            period: getTimestamp(item.period),
+            period: item.period,
             sorter: item.sorter,
+            addons: item.addons,
             resources: {
               model: item.key,
               bandwidth: item.BWLIMIT || undefined,
@@ -211,6 +248,7 @@ export default {
           ...this.template,
           products,
           resources,
+          addons: this.planAddons,
         });
         this.showSnackbarSuccess({
           message: "Price model edited successfully",
@@ -225,6 +263,7 @@ export default {
   mounted() {
     this.fetchPrices();
     this.products = this.template.products;
+    this.planAddons = this.template.addons;
   },
   computed: {
     sps() {

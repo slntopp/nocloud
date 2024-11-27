@@ -17,6 +17,7 @@ package statuses
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"log"
 	"time"
 
@@ -30,10 +31,10 @@ import (
 type StatusesPubSub struct {
 	log  *zap.Logger
 	db   *driver.Database
-	rbmq *amqp.Connection
+	rbmq rabbitmq.Connection
 }
 
-func NewStatusesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatusesPubSub {
+func NewStatusesPubSub(log *zap.Logger, db *driver.Database, rbmq rabbitmq.Connection) *StatusesPubSub {
 	sps := &StatusesPubSub{
 		log: log.Named("StatusesPubSub"), rbmq: rbmq,
 	}
@@ -43,7 +44,7 @@ func NewStatusesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connecti
 	return sps
 }
 
-func (s *StatusesPubSub) Channel() *amqp.Channel {
+func (s *StatusesPubSub) Channel() rabbitmq.Channel {
 	log := s.log.Named("Channel")
 
 	ch, err := s.rbmq.Channel()
@@ -53,7 +54,7 @@ func (s *StatusesPubSub) Channel() *amqp.Channel {
 	return ch
 }
 
-func (s *StatusesPubSub) TopicExchange(ch *amqp.Channel, name string) {
+func (s *StatusesPubSub) TopicExchange(ch rabbitmq.Channel, name string) {
 	log := s.log.Named("TopicExchange")
 
 	err := ch.ExchangeDeclare(
@@ -64,7 +65,7 @@ func (s *StatusesPubSub) TopicExchange(ch *amqp.Channel, name string) {
 	}
 }
 
-func (s *StatusesPubSub) StatusesConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
+func (s *StatusesPubSub) StatusesConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col string) {
 	if s.db == nil {
 		log.Fatal("Failed to initialize statuses consumer, database is not set")
 	}
@@ -115,34 +116,53 @@ func (s *StatusesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		c, err := (*s.db).Query(context.TODO(), updateStatusQuery, map[string]interface{}{
+		db := *s.db
+		ctx := context.Background()
+		trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: []string{col},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			log.Error("Failed to start transaction to update status", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while start transaction to update status", zap.Error(err))
+			}
+			continue
+		}
+		ctx = driver.WithTransactionID(ctx, trID)
+		c, err := (*s.db).Query(ctx, updateStatusQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
 			"status":      req.Status.GetStatus(),
 		})
-
 		if err != nil {
+			_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 			log.Error("Failed to update status", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
 				log.Warn("Failed to Negatively Acknowledge the delivery while Update db", zap.Error(err))
 			}
 			continue
 		}
-
-		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		if err := db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+			log.Error("Failed to commit transaction to update status", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while commit transaction to update status", zap.Error(err))
+			}
+			continue
 		}
 
-		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
+		log.Debug("Updated status", zap.String("type", col), zap.String("uuid", req.Uuid))
 		if err = c.Close(); err != nil {
 			log.Warn("Failed to close database cursor connection", zap.Error(err))
+		}
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 		}
 	}
 }
 
 type Pub func(msg *spb.ObjectStatus) (int, error)
 
-func (s *StatusesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
+func (s *StatusesPubSub) Publisher(ch rabbitmq.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *spb.ObjectStatus) (int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

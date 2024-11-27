@@ -24,6 +24,11 @@ const (
 )
 
 const (
+	DEFAULT_CURRENCY_ID   = 0
+	DEFAULT_CURRENCY_NAME = "NCU"
+)
+
+const (
 	NAMESPACES_COL = "Namespaces"
 	NS2ACC         = NAMESPACES_COL + "2" + ACCOUNTS_COL
 
@@ -54,8 +59,12 @@ const (
 
 const (
 	BILLING_PLANS_COL = "BillingPlans"
+	ADDONS_COL        = "Addons"
+	DESCRIPTIONS_COL  = "Descriptions"
 	TRANSACTIONS_COL  = "Transactions"
+	INVOICES_COL      = "Invoices"
 	RECORDS_COL       = "Records"
+	PROMOCODES_COL    = "Promocodes"
 )
 
 type NoCloudGraphSchema struct {
@@ -64,9 +73,9 @@ type NoCloudGraphSchema struct {
 }
 
 var COLLECTIONS = []string{
-	ACCOUNTS_COL, NAMESPACES_COL, CREDENTIALS_COL,
+	ACCOUNTS_COL, ADDONS_COL, DESCRIPTIONS_COL, NAMESPACES_COL, CREDENTIALS_COL,
 	SERVICES_PROVIDERS_COL, SERVICES_COL,
-	BILLING_PLANS_COL, TRANSACTIONS_COL, RECORDS_COL,
+	BILLING_PLANS_COL, TRANSACTIONS_COL, INVOICES_COL, RECORDS_COL,
 	CUR_COL, SHOWCASES_COL,
 }
 

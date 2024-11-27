@@ -1,6 +1,6 @@
 <template>
   <nocloud-table
-    table-name="accounts"
+    :table-name="tableName"
     :headers="headers"
     :items="accounts"
     :value="selected"
@@ -31,6 +31,10 @@
 
     <template v-slot:[`item.data.email`]="{ item }">
       {{ getShortName(item.data.email) }}
+    </template>
+
+    <template v-slot:[`item.data.tax_rate`]="{ item }">
+      {{ (item.data.tax_rate || 0) * 100 }}
     </template>
 
     <template v-slot:[`item.balance`]="{ item }">
@@ -90,6 +94,7 @@ import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
 import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
+import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
   value: {
@@ -102,13 +107,20 @@ const props = defineProps({
   },
   noSearch: { type: Boolean, default: false },
   customSearchParam: { type: String, default: "" },
+  customFilter: { type: Object },
+  tableName: { type: String, default: "accounts" },
 });
-const { value, singleSelect, customSearchParam, noSearch } = toRefs(props);
+const { value, singleSelect, customSearchParam, noSearch, customFilter } =
+  toRefs(props);
 
 const emit = defineEmits(["input"]);
 
 const store = useStore();
 const router = useRouter();
+useSearch({
+  name: props.tableName,
+  noSearch: props.noSearch,
+});
 
 const selected = ref([]);
 const loading = ref(false);
@@ -124,9 +136,10 @@ const headers = ref([
   { text: "Created date", value: "data.date_create" },
   { text: "Country", value: "data.country" },
   { text: "Address", value: "address" },
-  { text: "Client currency", value: "currency" },
+  { text: "Client currency", value: "currency.title" },
   { text: "Access level", value: "access.level" },
   { text: "WHMCS ID", value: "data.whmcs_id" },
+  { text: "Tax rate", value: "data.tax_rate" },
   { text: "Invoice based", value: "data.regular_payment" },
 ]);
 const levelColorMap = ref({
@@ -146,7 +159,7 @@ onMounted(() => {
 
 const searchParam = computed(() => store.getters["appSearch/param"]);
 const filter = computed(() => {
-  const filter = JSON.parse(JSON.stringify(store.getters["appSearch/filter"]));
+  const filter = store.getters["appSearch/filter"];
   const total = {};
   if (filter.total?.to) {
     total.to = +filter.total.to;
@@ -212,6 +225,8 @@ const requestOptions = computed(() => ({
         search_param:
           searchParam.value || filter.value.search_param || undefined,
       }
+    : customFilter.value
+    ? customFilter.value
     : { search_param: customSearchParam.value || undefined },
   page: options.value.page,
   limit: options.value.itemsPerPage,
@@ -250,7 +265,9 @@ const searchFields = computed(() => [
     title: "Client currency",
     key: "currency",
     type: "select",
-    items: store.getters["currencies/all"].filter((c) => c !== "NCU"),
+    items: store.getters["currencies/all"]
+      .filter((c) => c.title !== "NCU")
+      .map((c) => ({ text: c.title, value: c.id })),
   },
   {
     title: "Access level",
@@ -280,7 +297,10 @@ const setOptions = (newOptions) => {
 const fetchAccounts = async () => {
   loading.value = true;
   try {
-    await store.dispatch("accounts/fetch", requestOptions.value);
+    await store.dispatch("accounts/fetch", {
+      ...requestOptions.value,
+      silent: true,
+    });
   } catch (err) {
     fetchError.value = "Can't reach the server";
     if (err.response && err.response.data.message) {
@@ -342,21 +362,8 @@ watch(customSearchParam, fetchAccountsDebounce);
 </script>
 
 <script>
-import search from "@/mixins/search";
-
 export default {
   name: "accounts-table",
-  mixins: [
-    search({
-      name: "accounts-table",
-      defaultLayout: {
-        title: "Default",
-        filter: {
-          status: ["1", "0"],
-        },
-      },
-    }),
-  ],
 };
 </script>
 

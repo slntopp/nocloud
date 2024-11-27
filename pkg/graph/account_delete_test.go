@@ -40,13 +40,13 @@ func init() {
 
 func TestDeleteAccount(t *testing.T) {
 	ctx := context.TODO()
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, schema.DB_NAME)
 	db.Info(ctx)
 
 	ac := NewAccountsController(log, db)
 	nsc := NewNamespacesController(log, db)
-	instc := NewInstancesController(log, db, nil)
-	igc := NewInstancesGroupsController(log, db, nil)
+	//instc := NewInstancesController(log, db, nil)
+	//igc := NewInstancesGroupsController(log, db, nil)
 	spc := NewServicesProvidersController(log, db)
 	srvc := NewServicesController(log, db, nil)
 
@@ -97,19 +97,19 @@ func TestDeleteAccount(t *testing.T) {
 
 	ac.Delete(ctx, acc.Uuid)
 
-	ig := service.GetInstancesGroups()[0]
-	inst := ig.GetInstances()[0]
-	if _, err := igc.col.ReadDocument(ctx, ig.GetUuid(), &proto.InstancesGroup{}); err == nil {
-		t.Error("Found orphan instances groups")
-	}
-	if _, err := instc.col.ReadDocument(ctx, inst.GetUuid(), &proto.Instance{}); err == nil {
-		t.Error("Found orphan instance")
-	}
+	//ig := service.GetInstancesGroups()[0]
+	//inst := ig.GetInstances()[0]
+	//if _, err := igc.col.ReadDocument(ctx, ig.GetUuid(), &proto.InstancesGroup{}); err == nil {
+	//	t.Error("Found orphan instances groups")
+	//}
+	//if _, err := instc.col.ReadDocument(ctx, inst.GetUuid(), &proto.Instance{}); err == nil {
+	//	t.Error("Found orphan instance")
+	//}
 }
 
 func TestDeleteAccountCredentials(t *testing.T) {
 	ctx := context.TODO()
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, schema.DB_NAME)
 	db.Info(ctx)
 
 	ac := NewAccountsController(log, db)

@@ -66,12 +66,17 @@
         <template v-else>
           <v-col cols="3" class="align-center d-flex">
             <v-subheader>Linked price model</v-subheader>
-            <v-autocomplete
-              clearable
-              @change="plan.meta.linkedPlan = $event ?? undefined"
+            <plans-auto-complete
               label="Price model"
-              :value="plan.meta.linkedPlan"
-              :items="filteredPlans"
+              clearable
+              fetch-value
+              :custom-params="{
+                filters: { type: [plan.type] },
+                showDeleted: false,
+                anonymously: true,
+                excludeUuids: plan.uuid ? [plan.uuid] : [],
+              }"
+              v-model="plan.meta.linkedPlan"
             />
           </v-col>
         </template>
@@ -88,7 +93,7 @@
         <v-col cols="2" class="align-center d-flex">
           <v-subheader
             >Auto start
-            <v-tooltip :bottom="!top" :top="top">
+            <v-tooltip>
               <template v-slot:activator="{ on, attrs }">
                 <div class="d-inline-block" v-bind="attrs" v-on="on">
                   <v-icon class="ml-2"> mdi-help-circle-outline </v-icon>
@@ -127,10 +132,12 @@
           :rules="rules"
           :type="plan.type"
           :resources="plan.resources"
+          :addons="plan.addons"
           :products="filteredProducts"
           @change:resource="(data) => changeConfig(data, 'resource')"
           @change:product="(data) => changeConfig(data, 'product')"
           @change:meta="(data) => changeMetaConfig(data, 'meta')"
+          @change:addons="(data) => changeAddons(data)"
         />
 
         <template v-else-if="plan.type === 'openai'">
@@ -238,11 +245,12 @@ import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { downloadPlanXlsx, getTimestamp } from "@/functions.js";
+import { downloadPlanXlsx } from "@/functions.js";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 import NocloudTable from "@/components/table.vue";
 import RichEditor from "@/components/ui/richEditor.vue";
+import plansAutoComplete from "@/components/ui/plansAutoComplete.vue";
 
 export default {
   name: "plansCreate-view",
@@ -255,6 +263,7 @@ export default {
     planOpensrs,
     JsonEditor,
     RichEditor,
+    plansAutoComplete,
   },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
@@ -304,7 +313,7 @@ export default {
 
       const configs =
         type === "resource"
-          ? this.plan.resources
+          ? this.resources
           : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
 
@@ -321,7 +330,7 @@ export default {
             return;
           }
           break;
-        case "date":
+        case "period":
           this.setPeriod(value, id);
           return;
         case "resources":
@@ -333,8 +342,8 @@ export default {
         case "amount":
           key = "resources";
       }
-
       if (product) product[key] = value;
+      else if (type === "resource") this.$set(id, key, value);
     },
     changeMetaConfig({ key, value, id }) {
       try {
@@ -350,101 +359,102 @@ export default {
       this.$set(product.meta, key, value);
       this.plan.meta = Object.assign({}, this.plan.meta);
     },
-    tryToSend(action, bindPlan = false) {
-      let message = "";
-
+    changeAddons(val) {
+      this.plan.addons = val;
+    },
+    async tryToSend(action, bindPlan = false) {
       if (!this.isValid || !this.isFeeValid) {
         this.$refs.form.validate();
-        message = "Validation failed!";
+        return this.showSnackbarError({ message: "Validation failed!" });
       }
 
-      if (message) {
-        this.showSnackbarError({ message });
-        return;
-      }
       if (action === "create") delete this.plan.uuid;
       if (this.plan.type === "custom") {
         this.plan.type = this.customTitle;
       }
 
-      function checkName({ title, uuid }, obj, num = 2) {
-        const value = obj.find(
-          (el) => el.title === title && el.uuid !== uuid && el.status !== "DEL"
-        );
-        const oldTitle = title.split(" ");
-
-        if (oldTitle.length > 1 && num !== 2) {
-          oldTitle[oldTitle.length - 1] = num;
-        } else oldTitle.push(num);
-
-        const plan = { title: oldTitle.join(" "), uuid };
-
-        if (value) return checkName(plan, obj, num + 1);
-        else return title;
-      }
-
       this.isLoading = true;
       this.isSetSpDialog = false;
       this.savePlanAction = action;
-      this.plan.title = checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
 
-      //quick periodKind fix
-      const periodMap = {
-        2592000: "CALENDAR_MONTH",
-        31536000: "CALENDAR_YEAR",
-      };
+      try {
+        //update or create descriptions
+        const descriptionPromises = [
+          ...this.resources.map((resource, index) =>
+            this.updateOrCreateDescription(resource, "resources", index)
+          ),
+          ...Object.keys(this.plan.products).map((key) =>
+            this.updateOrCreateDescription(
+              this.plan.products[key],
+              "products",
+              key
+            )
+          ),
+        ];
 
-      Object.keys(this.plan.products || {}).forEach((key) => {
-        this.plan.products[key].periodKind = periodMap[
-          this.plan.products[key].period
-        ]
-          ? periodMap[this.plan.products[key].period]
-          : "DEFAULT";
-      });
-
-      this.plan.resources = this.plan.resources.map((r) => {
-        r.periodKind = periodMap[r.period] ? periodMap[r.period] : "DEFAULT";
-        return r;
-      });
-
-      const request =
-        action === "edit"
-          ? api.plans.update(id, this.plan)
-          : api.plans.create(this.plan);
-
-      request
-        .then((data) => {
-          if (bindPlan) {
-            return api.servicesProviders.bindPlan(this.selectedSp[0].uuid, [
-              data.uuid,
-            ]);
-          }
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message:
-              action === "edit"
-                ? "Price model edited successfully"
-                : "Price model created successfully",
-          });
-          if (action !== "edit") {
-            this.$router.push({ name: "Plans" });
-          }
-          this.isDialogVisible = false;
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isLoading = false;
-          this.savePlanAction = "";
+        const descriptions = await Promise.all(descriptionPromises);
+        descriptions.forEach(({ descriptionId, type, id }) => {
+          this.plan[type][id].descriptionId = descriptionId;
         });
+
+        const request =
+          action === "edit"
+            ? api.plans.update(id, this.plan)
+            : api.plans.create(this.plan);
+
+        const data = await request;
+        if (bindPlan) {
+          await api.servicesProviders.bindPlan(this.selectedSp[0].uuid, [
+            data.uuid,
+          ]);
+        }
+
+        const message =
+          action === "edit"
+            ? "Price model edited successfully"
+            : "Price model created successfully";
+        this.showSnackbarSuccess({ message });
+
+        if (action !== "edit") {
+          this.$router.push({ name: "Plans" });
+        }
+        this.isDialogVisible = false;
+      } catch (err) {
+        this.showSnackbarError({ message: err });
+      } finally {
+        this.isLoading = false;
+        this.savePlanAction = "";
+      }
+    },
+    async updateOrCreateDescription(item, type, id) {
+      const { descriptionId, description } = item;
+      if (descriptionId) {
+        await this.$store.dispatch("descriptions/update", {
+          uuid: descriptionId,
+          text: description,
+        });
+
+        return {
+          descriptionId,
+          type,
+          id,
+        };
+      }
+
+      const data = await this.$store.dispatch("descriptions/create", {
+        text: description,
+      });
+      return {
+        descriptionId: data.uuid,
+        type,
+        id,
+      };
     },
     setPeriod(date, id) {
-      const period = getTimestamp(date);
-      const resource = this.plan.resources.find((el) => el.id === id);
+      const period = date;
+      const resource = this.resources.find((el) => el.id === id);
       const product = Object.values(this.plan.products).find(
         (el) => el.id === id
       );
@@ -483,17 +493,10 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("plans/fetch", { silent: true }).catch((err) => {
-      const message = err.response?.data?.message ?? err.message ?? err;
-
-      this.showSnackbarError({ message });
-      console.error(err);
-    });
-
     this.$store.dispatch("servicesProviders/fetch");
 
     if (this.isEdit) {
-      this.plan.resources = this.item.resources;
+      this.plan.resources = this.resources;
     }
     const types = require.context(
       "@/components/modules/",
@@ -520,16 +523,6 @@ export default {
       const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
 
       return () => import(`@/components/plans_${type}_table.vue`);
-    },
-    plans() {
-      return this.$store.getters["plans/all"];
-    },
-    filteredPlans() {
-      const items = this.plans.filter(
-        (plan) => plan.type === this.plan.type && plan.uuid !== this.plan.uuid
-      );
-
-      return items.map((item) => ({ text: item.title, value: item.uuid }));
     },
     viewport() {
       return document.documentElement.clientWidth;
@@ -586,6 +579,9 @@ export default {
     },
     isDeleted() {
       return this.plan.status === "DEL";
+    },
+    resources() {
+      return this.plan.resources || [];
     },
   },
   watch: {

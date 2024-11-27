@@ -52,38 +52,6 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }) {
-      return new Promise((resolve, reject) => {
-        commit("setLoading", true);
-        api.services
-          .list()
-          .then((response) => {
-            commit("setServices", response.pool);
-            for (let srv of response.pool) {
-              api.services
-                .get(srv.uuid)
-                .then((response) => {
-                  commit("setInstances", response);
-                  commit("setServicesFull", response);
-                  resolve(response);
-                })
-                .catch((error) => {
-                  reject(error);
-                })
-                .finally(() => {
-                  commit("setLoading", false);
-                });
-            }
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
-    },
     actionVMInvoke({ commit }, data) {
       return new Promise((resolve, reject) => {
         api.instances

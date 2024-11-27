@@ -98,7 +98,7 @@
             <v-text-field
               dense
               type="number"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               :value="item.price"
               :rules="[rules.price]"
               @change="(value) => changeProduct('price', value, item.id)"
@@ -107,8 +107,10 @@
           <template v-slot:[`item.period`]="{ item }">
             <date-field
               v-if="!isOneTime(item)"
-              :period="fullDate[item.id]"
+              :period="item.period"
+              :period-kind="item.periodKind"
               @changeDate="(value) => changeDate(value, item.id)"
+              @changePeriodKind="changePeriodKind($event, item.id)"
             />
           </template>
           <template v-slot:[`item.public`]="{ item }">
@@ -176,13 +178,10 @@
             />
           </template>
 
-          <template v-slot:[`item.resources`]="{ item }">
+          <template v-slot:[`item.addons`]="{ item }">
             <product-addons-dialog
-              :rules="rules"
-              :addons="resources.filter((r) => r.public && r.virtual)"
-              :product="item.key"
-              :item="item"
-              @update:addons="(value) => (item.meta.addons = value)"
+              @change:addons="changeProductAddons(item, $event)"
+              :addons="item.addons"
             />
           </template>
 
@@ -200,7 +199,8 @@
               <v-subheader class="px-0"> Description: </v-subheader>
               <rich-editor
                 class="html-editor"
-                v-model="item.meta.description"
+                @input="changeProduct('description', $event, item.id)"
+                :value="item.description"
               />
 
               <template v-if="type === 'empty'">
@@ -208,7 +208,7 @@
                   :rules="rules"
                   :resources="item.meta.resources ?? []"
                   @update:resource="
-                    (value) => changeMeta(value, item.id, item.meta.resources)
+                    changeMeta($event, item.id, item.meta?.resources)
                   "
                 />
               </template>
@@ -217,15 +217,14 @@
                 <v-subheader class="px-0"> Amount of resources </v-subheader>
                 <json-editor
                   :json="item.resources"
-                  @changeValue="
-                    (value) => changeProduct('amount', value, item.id)
-                  "
+                  @changeValue="changeProduct('amount', $event, item.id)"
                 />
               </template>
-
               <v-row>
                 <v-col>
-                  <v-subheader class="px-0 pt-4">Installation price:</v-subheader>
+                  <v-subheader class="px-0 pt-4"
+                    >Installation price:</v-subheader
+                  >
                   <v-text-field
                     dense
                     type="number"
@@ -233,7 +232,8 @@
                     :value="item.installationFee"
                     :suffix="defaultCurrency"
                     @input="
-                      (value) => changeProduct('installationFee', +value, item.id)
+                      (value) =>
+                        changeProduct('installationFee', +value, item.id)
                     "
                   />
                 </v-col>
@@ -245,7 +245,12 @@
                     style="width: 150px"
                     :value="item.meta.minDiskSize"
                     @input="
-                      (value) => changeProduct('meta', { ...item.meta, minDiskSize: +value }, item.id)
+                      (value) =>
+                        changeProduct(
+                          'meta',
+                          { ...item.meta, minDiskSize: +value },
+                          item.id
+                        )
                     "
                   />
                 </v-col>
@@ -257,7 +262,12 @@
                     style="width: 150px"
                     :value="item.meta.maxDiskSize"
                     @input="
-                      (value) => changeProduct('meta', { ...item.meta, maxDiskSize: +value }, item.id)
+                      (value) =>
+                        changeProduct(
+                          'meta',
+                          { ...item.meta, maxDiskSize: +value },
+                          item.id
+                        )
                     "
                   />
                 </v-col>
@@ -269,18 +279,16 @@
         <plans-resources-table
           v-else-if="tab === 'Resources'"
           :rules="rules"
-          :resources="resources.filter((v) => v.virtual === false)"
+          :resources="resources"
           :default-virtual="false"
           :type="type"
-          @change:resource="changeResource(false, $event)"
+          @change:resource="changeResource($event)"
         />
 
-        <plans-resources-table
+        <plan-addons-table
+          @change:addons="emits('change:addons', $event)"
           v-else-if="tab === 'Addons'"
-          :rules="rules"
-          :resources="resources.filter((v) => v.virtual === true)"
-          :type="type"
-          @change:resource="changeResource(true, $event)"
+          :addons="addons"
         />
       </v-tab-item>
     </v-tabs-items>
@@ -294,26 +302,31 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import plansEmptyTable from "@/components/plans_empty_table.vue";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 import productAddonsDialog from "@/components/product_addons_dialog.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
 
 const props = defineProps({
+  addons: { type: Array, required: true },
   type: { type: String, required: true },
   products: { type: Object, required: true },
   resources: { type: Array, required: true },
   rules: { type: Object },
 });
-const emits = defineEmits(["change:resource", "change:product", "change:meta"]);
+const emits = defineEmits([
+  "change:resource",
+  "change:product",
+  "change:meta",
+  "change:addons",
+]);
 const { products, resources, rules, type } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
 
 const productsArray = ref([]);
 const table = ref();
-const fullDate = ref({});
 const selected = ref([]);
 const expanded = ref([]);
 const tabsIndex = ref(0);
@@ -326,11 +339,7 @@ const groupActionPayload = ref("");
 const kinds = ["POSTPAID", "PREPAID"];
 
 const tabs = computed(() => {
-  if (type.value === "empty") {
-    return ["Products", "Resources", "Addons"];
-  }
-
-  return ["Products", "Resources"];
+  return ["Products", "Resources", "Addons"];
 });
 
 const headers = computed(() =>
@@ -347,9 +356,9 @@ const headers = computed(() =>
     { text: "Group", value: "group", width: 300 },
     { text: "Public", value: "public" },
     { text: "Sorter", value: "sorter" },
-    type.value === "empty" && {
+    {
       text: "Addons",
-      value: "resources",
+      value: "addons",
     },
   ].filter((f) => !!f)
 );
@@ -359,25 +368,24 @@ const newMeta = ref({ description: "" });
 
 onMounted(() => {
   setProductsArray();
-  setFullDates(products.value);
   setDefaultGroups();
 });
 
-function changeDate({ value }, id) {
-  fullDate.value[id] = value;
-  emits("change:product", { key: "date", value, id });
+function changeDate(value, id) {
+  emits("change:product", { key: "period", value, id });
+}
+
+function changePeriodKind(value, id) {
+  emits("change:product", { key: "periodKind", value, id });
 }
 
 function changeProduct(key, value, id) {
   emits("change:product", { key, value, id });
 }
 
-function changeResource(virtual, data) {
+function changeResource(data) {
   if (data.key === "resources") {
-    data.value = [
-      ...resources.value.filter((r) => r.virtual !== virtual),
-      ...data.value,
-    ];
+    data.value = [...data.value];
   }
   emits("change:resource", data);
 }
@@ -409,14 +417,22 @@ function changeOneTime(item, value) {
   changeProduct("meta", { ...item.meta, oneTime: value }, item.id);
 }
 
+function changeProductAddons(item, value) {
+  changeProduct("addons", value, item.id);
+}
+
 function isOneTime(item) {
-  return item.meta.oneTime;
+  return item.meta?.oneTime;
 }
 
 const setProductsArray = () => {
-  productsArray.value = Object.keys(products.value).map(
-    (key) => ({ ...products.value[key], key })
-  );
+  productsArray.value = Object.keys(products.value).map((key) => {
+    return {
+      meta: {},
+      ...products.value[key],
+      key,
+    };
+  });
 };
 
 const setDefaultGroups = () => {
@@ -468,10 +484,14 @@ const setGroup = (group, id) => {
 const copyProducts = () => {
   setProductsArray();
   const copiedProducts = [
-    ...selected.value.map((p) => JSON.parse(JSON.stringify({
-      ...p,
-      id: Math.random().toString(16).slice(2),
-    }))),
+    ...selected.value.map((p) =>
+      JSON.parse(
+        JSON.stringify({
+          ...p,
+          id: Math.random().toString(16).slice(2),
+        })
+      )
+    ),
   ];
 
   const newProducts = {};
@@ -489,11 +509,10 @@ const copyProducts = () => {
   }
 
   changeProduct("products", newProducts);
-  setFullDates(newProducts);
   selected.value = [];
 };
 
-const saveNewMeta = () => {
+const saveNewMeta = async () => {
   setProductsArray();
 
   const newProducts = {};
@@ -502,17 +521,17 @@ const saveNewMeta = () => {
     delete product.key;
     newProducts[key] = product;
   }
+
   for (const product of selected.value) {
     const key = product.key;
     delete product.key;
     newProducts[key] = {
       ...product,
-      meta: { ...product.meta, ...newMeta.value },
+      description: newMeta.value.description,
     };
   }
 
   changeProduct("products", newProducts);
-  setFullDates(newProducts);
 
   selected.value = [];
   isEditOpen.value = false;
@@ -553,12 +572,6 @@ function removeConfig() {
   });
   changeProduct("products", result);
 }
-
-const setFullDates = (products) => {
-  Object.values(products).forEach(({ period, id }) => {
-    fullDate.value[id] = getFullDate(period);
-  });
-};
 
 watch(table, (value) => {
   const { rows } = value[0].$el.children[1].children[0];

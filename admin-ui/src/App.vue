@@ -141,6 +141,18 @@
                 </v-list-item-content>
               </v-list-item>
 
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Addons' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-tab-plus</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Addons")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
               <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
                 <v-list-item-icon>
                   <v-icon>mdi-abacus</v-icon>
@@ -149,6 +161,18 @@
                 <v-list-item-content>
                   <v-list-item-title>{{
                     navTitle("Transactions")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Invoices' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-invoice-list</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Invoices")
                   }}</v-list-item-title>
                 </v-list-item-content>
               </v-list-item>
@@ -347,47 +371,12 @@
             </template>
             <v-col class="d-flex justify-end align-center" :style="(viewport < 600) ? 'padding: 6px' : null">
               <languages v-if="false" />
-              <themes v-if="viewport >= 600" />
-              <v-menu
-                v-if="isLoggedIn"
-                offset-y
-                transition="slide-y-transition"
-              >
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn
-                    class="mx-2"
-                    fab
-                    color="background-light"
-                    v-bind="attrs"
-                    v-on="on"
-                    :small="viewport < 600"
-                  >
-                    <v-icon dark> mdi-account </v-icon>
-                  </v-btn>
-                </template>
-                <v-list dence min-width="250px">
-                  <v-list-item>
-                    <v-list-item-content>
-                      <v-list-item-title class="text-h6">
-                        {{ userdata.title }}
-                      </v-list-item-title>
-                      <v-list-item-subtitle
-                        >#{{ userdata.uuid }}</v-list-item-subtitle
-                      >
-                    </v-list-item-content>
-                  </v-list-item>
-                  <v-list-item>
-                    <balance loged-in-user title="Balance: " style="margin-right: auto" />
-                    <themes v-if="viewport < 600" />
-                  </v-list-item>
-                  <v-divider></v-divider>
-                  <v-list-item @click="logoutHandler">
-                    <v-list-item-title>Logout</v-list-item-title>
-                  </v-list-item>
-                </v-list>
-              </v-menu>
+              <themes />
+              <notifications />
+              <user-menu v-if="isLoggedIn" />
             </v-col>
           </v-row>
+          <v-spacer></v-spacer>
         </v-app-bar>
 
         <v-main>
@@ -435,22 +424,24 @@ import { mapGetters } from "vuex";
 import useLoginClient from "@/hooks/useLoginInClient.js";
 import api from "@/api.js";
 import config from "@/config.js";
-import balance from "@/components/balance.vue";
-import languages from "@/components/languages.vue";
+import languages from "@/components/header/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
-import Themes from "@/components/themes.vue";
+import Themes from "@/components/header/themes.vue";
+import userMenu from "@/components/header/userMenu.vue";
+import notifications from "@/components/header/notifications.vue";
 
 export default {
   name: "App",
   components: {
     Themes,
     AppSnackbar,
-    balance,
     appSearch,
     languages,
     instancesTableModal,
+    userMenu,
+    notifications
   },
   setup() {
     const { loginHandler } = useLoginClient();

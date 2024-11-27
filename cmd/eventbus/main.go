@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"net"
 
@@ -27,6 +28,7 @@ var (
 
 	arangodbHost string
 	arangodbCred string
+	arangodbName string
 
 	SIGNING_KEY []byte
 
@@ -44,6 +46,7 @@ func init() {
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DB_NAME", schema.DB_NAME)
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
@@ -52,6 +55,7 @@ func init() {
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	arangodbName = viper.GetString("DB_NAME")
 	redisHost = viper.GetString("REDIS_HOST")
 
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
@@ -66,7 +70,7 @@ func main() {
 	}()
 
 	log.Info("Setting up DB Connection")
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	log.Info("DB connection established")
 
 	log.Info("Setting up RabbitMQ Connection")
@@ -100,7 +104,7 @@ func main() {
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 
-	server := eventbus.NewServer(log, conn, db)
+	server := eventbus.NewServer(log, rabbitmq.NewRabbitMQConnection(conn), db)
 	go server.ListenBusQueue(ctx)
 	pb.RegisterEventsServiceServer(s, server)
 

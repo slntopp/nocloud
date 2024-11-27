@@ -2,8 +2,8 @@ package eventbus
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"go.uber.org/zap"
 )
@@ -15,8 +15,7 @@ type EventBus struct {
 	log      *zap.Logger
 }
 
-func NewEventBus(conn *amqp.Connection, logger *zap.Logger) (*EventBus, error) {
-
+func NewEventBus(conn rabbitmq.Connection, logger *zap.Logger) (*EventBus, error) {
 	log := logger.Named("EventBus")
 
 	log.Info("creating new EventBus instance")

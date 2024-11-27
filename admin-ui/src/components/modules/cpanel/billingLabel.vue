@@ -2,7 +2,7 @@
   <billing-label
     :account="account"
     :template="template"
-    :addons-price="0"
+    :addons-price="addonsPrices"
     :tariff-price="tariffPrice"
     :due-date="dueDate"
     @update="emit('update', $event)"
@@ -10,20 +10,35 @@
 </template>
 
 <script setup>
-import { computed, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import billingLabel from "@/components/ui/billingLabel.vue";
 
-const props = defineProps(["template", "account"]);
+const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["update"]);
 
-const { template, account } = toRefs(props);
+const { template, account, addons } = toRefs(props);
 
-const tariffPrice = computed(
-  () =>
-    template.value.billingPlan.products[template.value.resources.plan]?.price ??
-    0
-);
+const tariffPrice = ref(0);
+const addonsPrices = ref({});
+
+onMounted(() => {
+  const prices = {};
+
+  addons.value.forEach(
+    (a) =>
+      (prices[a.uuid] =
+        a.periods[
+          template.value.billingPlan.products[template.value.product]?.period
+        ])
+  );
+
+  addonsPrices.value = prices;
+
+  tariffPrice.value =
+    (template.value.estimate || 0) -
+    Object.keys(prices).reduce((acc, key) => acc + prices[key], 0);
+});
 
 const dueDate = computed(() => {
   return formatSecondsToDate(+template.value?.data?.next_payment_date);

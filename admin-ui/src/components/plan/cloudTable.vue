@@ -39,13 +39,13 @@
           <template v-slot:[`item.endPrice`]="{ item }">
             <v-text-field
               style="width: 200px"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model.number="item.endPrice"
               type="number"
             />
           </template>
           <template v-slot:[`item.price`]="{ value }">
-            {{ value }} {{ defaultCurrency }}
+            {{ value }} {{ defaultCurrency?.title }}
           </template>
           <template v-slot:[`item.gpu.model`]="{ item }">
             <template v-if="item.gpu.model !== ''">
@@ -95,6 +95,12 @@
           </template>
         </nocloud-table>
       </v-tab-item>
+      <v-tab-item key="addons">
+        <plan-addons-table
+          @change:addons="planAddons = $event"
+          :addons="template.addons"
+        />
+      </v-tab-item>
     </v-tabs-items>
   </div>
 </template>
@@ -114,6 +120,7 @@ import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
 import { getMarginedValue } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 
 const props = defineProps({
   fee: { type: Object, required: true },
@@ -130,7 +137,7 @@ const { convertFrom, defaultCurrency } = useCurrency();
 
 const expanded = ref([]);
 const tab = ref("prices");
-const tabItems = ref(["flavors", "images"]);
+const tabItems = ref(["flavors", "images", "addons"]);
 const regions = ref([]);
 const flavors = ref({});
 const prices = ref({});
@@ -139,6 +146,7 @@ const selectedRegion = ref("");
 const isFlavoursLoading = ref(false);
 const isImagesLoading = ref(false);
 const isRegionsLoading = ref(false);
+const planAddons = ref([]);
 
 const pricesHeaders = ref([
   { text: "Title", value: "name" },
@@ -179,6 +187,8 @@ const projectId = computed(() => {
 });
 
 onMounted(async () => {
+  planAddons.value = [...(template.value.addons || [])];
+
   await store.dispatch("servicesProviders/fetchById", sp.value.uuid);
   isRegionsLoading.value = true;
   try {
@@ -236,7 +246,7 @@ const fetchFlavours = async () => {
         const planCode = `${period} ${flavour.id}`;
         const price = convertFrom(
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]],
-          "PLN"
+          { title: "PLN" }
         );
 
         newFlavours.push({
@@ -357,6 +367,8 @@ const changePlan = (plan) => {
       };
     });
   });
+
+  plan.addons = planAddons.value;
 };
 const setEnabledToValues = (value, status) => {
   value = value[selectedRegion.value].map((i) => {

@@ -18,6 +18,7 @@ package proxy_test
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"testing"
 
 	pb "github.com/slntopp/nocloud-proto/services_providers"
@@ -31,6 +32,7 @@ import (
 var (
 	arangodbHost string
 	arangodbCred string
+	arangodbName string
 
 	ctrl graph.ServicesProvidersController
 )
@@ -41,13 +43,15 @@ func init() {
 
 	viper.SetDefault("DB_HOST", "db.nocloud.local:80")
 	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DB_NAME", schema.DB_NAME)
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	arangodbName = viper.GetString("DB_NAME")
 
 	log := zap.NewExample()
 
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	ctrl = graph.NewServicesProvidersController(log, db)
 
 	proxy.Setup(log, ctrl)

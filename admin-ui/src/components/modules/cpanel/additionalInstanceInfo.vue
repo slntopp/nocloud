@@ -2,24 +2,84 @@
   <v-row>
     <v-col cols="2">
       <v-text-field
-        readonly
         :value="template.config.domain"
         label="Domain"
-        @click:append="addToClipboard(template.config.domain)"
-        append-icon="mdi-content-copy"
-      />
+        @input="emit('update', { key: 'config.domain', value: $event })"
+      >
+        <template v-slot:append>
+          <v-icon>mdi-pencil</v-icon>
+          <v-icon class="ml-1" @click="addToClipboard(template.config.domain)"
+            >mdi-content-copy</v-icon
+          >
+        </template>
+      </v-text-field>
     </v-col>
     <v-col cols="2">
       <v-text-field
-        readonly
+        @input="emit('update', { key: 'config.email', value: $event })"
         :value="template.config.email"
         label="Email"
-        @click:append="addToClipboard(template.config.email)"
-        append-icon="mdi-content-copy"
-      />
+      >
+        <template v-slot:append>
+          <v-icon>mdi-pencil</v-icon>
+          <v-icon class="ml-1" @click="addToClipboard(template.config.email)"
+            >mdi-content-copy</v-icon
+          >
+        </template>
+      </v-text-field>
     </v-col>
     <v-col cols="2">
-      <password-text-field :value="template.config.password" copy />
+      <password-text-field
+        @input="emit('update', { key: 'config.password', value: $event })"
+        :readonly="false"
+        :value="template.config?.password || template.data?.password"
+        copy
+      />
+    </v-col>
+
+    <v-col cols="2">
+      <v-text-field
+        append-icon="mdi-pencil"
+        @input="emit('update', { key: 'resources.bandwidth', value: $event })"
+        :value="template.resources.bandwidth"
+        label="Bandwidth"
+      />
+    </v-col>
+
+    <v-col cols="1">
+      <v-text-field
+        append-icon="mdi-pencil"
+        @input="emit('update', { key: 'resources.ssd', value: $event })"
+        :value="template.resources.ssd"
+        label="SSD (GB)"
+      />
+    </v-col>
+
+    <v-col cols="1">
+      <v-text-field
+        append-icon="mdi-pencil"
+        @input="emit('update', { key: 'resources.email', value: $event })"
+        :value="template.resources.email"
+        label="Email"
+      />
+    </v-col>
+
+    <v-col cols="1">
+      <v-text-field
+        append-icon="mdi-pencil"
+        @input="emit('update', { key: 'resources.mysql', value: $event })"
+        :value="template.resources.mysql"
+        label="MySQL"
+      />
+    </v-col>
+
+    <v-col cols="1">
+      <v-text-field
+        append-icon="mdi-pencil"
+        @input="emit('update', { key: 'resources.websites', value: $event })"
+        :value="template.resources.websites"
+        label="Websites"
+      />
     </v-col>
   </v-row>
 </template>
@@ -30,8 +90,9 @@ import PasswordTextField from "@/components/ui/passwordTextField.vue";
 import { addToClipboard } from "@/functions";
 
 const props = defineProps(["template", "sp"]);
-
 const { template } = toRefs(props);
+
+const emit = defineEmits(["update"]);
 </script>
 
 <style scoped></style>

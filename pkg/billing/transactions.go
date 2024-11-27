@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"time"
 
+	"connectrpc.com/connect"
+
 	"google.golang.org/protobuf/types/known/structpb"
 
 	epb "github.com/slntopp/nocloud-proto/events"
@@ -28,7 +30,6 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -36,30 +37,28 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, acc, uuid string) (*pb.Transactions, error) {
+func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, acc, uuid string) (*connect.Response[pb.Transactions], error) {
 	tr, err := s.transactions.Get(ctx, uuid)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
+	ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
 
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
-	tr.Uuid = uuid
+	resp := connect.NewResponse(&pb.Transactions{Pool: []*pb.Transaction{tr}})
 
-	return &pb.Transactions{
-		Pool: []*pb.Transaction{
-			tr,
-		},
-	}, nil
+	return resp, nil
 }
 
-func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetTransactionsRequest) (*pb.Transactions, error) {
+func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.Request[pb.GetTransactionsRequest]) (*connect.Response[pb.Transactions], error) {
 	log := s.log.Named("GetTransactions")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
+
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	acc := requestor
@@ -67,6 +66,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	query := `FOR t IN @@transactions`
 	vars := map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
+		"@currencies":   schema.CUR_COL,
 	}
 
 	if req.GetUuid() != "" {
@@ -76,7 +76,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
@@ -90,7 +90,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
@@ -137,7 +137,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 			vars["count"] = limit
 		}
 	}
-	query += ` RETURN t`
+	query += ` RETURN MERGE(t, {currency: DOCUMENT(@@currencies, TO_STRING(t.currency.id))})`
 
 	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
 
@@ -164,17 +164,21 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	}
 
 	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-	return &pb.Transactions{Pool: transactions}, nil
+
+	resp := connect.NewResponse(&pb.Transactions{Pool: transactions})
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Transaction) (*pb.Transaction, error) {
+func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *connect.Request[pb.Transaction]) (*connect.Response[pb.Transaction], error) {
 	log := s.log.Named("CreateTransaction")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	t := req.Msg
+	log.Debug("Request received", zap.Any("transaction", t), zap.String("requester", requester))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
-	if !ok {
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
+	if !ok && !hasInternalAccess(ctx) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
@@ -183,53 +187,18 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 
-	/*var baseRec, prevRec string
-
-	if t.Base != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &baseRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}
-
-	if t.Previous != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &prevRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}*/
-
 	recBody := &pb.Record{
 		Start:     time.Now().Unix(),
 		End:       time.Now().Unix() + 1,
 		Exec:      time.Now().Unix(),
 		Processed: true,
 		Priority:  t.GetPriority(),
-		Total:     t.GetTotal(),
+		Total:     1,
 		Currency:  t.GetCurrency(),
 		Service:   t.GetService(),
 		Account:   t.GetAccount(),
 		Meta:      t.GetMeta(),
+		Cost:      t.GetTotal(),
 	}
 
 	if t.GetBase() != "" {
@@ -256,7 +225,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
 
-	eventsClient.Publish(ctx, &epb.Event{
+	_, _ = s.eventsClient.Publish(ctx, &epb.Event{
 		Type: "email",
 		Uuid: t.GetAccount(),
 		Key:  "transaction_created",
@@ -265,8 +234,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	if r.Transaction.Priority == pb.Priority_URGENT && r.Transaction.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -284,26 +253,25 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
+		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
 
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		var cur pb.Currency
+		var cur *pb.Currency
 
 		if dbAcc.Currency == nil {
-			cur = pb.Currency_NCU
+			cur = currencyConf.Currency
 		} else {
-			cur = *dbAcc.Currency
+			cur = dbAcc.Currency
 		}
 
 		var rate float64 = 1
 
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
-
+		if cur.GetId() != currencyConf.Currency.GetId() {
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -324,13 +292,13 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		}
 
 		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
+			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
+			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -340,7 +308,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	} else {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
 			"@transactions":  schema.TRANSACTIONS_COL,
@@ -357,12 +325,15 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		}
 	}
 
-	return r.Transaction, nil
+	resp := connect.NewResponse(r.Transaction)
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb.GetTransactionsCountRequest) (*pb.GetTransactionsCountResponse, error) {
+func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *connect.Request[pb.GetTransactionsCountRequest]) (*connect.Response[pb.GetTransactionsCountResponse], error) {
 	log := s.log.Named("GetTransactionsCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	acc := requestor
@@ -375,7 +346,7 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
@@ -389,7 +360,7 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
@@ -426,27 +397,24 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 
 	log.Info("transactions count", zap.Int64("count", cursor.Count()))
 
-	return &pb.GetTransactionsCountResponse{
-		Total: uint64(cursor.Count()),
-	}, nil
+	resp := connect.NewResponse(&pb.GetTransactionsCountResponse{Total: uint64(cursor.Count())})
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Transaction) (*pb.UpdateTransactionResponse, error) {
+func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect.Request[pb.Transaction]) (*connect.Response[pb.UpdateTransactionResponse], error) {
 	log := s.log.Named("UpdateTransaction")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
+	log.Debug("Request received", zap.Any("transaction", req), zap.String("requester", requester))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
 	t, err := s.transactions.Get(ctx, req.GetUuid())
-	if err != nil {
-		return nil, err
-	}
-
 	if err != nil {
 		log.Error("Failed to get transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get transaction")
@@ -482,8 +450,8 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 	if t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
+		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -501,26 +469,25 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
+		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
 
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		var cur pb.Currency
+		var cur *pb.Currency
 
 		if dbAcc.Currency == nil {
-			cur = pb.Currency_NCU
+			cur = currencyConf.Currency
 		} else {
-			cur = *dbAcc.Currency
+			cur = dbAcc.Currency
 		}
 
 		var rate float64 = 1
 
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
-
+		if cur.GetId() != currencyConf.Currency.GetId() {
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -541,13 +508,13 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		}
 
 		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
+			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
+			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
@@ -555,7 +522,9 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		}
 	}
 
-	return &pb.UpdateTransactionResponse{Result: true}, nil
+	resp := connect.NewResponse(&pb.UpdateTransactionResponse{Result: true})
+
+	return resp, nil
 }
 
 const processUrgentTransaction = `
@@ -565,8 +534,8 @@ LET transaction = DOCUMENT(@transactionKey)
 LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
@@ -575,7 +544,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {total: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key, payment_date: @now}), exec: transaction.exec} in @@records
+	UPDATE r WITH {cost: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key, payment_date: @now}), exec: transaction.exec} in @@records
 
 UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
 UPDATE account WITH { balance: account.balance - total } IN @@accounts
@@ -590,8 +559,8 @@ LET transaction = DOCUMENT(@transactionKey)
 LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
@@ -600,7 +569,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {total: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
+	UPDATE r WITH {cost: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
 
 UPDATE transaction WITH {currency: currency, total: total} IN @@transactions
 RETURN transaction
@@ -622,8 +591,8 @@ FILTER t.exec <= @now
 FILTER t.account == account._key
 	LET rate = PRODUCT(
 		FOR vertex, edge IN OUTBOUND
-		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency)))
-		TO DOCUMENT(CONCAT(@currencies, "/", currency))
+		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency.id)))
+		TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 		GRAPH @graph
 		FILTER edge
 			RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
@@ -635,15 +604,17 @@ FOR t IN transactions
     RETURN t
 `
 
-func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessTransactionsRequest) (*pb.Transactions, error) {
+func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request[pb.ReprocessTransactionsRequest]) (*connect.Response[pb.Transactions], error) {
 	log := s.log.Named("Reprocess")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
-	currencyConf := MakeCurrencyConf(ctx, log)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -680,5 +651,27 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessT
 	}
 
 	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-	return &pb.Transactions{Pool: transactions}, nil
+	resp := connect.NewResponse(&pb.Transactions{Pool: transactions})
+	return resp, nil
+}
+
+func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency) (*pb.Transaction, error) {
+	if amount == 0 {
+		return nil, nil
+	}
+	if curr == nil {
+		conf := MakeCurrencyConf(ctx, s.log, &s.settingsClient)
+		curr = conf.Currency
+	}
+	resp, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+		Exec:     time.Now().Unix(),
+		Priority: pb.Priority_URGENT,
+		Account:  account,
+		Total:    amount,
+		Currency: curr,
+	}))
+	if err != nil {
+		return nil, err
+	}
+	return resp.Msg, nil
 }

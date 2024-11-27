@@ -24,11 +24,16 @@
       v-model="tabsIndex"
     >
       <v-tab-item v-for="tab of tabs" :key="tab.title">
-        <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
+        <v-progress-linear
+          indeterminate
+          class="pt-2"
+          v-if="isLoading || isAddonsLoading"
+        />
         <component
           v-else
           :is="tab.component"
           :template="instance"
+          :addons="addons"
           :account="account"
         />
       </v-tab-item>
@@ -40,7 +45,6 @@
 import config from "@/config.js";
 import snackbar from "@/mixins/snackbar";
 import api from "@/api";
-import { mapGetters } from "vuex";
 
 let socket;
 
@@ -51,6 +55,8 @@ export default {
     navTitles: config.navTitles ?? {},
     isLoading: false,
     account: null,
+    addons: [],
+    isAddonsLoading: false,
   }),
   mixins: [snackbar],
   methods: {
@@ -95,15 +101,63 @@ export default {
         };
       }
     },
+    async fetchAddons() {
+      const addons = [];
+      this.isAddonsLoading = true;
+      try {
+        await Promise.allSettled(
+          (this.instance.addons || []).map(async (uuid) => {
+            const addon = await this.$store.getters["addons/addonsClient"].get({
+              uuid,
+            });
+            addons.push(addon.toJson());
+          })
+        );
+      } finally {
+        this.isAddonsLoading = false;
+        this.addons = addons;
+      }
+    },
+    async fetchInstanceData() {
+      try {
+        this.isLoading = true;
+        await Promise.all([
+          this.$store.dispatch("instances/get", this.$route.params?.instanceId),
+        ]);
+
+        this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+        this.$store.dispatch("services/fetch", {
+          filters: { uuid: [this.instance.service] },
+        });
+        this.$store.dispatch("namespaces/fetch", {
+          filters: { uuid: [this.instance.namespace] },
+        });
+        this.account = await api.accounts.get(this.instance.account);
+      } catch (err) {
+        console.log(err);
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: err.message,
+        });
+      } finally {
+        this.isLoading = false;
+      }
+
+      this.initSocket();
+    },
   },
   computed: {
-    ...mapGetters("namespaces", { namespaces: "all" }),
     instance() {
-      const id = this.$route.params?.instanceId;
+      const instanceResponse = this.$store.getters["instances/one"];
 
-      return this.$store.getters["services/getInstances"].find(
-        ({ uuid }) => uuid === id
-      );
+      if (!instanceResponse) {
+        return;
+      }
+
+      return {
+        ...instanceResponse.instance,
+        ...instanceResponse,
+        instance: undefined,
+      };
     },
     tabs() {
       return [
@@ -138,11 +192,6 @@ export default {
         },
       ].filter((el) => !!el);
     },
-    namespace() {
-      return this.namespaces?.find(
-        (n) => n.uuid == this.instance?.access.namespace
-      );
-    },
     instanceTitle() {
       if (this.isLoading) {
         return "...";
@@ -154,33 +203,13 @@ export default {
       return this.instance.title;
     },
   },
-  async mounted() {
+  mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
-      params: {
-        showDeleted: true,
-      },
+      event: this.fetchInstanceData,
     });
-    try {
-      this.isLoading = true;
-      await Promise.all([
-        this.$store.dispatch("namespaces/fetch"),
-        this.$store.dispatch("services/fetch", { showDeleted: true }),
-      ]);
 
-      this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
-      this.$store.dispatch("plans/fetch");
-
-      this.account = await api.accounts.get(this.namespace.access.namespace);
-    } catch (err) {
-      this.$store.commit("snackbar/showSnackbarError", {
-        message: err.message,
-      });
-    } finally {
-      this.isLoading = false;
-    }
-
-    this.initSocket();
+    this.fetchInstanceData();
   },
   destroyed() {
     socket?.close(1000, "job is done");
@@ -190,6 +219,7 @@ export default {
       if (newVal) {
         this.initSocket();
         this.$store.dispatch("plans/fetchItem", this.instance.billingPlan.uuid);
+        this.fetchAddons();
       }
     },
     instanceTitle(newVal) {

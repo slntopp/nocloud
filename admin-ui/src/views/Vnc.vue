@@ -374,10 +374,9 @@ export default {
   created() {
     document.title = `Console ${this.instanceId} | NoCloud`;
 
-    const instances = this.$store.getters["vnc/getInstances"];
-    if (instances.length > 0) return;
+    if (this.instance) return;
 
-    this.$store.dispatch("vnc/fetch").catch((err) => {
+    this.$store.dispatch("instances/get", this.instanceId).catch((err) => {
       this.$router.go(-1);
       alert(err);
     });
@@ -396,7 +395,12 @@ export default {
         .then((res) => {
           this.token = res.meta.token;
           this.desktopName = this.instance?.title ?? "Unknown";
-          this.url = `wss://${this.instance.sp}.proxy.nocloud.ione-cloud.net/socket?${res.meta.url}`;
+
+          this.url = `wss://${
+            this.instance.sp
+          }.${window.location.hostname.replace("api", "proxy")}/socket?${
+            res.meta.url
+          }`;
           this.connect(this.$store.state.auth.token);
         })
         .catch((err) => console.error(err));
@@ -426,12 +430,20 @@ export default {
       return this.$route.params.instanceId;
     },
     instance() {
-      return this.$store.getters["vnc/getInstances"].find(
-        (inst) => inst.uuid === this.instanceId
-      );
+      if (!this.$store.getters["instances/one"]) {
+        return;
+      }
+
+      return {
+        ...this.$store.getters["instances/one"].instance,
+        ...this.$store.getters["instances/one"],
+      };
     },
     isLoading() {
-      return this.$store.getters["vnc/isLoading"];
+      return (
+        this.$store.getters["vnc/isLoading"] ||
+        this.$store.getters["instances/isLoading"]
+      );
     },
   },
   watch: {

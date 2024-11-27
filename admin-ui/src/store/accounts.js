@@ -34,7 +34,10 @@ export default {
   actions: {
     fetch({ commit }, params) {
       commit("setAccounts", []);
-      commit("setLoading", true);
+      if (!params.silent) {
+        commit("setLoading", true);
+      }
+
       return new Promise((resolve, reject) => {
         api
           .post("accounts", params)

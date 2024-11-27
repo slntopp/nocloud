@@ -1,5 +1,5 @@
 <template>
-  <div class="namespaces pa-4 flex-wrap">
+  <div class="accounts pa-4 flex-wrap">
     <div class="buttons__inline pb-8 pt-4">
       <v-menu
         offset-y
@@ -67,17 +67,6 @@
             </v-row>
             <v-row>
               <v-col>
-                <v-autocomplete
-                  dense
-                  :items="namespacesForSelect"
-                  v-model="newAccount.namespace"
-                  label="namespace"
-                  :rules="rules.required"
-                ></v-autocomplete>
-              </v-col>
-            </v-row>
-            <v-row>
-              <v-col>
                 <v-select
                   dense
                   :items="accessLevels"
@@ -94,6 +83,9 @@
                   dense
                   :items="currencies"
                   v-model="newAccount.currency"
+                  return-object
+                  item-value="id"
+                  item-text="title"
                   label="currency"
                 ></v-select>
               </v-col>
@@ -195,7 +187,6 @@ export default {
           (value) => !!value || "Title is required",
           (value) => (value || "").length >= 3 || "Min 3 characters",
         ],
-        required: [(value) => !!value || "Namespace is required"],
         email: [
           (value) =>
             !!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.exec(value) || "Wrong email",
@@ -223,7 +214,7 @@ export default {
           type: "standard",
           data: ["", ""],
         },
-        namespace: "",
+        namespace: "0",
         access: 1,
         currency: this.defaultCurrency,
         data: {
@@ -354,22 +345,13 @@ export default {
     },
   },
   computed: {
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
-    namespacesForSelect() {
-      let namespaces = this.namespaces ?? [];
-      namespaces = namespaces.map((namespace) => ({
-        text: namespace.title,
-        value: namespace.uuid,
-      }));
-      return namespaces;
-    },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
     currencies() {
-      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
+      return this.$store.getters["currencies/all"].filter(
+        (c) => c.title !== "NCU"
+      );
     },
     changeStateButtons() {
       return [

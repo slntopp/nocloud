@@ -164,6 +164,14 @@ const routes = [
     },
   },
   {
+    path: "/settings/invoices",
+    name: "InvoicesSetting",
+    component: () => import("../views/InvoicesSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/plugin/:title",
     name: "Plugin",
     component: () => import("../views/PluginPage.vue"),
@@ -360,6 +368,54 @@ const routes = [
     path: "/showcases/create",
     name: "CreateShowcase",
     component: () => import("../views/ShowcaseCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/addons",
+    name: "Addons",
+    component: () => import("../views/Addons.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/addons/create",
+    name: "Addon create",
+    component: () => import("../views/AddonCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/addons/:uuid",
+    name: "Addon page",
+    component: () => import("../views/AddonPage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/invoices",
+    name: "Invoices",
+    component: () => import("../views/Invoices.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/invoices/create",
+    name: "Invoice create",
+    component: () => import("../views/InvoiceCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/invoices/:uuid",
+    name: "Invoice page",
+    component: () => import("../views/InvoicePage.vue"),
     meta: {
       requireLogin: true,
     },

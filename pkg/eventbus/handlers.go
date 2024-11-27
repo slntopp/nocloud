@@ -26,6 +26,7 @@ var handlers = map[string]EventHandler{
 	"instance_renew":              GetInstAccountHandler,
 	"pending_notification":        GetInstAccountHandler,
 	"instance_credentials":        GetInstAccountHandler,
+	"inactive_chat_closed":        nil,
 	"logging":                     EventLoggingHandler,
 }
 
@@ -52,17 +53,17 @@ LET account = LAST(
 
 LET rate_one = LAST(
 	FOR i IN @@c2c
-    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
+    FILTER (i.to.id == 0 || i.from.id == 0) && i.rate == 1
         RETURN i
 )
 
-LET default_cur = rate_one.to == 0 ? rate_one.from : rate_one.to
+LET default_cur = rate_one.to.id == 0 ? rate_one.from : rate_one.to
 
 LET currency = account.currency != null ? account.currency : default_cur
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", default_cur))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", default_cur.id))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate

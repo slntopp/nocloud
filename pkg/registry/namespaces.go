@@ -37,6 +37,7 @@ type NamespacesServiceServer struct {
 	db       driver.Database
 	ctrl     graph.NamespacesController
 	acc_ctrl graph.AccountsController
+	ca       graph.CommonActionsController
 
 	log *zap.Logger
 }
@@ -49,6 +50,9 @@ func NewNamespacesServer(log *zap.Logger, db driver.Database) *NamespacesService
 		),
 		acc_ctrl: graph.NewAccountsController(
 			log.Named("AccountsController"), db,
+		),
+		ca: graph.NewCommonActionsController(
+			log, db,
 		),
 	}
 }
@@ -126,12 +130,12 @@ func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacesp
 
 	var ok bool
 	var level access.Level
-	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID)
+	ok, level = s.ca.AccessLevel(ctx, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID)
 	if !ok || level < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
+	ok, level = s.ca.AccessLevel(ctx, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
 	if !ok || level < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -171,7 +175,7 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 
-	ok, level := graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
+	ok, level := s.ca.AccessLevel(ctx, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
 	if !ok || level < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -209,7 +213,7 @@ func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespace
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -235,7 +239,7 @@ func (s *NamespacesServiceServer) Get(ctx context.Context, request *namespacespb
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -255,7 +259,7 @@ func (s *NamespacesServiceServer) Patch(ctx context.Context, request *namespaces
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 

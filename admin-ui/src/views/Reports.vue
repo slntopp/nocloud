@@ -22,12 +22,19 @@
       no-hide-uuid
     >
       <template v-slot:[`item.uuid`]="{ value }">
-        <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
+        <router-link
+          v-if="!isInstancesLoading"
+          :to="{ name: 'Instance', params: { instanceId: value } }"
+        >
           {{ getShortName(getInstance(value)?.title || value, 100) }}
         </router-link>
+
+        <v-skeleton-loader type="text" v-else />
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        {{ `${convertTo(item.total, item.currency)} ${defaultCurrency}` }}
+        {{
+          `${convertTo(item.total, item.currency)} ${defaultCurrency?.title}`
+        }}
       </template>
     </nocloud-table>
   </v-card>
@@ -50,6 +57,7 @@ const count = ref(10);
 const page = ref(1);
 const isFetchLoading = ref(false);
 const isCountLoading = ref(false);
+const isInstancesLoading = ref(false);
 const fetchError = ref("");
 const options = ref({});
 const durationFilter = ref({ to: "", from: "" });
@@ -60,21 +68,13 @@ const reportsHeaders = [
   { text: "Total in default currency", value: "totalDefaultPreview" },
 ];
 
-const fetchData = () => {
-  store.dispatch("services/fetch", { showDeleted: true });
-};
-
 onMounted(() => {
-  fetchData();
   store.commit("reloadBtn/setCallback", {
     event: () => {
-      fetchData();
       onUpdateOptions(options.value);
     },
   });
 });
-
-const instances = computed(() => store.getters["services/getInstances"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -106,7 +106,7 @@ const onUpdateOptions = async (newOptions) => {
     reports.value = result.map((r) => {
       return {
         uuid: r.uuid,
-        totalPreview: `${r.total.toFixed(2)} ${r.currency}`,
+        totalPreview: `${r.total.toFixed(2)} ${r.currency?.title}`,
         total: r.total,
         currency: r.currency,
       };
@@ -138,7 +138,7 @@ const init = async () => {
 };
 
 const getInstance = (uuid) => {
-  return instances.value.find((i) => i.uuid === uuid) || uuid;
+  return store.getters["instances/cached"].get(uuid) || uuid;
 };
 
 watch(
@@ -148,6 +148,19 @@ watch(
   },
   { deep: true }
 );
+
+watch(reports, async () => {
+  isInstancesLoading.value = true;
+  try {
+    await Promise.all(
+      reports.value.map(({ uuid }) =>
+        store.dispatch("instances/fetchToCached", uuid)
+      )
+    );
+  } finally {
+    isInstancesLoading.value = false;
+  }
+});
 </script>
 
 <script>

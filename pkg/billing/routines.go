@@ -22,57 +22,21 @@ import (
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
-	epb "github.com/slntopp/nocloud-proto/events"
 	hpb "github.com/slntopp/nocloud-proto/health"
-	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
-	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-var (
-	settingsClient settingspb.SettingsServiceClient
-	accClient      regpb.AccountsServiceClient
-	eventsClient   epb.EventsServiceClient
-)
-
-func init() {
-	viper.AutomaticEnv()
-	viper.SetDefault("SETTINGS_HOST", "settings:8000")
-	viper.SetDefault("REGISTRY_HOST", "registry:8000")
-	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
-	settingsHost := viper.GetString("SETTINGS_HOST")
-	registryHost := viper.GetString("REGISTRY_HOST")
-	eventsHost := viper.GetString("EVENTS_HOST")
-
-	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	settingsClient = settingspb.NewSettingsServiceClient(settingsConn)
-
-	accConn, err := grpc.Dial(registryHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	accClient = regpb.NewAccountsServiceClient(accConn)
-
-	eventsConn, err := grpc.Dial(eventsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	eventsClient = epb.NewEventsServiceClient(eventsConn)
-}
-
-func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatus {
+func (s *BillingServiceServer) RoutinesState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
-		s.gen, s.proc,
+		s.gen, s.proc, s.sus, s.cron,
 	}
 }
+
+const updateDataQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+`
 
 func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Logger, tick time.Time,
 	currencyConf CurrencyConf, roundingConf RoundingConf) {
@@ -81,16 +45,18 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 	s.gen.Status.Error = nil
 
 	_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
-		"@transactions": schema.TRANSACTIONS_COL,
-		"@instances":    schema.INSTANCES_COL,
-		"@services":     schema.SERVICES_COL,
-		"@records":      schema.RECORDS_COL,
-		"@accounts":     schema.ACCOUNTS_COL,
-		"permissions":   schema.PERMISSIONS_GRAPH.Name,
-		"now":           tick.Unix(),
-		"graph":         schema.BILLING_GRAPH.Name,
-		"currencies":    schema.CUR_COL,
-		"currency":      currencyConf.Currency,
+		"@transactions":  schema.TRANSACTIONS_COL,
+		"@instances":     schema.INSTANCES_COL,
+		"@services":      schema.SERVICES_COL,
+		"@records":       schema.RECORDS_COL,
+		"@accounts":      schema.ACCOUNTS_COL,
+		"@addons":        schema.ADDONS_COL,
+		"@billing_plans": schema.BILLING_PLANS_COL,
+		"permissions":    schema.PERMISSIONS_GRAPH.Name,
+		"now":            tick.Unix(),
+		"graph":          schema.BILLING_GRAPH.Name,
+		"currencies":     schema.CUR_COL,
+		"currency":       currencyConf.Currency,
 	})
 	if err != nil {
 		log.Error("Error Generating Transactions", zap.Error(err))
@@ -130,8 +96,8 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 	log := s.log.Named("AccountSuspendRoutine")
 
 start:
-	suspConf := MakeSuspendConf(ctx, log)
-	routineConf := MakeRoutineConf(ctx, log)
+	suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
+	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{monFreqKey}, upd)
@@ -168,7 +134,7 @@ start:
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
-			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+			if _, err := s.accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Suspending Account", zap.Error(err))
 			}
 		}
@@ -194,7 +160,7 @@ start:
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
-			if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+			if _, err := s.accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Unsuspending Account", zap.Error(err))
 			}
 		}
@@ -215,9 +181,9 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 start:
 
-	routineConf := MakeRoutineConf(ctx, log)
-	roundingConf := MakeRoundingConf(ctx, log)
-	currencyConf := MakeCurrencyConf(ctx, log)
+	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
+	roundingConf := MakeRoundingConf(ctx, log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{monFreqKey, currencyKey}, upd)
@@ -248,6 +214,7 @@ let candidates = (
 	for acc in Accounts
 		filter acc.suspended
 		filter conf.auto_resume
+        filter LENGTH(acc.account_owner) == 0
 		return acc
 )
 
@@ -264,7 +231,14 @@ let global = (
         return acc
 )
 
-FOR acc IN union_distinct(local, global)
+LET subs = (
+    FOR acc IN UNION_DISTINCT(global, local)
+        FILTER IS_ARRAY(acc.subaccounts)
+        FOR sub IN acc.subaccounts
+           RETURN DOCUMENT(Accounts, sub)
+)
+
+FOR acc IN union_distinct(local, global, subs)
     RETURN MERGE(acc, {uuid:acc._key})
 `
 
@@ -281,6 +255,7 @@ LET candidates = (
         FILTER acc.balance != null
 		FILTER !acc.suspended
         FILTER !acc.suspend_conf.immune
+        FILTER LENGTH(acc.account_owner) == 0
         return acc
 )
 
@@ -307,8 +282,15 @@ LET local = (
         RETURN acc
 )
 
-FOR acc IN UNION_DISTINCT(global, local, extra)
-	RETURN MERGE(acc, {uuid: acc._key})
+LET subs = (
+    FOR acc IN UNION_DISTINCT(global, local, extra)
+        FILTER IS_ARRAY(acc.subaccounts)
+        FOR sub IN acc.subaccounts
+           RETURN DOCUMENT(Accounts, sub)
+)
+
+FOR acc IN UNION_DISTINCT(global, local, extra, subs)
+    RETURN MERGE(acc, {uuid:acc._key})
 `
 
 const generateTransactions = `
@@ -326,7 +308,7 @@ FOR service IN @@services // Iterate over Services
 		GRAPH @permissions
 		FILTER path.edges[*].role == ["owner","owner"]
 		FILTER IS_SAME_COLLECTION(node, @@accounts)
-			RETURN node
+			RETURN LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
     )
 
 	// Prefer user currency to default if present
@@ -337,18 +319,27 @@ FOR service IN @@services // Iterate over Services
         FILTER record.exec <= @now
         FILTER !record.processed
         FILTER record.instance IN instances
+
+        LET instance = DOCUMENT(@@instances, record.instance)
+        LET bp = DOCUMENT(@@billing_plans, instance.billing_plan.uuid)
+        LET resources = bp.resources == null ? [] : bp.resources
+        LET addon = DOCUMENT(@@addons, record.addon)
+        LET product_period = bp.products[instance.product].period
+        LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
+        LET final_price = record.cost > 0 ? record.cost : item_price
+
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND
-			SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency)))
-			TO DOCUMENT(CONCAT(@currencies, "/", currency))
+			SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency.id)))
+			TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 			GRAPH @graph
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET total = record.total * rate
+        LET cost = record.total * rate * final_price
             UPDATE record._key WITH { 
 				processed: true, 
-				total: total,
+				cost: cost,
 				currency: currency,
 				service: service._key,
 				account: account._key
@@ -364,7 +355,7 @@ FOR service IN @@services // Iterate over Services
         account: account._key,
         service: service._key,
         records: records[*]._key,
-        total: SUM(records[*].total), // Calculate Total
+        total: SUM(records[*].cost), // Calculate Total
 		meta: {type: "transaction"},
     } IN @@transactions RETURN NEW
 `
@@ -380,8 +371,8 @@ FILTER !t.processed
 	LET currency = account.currency != null ? account.currency : @currency
 	LET rate = PRODUCT(
 		FOR vertex, edge IN OUTBOUND
-		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency)))
-		TO DOCUMENT(CONCAT(@currencies, "/", currency))
+		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency.id)))
+		TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 		GRAPH @graph
 		FILTER edge
 			RETURN edge.rate

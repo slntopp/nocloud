@@ -31,12 +31,12 @@
       no-hide-uuid
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
-        <v-chip>{{ `${item.total} ${item.currency}` }}</v-chip>
+        <v-chip>{{ `${item.total} ${item.currency?.title}` }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
         <v-chip>{{
           item.totalDefault
-            ? `${item.totalDefault} ${defaultCurrency}`
+            ? `${item.totalDefault} ${defaultCurrency?.title}`
             : item.totalDefault
         }}</v-chip>
       </template>
@@ -55,15 +55,15 @@
           </v-chip>
         </div>
       </template>
-      <template v-slot:[`item.service`]="{ value }">
-        <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-          {{ getShortName(getService(value)?.title || value) }}
-        </router-link>
-      </template>
       <template v-slot:[`item.instance`]="{ value }">
-        <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
+        <router-link
+          v-if="!isInstancesLoading"
+          :to="{ name: 'Instance', params: { instanceId: value } }"
+        >
           {{ getShortName(getInstance(value)?.title || value) }}
         </router-link>
+
+        <v-skeleton-loader type="text" v-else />
       </template>
       <template v-slot:[`item.meta.transactionType`]="{ item }">
         <span>{{ getReportType(item) }}</span>
@@ -122,13 +122,12 @@ const props = defineProps({
   filters: { type: Object },
   hideInstance: { type: Boolean, default: false },
   hideAccount: { type: Boolean, default: false },
-  hideService: { type: Boolean, default: false },
   selectRecord: { type: Function, default: () => {} },
   tableName: { type: String },
   showDates: { type: Boolean, default: false },
   duration: { type: Object, default: () => ({ from: null, to: null }) },
 });
-const { filters, hideInstance, hideService, hideAccount, duration, showDates } =
+const { filters, hideInstance, hideAccount, duration, showDates } =
   toRefs(props);
 
 const emit = defineEmits(["input:unique", "input:duration"]);
@@ -148,6 +147,7 @@ const fetchError = ref("");
 const options = ref({});
 const accounts = ref({});
 const isAccountsLoading = ref(false);
+const isInstancesLoading = ref(false);
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -172,15 +172,9 @@ const reportsHeaders = computed(() => {
   if (!hideInstance.value) {
     headers.push({ text: "Instance", value: "instance" });
   }
-  if (!hideService.value) {
-    headers.push({ text: "Service", value: "service" });
-  }
 
   return headers;
 });
-
-const instances = computed(() => store.getters["services/getInstances"]);
-const services = computed(() => store.getters["services/all"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -256,7 +250,7 @@ const fetchReports = async () => {
     const { records: result } = await api.reports.list(requestOptions.value);
     reports.value = result.map((r) => {
       return {
-        total: -r.total.toFixed(2),
+        total: -r.cost.toFixed(2),
         start: r.start,
         end: r.end,
         duration: `${formatSecondsToDate(
@@ -268,13 +262,12 @@ const fetchReports = async () => {
         currency: r.currency,
         item: r.product || r.resource,
         uuid: r.uuid,
-        service: r.service,
         instance: r.instance,
         account: r.account,
         meta: {
           ...r.meta,
         },
-        totalDefault: -convertFrom(r.total, r.currency),
+        totalDefault: -convertFrom(r.cost, r.currency),
       };
     });
   } catch (e) {
@@ -314,14 +307,13 @@ const init = async () => {
 };
 
 const getAccount = (value) => accounts.value[value];
-const getInstance = (value) => instances.value.find((s) => s.uuid === value);
-const getService = (value) => services.value.find((s) => s.uuid === value);
+const getInstance = (value) => store.getters["instances/cached"].get(value);
 
 const getStatus = (item) => {
-  if (item.meta.status) {
-    return item.meta.status;
+  if (item.meta?.status) {
+    return item.meta?.status;
   }
-  return item.meta.payment_date ? "Paid" : "Unpaid";
+  return item.meta?.payment_date ? "Paid" : "Unpaid";
 };
 
 const getStatusColor = (item) => {
@@ -394,7 +386,7 @@ watch(rates, () => {
 watch(filters, fetchReportsDebounced, { deep: true });
 watch(options, fetchReportsDebounced);
 
-watch(reports, () => {
+watch(reports, async () => {
   reports.value.forEach(async ({ account: uuid }) => {
     isAccountsLoading.value = true;
     try {
@@ -410,5 +402,16 @@ watch(reports, () => {
       );
     }
   });
+
+  isInstancesLoading.value = true;
+  try {
+    await Promise.all(
+      reports.value.map(({ instance: uuid }) =>
+        store.dispatch("instances/fetchToCached", uuid)
+      )
+    );
+  } finally {
+    isInstancesLoading.value = false;
+  }
 });
 </script>

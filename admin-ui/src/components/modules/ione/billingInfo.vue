@@ -78,11 +78,16 @@
         :show-select="false"
         hide-default-footer
       >
+        <template v-slot:[`item.name`]="{ item }">
+          <span v-html="item.name" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+        </template>
+
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
             <v-text-field
               class="mr-2"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model="item.price"
               type="number"
               @input="updatePrice(item, false)"
@@ -92,7 +97,7 @@
               style="color: var(--v-primary-base)"
               class="ml-2"
               type="number"
-              :suffix="accountCurrency"
+              :suffix="accountCurrency?.title"
               v-model="item.accountPrice"
               @input="updatePrice(item, true)"
               append-icon="mdi-pencil"
@@ -104,9 +109,9 @@
         </template>
         <template v-slot:[`item.total`]="{ item }">
           {{ totalPrices[item.name]?.toFixed(2) }}
-          {{ defaultCurrency }} /
+          {{ defaultCurrency?.title }} /
           {{ totalAccountPrices[item.name]?.toFixed(2) }}
-          {{ accountCurrency }}
+          {{ accountCurrency?.title }}
         </template>
         <template v-slot:body.append>
           <tr>
@@ -118,12 +123,31 @@
               }}
             </td>
             <td></td>
-            <td></td>
+            <td>
+              <v-dialog v-model="isAddonsDialog" max-width="60%">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on"
+                    >addons</v-btn
+                  >
+                </template>
+                <instance-change-addons
+                  v-if="isAddonsDialog"
+                  :instance="template"
+                  :instance-addons="addons"
+                  @update="
+                    emit('update', {
+                      key: 'addons',
+                      value: $event,
+                    })
+                  "
+                />
+              </v-dialog>
+            </td>
             <td>
               <v-chip color="primary" outlined>
                 {{ totalPrice }}
-                {{ defaultCurrency }} / {{ totalAccountPrice }}
-                {{ accountCurrency }}
+                {{ defaultCurrency?.title }} / {{ totalAccountPrice }}
+                {{ accountCurrency?.title }}
               </v-chip>
             </td>
           </tr>
@@ -154,7 +178,6 @@
       :account-currency="accountCurrency"
       v-model="priceModelDialog"
       :template="template"
-      :plans="filteredPlans"
       @refresh="emit('refresh')"
       :service="service"
     />
@@ -181,15 +204,16 @@ import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
+import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, service, sp, plans, account } = toRefs(props);
+const { template, service, sp, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -197,6 +221,7 @@ const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
 
 const changeDatesDialog = ref(false);
 const changeTariffDialog = ref(false);
+const isAddonsDialog = ref(false);
 const priceModelDialog = ref(false);
 const billingItems = ref([]);
 const billingHeaders = ref([
@@ -218,18 +243,14 @@ const dueDate = computed(() =>
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isMonitoringEmpty = computed(() => dueDate.value === "-");
 const isDynamicPlan = computed(() => fullPlan.value?.kind === "DYNAMIC");
-const fullPlan = computed(() =>
-  plans.value.find((p) => p.uuid === template.value.billingPlan.uuid)
-);
+const fullPlan = computed(() => store.getters["plans/one"]);
 const availableTarrifs = computed(() =>
   Object.keys(fullPlan.value?.products || {}).map((key) => ({
     title: key,
     resources: fullPlan.value.products[key].resources,
   }))
 );
-const filteredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "ione")
-);
+
 const billingPlan = computed(() => template.value.billingPlan);
 const totalPrice = computed(() =>
   Object.keys(totalPrices.value || {})
@@ -276,35 +297,6 @@ const getBillingItems = () => {
     });
   }
 
-  const gbAddons = ["ram"];
-  Object.keys(template.value.resources).forEach((resourceKey) => {
-    let quantity = template.value.resources[resourceKey];
-    if (!quantity) {
-      return;
-    }
-
-    if (gbAddons.includes(resourceKey)) {
-      quantity = quantity / 1024;
-    }
-
-    const addonIndex = billingPlan.value.resources.findIndex(
-      (r) => r.key === resourceKey
-    );
-    const addon = billingPlan.value.resources[addonIndex];
-    if (addon) {
-      items.push({
-        name: resourceKey,
-        price: addon.price,
-        accountPrice: toAccountPrice(addon.price),
-        kind: addon.kind,
-        period: addon.period,
-        quantity,
-        unit: "pcs",
-        path: `billingPlan.resources.${addonIndex}.price`,
-      });
-    }
-  });
-
   const driveType = template.value.resources.drive_type?.toLowerCase();
 
   if (driveType) {
@@ -324,6 +316,22 @@ const getBillingItems = () => {
     });
   }
 
+  addons.value.forEach((addon, index) => {
+    const { title, periods } = addon;
+    const { period, kind } = billingPlan.value.products[template.value.product];
+    items.push({
+      name: title,
+      price: periods[period],
+      path: `${index}.periods.${period}`,
+      unit: "pcs",
+      accountPrice: toAccountPrice(periods[period]),
+      quantity: 1,
+      isAddon: true,
+      kind,
+      period,
+    });
+  });
+
   return items.map((i) => {
     i.period = getBillingPeriod(i.period);
     return i;
@@ -335,6 +343,7 @@ const updatePrice = (item, isAccount) => {
     emit("update", {
       key: item.path,
       value: fromAccountPrice(item.accountPrice),
+      type: item.isAddon ? "addons" : "template",
     });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
@@ -343,7 +352,11 @@ const updatePrice = (item, isAccount) => {
       return p;
     });
   } else {
-    emit("update", { key: item.path, value: item.price });
+    emit("update", {
+      key: item.path,
+      value: item.price,
+      type: item.isAddon ? "addons" : "template",
+    });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
         p.accountPrice = toAccountPrice(item.price);

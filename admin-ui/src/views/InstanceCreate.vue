@@ -76,7 +76,6 @@
         @set-instance="instance = $event"
         @set-meta="meta = $event"
         :instance="instance"
-        :plans="plans"
         :account-id="account?.uuid"
         :plan-rules="rules.req"
         :sp-uuid="serviceProviderId"
@@ -148,19 +147,6 @@ const serviceInstanceGroupTitles = computed(() => {
 
   return igs;
 });
-const allPlans = computed(() => {
-  return store.getters["plans/all"] || [];
-});
-const plans = computed(() =>
-  allPlans.value
-    .map((plan) => ({
-      ...plan,
-      sp: servicesProviders.value.find((sp) =>
-        sp.meta.plans?.includes(plan.uuid)
-      )?.uuid,
-    }))
-    .filter((plan) => !!plan.sp)
-);
 
 const isInstanceControlsShowed = computed(
   () =>
@@ -192,7 +178,6 @@ onMounted(async () => {
     await Promise.all([
       store.dispatch("services/fetch"),
       store.dispatch("servicesProviders/fetch", { anonymously: false }),
-      store.dispatch("plans/fetch"),
     ]);
     const instanceId = route.query.instanceId;
     if (instanceId) {
@@ -212,7 +197,7 @@ onMounted(async () => {
       return;
     }
 
-    let { type: newType, accountId, serviceProviderId } = route.query;
+    let { type: newType, accountId } = route.query;
 
     if (newType) {
       account.value = accountId;
@@ -222,7 +207,6 @@ onMounted(async () => {
         newType = "custom";
       }
       type.value = newType;
-      serviceProviderId.value = serviceProviderId;
     }
   } finally {
     isLoading.value = false;
@@ -373,14 +357,9 @@ const fetchNamespace = async () => {
 
 const setService = () => {
   let newService;
-  const serviceId = route.query.serviceId;
 
   if (!account.value) {
     return (service.value = null);
-  }
-
-  if (serviceId) {
-    newService = servicesByAccount.value.find((s) => s.uuid === serviceId);
   }
 
   if (!newService) {
@@ -403,8 +382,9 @@ watch(
     if (!plan) {
       return;
     }
-    serviceProviderId.value =
-      plan.sp || plans.value.find((p) => p.uuid === plan)?.sp;
+    serviceProviderId.value = servicesProviders.value.find((sp) =>
+      sp.meta.plans?.includes(plan.uuid || plan)
+    )?.uuid;
   }
 );
 watch(instanceGroupTitle, (newVal) => {
@@ -434,13 +414,6 @@ watch(type, () => {
     customTypeName.value = null;
   }
   isEdit.value = false;
-});
-
-watch(plans, (newVal) => {
-  if (newVal && instance.value?.billingPlan?.uuid) {
-    instance.value.billing_plan = instance.value?.billingPlan?.uuid;
-    delete instance.value.billingPlan;
-  }
 });
 </script>
 

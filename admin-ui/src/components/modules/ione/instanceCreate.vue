@@ -20,15 +20,16 @@
 
       <v-row>
         <v-col cols="6">
-          <v-autocomplete
-            :filter="defaultFilterObject"
+          <plans-autocomplete
+            :value="bilingPlan"
+            :custom-params="{
+              filters: { type: ['ione'] },
+              anonymously: true,
+            }"
+            @input="changeBilling"
+            return-object
             label="Price model"
-            item-text="title"
-            item-value="uuid"
-            :value="instance.billing_plan"
-            :items="plans"
             :rules="planRules"
-            @change="changeBilling"
           />
         </v-col>
         <v-col cols="6">
@@ -131,6 +132,19 @@
           >
           </v-text-field>
         </v-col>
+
+        <v-col cols="6" v-if="tarrifAddons.length > 0">
+          <v-autocomplete
+            @change="(newVal) => setValue('addons', newVal)"
+            label="Addons"
+            :value="instance.addons"
+            :items="isAddonsLoading ? [] : getAvailableAddons()"
+            :loading="isAddonsLoading"
+            item-value="uuid"
+            item-text="title"
+            multiple
+          />
+        </v-col>
       </v-row>
       <v-row>
         <v-col cols="2">
@@ -157,8 +171,20 @@
   </div>
 </template>
 
-<script>
-import { defaultFilterObject } from "@/functions";
+<script setup>
+import { computed, onMounted, ref, toRefs, watch } from "vue";
+import { useStore } from "@/store/";
+import useInstanceAddons from "@/hooks/useInstanceAddons";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
+
+const props = defineProps(["instance", "planRules", "spUuid", "isEdit"]);
+const { instance, isEdit, planRules, spUuid } = toRefs(props);
+
+const emit = defineEmits(["set-instance", "set-value"]);
+
+const store = useStore();
+const { tarrifAddons, setTariffAddons, getAvailableAddons, isAddonsLoading } =
+  useInstanceAddons(instance, (key, value) => setValue(key, value));
 
 const getDefaultInstance = () => ({
   title: "instance",
@@ -178,147 +204,141 @@ const getDefaultInstance = () => ({
   },
   data: {},
   billing_plan: {},
+  addons: [],
 });
+
+const bilingPlan = ref(null);
+const products = ref([]);
+const existing = ref(false);
+const requiredRule = ref([(val) => !!val || "Field required"]);
+
+onMounted(() => {
+  if (!isEdit.value) {
+    emit("set-instance", getDefaultInstance());
+    existing.value = !!(
+      instance.value.data?.vm_id || instance.value.data?.vm_name
+    );
+  } else {
+    changeBilling(instance.value.billing_plan);
+  }
+});
+
+const osTemplates = computed(() => {
+  const sp = store.getters["servicesProviders/all"].filter(
+    (el) => el.uuid === spUuid.value
+  )[0];
+
+  if (!sp) return {};
+
+  const osTemplates = {};
+
+  Object.keys(sp.publicData.templates || {}).forEach((key) => {
+    if (!instance.value?.billing_plan?.meta?.hidedOs?.includes(key)) {
+      osTemplates[key] = sp.publicData.templates[key];
+    }
+  });
+
+  return osTemplates;
+});
+
+const osNames = computed(() => {
+  if (!osTemplates.value) return [];
+
+  return Object.values(osTemplates.value).map((os) => os.name);
+});
+
+const driveTypes = computed(() => {
+  return instance.value.billing_plan?.resources
+    ?.filter((r) => r.key.includes("drive"))
+    .map((k) => k.key.split("_")[1].toUpperCase());
+});
+
+const driveSizeConfig = computed(() => {
+  let minDisk, maxDisk;
+  if (instance.value.billing_plan?.meta?.minDisk) {
+    minDisk = instance.value.billing_plan.meta.minDisk;
+  }
+  if (instance.value.billing_plan?.meta?.maxDisk) {
+    maxDisk = instance.value.billing_plan.meta.maxDisk;
+  }
+
+  if (selectedTemplate.value?.min_size) {
+    minDisk = selectedTemplate.value?.min_size;
+  }
+
+  return {
+    minDisk: (minDisk || 0) / 1024,
+    maxDisk: (maxDisk || 1024000000) / 1024,
+  };
+});
+
+const selectedTemplate = computed(() => {
+  return osTemplates.value[instance.value.config.template_id];
+});
+
+const driveSizeRule = computed(() => {
+  return (val) =>
+    (+val >= +driveSizeConfig.value.minDisk &&
+      +val <= +driveSizeConfig.value.maxDisk) ||
+    "Bad drive size";
+});
+const isDynamicPlan = computed(() => {
+  return instance.value.billing_plan?.kind === "DYNAMIC";
+});
+
+const changeOS = (newVal) => {
+  let osId = null;
+
+  for (const [key, value] of Object.entries(osTemplates.value)) {
+    if (value.name === newVal) {
+      osId = key;
+      break;
+    }
+  }
+
+  setValue("config.template_id", +osId);
+};
+const changeBilling = (val) => {
+  bilingPlan.value = val;
+  if (bilingPlan.value) {
+    products.value = Object.keys(bilingPlan.value.products);
+  }
+  setValue("billing_plan", bilingPlan.value);
+};
+
+const setProduct = (newVal) => {
+  const product = bilingPlan.value?.products[newVal].resources;
+
+  Object.keys(product).forEach((key) => {
+    emit("set-value", {
+      key: "resources." + key,
+      value: product[key],
+    });
+  });
+  setValue("product", newVal);
+
+  setTariffAddons();
+};
+
+const setValue = (key, value) => {
+  emit("set-value", { key, value });
+};
+
+watch(existing, () => {
+  setValue("data.vm_id", null);
+  setValue("data.vm_name", null);
+});
+
+watch(driveTypes, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    setValue("resources.drive_type", newVal[0]);
+  }
+});
+</script>
+
+<script>
 export default {
   name: "instance-ione-create",
-  props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({
-    bilingPlan: null,
-    products: [],
-    existing: false,
-    requiredRule: [(val) => !!val || "Field required"],
-  }),
-  mounted() {
-    if (!this.isEdit) {
-      this.$emit("set-instance", getDefaultInstance());
-      this.existing = !!(
-        this.instance.data?.vm_id || this.instance.data?.vm_name
-      );
-    } else {
-      this.changeBilling(this.instance.billing_plan);
-    }
-  },
-  methods: {
-    defaultFilterObject,
-    changeOS(newVal) {
-      let osId = null;
-
-      for (const [key, value] of Object.entries(this.osTemplates)) {
-        if (value.name === newVal) {
-          osId = key;
-          break;
-        }
-      }
-
-      this.setValue("config.template_id", +osId);
-    },
-    changeBilling(val) {
-      this.bilingPlan = this.plans.find((p) => p.uuid === val);
-      if (this.bilingPlan) {
-        this.products = Object.keys(this.bilingPlan.products);
-      }
-      this.setValue("billing_plan", this.bilingPlan);
-    },
-    setProduct(newVal) {
-      const product = this.bilingPlan?.products[newVal].resources;
-
-      Object.keys(product).forEach((key) => {
-        this.$emit("set-value", {
-          key: "resources." + key,
-          value: product[key],
-        });
-      });
-      this.setValue("product", newVal);
-    },
-    setValue(key, value) {
-      this.$emit("set-value", { key, value });
-    },
-  },
-  computed: {
-    osTemplates() {
-      const sp = this.$store.getters["servicesProviders/all"].filter(
-        (el) => el.uuid === this.spUuid
-      )[0];
-
-      if (!sp) return {};
-
-      const osTemplates = {};
-
-      Object.keys(sp.publicData.templates || {}).forEach((key) => {
-        if (!this.instance?.billing_plan?.meta?.hidedOs?.includes(key)) {
-          osTemplates[key] = sp.publicData.templates[key];
-        }
-      });
-
-      return osTemplates;
-    },
-    osNames() {
-      if (!this.osTemplates) return [];
-
-      return Object.values(this.osTemplates).map((os) => os.name);
-    },
-    driveTypes() {
-      return this.instance.billing_plan?.resources
-        ?.filter((r) => r.key.includes("drive"))
-        .map((k) => k.key.split("_")[1].toUpperCase());
-    },
-    driveSizeConfig() {
-      const defaultDiskSize = {
-        minDisk: 0,
-        maxDisk: 102400,
-      };
-
-      if (!this.instance.resources.drive_type) {
-        return defaultDiskSize;
-      }
-
-      const diskType = this.instance.resources.drive_type;
-      let minDisk, maxDisk;
-
-      if (this.instance.billing_plan?.meta?.minDiskSize?.[diskType]) {
-        minDisk = this.instance.billing_plan.meta.minDiskSize[diskType];
-      }
-      if (this.instance.billing_plan?.meta?.maxDiskSize?.[diskType]) {
-        maxDisk = this.instance.billing_plan.meta.maxDiskSize[diskType];
-      }
-
-      if (this.selectedTemplate?.min_size) {
-        const osMinDiskSize = (this.selectedTemplate?.min_size || 0) / 1024;
-        minDisk = osMinDiskSize > minDisk ? osMinDiskSize : minDisk;
-      }
-
-      return {
-        minDisk: minDisk || defaultDiskSize.minDisk,
-        maxDisk: maxDisk || defaultDiskSize.maxDisk,
-      };
-    },
-    selectedTemplate() {
-      return this.osTemplates[this.instance.config.template_id];
-    },
-    driveSizeRule() {
-      return (val) =>
-        (+val >= +this.driveSizeConfig.minDisk &&
-          +val <= +this.driveSizeConfig.maxDisk) ||
-        "Bad drive size";
-    },
-    isDynamicPlan() {
-      return this.instance.billing_plan?.kind === "DYNAMIC";
-    },
-  },
-  watch: {
-    plans() {
-      this.changeBilling(this.instance.billing_plan);
-    },
-    existing() {
-      this.setValue("data.vm_id", null);
-      this.setValue("data.vm_name", null);
-    },
-    driveTypes(newVal) {
-      if (newVal && newVal.length > 0) {
-        this.setValue("resources.drive_type", newVal[0]);
-      }
-    },
-  },
 };
 </script>
 

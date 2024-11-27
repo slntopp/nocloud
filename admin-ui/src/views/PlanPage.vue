@@ -44,7 +44,8 @@ export default {
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
     planTitle: "Not found",
-    plan: {},
+    plan: null,
+    isDescriptionsLoading: false,
   }),
   methods: {
     navTitle(title) {
@@ -60,19 +61,26 @@ export default {
 
       try {
         await this.$store.dispatch("plans/fetchItem", id);
-        this.plan = this.$store.getters["plans/one"];
+        this.plan = {
+          resources: [],
+          products: {},
+          meta: {},
+          ...this.$store.getters["plans/one"],
+        };
+
+        console.log({ ...this.plan });
+
         this.planTitle = this.plan.title;
 
         document.title = `${this.planTitle} | NoCloud`;
 
-        console.log(this.plan);
         const descriptionPromises = [
-          ...this.plan.resources.map((resource, index) => ({
+          ...this.plan.resources?.map((resource, index) => ({
             id: index,
             type: "resources",
             descriptionId: resource.descriptionId,
           })),
-          ...Object.keys(this.plan.products).map((key) => ({
+          ...Object.keys(this.plan.products || {}).map((key) => ({
             id: key,
             type: "products",
             descriptionId: this.plan.products[key].descriptionId,
@@ -101,7 +109,9 @@ export default {
   },
   computed: {
     planLoading() {
-      return this.$store.getters["plans/isLoading"];
+      return (
+        this.$store.getters["plans/isLoading"] || this.isDescriptionsLoading
+      );
     },
     tabs() {
       return [
@@ -109,7 +119,7 @@ export default {
           title: "Info",
           component: () => import("@/views/PlansCreate.vue"),
         },
-        this.plan.type === "ione" && {
+        this.plan?.type === "ione" && {
           title: "Configuration",
           component: () =>
             import("@/components/modules/ione/planConfiguration.vue"),
@@ -133,17 +143,9 @@ export default {
       ].filter((t) => t);
     },
   },
-  created() {
-    const id = this.$route.params?.planId;
-    this.$store.dispatch("plans/fetchItem", id).then(() => {
-      this.planTitle = this.plan.title || this.planTitle;
-      document.title = `${this.planTitle} | NoCloud`;
-    });
-  },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      type: "plans/fetchItem",
-      params: this.$route.params?.planId,
+      event: this.fetchPlan,
     });
 
     this.fetchPlan();
@@ -156,12 +158,12 @@ export default {
 
       if (
         !pricesComponents.includes(
-          `./${this.plan.type.split(" ")[0]}Prices.vue`
+          `./${this.plan?.type.split(" ")[0]}Prices.vue`
         )
       )
         return;
       if (this.tabs.find(({ title }) => title === "Prices")) return;
-      const type = this.plan.type.split(" ")[0];
+      const type = this.plan?.type.split(" ")[0];
 
       this.tabs.splice(this.tabs.length - 1, 0, {
         title: "Prices",

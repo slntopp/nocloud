@@ -7,12 +7,17 @@ RUN upx ./billing
 
 RUN adduser -SD nocloud
 
+# Download Healthcheck
+WORKDIR /health
+RUN wget https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.14/grpc_health_probe-linux-amd64 -O check && chmod +x check
+
 FROM scratch
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/billing /billing
 COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /docker_health_check /docker_health_check
-HEALTHCHECK --start-period=10s CMD ["/docker_health_check"]
+COPY --from=builder /health/check /check
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+HEALTHCHECK --start-period=5s CMD [ "/check", "-addr=:8000" ]
 
 USER nocloud
 EXPOSE 8000

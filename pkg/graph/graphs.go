@@ -19,16 +19,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"math"
 	"strings"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
-	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
+
+type ContextKey string
+
+const (
+	AQLTransactionContextKey ContextKey = "aql-transaction"
+)
+
+type TransactionsAPI interface {
+	BeginTransaction(ctx context.Context) (context.Context, error)
+	AbortTransaction(ctx context.Context) error
+	CommitTransaction(ctx context.Context) error
+}
 
 type Node struct {
 	Collection string `json:"collection"`
@@ -39,7 +52,17 @@ type Accessible interface {
 	GetAccess() *access.Access
 }
 
-func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {
+func Round(amount float64, precision int32, mode pb.Rounding) float64 {
+	if mode == pb.Rounding_ROUND_HALF {
+		return math.Round(amount*math.Pow10(int(precision))) / math.Pow10(int(precision))
+	} else if mode == pb.Rounding_ROUND_UP {
+		return math.Ceil(amount*math.Pow10(int(precision))) / math.Pow10(int(precision))
+	} else {
+		return math.Floor(amount*math.Pow10(int(precision))) / math.Pow10(int(precision))
+	}
+}
+
+func deleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {
 	col, err := db.Collection(ctx, id.Collection())
 	if err != nil {
 		return fmt.Errorf("error while extracting collection: %v, DocID: %s", err, id)
@@ -74,7 +97,7 @@ FILTER !edge || edge.role == "owner"
     RETURN MERGE({ node: node._id }, edge ? { edge: edge._id, parent: edge._from } : { edge: null, parent: null })
 `
 
-func ListOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID) (res *access.Nodes, err error) {
+func listOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID) (res *access.Nodes, err error) {
 	c, err := db.Query(ctx, listOwnedQuery, map[string]interface{}{
 		"from": id,
 	})
@@ -99,8 +122,8 @@ func ListOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID
 	return &access.Nodes{Nodes: nodes}, nil
 }
 
-func DeleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID) error {
-	nodes, err := ListOwnedDeep(ctx, db, id)
+func deleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID) error {
+	nodes, err := listOwnedDeep(ctx, db, id)
 	if err != nil {
 		return err
 	}
@@ -145,7 +168,7 @@ func handleDeleteNodeInRecursion(ctx context.Context, db driver.Database, node s
 		if id[1] == schema.ROOT_ACCOUNT_KEY {
 			return errors.New("ERR_ROOT_OBJECT_CANNOT_BE_DELETED")
 		}
-		nodes, err := ListCredentialsAndEdges(ctx, col.Database(), driver.DocumentID(node))
+		nodes, err := listCredentialsAndEdges(ctx, col.Database(), driver.DocumentID(node))
 		if err != nil {
 			return err
 		}
@@ -167,7 +190,7 @@ func handleDeleteNodeInRecursion(ctx context.Context, db driver.Database, node s
 	return err
 }
 
-func ListCredentialsAndEdges(ctx context.Context, db driver.Database, account driver.DocumentID) (nodes []string, err error) {
+func listCredentialsAndEdges(ctx context.Context, db driver.Database, account driver.DocumentID) (nodes []string, err error) {
 	c, err := db.Query(ctx, listCredentialsAndEdgesQuery, map[string]interface{}{
 		"account":     account,
 		"credentials": schema.CREDENTIALS_COL,
@@ -192,44 +215,27 @@ GRAPH @credentials
 const getWithAccessLevel = `
 FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
 GRAPH @permissions SORT path.edges[0].level
+    LET cred = LAST(
+               FOR n, e IN 0..1 OUTBOUND @node GRAPH @credentials_graph 
+               OPTIONS {order: "bfs", uniqueVertices: "global"}
+                   RETURN n
+        )
     RETURN MERGE(path.vertices[-1], {
         uuid: path.vertices[-1]._key,
-	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
+        currency: DOCUMENT(@@currencies, TO_STRING(path.vertices[-1].currency.id)),
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key, username: cred.username }
 	})
 `
 
-const getInstanceWithAccessLevel = `
-FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
-GRAPH @permissions SORT path.edges[0].level
-	LET bp = DOCUMENT(CONCAT(@bps, "/", path.vertices[-1].billing_plan.uuid))
-    RETURN MERGE(path.vertices[-1], {
-        uuid: path.vertices[-1]._key,
-        billing_plan: {
-			uuid: bp._key,
-			title: bp.title,
-			type: bp.type,
-			kind: bp.kind,
-			resources: bp.resources,
-			products: {
-			    [path.vertices[-1].product]: bp.products[path.vertices[-1].product],
-            },
-			meta: bp.meta,
-			fee: bp.fee,
-			software: bp.software
-        },
-	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
-	})
-`
-
-func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
+func getWithAccess[T Accessible](ctx context.Context, db driver.Database, from driver.DocumentID, id driver.DocumentID) (T, error) {
 	var o T
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	requestor_id := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 
 	vars := map[string]interface{}{
-		"account":     requestor_id,
-		"node":        id,
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"account":           from,
+		"node":              id,
+		"permissions":       schema.PERMISSIONS_GRAPH.Name,
+		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
+		"@currencies":       schema.CUR_COL,
 	}
 	c, err := db.Query(ctx, getWithAccessLevel, vars)
 	if err != nil {
@@ -242,36 +248,7 @@ func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id dri
 		return o, err
 	}
 
-	if requestor_id.String() == meta.ID.String() {
-		o.GetAccess().Level = access.Level_ROOT
-	}
-
-	return o, nil
-}
-
-func GetInstanceWithAccess(ctx context.Context, db driver.Database, id driver.DocumentID) (Instance, error) {
-	var o Instance
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	requestor_id := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
-
-	vars := map[string]interface{}{
-		"account":     requestor_id,
-		"node":        id,
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"bps":         schema.BILLING_PLANS_COL,
-	}
-	c, err := db.Query(ctx, getInstanceWithAccessLevel, vars)
-	if err != nil {
-		return o, err
-	}
-	defer c.Close()
-
-	meta, err := c.ReadDocument(ctx, &o)
-	if err != nil {
-		return o, err
-	}
-
-	if requestor_id.String() == meta.ID.String() {
+	if from.String() == meta.ID.String() {
 		o.GetAccess().Level = access.Level_ROOT
 	}
 
@@ -284,7 +261,7 @@ FOR edge IN @@collection
     REMOVE edge._key IN @@collection
 `
 
-func DeleteEdge(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) error {
+func deleteEdge(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) error {
 	fromDocID := driver.NewDocumentID(fromCollection, fromKey)
 	toDocID := driver.NewDocumentID(toCollection, toKey)
 	collection := fromCollection + "2" + toCollection
@@ -309,7 +286,7 @@ FOR edge IN @@collection
     RETURN edge._key
 `
 
-func EdgeExist(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) (bool, error) {
+func edgeExist(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) (bool, error) {
 	fromDocID := driver.NewDocumentID(fromCollection, fromKey)
 	toDocID := driver.NewDocumentID(toCollection, toKey)
 	collection := fromCollection + "2" + toCollection
@@ -342,10 +319,11 @@ OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
 // FILTER edge.level > 0 // TODO: ensure all edges have level
     LET perm = path.edges[0]
-	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+    LET currency = DOCUMENT(@@currencies, TO_STRING(node.currency.id))
+	RETURN MERGE(node, { uuid: node._key, currency: currency, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 `
 
-func ListWithAccess[T Accessible](
+func listWithAccess[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,
@@ -360,6 +338,7 @@ func ListWithAccess[T Accessible](
 		"from":              fromDocument,
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@kind":             collectionName,
+		"@currencies":       schema.CUR_COL,
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
@@ -382,21 +361,21 @@ func ListWithAccess[T Accessible](
 
 const listObjectsWithFiltersOfKind = `
 LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
-GRAPH @permissions_graph
-OPTIONS {order: "bfs", uniqueVertices: "global"}
-FILTER IS_SAME_COLLECTION(@@kind, node)
-    LET perm = path.edges[0]
-	%s
-	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
-)
-
-RETURN { 
-	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
-	count: LENGTH(list)
-}
+	GRAPH @permissions_graph
+	OPTIONS {order: "bfs", uniqueVertices: "global"}
+	FILTER IS_SAME_COLLECTION(@@kind, node)
+		LET perm = path.edges[0]
+		%s
+		RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+	)
+	
+	RETURN { 
+		result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+		count: LENGTH(list)
+	}
 `
 
-const listAccounts = `
+const listAccountsQuery = `
 LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 	GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
@@ -410,7 +389,14 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 				FILTER IS_SAME_COLLECTION(@@subkiund, subnode)
 				RETURN subnode
 			)
-		RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+
+        LET cred = LAST(
+               FOR n, e IN 0..1 OUTBOUND node GRAPH @credentials_graph 
+               OPTIONS {order: "bfs", uniqueVertices: "global"}
+                   RETURN n
+        )
+        
+		RETURN MERGE(node, { uuid: node._key, currency: DOCUMENT(@@currencies, TO_STRING(node.currency.id)), active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key, username: cred.username } })
 	)
 	
 	LET active = LENGTH(
@@ -432,7 +418,8 @@ type ListQueryResult[T Accessible] struct {
 	Active int `json:"active"`
 }
 
-func ListAccounts[T Accessible](
+// ListAccounts deprecated for import
+func listAccounts[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,
@@ -449,10 +436,12 @@ func ListAccounts[T Accessible](
 		"depth":             depth,
 		"from":              fromDocument,
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
 		"@kind":             collectionName,
 		"@subkiund":         schema.INSTANCES_COL,
 		"offset":            offset,
 		"limit":             limit,
+		"@currencies":       schema.CUR_COL,
 	}
 
 	var insert string
@@ -471,7 +460,7 @@ func ListAccounts[T Accessible](
 			if len(split) != 2 {
 				continue
 			}
-			if split[1] == "address" || split[1] == "country" || split[1] == "email" {
+			if split[1] == "address" || split[1] == "country" || split[1] == "email" || split[1] == "city" || split[1] == "company" || split[1] == "phone" {
 				insert += fmt.Sprintf(` FILTER node.data["%s"] LIKE "%s"`, split[1], "%"+val.GetStringValue()+"%")
 			} else if split[1] == "date_create" {
 				values := val.GetStructValue().AsMap()
@@ -487,6 +476,13 @@ func ListAccounts[T Accessible](
 			} else if split[1] == "whmcs_id" {
 				insert += fmt.Sprintf(` FILTER node.data["%s"] == %d`, split[1], int(val.GetNumberValue()))
 			}
+		} else if key == "uuid" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER node._key in @uuids`
+			bindVars["uuids"] = values
 		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
@@ -501,6 +497,13 @@ func ListAccounts[T Accessible](
 			}
 			insert += ` FILTER TO_NUMBER(node.status) in @statuses`
 			bindVars["statuses"] = values
+		} else if key == "currency" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER TO_NUMBER(node.currency.id) in @currencies`
+			bindVars["currencies"] = values
 		} else if key == "balance" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
@@ -523,7 +526,7 @@ func ListAccounts[T Accessible](
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
-	q := fmt.Sprintf(listAccounts, insert)
+	q := fmt.Sprintf(listAccountsQuery, insert)
 	log.Debug("Query", zap.String("q", q))
 	c, err := db.Query(ctx, q, bindVars)
 	if err != nil {
@@ -538,7 +541,7 @@ func ListAccounts[T Accessible](
 	return &result, nil
 }
 
-func ListNamespaces[T Accessible](
+func listNamespaces[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,

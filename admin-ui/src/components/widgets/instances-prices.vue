@@ -43,7 +43,6 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { getInstancePrice } from "@/functions";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
@@ -58,7 +57,9 @@ const typesMap = ref(new Map());
 const options = computed(() => ({
   labels: [...Object.keys(typesMap.value)]
     .filter((key) => typesMap.value[key] != 0)
-    .map((key) => `${key} - ${typesMap.value[key]} ${defaultCurrency.value}`),
+    .map(
+      (key) => `${key} - ${typesMap.value[key]} ${defaultCurrency.value?.title}`
+    ),
   theme: {
     palette: "palette8",
   },
@@ -132,7 +133,7 @@ watch(
     const map = {};
     instancesForPeriod.value.forEach((inst) => {
       const key = inst?.type;
-      const price = Math.round(+getInstancePrice(inst)) || 0;
+      const price = Math.round(+inst.estimate) || 0;
       if (!price) {
         return;
       }

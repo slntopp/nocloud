@@ -58,7 +58,7 @@
         <v-text-field
           readonly
           label="Start date"
-          :value="formatSecondsToDate(template.data.start) || '-'"
+          :value="formatSecondsToDate(template.data?.start) || '-'"
         />
       </v-col>
 
@@ -85,72 +85,6 @@
             <span style="color: var(--v-primary-base)" class="text-h6"
               >Prices
             </span>
-            <v-dialog
-              v-model="isAddonsOpen"
-              persistent
-              v-if="addons?.length"
-              max-width="60%"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on"
-                  >addons</v-btn
-                >
-              </template>
-              <v-card color="background-light" class="pa-5">
-                <nocloud-table
-                  :items="newAddons"
-                  :headers="addonsHeaders"
-                  no-hide-uuid
-                  :show-select="false"
-                  hide-default-footer
-                >
-                  <template v-slot:[`item.name`]="{ item }">
-                    <span v-html="item.name" />
-                  </template>
-                  <template v-slot:[`item.enabled`]="{ item }">
-                    <v-switch v-model="item.enabled"></v-switch>
-                  </template>
-                </nocloud-table>
-                <div class="d-flex justify-end mt-3">
-                  <v-btn
-                    class="mx-1"
-                    @click="resetAddons"
-                    :disabled="isAddonsLoading"
-                    >Cancel</v-btn
-                  >
-                  <v-menu offset-y>
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-btn
-                        class="mx-1"
-                        v-bind="newEnabledAddons.length ? attrs : undefined"
-                        v-on="newEnabledAddons.length ? on : undefined"
-                        :disabled="!isAddonsEdited"
-                        :loading="isAddonsLoading"
-                        @click="saveAddonsClick"
-                        >Save</v-btn
-                      >
-                    </template>
-                    <v-card color="background-light">
-                      <v-card-title
-                        >Make a payment now (balance will be
-                        debited)?</v-card-title
-                      >
-                      <v-card-actions class="d-flex justify-end">
-                        <v-btn class="mr-2" @click="saveAddons(true)">
-                          No
-                        </v-btn>
-                        <v-btn class="mr-2" @click="saveAddons(false)">
-                          Yes
-                        </v-btn>
-                      </v-card-actions>
-                    </v-card>
-                  </v-menu>
-                </div>
-              </v-card>
-            </v-dialog>
-            <v-chip class="ml-1" v-if="enabledAddonsCount > 0">{{
-              enabledAddonsCount
-            }}</v-chip>
           </div>
           <template v-slot:actions>
             <v-icon color="primary" x-large> $expand </v-icon>
@@ -174,13 +108,13 @@
                 <v-text-field
                   class="mr-2"
                   v-model="item.price"
-                  :suffix="defaultCurrency"
+                  :suffix="defaultCurrency?.title"
                   @input="updatePrice(item, false)"
                   append-icon="mdi-pencil"
                 />
                 <v-text-field
                   class="ml-2"
-                  :suffix="accountCurrency"
+                  :suffix="accountCurrency?.title"
                   style="color: var(--v-primary-base)"
                   v-model="item.accountPrice"
                   @input="updatePrice(item, true)"
@@ -199,11 +133,36 @@
                   }}
                 </td>
                 <td>
-                  <div class="d-flex justify-end mr-4">
+                  <div class="d-flex align-center justify-end mr-4">
+                    <v-dialog v-model="isAddonsDialog" max-width="60%">
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-btn
+                          class="mr-5"
+                          color="primary"
+                          v-bind="attrs"
+                          v-on="on"
+                          >addons</v-btn
+                        >
+                      </template>
+                      <instance-change-addons
+                        v-if="isAddonsDialog"
+                        :instance="template"
+                        :instance-addons="addons"
+                        @update="
+                          emit('update', {
+                            key: 'addons',
+                            value: $event,
+                          })
+                        "
+                      />
+                    </v-dialog>
+
                     <v-chip color="primary" outlined>
-                      {{ [totalPrice, defaultCurrency].join(" ") }}
+                      {{ [totalPrice, defaultCurrency?.title].join(" ") }}
                       /
-                      {{ [totalAccountPrice, accountCurrency].join(" ") }}
+                      {{
+                        [totalAccountPrice, accountCurrency?.title].join(" ")
+                      }}
                     </v-chip>
                   </div>
                 </td>
@@ -225,7 +184,6 @@
       :account-currency="accountCurrency"
       v-model="priceModelDialog"
       :template="template"
-      :plans="filtredPlans"
       @refresh="emit('refresh')"
       :service="service"
     />
@@ -245,13 +203,19 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
-import api from "@/api";
 import DatePicker from "../../ui/datePicker.vue";
+import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps([
+  "template",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans, service, account } = toRefs(props);
+const { template, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -259,9 +223,7 @@ const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
 
 const changeDatesDialog = ref(false);
 const priceModelDialog = ref(false);
-const newAddons = ref([]);
-const isAddonsOpen = ref(false);
-const isAddonsLoading = ref(false);
+const isAddonsDialog = ref(false);
 
 function getBillingHeaders() {
   return [
@@ -273,20 +235,12 @@ function getBillingHeaders() {
 }
 
 const billingHeaders = ref(getBillingHeaders());
-const addonsHeaders = ref([
-  ...getBillingHeaders(),
-  { text: "Enabled", value: "enabled" },
-]);
 const billingItems = ref([]);
 
 const dueDate = computed(() =>
   formatSecondsToDate(template.value?.data?.next_payment_date, true)
 );
 const isMonitoringsEmpty = computed(() => dueDate.value === "-");
-
-const filtredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "empty")
-);
 
 const totalPrice = computed(() => {
   return billingItems.value.reduce((acc, i) => acc + +i.price, 0)?.toFixed(2);
@@ -302,13 +256,8 @@ const billingPlan = computed(() => template.value.billingPlan);
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
-const isAddonsEdited = computed(
-  () => JSON.stringify(newAddons.value) !== JSON.stringify(addons.value)
-);
-
 onMounted(() => {
   billingItems.value = getBillingItems();
-  newAddons.value = JSON.parse(JSON.stringify(addons.value));
 });
 
 watch(accountRate, () => {
@@ -317,34 +266,6 @@ watch(accountRate, () => {
     return i;
   });
 });
-
-const addons = computed(() => {
-  return (
-    billingPlan.value.products[template.value.product].meta.addons
-      ?.map((key) => billingPlan.value.resources.find((r) => r.key === key))
-      ?.filter((a) => !!a)
-      ?.map(({ price, title, kind, period, key }, index) => ({
-        name: title,
-        price,
-        enabled: !!template.value.config?.addons?.find((a) => a === key),
-        path: `billingPlan.resources.${index}.price`,
-        kind,
-        key,
-        period: getBillingPeriod(period),
-        accountPrice: toAccountPrice(price),
-      })) || []
-  );
-});
-
-const enabledAddonsCount = computed(() => {
-  return addons.value.filter((a) => a.enabled).length;
-});
-
-const newEnabledAddons = computed(() =>
-  newAddons.value.filter(
-    (a, index) => a.enabled === true && addons.value[index].enabled === false
-  )
-);
 
 const getBillingItems = () => {
   const items = [];
@@ -358,11 +279,20 @@ const getBillingItems = () => {
     accountPrice: toAccountPrice(product?.price),
   });
 
-  items.push(
-    ...addons.value
-      .filter((a) => a.enabled)
-      .map((a) => ({ ...a, isAddon: true }))
-  );
+  addons.value.forEach((addon, index) => {
+    const { title, periods } = addon;
+    const { period, kind } = billingPlan.value.products[template.value.product];
+    items.push({
+      name: title,
+      price: periods[period],
+      accountPrice: toAccountPrice(periods[period]),
+      path: `${index}.periods.${period}`,
+      quantity: 1,
+      isAddon: true,
+      kind,
+      period: getBillingPeriod(product?.period),
+    });
+  });
 
   return items.map((i) => {
     return i;
@@ -374,6 +304,7 @@ const updatePrice = (item, isAccount) => {
     emit("update", {
       key: item.path,
       value: fromAccountPrice(item.accountPrice),
+      type: item.isAddon ? "addons" : "template",
     });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
@@ -382,65 +313,17 @@ const updatePrice = (item, isAccount) => {
       return p;
     });
   } else {
-    emit("update", { key: item.path, value: item.price });
+    emit("update", {
+      key: item.path,
+      value: item.price,
+      type: item.isAddon ? "addons" : "template",
+    });
     billingItems.value = billingItems.value.map((p) => {
       if (p.path === item.path) {
         p.accountPrice = toAccountPrice(item.price);
       }
       return p;
     });
-  }
-};
-
-const resetAddons = () => {
-  newAddons.value = JSON.parse(JSON.stringify(addons.value));
-  isAddonsOpen.value = false;
-};
-
-const saveAddons = async (isSkipped) => {
-  const tempService = JSON.parse(JSON.stringify(service.value));
-  const instance = JSON.parse(JSON.stringify(template.value));
-  const igIndex = tempService.instancesGroups.findIndex((ig) =>
-    ig.instances.find((i) => i.uuid === template.value.uuid)
-  );
-  const instanceIndex = tempService.instancesGroups[
-    igIndex
-  ].instances.findIndex((i) => i.uuid === template.value.uuid);
-
-  const skipped = [];
-  skipped.push(template.value.product);
-  skipped.push(...(template.value?.config?.addons || []));
-
-  const addons = newAddons.value.filter((a) => a.enabled).map((a) => a.key);
-
-  if (isSkipped) {
-    instance.config = {
-      ...instance.config,
-      skip_next_payment: [
-        ...new Set(
-          (instance.config?.skip_next_payment || []).concat(
-            ...newEnabledAddons.value.map((a) => a.key)
-          )
-        ),
-      ],
-    };
-  }
-  instance.config.addons = addons;
-
-  tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-  try {
-    isAddonsLoading.value = true;
-    await api.services._update(tempService);
-    emit("refresh");
-  } catch (err) {
-    store.commit("snackbar/showSnackbarError", { message: err });
-  } finally {
-    isAddonsLoading.value = false;
-  }
-};
-const saveAddonsClick = () => {
-  if (newEnabledAddons.value.length === 0) {
-    saveAddons();
   }
 };
 </script>

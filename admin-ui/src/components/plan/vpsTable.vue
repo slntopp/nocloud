@@ -84,40 +84,18 @@
             {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ value }">
-            {{ value }} {{ defaultCurrency }}
+            {{ value }} {{ defaultCurrency?.title }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
               dense
               style="width: 200px"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model="item.value"
             />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.public" />
-          </template>
-          <template v-slot:expanded-item="{ headers, item }">
-            <template v-if="item.windows">
-              <td></td>
-              <td :colspan="headers.length - 4">{{ item.windows.name }}</td>
-              <td>
-                {{ item.windows.price.value }}
-                {{ defaultCurrency }}
-              </td>
-              <td>
-                <v-text-field
-                  dense
-                  style="width: 150px"
-                  v-model="item.windows.value"
-                />
-              </td>
-              <td></td>
-            </template>
-            <template v-else>
-              <td></td>
-              <td :colspan="headers.length - 1">{{ $t("Windows is none") }}</td>
-            </template>
           </template>
         </nocloud-table>
 
@@ -133,13 +111,13 @@
             {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ value }">
-            {{ value }} {{ defaultCurrency }}
+            {{ value }} {{ defaultCurrency?.title }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
               dense
               style="width: 200px"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model="item.value"
             />
           </template>
@@ -148,40 +126,35 @@
           </template>
         </nocloud-table>
 
-        <div class="os-tab__card" v-else-if="tab === 'OS'">
-          <template v-if="allImages.length">
-            <v-card
-              outlined
-              class="pt-4 pl-4 d-flex"
-              style="gap: 10px"
-              color="background"
-              v-for="item of allImages"
-              :key="item"
-            >
-              <v-chip
-                close
-                :color="images.includes(item) ? 'info' : 'error'"
-                :close-icon="
-                  images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle'
-                "
-                @click:close="changeImage(item)"
-              >
-                <span>
-                  {{ item }}
-                </span>
-              </v-chip>
-            </v-card>
+        <nocloud-table
+          v-else-if="tab === 'OS'"
+          :show-select="false"
+          :items="images"
+          :headers="imagesHeaders"
+          :loading="isPlansLoading"
+          :footer-error="fetchError"
+        >
+          <template v-slot:[`item.tariff`]="{ value }">
+            {{ value || "Any" }}
           </template>
-          <template v-else>
-            <v-card
-              outlined
-              class="pt-4 pl-4 d-flex"
-              style="gap: 10px"
-              color="background"
-            >
-              <v-card-title>No os in selected tariffs</v-card-title>
-            </v-card>
+          <template v-slot:[`item.value`]="{ item }">
+            <v-text-field
+              dense
+              style="width: 200px"
+              :suffix="defaultCurrency?.title"
+              v-model="item.value"
+            />
           </template>
+          <template v-slot:[`item.sell`]="{ item }">
+            <v-switch v-model="item.public" />
+          </template>
+        </nocloud-table>
+
+        <div v-else>
+          <plan-addons-table
+            @change:addons="planAddons = $event"
+            :addons="template.addons"
+          />
         </div>
       </v-tab-item>
     </v-tabs-items>
@@ -192,10 +165,15 @@
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
 import { getMarginedValue } from "@/functions";
+import {
+  Addon,
+  ListAddonsRequest,
+} from "nocloud-proto/proto/es/billing/addons/addons_pb";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 
 export default {
   name: "vps-table",
-  components: { nocloudTable },
+  components: { nocloudTable, planAddonsTable },
   props: {
     fee: { type: Object, required: true },
     template: { type: Object, required: true },
@@ -206,8 +184,7 @@ export default {
   data: () => ({
     groups: [],
     expanded: [],
-    tabs: ["Tariffs", "Addons", "OS"],
-    images: [],
+    tabs: ["Tariffs", "Addons", "OS", "Custom addons"],
 
     plans: [],
     headers: [
@@ -231,13 +208,26 @@ export default {
     addons: [],
     addonsHeaders: [
       { text: "Addon", value: "name" },
-      { text: "Margin", value: "margin" },
       {
         text: "Payment",
         value: "duration",
       },
       { text: "Incoming price", value: "price.value" },
       { text: "Sale price", value: "value" },
+      {
+        text: "Sell",
+        value: "sell",
+        width: 100,
+      },
+    ],
+
+    images: [],
+    imagesHeaders: [
+      { text: "OS", value: "name" },
+      { text: "Tariff", value: "tariff" },
+      { text: "Incoming price", value: "price.value" },
+      { text: "Sale price", value: "value" },
+      { text: "Payment", value: "duration" },
       {
         text: "Sell",
         value: "sell",
@@ -256,37 +246,168 @@ export default {
 
     newPlans: null,
     newAddons: null,
+    newImages: null,
     isRefreshLoading: false,
+
+    planAddons: [],
   }),
   methods: {
-    changeImage(value) {
-      const i = this.images.indexOf(value);
-
-      if (i !== -1) this.images.splice(i, 1);
-      else this.images.push(value);
-    },
     testConfig() {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
         return "You must select a group for the tariff!";
       }
     },
-    changePlan(plan) {
+    async changePlan(plan) {
+      plan.resources = [];
+      plan.products = {};
+
+      let allAddons = [];
+      let addons = [];
+
+      this.addons.forEach((addon) => {
+        const addonkey = addon.id.split(" ")[1];
+        const existedAddon = addons.find(
+          (existed) => existed.meta.key === addonkey
+        );
+
+        let data;
+        if (existedAddon) {
+          existedAddon.periods[this.getPeriod(addon.duration)] = addon.value;
+          existedAddon.meta.basePrices[this.getPeriod(addon.duration)] =
+            addon.price.value;
+          data = existedAddon;
+          return;
+        } else {
+          data = {
+            system: true,
+            title: addon.name,
+            group: this.template.uuid,
+            periods: { [this.getPeriod(addon.duration)]: addon.value },
+            public: addon.public,
+            kind: "PREPAID",
+            meta: {
+              basePrices: {
+                [this.getPeriod(addon.duration)]: addon.price.value,
+              },
+              key: addonkey,
+              type: "addon",
+            },
+          };
+        }
+
+        if (addon.uuid) {
+          data.uuid = addon.uuid;
+          addons.push({ ...data, type: "update" });
+        } else {
+          addons.push({ ...data, type: "create" });
+        }
+      });
+
+      this.images.forEach((addon) => {
+        const existedAddon = addons.find(
+          (existed) =>
+            existed.meta.type === "os" &&
+            existed.meta.key === addon.id &&
+            existed.meta.tariff === addon.tariff
+        );
+
+        let data;
+        if (existedAddon) {
+          existedAddon.periods[this.getPeriod(addon.duration)] = addon.value;
+          existedAddon.meta.basePrices[this.getPeriod(addon.duration)] =
+            addon.price.value;
+          data = existedAddon;
+          return;
+        } else {
+          data = {
+            system: true,
+            title: addon.name,
+            group: this.template.uuid,
+            periods: { [this.getPeriod(addon.duration)]: addon.value },
+            public: addon.public,
+            kind: "PREPAID",
+            meta: {
+              basePrices: {
+                [this.getPeriod(addon.duration)]: addon.price.value,
+              },
+              key: addon.id,
+              type: "os",
+            },
+          };
+        }
+
+        if (addon.tariff) {
+          data.meta.tariff = addon.tariff;
+        }
+
+        if (addon.uuid) {
+          data.uuid = addon.uuid;
+          addons.push({ ...data, type: "update" });
+        } else {
+          addons.push({ ...data, type: "create" });
+        }
+      });
+
+      const addonsForCreate = addons
+        .filter((a) => a.type === "create")
+        .map((a) => {
+          delete a.type;
+          return a;
+        });
+
+      const addonsForUpdate = addons
+        .filter((a) => a.type === "update")
+        .map((a) => {
+          delete a.type;
+          return a;
+        });
+
+      if (addonsForCreate.length) {
+        const createdAddons = await this.addonsClient.createBulk({
+          addons: addonsForCreate.map((addon) => Addon.fromJson(addon)),
+        });
+
+        allAddons.push(...createdAddons.toJson().addons);
+      }
+
+      if (addonsForUpdate.length) {
+        const updatedAddons = await this.addonsClient.updateBulk({
+          addons: addonsForUpdate.map((addon) => Addon.fromJson(addon)),
+        });
+        allAddons.push(...updatedAddons.toJson().addons);
+      }
+
       this.plans.forEach((el) => {
         const [, , cpu, ram, disk] = el.planCode.split("-");
         const meta = {
-          addons: el.addons.map((a) => [el.duration, a].join(" ")),
           datacenter: el.datacenter,
-          os: el.os.filter((item) => this.images.includes(item)),
-          hidedOs: el.os.filter((item) => !this.images.includes(item)),
         };
 
-        if (el.windows) meta.windows = el.windows.value;
+        const addons = el.addons
+          .map((key) => allAddons.find((addon) => key === addon.meta.key)?.uuid)
+          .filter((a) => !!a)
+          .concat(
+            el.os
+              .map(
+                (key) =>
+                  allAddons.find(
+                    (addon) =>
+                      key === addon.meta.key &&
+                      (!addon.meta.tariff ||
+                        addon.meta.tariff ===
+                          `option-windows-${el.planCode.replace("vps-", "")}`)
+                  )?.uuid
+              )
+              .filter((a) => !!a)
+          );
+
         plan.products[el.id] = {
           kind: "PREPAID",
           title: el.name,
           price: el.value,
           public: el.public,
           group: el.group,
+          addons,
           period: this.getPeriod(el.duration),
           resources: { cpu: +cpu, ram: ram * 1024, drive_size: disk * 1024 },
           meta: {
@@ -299,23 +420,9 @@ export default {
         };
       });
 
-      this.addons.forEach((el) => {
-        plan.resources.push({
-          key: el.id,
-          public: el.public,
-          kind: "PREPAID",
-          title: el.name,
-          price: el.value,
-          period: this.getPeriod(el.duration),
-          except: false,
-          meta: {
-            basePrice: el.price.value,
-          },
-          on: [],
-        });
-      });
+      plan.addons = this.planAddons;
     },
-    changePlans({ plans, windows, catalog }) {
+    changePlans({ plans, catalog }) {
       const result = [];
 
       plans.forEach(({ prices, planCode, productName }) => {
@@ -328,7 +435,6 @@ export default {
             const realProduct = this.plans.find((p) => p.id === id) || {};
 
             const code = planCode.split("-").slice(1).join("-");
-            const option = windows.find((el) => el.planCode.includes(code));
             const newPrice = this.convertPrice(price.value);
 
             const { configurations, addonFamilies } = catalog.plans.find(
@@ -343,24 +449,7 @@ export default {
               (res, { addons }) => [...res, ...addons],
               []
             );
-            const plan = { windows: null, addons, os, datacenter };
-
-            if (option) {
-              const {
-                price: { value },
-              } = option.prices.find(
-                (el) =>
-                  el.duration === duration && el.pricingMode === pricingMode
-              );
-              const newPrice = this.convertPrice(value);
-
-              plan.windows = {
-                value,
-                price: { value: newPrice },
-                name: option.productName,
-                code: option.planCode,
-              };
-            }
+            const plan = { addons, os, datacenter };
 
             const installation = prices.find(
               (price) =>
@@ -420,7 +509,7 @@ export default {
                 price: { value: newPrice },
                 duration,
                 name: productName,
-                value: realAddon.value || price.value,
+                value: realAddon.value || newPrice,
                 public: !!realAddon.public,
                 id,
               });
@@ -431,15 +520,69 @@ export default {
 
       return result;
     },
+    changeImages({ windows }) {
+      const newImages = [];
+
+      this.newPlans.forEach((plan) =>
+        plan.os.forEach((key) => {
+          let tariff, price, basePrice;
+          const periods = ["P1M", "P1Y"];
+
+          periods.forEach((duration) => {
+            let product;
+            if (key.toLowerCase().includes("windows")) {
+              product = windows.find(
+                (w) =>
+                  w.planCode ===
+                  `option-windows-${plan.planCode.replace("vps-", "")}`
+              );
+
+              const { price: priceObject } = product.prices.find(
+                (price) =>
+                  price.duration === duration &&
+                  ["upfront12", "default"].includes(price.pricingMode)
+              );
+              tariff = product.planCode;
+              const newPrice = this.convertPrice(priceObject.value);
+              price = newPrice;
+              basePrice = newPrice;
+            }
+
+            if (
+              newImages.find(
+                (os) =>
+                  os.id === key &&
+                  os.duration === duration &&
+                  (!os.tariff || os.tariff === product.planCode)
+              )
+            ) {
+              return;
+            }
+
+            const realAddon = this.images.find(
+              (a) =>
+                a.id === key && tariff === a.tariff && a.duration === duration
+            );
+
+            newImages.push({
+              name: key,
+              price: { value: basePrice || 0 },
+              value: realAddon?.value || price || 0,
+              public: realAddon ? realAddon.public : true,
+              tariff,
+              id: key,
+              duration,
+            });
+          });
+        })
+      );
+
+      return newImages;
+    },
     setFee() {
-      const windows = [];
-
       this.usedFee = JSON.parse(JSON.stringify(this.fee));
-      this.plans.forEach((el) => {
-        if (el.windows) windows.push(el.windows);
-      });
 
-      [this.plans, this.addons, windows].forEach((el) => {
+      [this.plans, this.addons, this.images].forEach((el) => {
         el.forEach((plan, i, arr) => {
           arr[i].value = getMarginedValue(this.fee, plan.price.value);
         });
@@ -489,12 +632,7 @@ export default {
           break;
         }
         case "OS": {
-          this.images = [];
-          if (status) {
-            this.allImages.forEach((img) => {
-              this.images.push(img);
-            });
-          }
+          this.setSellToValue(this.images, status);
           break;
         }
         case "Tariffs": {
@@ -522,8 +660,13 @@ export default {
 
         this.newPlans = this.changePlans(meta);
         this.newAddons = this.changeAddons(meta);
+        this.newImages = this.changeImages(meta);
 
-        if (!this.plans?.length || !this.addons?.length) {
+        if (
+          !this.plans?.length ||
+          !this.addons?.length ||
+          !this.images?.length
+        ) {
           this.setRefreshedPlans();
         }
       } catch (err) {
@@ -539,6 +682,7 @@ export default {
     setRefreshedPlans() {
       this.addons = JSON.parse(JSON.stringify(this.newAddons));
       this.plans = JSON.parse(JSON.stringify(this.newPlans));
+      this.images = JSON.parse(JSON.stringify(this.newImages));
       this.newPlans = null;
       this.newAddons = null;
 
@@ -552,19 +696,45 @@ export default {
       });
     },
   },
-  created() {
-    const newImages = [];
+  async created() {
+    const periodsDurationMap = { 31536000: "P1Y", 2592000: "P1M" };
+
+    const { addons = [] } = (
+      await this.addonsClient.list(
+        ListAddonsRequest.fromJson({ filters: { group: [this.template.uuid] } })
+      )
+    ).toJson();
+
+    const newAddons = [];
+    addons
+      .filter((addon) => addon.meta?.type != "os")
+      .forEach((addon) =>
+        newAddons.push(
+          ...Object.keys(addon.periods).map((period) => {
+            const duration = periodsDurationMap[period];
+            const { key: planCode, basePrices } = addon.meta;
+            return {
+              ...addon,
+              duration,
+              planCode,
+              price: { value: basePrices[period] },
+              value: addon.periods[period],
+              name: addon.title,
+              id: [duration, planCode].join(" "),
+              uuid: addon.uuid,
+            };
+          })
+        )
+      );
+    this.addons = newAddons;
+
     this.plans = Object.keys(this.template.products || {}).map((key) => {
       const [duration, planCode] = key.split(" ");
       const product = this.template.products[key];
 
       const { meta } = product;
 
-      const enabledOs = meta.os || [];
-      newImages.push(...enabledOs);
-      const os = enabledOs.concat(...(meta.hidedOs || []));
-
-      const { apiName, addons, datacenter, basePrice } = meta;
+      const { apiName, datacenter, basePrice } = meta;
 
       return {
         ...product,
@@ -573,35 +743,51 @@ export default {
         price: { value: basePrice },
         value: product.price,
         datacenter,
-        addons: addons?.map((a) => a.split(" "))[1],
+        addons: product.addons
+          ?.map((uuid) => addons.find((addon) => addon.uuid === uuid))
+          .filter((addon) => addon?.meta.type !== "os")
+          .map((addon) => addon?.meta.key),
         installation_fee: product.installationFee,
-        os,
+        os: product.addons
+          ?.map((uuid) => addons.find((addon) => addon.uuid === uuid))
+          .filter((addon) => addon?.meta.type === "os")
+          .map((addon) => addon?.meta.key),
         name: product.title,
         apiName,
         id: key,
       };
     });
 
-    this.addons = this.template.resources.map((r) => {
-      const { key } = r;
-      const [duration, planCode] = key.split(" ");
-      return {
-        ...r,
-        duration,
-        planCode,
-        price: { value: r.meta.basePrice },
-        value: r.price,
-        name: r.title,
-        id: key,
-      };
-    });
+    const newImages = [];
+    addons
+      .filter((addon) => addon.meta?.type == "os")
+      .forEach((addon) =>
+        newImages.push(
+          ...Object.keys(addon.periods).map((period) => {
+            const duration = periodsDurationMap[period];
+            const { key, basePrices, tariff } = addon.meta;
+            return {
+              ...addon,
+              duration,
+              price: { value: basePrices[period] },
+              value: addon.periods[period],
+              name: addon.title,
+              tariff,
+              id: key,
+              uuid: addon.uuid,
+            };
+          })
+        )
+      );
 
-    this.images = [...new Set(newImages)];
+    this.images = newImages;
   },
   mounted() {
     this.$emit("changeFee", this.template.fee);
 
     this.refreshPlans();
+
+    this.planAddons = [...this.template.addons];
   },
   computed: {
     defaultCurrency() {
@@ -611,22 +797,16 @@ export default {
       return this.$store.getters["currencies/rates"];
     },
     plnRate() {
-      if (this.defaultCurrency === "PLN") {
+      if (this.defaultCurrency?.title === "PLN") {
         return 1;
       }
       return this.rates.find(
-        (r) => r.to === this.defaultCurrency && r.from === "PLN"
+        (r) =>
+          r.to?.title === this.defaultCurrency?.title && r.from?.title === "PLN"
       )?.rate;
     },
-    allImages() {
-      const imagesSet = new Set();
-      this.plans.forEach((p) => {
-        p.os.forEach((os) => imagesSet.add(os));
-      });
-
-      const imagesArr = [...imagesSet.values()];
-      imagesArr.sort();
-      return imagesArr;
+    addonsClient() {
+      return this.$store.getters["addons/addonsClient"];
     },
   },
   watch: {

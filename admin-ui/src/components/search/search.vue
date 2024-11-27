@@ -46,7 +46,7 @@
               color="primary"
               v-if="currentLayout"
               >{{ currentLayout.title }}
-              <v-btn icon x-small @click="setCurrentLayout('')">
+              <v-btn icon x-small @click.stop="setCurrentLayout('')">
                 <v-icon small>mdi-close</v-icon>
               </v-btn>
             </v-chip>
@@ -308,7 +308,6 @@ const isOpen = ref(false);
 const localFilter = ref({});
 const pinnedLayout = ref();
 const currentFieldsKeys = ref([]);
-const layouts = ref([]);
 function getBlankLayout() {
   return { filter: {}, fields: {}, id: "blank" };
 }
@@ -350,6 +349,10 @@ const currentFields = computed(() => {
   });
 
   return fields;
+});
+const layouts = computed({
+  get: () => store.getters["appSearch/layouts"] || [],
+  set: (val) => store.commit("appSearch/setLayouts", val),
 });
 const currentLayout = computed({
   get: () =>
@@ -658,7 +661,9 @@ watch(allFields, (fields) => {
           const correctFilter = [];
           filterValue.forEach((value) => {
             if (
-              items.find((item) => (item[options?.value] || item) === value)
+              items.find(
+                (item) => (item[options?.value || "value"] || item) === value
+              )
             ) {
               correctFilter.push(value);
             }

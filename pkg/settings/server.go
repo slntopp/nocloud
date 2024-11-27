@@ -18,9 +18,9 @@ package settings
 import (
 	"context"
 	"fmt"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"strings"
 
-	redis "github.com/go-redis/redis/v8"
 	pb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"google.golang.org/grpc/codes"
@@ -40,10 +40,10 @@ type SettingsServiceServer struct {
 	pb.UnimplementedSettingsServiceServer
 
 	log *zap.Logger
-	rdb *redis.Client
+	rdb redisdb.Client
 }
 
-func NewSettingsServer(log *zap.Logger, rdb *redis.Client) *SettingsServiceServer {
+func NewSettingsServer(log *zap.Logger, rdb redisdb.Client) *SettingsServiceServer {
 	return &SettingsServiceServer{
 		log: log.Named("SettingsServer"), rdb: rdb,
 	}

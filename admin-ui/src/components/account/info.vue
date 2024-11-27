@@ -4,7 +4,7 @@
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <hint-btn hint="Create instance">
           <v-btn
-            :class="(viewport < 600) ? 'ma-0' : 'ma-1'"
+            :class="viewport < 600 ? 'ma-0' : 'ma-1'"
             :small="viewport < 600"
             :disabled="isLocked"
             :to="{
@@ -25,7 +25,7 @@
                 :disabled="isChangeRegularPaymentLoading"
                 :loading="isChangeRegularPaymentLoading"
                 :small="viewport < 600"
-                :class="(viewport < 600) ? 'ma-4' : 'ma-1'"
+                :class="viewport < 600 ? 'ma-4' : 'ma-1'"
                 v-bind="attrs"
                 v-on="on"
               >
@@ -69,7 +69,7 @@
         <hint-btn hint="Create transaction/invoice">
           <v-chip @click="openTransaction" class="ma-1" color="primary" outlined
             >Balance: {{ account.balance?.toFixed(2) || 0 }}
-            {{ account.currency }}</v-chip
+            {{ account.currency?.title }}</v-chip
           >
         </hint-btn>
       </div>
@@ -91,8 +91,15 @@
           :readonly="isCurrencyReadonly"
           :items="currencies"
           v-model="currency"
+          item-text="title"
+          return-object
+          item-value="id"
           label="currency"
         />
+      </v-col>
+
+      <v-col lg="2" md="4" sm="6" cols="12">
+        <v-text-field v-model="taxRate" label="tax rate" suffix="%"/>
       </v-col>
     </v-row>
 
@@ -169,9 +176,13 @@
       />
     </div>
     <instances-table
-      :items="filteredInstances"
+      table-name="account-instances-table"
       no-search
       :show-select="false"
+      :custom-filter="{
+        account: [uuid],
+        'state.state': !!showDeletedInstances ? [] : [0, 1, 2, 3, 4, 6, 7, 8],
+      }"
     />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
@@ -240,7 +251,7 @@ import config from "@/config.js";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
-import InstancesTable from "@/components/instances_table.vue";
+import InstancesTable from "@/components/instancesTable.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
@@ -272,6 +283,7 @@ export default {
     accountNamespace: null,
     uuid: "",
     title: "",
+    taxRate: 0,
     currency: "",
     keys: [],
     selected: [],
@@ -281,7 +293,7 @@ export default {
     isChangeRegularPaymentLoading: false,
     isChangeRegularPaymentOpen: false,
     showDeletedInstances: false,
-    viewport: window.innerWidth
+    viewport: window.innerWidth,
   }),
   methods: {
     formatSecondsToDate,
@@ -314,6 +326,10 @@ export default {
         ...this.account,
         title: this.title,
         currency: this.currency,
+        data: {
+          ...this.account.data,
+          tax_rate: this.taxRate / 100,
+        },
       };
       if (!newAccount.data) {
         newAccount.data = {};
@@ -350,6 +366,7 @@ export default {
         this.statusChangeValue = "";
       }
     },
+    //need remake to instances api
     async permanentLock() {
       const newStatus = "PERMANENT_LOCK";
       this.statusChangeValue = newStatus;
@@ -378,6 +395,7 @@ export default {
         this.statusChangeValue = "";
       }
     },
+    //need remake to instances api
     async changeRegularPayment(value) {
       this.isChangeRegularPaymentLoading = true;
       this.isChangeRegularPaymentOpen = false;
@@ -437,8 +455,13 @@ export default {
       }
     },
     setViewport() {
-      this.viewport = window.innerWidth
-    }
+      this.viewport = window.innerWidth;
+    },
+    initTaxRate() {
+      this.taxRate = this.account.data.tax_rate
+        ? this.account.data.tax_rate * 100
+        : 0;
+    },
   },
   mounted() {
     this.title = this.account.title;
@@ -449,17 +472,21 @@ export default {
     this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     this.fetchNamespace();
 
-    window.addEventListener('resize', this.setViewport)
+    window.addEventListener("resize", this.setViewport);
+
+    this.initTaxRate();
   },
   destroyed() {
-    window.removeEventListener('resize', this.setViewport)
+    window.removeEventListener("resize", this.setViewport);
   },
   computed: {
     services() {
       return this.$store.getters["services/all"];
     },
     currencies() {
-      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
+      return this.$store.getters["currencies/all"].filter(
+        (c) => c.title !== "NCU"
+      );
     },
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
@@ -482,7 +509,7 @@ export default {
       );
     },
     isCurrencyReadonly() {
-      return this.account.currency && this.account.currency !== "NCU";
+      return this.account.currency && this.account.currency.title !== "NCU";
     },
     isLocked() {
       return this.account.status !== "ACTIVE";
@@ -520,6 +547,11 @@ export default {
     },
     whmcsApi() {
       return this.$store.getters["settings/whmcsApi"];
+    },
+  },
+  watch: {
+    account() {
+      this.initTaxRate();
     },
   },
 };

@@ -18,8 +18,8 @@ package edge
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
-	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/edge"
 	stpb "github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -36,7 +36,7 @@ type EdgeServiceServer struct {
 	pub s.Pub
 }
 
-func NewEdgeServiceServer(log *zap.Logger, rbmq *amqp.Connection) *EdgeServiceServer {
+func NewEdgeServiceServer(log *zap.Logger, rbmq rabbitmq.Connection) *EdgeServiceServer {
 	s := s.NewStatesPubSub(log, nil, rbmq)
 	ch := s.Channel()
 	s.TopicExchange(ch, "states")

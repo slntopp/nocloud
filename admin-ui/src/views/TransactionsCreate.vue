@@ -101,7 +101,7 @@
               <v-text-field
                 type="number"
                 label="Amount"
-                :suffix="accountCurrency"
+                :suffix="accountCurrency?.title"
                 v-model.number="transaction.total"
                 :rules="isInvoice ? [] : amountRule"
                 :disabled="isInvoice"
@@ -467,7 +467,7 @@ export default {
     },
     openAccountWindow() {
       return window.open(
-        "/accounts/" + this.transaction.account.uuid,
+        "/admin/accounts/" + this.transaction.account.uuid,
         "_blanc"
       );
     },

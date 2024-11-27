@@ -2,6 +2,7 @@ package graph_test
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"testing"
 
 	"github.com/Pallinder/go-randomdata"
@@ -30,7 +31,7 @@ func init() {
 	viper.Set("LOG_LEVEL", -1)
 	log = nocloud.NewLogger()
 	log.Info("Setting up DB Connection")
-	db = connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db = connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, schema.DB_NAME)
 	log.Info("DB connection established")
 
 	ctrl = graph.NewServicesController(log, db, nil)

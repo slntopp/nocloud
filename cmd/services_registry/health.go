@@ -16,7 +16,9 @@ limitations under the License.
 package main
 
 import (
+	"connectrpc.com/connect"
 	"context"
+	"github.com/slntopp/nocloud/pkg/instances"
 
 	pb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/services"
@@ -27,23 +29,26 @@ const SERVICE = "Services Registry"
 
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer
-	log *zap.Logger
-	srv *services.ServicesServer
+	log  *zap.Logger
+	srv  *services.ServicesServer
+	isrv *instances.InstancesServer
 }
 
-func NewHealthServer(log *zap.Logger, srv *services.ServicesServer) *HealthServer {
+func NewHealthServer(log *zap.Logger, srv *services.ServicesServer, isrv *instances.InstancesServer) *HealthServer {
 	return &HealthServer{
-		log: log, srv: srv,
+		log: log, srv: srv, isrv: isrv,
 	}
 }
 
-func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.ServingStatus, error) {
-	return &pb.ServingStatus{
+func (s *HealthServer) Service(_ context.Context, _ *connect.Request[pb.ProbeRequest]) (*connect.Response[pb.ServingStatus], error) {
+	return connect.NewResponse(&pb.ServingStatus{
 		Service: SERVICE,
 		Status:  pb.Status_SERVING,
-	}, nil
+	}), nil
 }
 
-func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
-	return &pb.RoutinesStatus{}, nil
+func (s *HealthServer) Routine(_ context.Context, _ *connect.Request[pb.ProbeRequest]) (*connect.Response[pb.RoutinesStatus], error) {
+	return connect.NewResponse(&pb.RoutinesStatus{
+		Routines: s.isrv.RoutinesState(),
+	}), nil
 }

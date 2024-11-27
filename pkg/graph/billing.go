@@ -25,12 +25,22 @@ import (
 	"go.uber.org/zap"
 )
 
+type BillingPlansController interface {
+	Create(ctx context.Context, plan *pb.Plan) (*BillingPlan, error)
+	Update(ctx context.Context, plan *pb.Plan) (*BillingPlan, error)
+	Delete(ctx context.Context, plan *pb.Plan) error
+	Get(ctx context.Context, plan *pb.Plan) (*BillingPlan, error)
+	InstancesCount(ctx context.Context, plan *pb.Plan) (int, error)
+	List(ctx context.Context, spUuid string) ([]*BillingPlan, error)
+	CheckStatus(ctx context.Context, plan *pb.Plan) (statuspb.NoCloudStatus, error)
+}
+
 type BillingPlan struct {
 	*pb.Plan
 	driver.DocumentMeta
 }
 
-type BillingPlansController struct {
+type billingPlansController struct {
 	log   *zap.Logger
 	col   driver.Collection // Billing Plans collection
 	graph driver.Graph
@@ -42,12 +52,13 @@ func NewBillingPlansController(logger *zap.Logger, db driver.Database) BillingPl
 	graph := GraphGetEnsure(log, ctx, db, schema.BILLING_GRAPH.Name)
 	plans := GetEnsureCollection(log, ctx, db, schema.BILLING_PLANS_COL)
 	GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
-	return BillingPlansController{
+
+	return &billingPlansController{
 		log: log, col: plans, graph: graph,
 	}
 }
 
-func (ctrl *BillingPlansController) Create(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
+func (ctrl *billingPlansController) Create(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
 	meta, err := ctrl.col.CreateDocument(ctx, plan)
 	if err != nil {
 		return nil, err
@@ -58,7 +69,7 @@ func (ctrl *BillingPlansController) Create(ctx context.Context, plan *pb.Plan) (
 	}, nil
 }
 
-func (ctrl *BillingPlansController) Update(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
+func (ctrl *billingPlansController) Update(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
 	if plan.Uuid == "" {
 		return nil, errors.New("uuid is empty")
 	}
@@ -72,7 +83,7 @@ func (ctrl *BillingPlansController) Update(ctx context.Context, plan *pb.Plan) (
 	}, nil
 }
 
-func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) error {
+func (ctrl *billingPlansController) Delete(ctx context.Context, plan *pb.Plan) error {
 	if plan.Uuid == "" {
 		return errors.New("uuid is empty")
 	}
@@ -108,7 +119,7 @@ FOR item IN sp2bp
     REMOVE item IN @@sp_to_bp
 `
 
-func (ctrl *BillingPlansController) Get(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
+func (ctrl *billingPlansController) Get(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
 	if plan.Uuid == "" {
 		return nil, errors.New("uuid is empty")
 	}
@@ -129,7 +140,7 @@ FOR i IN Instances
     RETURN i
 `
 
-func (ctrl *BillingPlansController) InstancesCount(ctx context.Context, plan *pb.Plan) (int, error) {
+func (ctrl *billingPlansController) InstancesCount(ctx context.Context, plan *pb.Plan) (int, error) {
 	if plan.Uuid == "" {
 		return 0, errors.New("uuid is empty")
 	}
@@ -151,7 +162,7 @@ func (ctrl *BillingPlansController) InstancesCount(ctx context.Context, plan *pb
 	return result, nil
 }
 
-func (ctrl *BillingPlansController) List(ctx context.Context, spUuid string) ([]*BillingPlan, error) {
+func (ctrl *billingPlansController) List(ctx context.Context, spUuid string) ([]*BillingPlan, error) {
 	var query string
 	bindVars := make(map[string]interface{}, 0)
 
@@ -184,7 +195,7 @@ func (ctrl *BillingPlansController) List(ctx context.Context, spUuid string) ([]
 	return r, nil
 }
 
-func (ctrl *BillingPlansController) CheckStatus(ctx context.Context, plan *pb.Plan) (statuspb.NoCloudStatus, error) {
+func (ctrl *billingPlansController) CheckStatus(ctx context.Context, plan *pb.Plan) (statuspb.NoCloudStatus, error) {
 	var planFromDb pb.Plan
 
 	_, err := ctrl.col.ReadDocument(ctx, plan.Uuid, &planFromDb)

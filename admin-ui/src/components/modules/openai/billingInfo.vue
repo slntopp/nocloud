@@ -56,7 +56,7 @@
       >
         <template v-slot:[`item.price`]="{ item }">
           <v-text-field
-            :suffix="defaultCurrency"
+            :suffix="defaultCurrency?.title"
             v-model="item.price"
             @input="updatePrice(item, false)"
             append-icon="mdi-pencil"
@@ -64,7 +64,7 @@
         </template>
         <template v-slot:[`item.accountPrice`]="{ item }">
           <v-text-field
-            :suffix="accountCurrency"
+            :suffix="accountCurrency?.title"
             style="color: var(--v-primary-base)"
             v-model="item.accountPrice"
             @input="updatePrice(item, true)"
@@ -78,13 +78,14 @@
         <v-card-title class="text-center">Change price model</v-card-title>
         <v-row align="center">
           <v-col cols="12">
-            <v-autocomplete
-              label="price model"
-              item-text="title"
-              item-value="uuid"
-              return-object
+            <plans-autocomplete
               v-model="newPlan"
-              :items="filteredPlans"
+              :custom-params="{
+                filters: { type: ['openai'] },
+                anonymously: true,
+              }"
+              return-object
+              label="Price model"
             />
           </v-col>
         </v-row>
@@ -125,11 +126,12 @@ import {
 } from "@/functions";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
+import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, plans, service, account } = toRefs(props);
+const { template, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -149,9 +151,7 @@ const billingHeaders = ref([
 onMounted(() => {
   billingItems.value = getBillingItems();
 });
-const filteredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "openai")
-);
+
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isChangeBtnDisabled = computed(() => !newPlan.value);
 
@@ -201,6 +201,15 @@ const getBillingItems = () => {
         path: `billingPlan.resources.${index}.price`,
       });
     }
+  });
+  addons.value.forEach((addon) => {
+    const price = addon.periods[Object.keys(addon.periods)[0]];
+
+    items.push({
+      name: addon.title,
+      price: price,
+      accountPrice: toAccountPrice(price),
+    });
   });
 
   return items;

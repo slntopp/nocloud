@@ -18,12 +18,12 @@ package auth
 import (
 	"context"
 	"errors"
-	"github.com/go-redis/redis/v8"
 	"github.com/golang-jwt/jwt/v4"
 	billpb "github.com/slntopp/nocloud-proto/billing"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"go.uber.org/zap"
 
@@ -37,11 +37,11 @@ import (
 
 var (
 	log         *zap.Logger
-	rdb         *redis.Client
+	rdb         redisdb.Client
 	SIGNING_KEY []byte
 )
 
-func SetContext(logger *zap.Logger, _rdb *redis.Client, key []byte) {
+func SetContext(logger *zap.Logger, _rdb redisdb.Client, key []byte) {
 	log = logger.Named("JWT")
 	rdb = _rdb
 	SIGNING_KEY = key
@@ -110,14 +110,16 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		if probe.Anonymously {
 			return handler(ctx, req)
 		}
-	case "/nocloud.billing.CurrencyService/GetCurrencies":
-		return handler(ctx, req)
 	case "/nocloud.billing.CurrencyService/GetExchangeRates":
 		return handler(ctx, req)
 	}
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
-	if info.FullMethod != "/nocloud.registry.AccountsService/Token" && err != nil {
-		return nil, err
+	if info.FullMethod != "/nocloud.registry.AccountsService/Token" &&
+		info.FullMethod != "/nocloud.billing.CurrencyService/GetCurrencies" &&
+		info.FullMethod != "/nocloud.billing.AddonsService/List" {
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	go handleLogActivity(ctx)

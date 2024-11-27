@@ -6,19 +6,34 @@
     :sort-by="sortBy"
     sort-desc
   >
-    <template v-slot:[`item.amount`]="{ item }">
+    <template v-slot:[`item.price`]="{ item }">
       <v-text-field
         type="number"
-        label="Amount"
         :rules="!readonly ? generalRule : []"
         :readonly="readonly"
-        :suffix="accountCurrency"
-        v-model.number="item.amount"
+        :suffix="accountCurrency?.title"
+        v-model.number="item.price"
       />
     </template>
 
-    <template v-slot:[`item.title`]="{ index, item }">
-      <span>{{ item.title || `Item ${index + 1}` }}</span>
+    <template v-slot:[`item.amount`]="{ item }">
+      <v-text-field
+        type="number"
+        v-model.number="item.amount"
+        :rules="generalRule"
+      />
+    </template>
+
+    <template v-slot:[`item.price`]="{ item }">
+      <v-text-field
+        type="number"
+        v-model.number="item.price"
+        :rules="generalRule"
+      />
+    </template>
+
+    <template v-slot:[`item.unit`]="{ item }">
+      <v-select :rules="generalRule" v-model="item.unit" :items="unitItems" />
     </template>
 
     <template v-slot:[`item.description`]="{ item }">
@@ -33,12 +48,36 @@
       />
     </template>
 
-    <template v-slot:[`item.actions`]="{ index }">
+    <template v-if="showDelete" v-slot:[`item.actions`]="{ index }">
       <div class="d-flex justify-center">
         <v-btn icon @click="emit('click:delete', index)"
           ><v-icon>mdi-delete</v-icon></v-btn
         >
       </div>
+    </template>
+
+    <template v-if="showDelete" v-slot:[`item.total`]="{ item }">
+      <span>{{ (item.price * item.amount || 0).toFixed(2) }}</span>
+    </template>
+
+    <template v-if="items.length" v-slot:body.append>
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>
+          {{
+            items
+              .reduce(
+                (acc, item) => acc + (item.amount || 0) * (item.price || 0),
+                0
+              )
+              .toFixed(2)
+          }}
+        </td>
+        <td></td>
+      </tr>
     </template>
   </nocloud-table>
 </template>
@@ -55,6 +94,7 @@ const props = defineProps({
   showDate: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   sortBy: {},
+  instances: {},
 });
 const { items, account, showDelete, showDate, readonly, sortBy } =
   toRefs(props);
@@ -63,15 +103,18 @@ const emit = defineEmits("click:delete");
 
 const store = useStore();
 
-const generalRule = ref([(v) => !!v || "This field is required!"]);
+const generalRule = ref([(v) => !!v || v===0 || "This field is required!"]);
+const unitItems = ref(["Pcs", "Szt", "Hour`s"]);
 
 const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
-    { text: "Title", value: "title", width: 125 },
-    { text: "Description", value: "description" },
-    { text: "Amount", value: "amount", width: 175 },
-    showDelete.value && { text: "Actions", value: "actions", width:25 },
+    { text: "Description", value: "description", width: "40%" },
+    { text: "Unit", value: "unit", width: 100 },
+    { text: "Amount", value: "amount", width: 100 },
+    { text: "Price", value: "price", width: 100 },
+    { text: "Total", value: "total", width: 75 },
+    showDelete.value ? { text: "Actions", value: "actions", width: 25 } : null,
   ].filter((c) => !!c)
 );
 const accountCurrency = computed(

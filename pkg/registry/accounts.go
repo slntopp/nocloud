@@ -18,6 +18,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"slices"
 	"time"
 
@@ -42,7 +43,6 @@ import (
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
-	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -72,14 +72,15 @@ type AccountsServiceServer struct {
 	db      driver.Database
 	ctrl    graph.AccountsController
 	ns_ctrl graph.NamespacesController
+	ca      graph.CommonActionsController
 
 	log         *zap.Logger
 	SIGNING_KEY []byte
 
-	rdb *redis.Client
+	rdb redisdb.Client
 }
 
-func NewAccountsServer(log *zap.Logger, db driver.Database, rdb *redis.Client) *AccountsServiceServer {
+func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client) *AccountsServiceServer {
 	return &AccountsServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewAccountsController(
@@ -87,6 +88,9 @@ func NewAccountsServer(log *zap.Logger, db driver.Database, rdb *redis.Client) *
 		),
 		ns_ctrl: graph.NewNamespacesController(
 			log.Named("NamespacesController"), db,
+		),
+		ca: graph.NewCommonActionsController(
+			log.Named("CommonActionsController"), db,
 		),
 		rdb: rdb,
 	}
@@ -162,6 +166,19 @@ func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.Sus
 		return nil, status.Error(codes.Internal, "Error while updating account")
 	}
 
+	nocloud.Log(log, &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.Key,
+		Scope:     "database",
+		Action:    "suspended",
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	})
+
 	log.Debug("Suspend request end")
 	return &accountspb.SuspendResponse{Result: true}, nil
 }
@@ -211,6 +228,19 @@ func (s *AccountsServiceServer) Unsuspend(ctx context.Context, req *accountspb.U
 		return nil, status.Error(codes.Internal, "Error while updating account")
 	}
 
+	nocloud.Log(log, &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.Key,
+		Scope:     "database",
+		Action:    "unsuspended",
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	})
+
 	log.Debug("Unsuspend request end")
 	return &accountspb.UnsuspendResponse{Result: true}, nil
 }
@@ -220,6 +250,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	log.Debug("Get request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	requested := request.GetUuid()
@@ -228,17 +259,18 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	}
 
 	log.Debug("Retrieving account", zap.String("uuid", requested))
-	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, requested))
+	acc, err := s.ctrl.GetWithAccess(ctx, requestorId, requested)
+
+	if err != nil || acc.Access == nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
 
 	if acc.Account == nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if err != nil || acc.Access == nil {
-		log.Debug("Error getting account", zap.Any("error", err))
-		return nil, status.Error(codes.NotFound, "Account not found")
-	}
 	log.Debug("Retrieved account", zap.Any("account", acc))
 
 	// Provide public information without access check
@@ -284,15 +316,15 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	offset := (page - 1) * limit
 
-	pool, err := graph.ListAccounts[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
+	pool, count, active, err := s.ctrl.ListImproved(ctx, acc.GetUuid(), depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
-	result := make([]*accountspb.Account, len(pool.Result))
-	for i, acc := range pool.Result {
+	result := make([]*accountspb.Account, len(pool))
+	for i, acc := range pool {
 		if acc.Access.Level < access.Level_ROOT {
 			acc.Account.SuspendConf = nil
 		}
@@ -302,8 +334,8 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	return &accountspb.ListResponse{
 		Pool:   result,
-		Count:  int64(pool.Count),
-		Active: int64(pool.Active),
+		Count:  count,
+		Active: active,
 	}, nil
 }
 
@@ -334,8 +366,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 			log.Warn("Need SUDO Access token", zap.String("requestor", requestor.(string)))
 			return nil, status.Error(codes.Unauthenticated, "Wrong credentials")
 		}
-
-		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*5)
+		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*10)
 	} else {
 		if request.GetAuth() == nil {
 			return nil, status.Error(codes.InvalidArgument, "Auth data was not presented")
@@ -361,7 +392,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	if request.GetRootClaim() {
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, "0")
-		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, ns)
+		ok, lvl := s.ca.AccessLevel(ctx, acc.Key, ns)
 		if !ok {
 			lvl = access.Level_NONE
 		}
@@ -370,7 +401,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	}
 
 	if sp := request.GetSpClaim(); sp != "" {
-		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp))
+		ok, lvl := s.ca.AccessLevel(ctx, acc.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp))
 		if !ok {
 			lvl = access.Level_NONE
 		}
@@ -409,13 +440,54 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, request.Namespace)
+	var nsToConnect = request.GetNamespace()
+	isSubaccount := request.GetAccountOwner() != ""
+	var motherAcc graph.Account
+	if isSubaccount {
+		var err error
+		motherAcc, err = s.ctrl.Get(ctx, request.GetAccountOwner())
+		if err != nil {
+			log.Error("Error getting account owner", zap.Error(err), zap.String("account", request.GetAccountOwner()))
+			return nil, err
+		}
+		ok, access_lvl := s.ca.AccessLevel(ctx, requestor, motherAcc.ID)
+		if !ok {
+			log.Warn("No Access", zap.String("requestor", requestor), zap.String("mother", motherAcc.ID.String()))
+			return nil, status.Error(codes.PermissionDenied, "No Access")
+		} else if access_lvl < access.Level_ADMIN {
+			log.Warn("No Enough Rights", zap.String("requestor", requestor), zap.String("mother", motherAcc.ID.String()))
+			return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
+		}
+		if motherAcc.GetAccountOwner() != "" {
+			log.Warn("Subaccounts cannot create subaccounts", zap.String("account", motherAcc.GetUuid()))
+			return nil, status.Error(codes.InvalidArgument, "Subaccounts cannot create subaccounts")
+		}
+		existNs, err := s.ctrl.GetNamespace(ctx, motherAcc)
+		if err != nil {
+			if err.Error() == "no more documents" {
+				personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, request.GetAccountOwner())
+				createdNs, err := s.ns_ctrl.Create(personal_ctx, motherAcc.GetTitle())
+				if err != nil {
+					log.Error("Error creating namespace for account owner", zap.Error(err), zap.String("namespace", request.Namespace))
+					return nil, err
+				}
+				nsToConnect = createdNs.GetUuid()
+			} else {
+				log.Error("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
+				return nil, err
+			}
+		} else {
+			nsToConnect = existNs.GetUuid()
+		}
+	}
+
+	ns, err := s.ns_ctrl.Get(ctx, nsToConnect)
 	if err != nil {
-		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
+		log.Error("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
 		return nil, err
 	}
 
-	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID)
+	ok, access_lvl := s.ca.AccessLevel(ctx, requestor, ns.ID)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "No Access")
 	} else if access_lvl < access.Level_MGMT {
@@ -432,14 +504,15 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	creationAccount := accountspb.Account{
-		Title:    request.Title,
-		Currency: &request.Currency,
-		Data:     request.GetData(),
+		Title:        request.Title,
+		Currency:     request.Currency,
+		Data:         request.GetData(),
+		AccountOwner: request.GetAccountOwner(),
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
 	if err != nil {
-		log.Debug("Error creating account", zap.Error(err))
+		log.Error("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
 	}
 	res := &accountspb.CreateResponse{Uuid: acc.Key}
@@ -452,13 +525,14 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
 		log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
+	settings.CreateNamespace = true // Always create namespace
 
 	if settings.CreateNamespace {
 		personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, acc.GetUuid())
 
 		createdNs, err := s.ns_ctrl.Create(personal_ctx, acc.GetTitle())
 		if err != nil {
-			log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
+			log.Error("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
 		} else {
 			res.Namespace = createdNs.ID.Key()
 		}
@@ -467,7 +541,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
 	if err != nil {
-		log.Debug("Error linking to namespace")
+		log.Error("Error linking to namespace")
 		return res, err
 	}
 
@@ -477,12 +551,39 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return res, err
 	}
 
+	// Patch mother account with new subaccount and link namespace
+	if isSubaccount {
+		subaccounts := motherAcc.GetSubaccounts()
+		subaccounts = append(subaccounts, acc.GetUuid())
+		if err = s.ctrl.Update(ctx, motherAcc, map[string]interface{}{
+			"subaccounts": subaccounts,
+		}); err != nil {
+			log.Error("Error updating mother account with new subaccount", zap.Error(err))
+			return res, err
+		}
+		col, _ := s.db.Collection(ctx, schema.NS2ACC)
+		accNs, err := s.ctrl.GetNamespace(ctx, acc)
+		if err != nil {
+			log.Error("Error getting personal namespace", zap.Error(err))
+			return res, err
+		}
+		if err := motherAcc.JoinNamespace(ctx, col, accNs, access.Level_MGMT, roles.DEFAULT); err != nil {
+			log.Error("Error joining child namespace to mother account", zap.Error(err))
+			return res, err
+		}
+		log.Debug("Subaccount created and linked", zap.String("subaccount", acc.GetUuid()))
+	}
+
 	return res, nil
 }
 
 func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log := s.log.Named("SignUp")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	if request.GetAccountOwner() != "" {
+		return nil, status.Error(codes.InvalidArgument, "Cannot create subaccount during SignUp")
+	}
 
 	var stdSettings SignUpSettings
 	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {
@@ -501,7 +602,7 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 		return nil, err
 	}
 
-	ok, access_lvl := graph.AccessLevel(ctx, s.db, schema.ROOT_ACCOUNT_KEY, ns.ID)
+	ok, access_lvl := s.ca.AccessLevel(ctx, schema.ROOT_ACCOUNT_KEY, ns.ID)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "No Access")
 	} else if access_lvl < access.Level_MGMT {
@@ -531,7 +632,7 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
-		Currency: &request.Currency,
+		Currency: request.Currency,
 		Data:     request.GetData(),
 		Status:   accStatus,
 	}
@@ -592,9 +693,10 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	acc, err := s.ctrl.GetWithAccess(ctx, requestorId, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
@@ -626,7 +728,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	}
 
 	if request.Currency != nil {
-		if acc.GetCurrency() != request.GetCurrency() {
+		if acc.GetCurrency() != nil && (acc.GetCurrency().GetId() != request.GetCurrency().GetId()) {
 			log.Debug("Currency patch detected")
 			patch["currency"] = request.GetCurrency()
 		}
@@ -684,7 +786,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, acc.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -727,7 +829,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.Level_ADMIN) {
+	if !s.ca.HasAccess(ctx, requestor, acc.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -745,9 +847,10 @@ func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddN
 	log.Debug("AddNote request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	acc, err := s.ctrl.GetWithAccess(ctx, requestorId, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
@@ -790,9 +893,10 @@ func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.Pa
 	log.Debug("PatchNote request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	acc, err := s.ctrl.GetWithAccess(ctx, requestorId, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
@@ -837,9 +941,10 @@ func (s *AccountsServiceServer) RemoveNote(ctx context.Context, request *notes.R
 	log.Debug("RemoveNote request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	acc, err := s.ctrl.GetWithAccess(ctx, requestorId, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")

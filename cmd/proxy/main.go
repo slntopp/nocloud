@@ -16,6 +16,7 @@ limitations under the License.
 package main
 
 import (
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"net"
 	"net/http"
 
@@ -36,6 +37,7 @@ var (
 
 	arangodbHost string
 	arangodbCred string
+	arangodbName string
 
 	SIGNING_KEY []byte
 )
@@ -46,6 +48,7 @@ func init() {
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DB_NAME", schema.DB_NAME)
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
@@ -53,6 +56,7 @@ func init() {
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	arangodbName = viper.GetString("DB_NAME")
 }
 
 func main() {
@@ -61,7 +65,7 @@ func main() {
 	}()
 
 	log.Info("Setting up DB Connection")
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	log.Info("DB connection established")
 
 	ctrl := graph.NewServicesProvidersController(log, db)

@@ -17,6 +17,7 @@ package instances
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"log"
 	"time"
 
@@ -34,10 +35,10 @@ var (
 type PubSub struct {
 	log  *zap.Logger
 	db   *driver.Database
-	rbmq *amqp.Connection
+	rbmq rabbitmq.Connection
 }
 
-func NewPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *PubSub {
+func NewPubSub(log *zap.Logger, db *driver.Database, rbmq rabbitmq.Connection) *PubSub {
 	ps := &PubSub{
 		log: log.Named("PubSub"), rbmq: rbmq,
 	}
@@ -47,7 +48,7 @@ func NewPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *Pub
 	return ps
 }
 
-func (s *PubSub) Channel() *amqp.Channel {
+func (s *PubSub) Channel() rabbitmq.Channel {
 	log := s.log.Named("Channel")
 
 	ch, err := s.rbmq.Channel()
@@ -57,7 +58,7 @@ func (s *PubSub) Channel() *amqp.Channel {
 	return ch
 }
 
-func (s *PubSub) TopicExchange(ch *amqp.Channel, name string) {
+func (s *PubSub) TopicExchange(ch rabbitmq.Channel, name string) {
 	err := ch.ExchangeDeclare(
 		name, "topic", true, false, false, false, nil,
 	)
@@ -66,7 +67,7 @@ func (s *PubSub) TopicExchange(ch *amqp.Channel, name string) {
 	}
 }
 
-func (s *PubSub) ConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
+func (s *PubSub) ConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col string) {
 	if s.db == nil {
 		log.Fatal("Failed to initialize data consumer, database is not set")
 	}
@@ -91,7 +92,7 @@ func (s *PubSub) ConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) 
 }
 
 const updateDataQuery = `
-UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+UPDATE DOCUMENT(@@collection, @key) WITH { data: MERGE(@data, { is_monitored: true }) } IN @@collection
 `
 
 func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
@@ -106,18 +107,41 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			}
 			continue
 		}
-		c, err := (*s.db).Query(context.TODO(), updateDataQuery, map[string]interface{}{
+
+		db := *s.db
+		ctx := context.Background()
+		trID, err := db.BeginTransaction(ctx, driver.TransactionCollections{
+			Exclusive: []string{col},
+		}, &driver.BeginTransactionOptions{})
+		if err != nil {
+			log.Error("Failed to start transaction to update data", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while start transaction to update data", zap.Error(err))
+			}
+			continue
+		}
+		ctx = driver.WithTransactionID(ctx, trID)
+		c, err := db.Query(ctx, updateDataQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
 			"data":        req.Data,
 		})
 		if err != nil {
+			_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 			log.Error("Failed to update data", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
 				log.Warn("Failed to Acknowledge the delivery while Update db", zap.Error(err))
 			}
 			continue
 		}
+		if err := db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+			log.Error("Failed to commit transaction to update data", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to Acknowledge the delivery while commit transaction to update data", zap.Error(err))
+			}
+			continue
+		}
+
 		log.Debug("Updated data", zap.String("type", col), zap.String("uuid", req.Uuid), zap.Any("data", req.GetData()))
 		if err = c.Close(); err != nil {
 			log.Warn("Error closing Driver cursor", zap.Error(err))
@@ -130,7 +154,7 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 
 type Pub func(msg *pb.ObjectData) (int, error)
 
-func (s *PubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
+func (s *PubSub) Publisher(ch rabbitmq.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectData) (int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

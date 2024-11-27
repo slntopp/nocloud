@@ -49,6 +49,7 @@ var (
 
 	arangodbHost    string
 	arangodbCred    string
+	arangodbName    string
 	nocloudRootPass string
 	settingsHost    string
 	redisHost       string
@@ -63,6 +64,7 @@ func init() {
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DB_NAME", schema.DB_NAME)
 	viper.SetDefault("NOCLOUD_ROOT_PASSWORD", "secret")
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REDIS_HOST", "redis:6379")
@@ -73,6 +75,7 @@ func init() {
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	arangodbName = viper.GetString("DB_NAME")
 	nocloudRootPass = viper.GetString("NOCLOUD_ROOT_PASSWORD")
 	settingsHost = viper.GetString("SETTINGS_HOST")
 	redisHost = viper.GetString("REDIS_HOST")
@@ -96,7 +99,7 @@ func main() {
 	}()
 
 	log.Info("Setting up DB Connection")
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	log.Info("DB connection established")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
