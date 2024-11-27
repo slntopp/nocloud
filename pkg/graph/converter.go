@@ -69,6 +69,9 @@ func (conv *PricesConverter) ConvertObjectPrices(obj interface{}) {
 	if conv.failed {
 		return
 	}
+	if obj == nil {
+		return
+	}
 	switch val := obj.(type) {
 	case *pb.Addon:
 		convertAddon(val, conv.rate, conv.target.Precision, conv.target.Rounding)
