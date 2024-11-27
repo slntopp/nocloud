@@ -2,7 +2,7 @@
   <component
     offset-y
     max-width="1280"
-    :is="(type === 'dialog') ? VDialog : VMenu"
+    :is="type === 'dialog' ? VDialog : VMenu"
     :value="visible"
     :close-on-content-click="false"
     @input="emits('close')"
@@ -24,25 +24,28 @@
         :value="[]"
         :headers="headers"
         no-search
-        :items="accountInstances"
         :show-select="false"
+        :custom-filter="{ account: [uuid] }"
       />
     </v-card>
   </component>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { VDialog, VMenu } from 'vuetify/lib/components'
-import store from '@/store'
-import instancesTable from '@/components/instancesTable.vue'
+import { VDialog, VMenu } from "vuetify/lib/components";
+import instancesTable from "@/components/instancesTable.vue";
+import { onMounted, toRefs } from "vue";
 
 const props = defineProps({
   uuid: { type: String, required: true },
   visible: { type: Boolean, required: true },
-  type: { type: String, default: 'dialog' }
-})
-const emits = defineEmits(['hover', 'close'])
+  type: { type: String, default: "dialog" },
+});
+const emits = defineEmits(["hover", "close"]);
+
+const { uuid } = toRefs(props);
+
+onMounted(() => console.log(2332));
 
 const headers = [
   { text: "Title", value: "title" },
@@ -50,27 +53,5 @@ const headers = [
   { text: "Status", value: "state" },
   { text: "Tariff", value: "product" },
   { text: "Price", value: "accountPrice" },
-]
-
-const namespaces = computed(() =>
-  store.getters['namespaces/all'] ?? []
-)
-
-const instances = computed(() =>
-  store.getters['services/getInstances'] ?? []
-)
-
-const accountInstances = computed(() => {
-  const namespace = namespaces.value.find(({ access }) => 
-    access.namespace === props.uuid
-  )
-
-  if (!namespace) return []
-  return instances.value.filter(({ access }) =>
-    access.namespace === namespace.uuid
-  )
-})
-
-store.dispatch('services/fetch',{showDeleted:true})
-store.dispatch('namespaces/fetch')
+];
 </script>
