@@ -160,7 +160,22 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 }
 
 const migrateOldLinkedInstancesToNew = `
-
+FOR inv IN @@invoices
+   FILTER !inv.instances || LENGTH(inv.instances) == 0
+   LET newInstancesResp = (
+      FILTER IS_ARRAY(inv.items)
+      FOR item IN inv.items
+         FILTER IS_STRING(item.instance) && LENGTH(item.instance) > 0
+         RETURN item.instance
+   )
+   LET newItemsResp = (
+      FILTER IS_ARRAY(inv.items)
+      FOR item IN inv.items
+         RETURN UNSET(item, "instance")
+   )
+   LET newInstances = LENGTH(newInstancesResp) > 0 ? newInstancesResp : []
+   LET newItems = LENGTH(newItemsResp) > 0 ? newItemsResp : []
+   UPDATE inv WITH { instances: newInstances, items: newItems } IN @@invoices
 `
 
 func MigrateOldInvoicesInstancesToNew(log *zap.Logger, invoices driver.Collection) {
