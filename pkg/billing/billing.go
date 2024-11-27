@@ -719,25 +719,23 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 
 		for planIndex := range plans {
 			plan := plans[planIndex]
-
-			products := plan.GetProducts()
-			for key := range products {
-				products[key].Price *= rate
-			}
-			plan.Products = products
-
-			resources := plan.GetResources()
-			for index := range resources {
-				resources[index].Price *= rate
-			}
-			plan.Resources = resources
-
-			plans[planIndex] = plan
+			graph.ConvertPlan(plan, rate, cur.Precision, cur.Rounding)
 		}
+
+		log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
+		resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
+		graph.ExplicitSetPrimaryCurrencyHeader(resp.Header(), cur.Code)
+		return resp, nil
+	}
+
+	conv := graph.NewConverter(r.Header(), s.currencies)
+	for _, plan := range plans {
+		conv.ConvertObjectPrices(plan)
 	}
 
 	log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
 	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
+	conv.SetResponseHeader(resp.Header())
 	return resp, nil
 }
 
