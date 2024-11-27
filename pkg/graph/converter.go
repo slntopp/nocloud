@@ -113,9 +113,15 @@ func convertPlan(p *bpb.Plan, rate float64, precision int32, round bpb.Rounding)
 		return
 	}
 	for _, res := range p.GetResources() {
+		if res == nil {
+			continue
+		}
 		res.Price = Round(res.Price*rate, precision, round)
 	}
 	for _, prod := range p.GetProducts() {
+		if prod == nil {
+			continue
+		}
 		prod.Price = Round(prod.Price*rate, precision, round)
 	}
 }
