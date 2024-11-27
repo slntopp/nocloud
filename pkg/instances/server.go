@@ -1343,6 +1343,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 		return nil, err
 	}
 
+	conv := graph.NewConverter(_req.Header(), s.curr_ctrl)
 	if result.Instance != nil {
 		var oneTime bool
 		result.Instance.Period, _ = s.ctrl.GetInstancePeriod(result.Instance)
@@ -1350,8 +1351,8 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 			oneTime = true
 		}
 		result.Instance.Estimate, _ = s.ctrl.CalculateInstanceEstimatePrice(result.Instance, oneTime)
+		conv.ConvertObjectPrices(result.Instance)
 	}
-	conv := graph.NewConverter(_req.Header(), s.curr_ctrl)
 
 	resp := connect.NewResponse(&result)
 	conv.SetResponseHeader(resp.Header())
