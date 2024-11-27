@@ -158,3 +158,18 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	}
 	log.Info("Migrated old invoices to new")
 }
+
+const migrateOldLinkedInstancesToNew = `
+
+`
+
+func MigrateOldInvoicesInstancesToNew(log *zap.Logger, invoices driver.Collection) {
+	db := invoices.Database()
+	_, err := db.Query(context.TODO(), migrateOldLinkedInstancesToNew, map[string]interface{}{
+		"@invoices": invoices.Name(),
+	})
+	if err != nil {
+		log.Fatal("Error migrating old linked invoices instances to new", zap.Error(err))
+	}
+	log.Info("Migrated old linked invoices instances to new")
+}

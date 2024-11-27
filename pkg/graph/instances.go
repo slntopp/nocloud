@@ -24,7 +24,6 @@ import (
 	addonspb "github.com/slntopp/nocloud-proto/billing/addons"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	epb "github.com/slntopp/nocloud-proto/events"
-	instancespb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud-proto/notes"
 	servicespb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
@@ -101,227 +100,6 @@ type instancesController struct {
 
 	bp_ctrl BillingPlansController
 }
-
-// Migrations
-
-func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, srvCtrl ServicesController, bpCtrl BillingPlansController, addCtrl AddonsController, descCtrl DescriptionsController) {
-	log = log.Named("MigrateInstancesToNewAddons")
-	log.Debug("Starting MigrateInstancesToNewAddons")
-	page := uint64(1)
-	depth := int32(150)
-	limit := uint64(0)
-	services, err := srvCtrl.List(context.Background(), schema.ROOT_ACCOUNT_KEY, &servicespb.ListRequest{
-		Page:  &page,
-		Limit: &limit,
-		Depth: &depth,
-	})
-	if err != nil {
-		log.Fatal("Failed to list services", zap.Error(err))
-		return
-	}
-	log.Debug("Found " + fmt.Sprint(len(services.Result)) + " services")
-	instances := make([]string, 0)
-	for _, srv := range services.Result {
-		for _, ig := range srv.GetInstancesGroups() {
-			for _, inst := range ig.GetInstances() {
-				instances = append(instances, inst.GetUuid())
-			}
-		}
-	}
-	log.Debug("Creating virtual addons")
-	bps, err := bpCtrl.List(context.Background(), "")
-	if err != nil {
-		log.Fatal("Failed to list billing plans", zap.Error(err))
-		return
-	}
-	if err := createVirtualAddons(log.Named("CreateVirtualAddons"), bps, addCtrl, descCtrl, bpCtrl); err != nil {
-		log.Fatal("Failed to create virtual addons", zap.Error(err))
-		return
-	}
-	log.Debug("Found " + fmt.Sprint(len(instances)) + " instances")
-	addons, err := addCtrl.List(context.Background(), &addonspb.ListAddonsRequest{})
-	if err != nil {
-		log.Fatal("Failed to list addons", zap.Error(err))
-		return
-	}
-	log.Debug("Found " + fmt.Sprint(len(addons)) + " addons")
-	var migrated = make([]string, 0)
-	for _, id := range instances {
-		log := log.With(zap.String("instance_id", id))
-		inst, err := instCtrl.Get(context.Background(), id)
-		if err != nil {
-			log.Fatal("Failed to get instance", zap.Error(err))
-			return
-		}
-		if err := migrateInstance(log, inst, instCtrl, bpCtrl, addons, &migrated); err != nil {
-			log.Fatal("Failed to migrate instance", zap.Error(err))
-			return
-		}
-	}
-	log.Debug("Migrated instances", zap.Any("uuids", migrated))
-	log.Debug("Finished MigrateInstancesToNewAddons")
-}
-
-func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsController, descCtrl DescriptionsController, bpCtrl BillingPlansController) error {
-	// Collect only 'empty' plans
-	bps := make([]*BillingPlan, 0)
-	for _, bp := range _bps {
-		if bp.Type == "empty" {
-			bps = append(bps, bp)
-		}
-	}
-	log.Debug("Found " + fmt.Sprint(len(bps)) + " empty type billing plans")
-
-	// Collect resources which will be used to create new addons, exclude 'ram', 'cpu', 'drive_ssd', 'drive_hdd', 'ips_public', 'ips_private' just in case
-	resources := make([]*bpb.ResourceConf, 0)
-	resToBp := make([]*BillingPlan, 0)
-	for _, bp := range bps {
-		for _, res := range bp.Resources {
-			if res.GetKey() == "ram" || res.GetKey() == "cpu" || res.GetKey() == "drive_ssd" ||
-				res.GetKey() == "drive_hdd" || res.GetKey() == "ips_public" || res.GetKey() == "ips_private" {
-				continue
-			}
-			resources = append(resources, res)
-			resToBp = append(resToBp, bp)
-		}
-	}
-	log.Debug("Found " + fmt.Sprint(len(resources)) + " resources which will be used to create new addons")
-
-	addons, err := addCtrl.List(context.Background(), &addonspb.ListAddonsRequest{})
-	if err != nil {
-		return fmt.Errorf("failed to list addons: %w", err)
-	}
-
-	for i, res := range resources {
-		isSkip := false
-		for _, addon := range addons {
-			if addon.Group == resToBp[i].GetUuid() && addon.GetMeta()["key"].GetStringValue() == res.GetKey() {
-				log.Debug("Found existing addon", zap.String("key", res.GetKey()), zap.String("group", resToBp[i].GetUuid()))
-				isSkip = true
-				break
-			}
-		}
-		if isSkip {
-			continue
-		}
-
-		var descrId string
-		if desc, ok := res.GetMeta()["description"]; ok && desc.GetStringValue() != "" {
-			newDesc, err := descCtrl.Create(context.Background(), &dpb.Description{
-				Text: desc.GetStringValue(),
-			})
-			if err != nil {
-				return fmt.Errorf("failed to create description: %w", err)
-			}
-			descrId = newDesc.GetUuid()
-		}
-
-		var title = res.GetTitle()
-		if title == "" {
-			title = res.GetKey()
-		}
-
-		addon := &addonspb.Addon{
-			Title:         title,
-			Public:        true,
-			Group:         resToBp[i].GetUuid(),
-			DescriptionId: descrId,
-			Meta: map[string]*structpb.Value{
-				"key": structpb.NewStringValue(res.GetKey()),
-			},
-			Kind:   addonspb.Kind(res.GetKind()),
-			System: false,
-			Periods: map[int64]float64{
-				res.GetPeriod(): res.GetPrice(),
-			},
-			Created: time.Now().Unix(),
-		}
-		newAddon, err := addCtrl.Create(context.Background(), addon)
-		if err != nil {
-			return fmt.Errorf("failed to create addon: %w", err)
-		}
-		if !slices.Contains(resToBp[i].GetAddons(), newAddon.GetUuid()) {
-			resToBp[i].Addons = append(resToBp[i].GetAddons(), newAddon.GetUuid())
-			if _, err := bpCtrl.Update(context.Background(), resToBp[i].Plan); err != nil {
-				return fmt.Errorf("failed to update billing plan: %w", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesController, bpCtrl BillingPlansController, addons []*addonspb.Addon, migrated *[]string) error {
-	oldInst := proto.Clone(inst.Instance).(*instancespb.Instance)
-
-	bp, err := bpCtrl.Get(context.Background(), inst.GetBillingPlan())
-	if err != nil {
-		return fmt.Errorf("failed to get billing plan: %w", err)
-	}
-
-	if inst.GetProduct() == "" {
-		log.Debug("Skipping instance without product")
-		return nil
-	}
-
-	product, ok := bp.GetProducts()[inst.GetProduct()]
-	if !ok {
-		return fmt.Errorf("product '%s' not found in billing plan %s", inst.GetProduct(), inst.GetBillingPlan().GetUuid())
-	}
-
-	instAddons := inst.GetAddons()
-	instData := inst.GetData()
-	oldAddonKeys := inst.GetConfig()["addons"].GetListValue().GetValues() // Old addons from config (ovh, virtual, keyweb...)
-	//oldAddonKeys = append(oldAddonKeys, product.GetMeta()["addons"].GetListValue().GetValues()...) // Old addons from product meta (virtual driver)
-	_ = inst.GetConfig()["duration"].GetStringValue()
-
-	modified := false
-	for _, oldAddonKey := range oldAddonKeys {
-		var a *addonspb.Addon = nil
-		oldKey := oldAddonKey.GetStringValue()
-		for _, addon := range addons {
-			key := addon.GetMeta()["key"].GetStringValue()
-			if key == oldKey {
-				a = addon
-				break
-			}
-		}
-		if a == nil {
-			return fmt.Errorf("addon with key '%s' not found in new addons", oldKey)
-		}
-		if _, ok := a.GetPeriods()[product.GetPeriod()]; !ok {
-			return fmt.Errorf("addon '%s' with key '%s' don't have period that instances's product have. Addon missing '%d' period", a.GetUuid(), oldKey, product.GetPeriod())
-		}
-		if slices.Contains(instAddons, a.GetUuid()) {
-			continue
-		}
-		instAddons = append(instAddons, a.GetUuid())
-		modified = true
-		lmVal, ok := instData[oldKey+"_last_monitoring"]
-		if !ok {
-			continue
-		}
-		lm := int64(lmVal.GetNumberValue())
-		instData["addon_"+a.GetUuid()+"_last_monitoring"] = structpb.NewNumberValue(float64(lm))
-	}
-
-	if !modified {
-		return nil
-	}
-
-	inst.Addons = instAddons
-	inst.Data = instData
-
-	log.Debug("Updating instance")
-	if err := instCtrl.Update(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), "", inst.Instance, oldInst); err != nil {
-		return fmt.Errorf("failed to update instance: %w", err)
-	}
-	*migrated = append(*migrated, inst.GetUuid())
-
-	return nil
-}
-
-//
 
 func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) InstancesController {
 	ctx := context.TODO()
@@ -1214,3 +992,222 @@ GRAPH @permissions SORT path.edges[0].level
 	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
 	})
 `
+
+// Migrations
+
+func MigrateInstancesToNewAddons(log *zap.Logger, instCtrl InstancesController, srvCtrl ServicesController, bpCtrl BillingPlansController, addCtrl AddonsController, descCtrl DescriptionsController) {
+	log = log.Named("MigrateInstancesToNewAddons")
+	log.Debug("Starting MigrateInstancesToNewAddons")
+	page := uint64(1)
+	depth := int32(150)
+	limit := uint64(0)
+	services, err := srvCtrl.List(context.Background(), schema.ROOT_ACCOUNT_KEY, &servicespb.ListRequest{
+		Page:  &page,
+		Limit: &limit,
+		Depth: &depth,
+	})
+	if err != nil {
+		log.Fatal("Failed to list services", zap.Error(err))
+		return
+	}
+	log.Debug("Found " + fmt.Sprint(len(services.Result)) + " services")
+	instances := make([]string, 0)
+	for _, srv := range services.Result {
+		for _, ig := range srv.GetInstancesGroups() {
+			for _, inst := range ig.GetInstances() {
+				instances = append(instances, inst.GetUuid())
+			}
+		}
+	}
+	log.Debug("Creating virtual addons")
+	bps, err := bpCtrl.List(context.Background(), "")
+	if err != nil {
+		log.Fatal("Failed to list billing plans", zap.Error(err))
+		return
+	}
+	if err := createVirtualAddons(log.Named("CreateVirtualAddons"), bps, addCtrl, descCtrl, bpCtrl); err != nil {
+		log.Fatal("Failed to create virtual addons", zap.Error(err))
+		return
+	}
+	log.Debug("Found " + fmt.Sprint(len(instances)) + " instances")
+	addons, err := addCtrl.List(context.Background(), &addonspb.ListAddonsRequest{})
+	if err != nil {
+		log.Fatal("Failed to list addons", zap.Error(err))
+		return
+	}
+	log.Debug("Found " + fmt.Sprint(len(addons)) + " addons")
+	var migrated = make([]string, 0)
+	for _, id := range instances {
+		log := log.With(zap.String("instance_id", id))
+		inst, err := instCtrl.Get(context.Background(), id)
+		if err != nil {
+			log.Fatal("Failed to get instance", zap.Error(err))
+			return
+		}
+		if err := migrateInstance(log, inst, instCtrl, bpCtrl, addons, &migrated); err != nil {
+			log.Fatal("Failed to migrate instance", zap.Error(err))
+			return
+		}
+	}
+	log.Debug("Migrated instances", zap.Any("uuids", migrated))
+	log.Debug("Finished MigrateInstancesToNewAddons")
+}
+
+func createVirtualAddons(log *zap.Logger, _bps []*BillingPlan, addCtrl AddonsController, descCtrl DescriptionsController, bpCtrl BillingPlansController) error {
+	// Collect only 'empty' plans
+	bps := make([]*BillingPlan, 0)
+	for _, bp := range _bps {
+		if bp.Type == "empty" {
+			bps = append(bps, bp)
+		}
+	}
+	log.Debug("Found " + fmt.Sprint(len(bps)) + " empty type billing plans")
+
+	// Collect resources which will be used to create new addons, exclude 'ram', 'cpu', 'drive_ssd', 'drive_hdd', 'ips_public', 'ips_private' just in case
+	resources := make([]*bpb.ResourceConf, 0)
+	resToBp := make([]*BillingPlan, 0)
+	for _, bp := range bps {
+		for _, res := range bp.Resources {
+			if res.GetKey() == "ram" || res.GetKey() == "cpu" || res.GetKey() == "drive_ssd" ||
+				res.GetKey() == "drive_hdd" || res.GetKey() == "ips_public" || res.GetKey() == "ips_private" {
+				continue
+			}
+			resources = append(resources, res)
+			resToBp = append(resToBp, bp)
+		}
+	}
+	log.Debug("Found " + fmt.Sprint(len(resources)) + " resources which will be used to create new addons")
+
+	addons, err := addCtrl.List(context.Background(), &addonspb.ListAddonsRequest{})
+	if err != nil {
+		return fmt.Errorf("failed to list addons: %w", err)
+	}
+
+	for i, res := range resources {
+		isSkip := false
+		for _, addon := range addons {
+			if addon.Group == resToBp[i].GetUuid() && addon.GetMeta()["key"].GetStringValue() == res.GetKey() {
+				log.Debug("Found existing addon", zap.String("key", res.GetKey()), zap.String("group", resToBp[i].GetUuid()))
+				isSkip = true
+				break
+			}
+		}
+		if isSkip {
+			continue
+		}
+
+		var descrId string
+		if desc, ok := res.GetMeta()["description"]; ok && desc.GetStringValue() != "" {
+			newDesc, err := descCtrl.Create(context.Background(), &dpb.Description{
+				Text: desc.GetStringValue(),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create description: %w", err)
+			}
+			descrId = newDesc.GetUuid()
+		}
+
+		var title = res.GetTitle()
+		if title == "" {
+			title = res.GetKey()
+		}
+
+		addon := &addonspb.Addon{
+			Title:         title,
+			Public:        true,
+			Group:         resToBp[i].GetUuid(),
+			DescriptionId: descrId,
+			Meta: map[string]*structpb.Value{
+				"key": structpb.NewStringValue(res.GetKey()),
+			},
+			Kind:   addonspb.Kind(res.GetKind()),
+			System: false,
+			Periods: map[int64]float64{
+				res.GetPeriod(): res.GetPrice(),
+			},
+			Created: time.Now().Unix(),
+		}
+		newAddon, err := addCtrl.Create(context.Background(), addon)
+		if err != nil {
+			return fmt.Errorf("failed to create addon: %w", err)
+		}
+		if !slices.Contains(resToBp[i].GetAddons(), newAddon.GetUuid()) {
+			resToBp[i].Addons = append(resToBp[i].GetAddons(), newAddon.GetUuid())
+			if _, err := bpCtrl.Update(context.Background(), resToBp[i].Plan); err != nil {
+				return fmt.Errorf("failed to update billing plan: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func migrateInstance(log *zap.Logger, inst *Instance, instCtrl InstancesController, bpCtrl BillingPlansController, addons []*addonspb.Addon, migrated *[]string) error {
+	oldInst := proto.Clone(inst.Instance).(*pb.Instance)
+
+	bp, err := bpCtrl.Get(context.Background(), inst.GetBillingPlan())
+	if err != nil {
+		return fmt.Errorf("failed to get billing plan: %w", err)
+	}
+
+	if inst.GetProduct() == "" {
+		log.Debug("Skipping instance without product")
+		return nil
+	}
+
+	product, ok := bp.GetProducts()[inst.GetProduct()]
+	if !ok {
+		return fmt.Errorf("product '%s' not found in billing plan %s", inst.GetProduct(), inst.GetBillingPlan().GetUuid())
+	}
+
+	instAddons := inst.GetAddons()
+	instData := inst.GetData()
+	oldAddonKeys := inst.GetConfig()["addons"].GetListValue().GetValues() // Old addons from config (ovh, virtual, keyweb...)
+	//oldAddonKeys = append(oldAddonKeys, product.GetMeta()["addons"].GetListValue().GetValues()...) // Old addons from product meta (virtual driver)
+	_ = inst.GetConfig()["duration"].GetStringValue()
+
+	modified := false
+	for _, oldAddonKey := range oldAddonKeys {
+		var a *addonspb.Addon = nil
+		oldKey := oldAddonKey.GetStringValue()
+		for _, addon := range addons {
+			key := addon.GetMeta()["key"].GetStringValue()
+			if key == oldKey {
+				a = addon
+				break
+			}
+		}
+		if a == nil {
+			return fmt.Errorf("addon with key '%s' not found in new addons", oldKey)
+		}
+		if _, ok := a.GetPeriods()[product.GetPeriod()]; !ok {
+			return fmt.Errorf("addon '%s' with key '%s' don't have period that instances's product have. Addon missing '%d' period", a.GetUuid(), oldKey, product.GetPeriod())
+		}
+		if slices.Contains(instAddons, a.GetUuid()) {
+			continue
+		}
+		instAddons = append(instAddons, a.GetUuid())
+		modified = true
+		lmVal, ok := instData[oldKey+"_last_monitoring"]
+		if !ok {
+			continue
+		}
+		lm := int64(lmVal.GetNumberValue())
+		instData["addon_"+a.GetUuid()+"_last_monitoring"] = structpb.NewNumberValue(float64(lm))
+	}
+
+	if !modified {
+		return nil
+	}
+
+	inst.Addons = instAddons
+	inst.Data = instData
+
+	log.Debug("Updating instance")
+	if err := instCtrl.Update(context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), "", inst.Instance, oldInst); err != nil {
+		return fmt.Errorf("failed to update instance: %w", err)
+	}
+	*migrated = append(*migrated, inst.GetUuid())
+
+	return nil
+}
