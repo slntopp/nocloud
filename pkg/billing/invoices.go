@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"math"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -785,6 +786,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if err != nil {
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
+	}
+	if reflect.DeepEqual(t.Invoice, req) {
+		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
+		return connect.NewResponse(t.Invoice), nil
 	}
 	old := proto.Clone(t.Invoice).(*pb.Invoice)
 
