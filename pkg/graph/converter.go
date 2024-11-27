@@ -88,6 +88,9 @@ func (conv *PricesConverter) ConvertObjectPrices(obj interface{}) {
 }
 
 func convertService(s *spb.Service, rate float64, precision int32, round bpb.Rounding) {
+	if s == nil {
+		return
+	}
 	for _, ig := range s.GetInstancesGroups() {
 		for _, i := range ig.GetInstances() {
 			convertInstance(i, rate, precision, round)
@@ -96,6 +99,9 @@ func convertService(s *spb.Service, rate float64, precision int32, round bpb.Rou
 }
 
 func convertInstance(i *ipb.Instance, rate float64, precision int32, round bpb.Rounding) {
+	if i == nil {
+		return
+	}
 	i.Estimate = Round(i.Estimate*rate, precision, round)
 	if i.BillingPlan != nil {
 		convertPlan(i.BillingPlan, rate, precision, round)
@@ -103,6 +109,9 @@ func convertInstance(i *ipb.Instance, rate float64, precision int32, round bpb.R
 }
 
 func convertPlan(p *bpb.Plan, rate float64, precision int32, round bpb.Rounding) {
+	if p == nil {
+		return
+	}
 	for _, res := range p.GetResources() {
 		res.Price = Round(res.Price*rate, precision, round)
 	}
@@ -112,6 +121,9 @@ func convertPlan(p *bpb.Plan, rate float64, precision int32, round bpb.Rounding)
 }
 
 func convertAddon(a *pb.Addon, rate float64, precision int32, round bpb.Rounding) {
+	if a == nil {
+		return
+	}
 	if a.Periods == nil {
 		return
 	}
