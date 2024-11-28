@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	bpb "github.com/slntopp/nocloud-proto/billing"
@@ -8,6 +9,8 @@ import (
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	spb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"net/http"
 )
 
@@ -37,6 +40,13 @@ type PricesConverter struct {
 
 func ExplicitSetPrimaryCurrencyHeader(header http.Header, code string) {
 	header.Set(CurrencyHeader, code)
+}
+
+func HandleConvertionError[T any](resp *connect.Response[T], conv PricesConverter) (*connect.Response[T], error) {
+	if conv.failed {
+		return nil, status.Error(codes.Internal, "Internal error. Couldn't convert result prices")
+	}
+	return resp, nil
 }
 
 func NewConverter(header http.Header, curr CurrencyController) PricesConverter {

@@ -1109,7 +1109,7 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 	log.Debug("Result", zap.Any("result", &result))
 	resp := connect.NewResponse(&result)
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 const countInstancesQuery = `
@@ -1356,7 +1356,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 
 	resp := connect.NewResponse(&result)
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {
