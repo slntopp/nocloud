@@ -252,6 +252,9 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 	}
 
 	if tax == 0 {
+		// If pass it as 0.0 then it will be omitted as default value or nil and
+		// WHMCS will consider it like we don't want to change tax rate
+		// If you pass 0.000000001 then it will not be omitted and WHMCS will round it to zero :(
 		body.TaxRate = floatAsString(0.000001)
 	} else {
 		body.TaxRate = floatAsString(tax)
