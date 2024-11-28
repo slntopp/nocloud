@@ -258,6 +258,11 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *conne
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
+	if req.GetTo().GetId() != schema.DEFAULT_CURRENCY_ID &&
+		req.GetFrom().GetId() != schema.DEFAULT_CURRENCY_ID {
+		return nil, status.Error(codes.InvalidArgument, "Can't create rate with 2 platform currencies. One edge must be root currency")
+	}
+
 	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission)
 	if err != nil {
 		log.Error("Error creating Exchange rate", zap.Error(err))
