@@ -94,7 +94,6 @@ const props = defineProps({
   showDate: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   sortBy: {},
-  instances: {},
 });
 const { items, account, showDelete, showDate, readonly, sortBy } =
   toRefs(props);
@@ -103,7 +102,7 @@ const emit = defineEmits("click:delete");
 
 const store = useStore();
 
-const generalRule = ref([(v) => !!v || v===0 || "This field is required!"]);
+const generalRule = ref([(v) => !!v || v === 0 || "This field is required!"]);
 const unitItems = ref(["Pcs", "Szt", "Hour`s"]);
 
 const headers = computed(() =>
