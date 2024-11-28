@@ -143,6 +143,11 @@ func (s *CurrencyServiceServer) ChangeDefaultCurrency(ctx context.Context, r *co
 	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
+	def := &pb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME}
+
+	if req.GetId() == def.GetId() {
+		return nil, status.Error(codes.InvalidArgument, "Can't use root currency(NCU) as default currency")
+	}
 
 	trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
 		Exclusive: []string{schema.CUR_COL, schema.CUR2CUR},
@@ -203,11 +208,8 @@ func (s *CurrencyServiceServer) ChangeDefaultCurrency(ctx context.Context, r *co
 		log.Error("Failed to mark default", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to mark default")
 	}
-	def := &pb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME}
-	if _, _, err = s.ctrl.GetExchangeRateDirect(ctx, next, def); err == nil {
-		err = errors.Join(s.ctrl.DeleteExchangeRate(ctx, next, def),
-			s.ctrl.DeleteExchangeRate(ctx, def, next))
-	}
+	err = errors.Join(s.ctrl.DeleteExchangeRate(ctx, next, def),
+		s.ctrl.DeleteExchangeRate(ctx, def, next))
 	if err = errors.Join(s.ctrl.CreateExchangeRate(ctx, next, def, 1, 0),
 		s.ctrl.CreateExchangeRate(ctx, def, next, 1, 0)); err != nil && !driver.IsNotFoundGeneral(err) {
 		abort()
