@@ -353,6 +353,26 @@ watch([currencies, rates], () => {
   currenciesItems.value = JSON.parse(JSON.stringify(items));
   originalCurrenciesItems.value = JSON.parse(JSON.stringify(items));
 });
+
+watch(rates, async () => {
+  if (
+    defaultCurrency.value &&
+    rates.value.length &&
+    !rates.value.find(
+      (rate) => rate.to.id == defaultCurrency.value.id && !rate.from.id
+    )
+  ) {
+    await currenciesClient.value.createExchangeRate(
+      CreateExchangeRateRequest.fromJson({
+        rate: 1,
+        to: { id: defaultCurrency.value.id },
+        from: { id: 0 },
+      })
+    );
+
+    fetchCurrencies();
+  }
+});
 </script>
 
 <script>
