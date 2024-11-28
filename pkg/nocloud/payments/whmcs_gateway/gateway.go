@@ -245,7 +245,11 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
-	isTaxed := "1"
+	_taxed := tax > 0
+	isTaxed := "0"
+	if _taxed {
+		isTaxed = "1"
+	}
 
 	body.TaxRate = ptr(floatAsString(tax))
 
