@@ -28,13 +28,10 @@ export default {
       }));
     },
     setDefault(state, currencies) {
-      const currency = currencies.find(
-        (el) => el.rate === 1 && [el.from.title, el.to.title].includes("NCU")
-      );
+      const currency = currencies.find((el) => el.default);
 
       if (!currency) return;
-      state.defaultCurrency =
-        currency.from.title === "NCU" ? currency.to : currency.from;
+      state.defaultCurrency = currency;
     },
     setLoading(state, data) {
       state.loading = data;
@@ -60,11 +57,11 @@ export default {
           new GetCurrenciesRequest()
         );
         commit("setCurrencies", currencies);
+        commit("setDefault", currencies);
         const { rates } = await getters["currencyClient"].getExchangeRates(
           new GetExchangeRatesRequest()
         );
         commit("setRates", rates);
-        commit("setDefault", rates);
       } finally {
         commit("setLoading", false);
       }
