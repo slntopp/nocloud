@@ -409,8 +409,6 @@ func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) err
 }
 
 func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) error {
-	time.Sleep(time.Duration(2) * time.Second) // To avoid fetching invoice too early
-
 	whmcsInv, err := g.GetInvoice(ctx, invoiceId)
 	if err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
