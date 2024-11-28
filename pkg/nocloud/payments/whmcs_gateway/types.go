@@ -174,8 +174,8 @@ type UpdateInvoiceQuery struct {
 
 	Status              *string               `url:"status,omitempty"`
 	PaymentMethod       *string               `url:"paymentmethod,omitempty"`
-	TaxRate             *floatAsString        `url:"taxrate,omitempty"`
-	TaxRate2            *floatAsString        `url:"taxrate2,omitempty"`
+	TaxRate             *floatAsString        `url:"taxrate"`
+	TaxRate2            *floatAsString        `url:"taxrate2"`
 	Credit              *floatAsString        `url:"credit,omitempty"`
 	Date                *string               `url:"date,omitempty"`
 	DueDate             *string               `url:"duedate,omitempty"`
