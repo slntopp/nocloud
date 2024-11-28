@@ -736,7 +736,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 	log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
 	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 const countPlansQuery = `
@@ -905,7 +905,7 @@ func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, r *conn
 	if r.Msg.GetAnonymously() && p.Public {
 		resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
 		conv.SetResponseHeader(resp.Header())
-		return resp, nil
+		return graph.HandleConvertionError(resp, conv)
 	}
 
 	if !ok && !p.Public {
@@ -914,7 +914,7 @@ func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, r *conn
 
 	resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 /*

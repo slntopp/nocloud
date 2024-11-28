@@ -844,7 +844,7 @@ func (s *ServicesServer) Get(ctx context.Context, _request *connect.Request[pb.G
 
 	resp := connect.NewResponse(service)
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.ListRequest]) (response *connect.Response[pb.Services], err error) {
@@ -893,7 +893,7 @@ func (s *ServicesServer) List(ctx context.Context, _request *connect.Request[pb.
 		Pool: r.Result, Count: int64(r.Count),
 	})
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 func (s *ServicesServer) Delete(ctx context.Context, _request *connect.Request[pb.DeleteRequest]) (response *connect.Response[pb.DeleteResponse], err error) {
