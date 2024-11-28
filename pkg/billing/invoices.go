@@ -867,11 +867,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 
 	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
+		log.Info("Updating invoice through gateway")
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
 
+	log.Info("Invoice updated", zap.Any("invoice", t.GetUuid()))
 	return connect.NewResponse(t.Invoice), nil
 }
 
