@@ -228,6 +228,7 @@ func (s *CurrencyServiceServer) ChangeDefaultCurrency(ctx context.Context, r *co
 		return nil
 	}
 	if errors.Join(zeroRate(next, def), zeroRate(def, next)); err != nil {
+		abort()
 		return nil, err
 	}
 
