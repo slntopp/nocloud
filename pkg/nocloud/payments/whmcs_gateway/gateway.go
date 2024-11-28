@@ -472,6 +472,9 @@ skipStatus:
 	ncItems := slices.Clone(inv.GetItems())
 	newItems := make([]*pb.Item, 0)
 	synced := true
+	if len(whmcsItems) != len(ncItems) {
+		synced = false
+	}
 	var total float64
 	for _, item := range whmcsItems {
 		var price float64
