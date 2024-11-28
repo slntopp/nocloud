@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
-	"math"
 	"slices"
 	"strings"
 	"time"
@@ -27,13 +26,48 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func compareFloat(a, b float64, precisionDigits int) bool {
-	return math.Abs(a-b) < math.Pow10(-precisionDigits)
-}
-
 type pair[T any] struct {
 	f T
 	s T
+}
+
+func invoicesEqual(a, b *pb.Invoice) bool {
+	emptyCur := func(c *pb.Currency) {
+		if c == nil {
+			return
+		}
+		c.Public = true
+		c.Precision = 0
+		c.Format = ""
+		c.Title = ""
+		c.Code = ""
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Transactions == nil {
+		a.Transactions = []string{}
+	}
+	if a.Instances == nil {
+		a.Instances = []string{}
+	}
+	if a.Meta == nil {
+		a.Meta = make(map[string]*structpb.Value)
+	}
+	if b.Transactions == nil {
+		b.Transactions = []string{}
+	}
+	if b.Instances == nil {
+		b.Instances = []string{}
+	}
+	if b.Meta == nil {
+		b.Meta = make(map[string]*structpb.Value)
+	}
+	_a := proto.Clone(a).(*pb.Invoice)
+	_b := proto.Clone(b).(*pb.Invoice)
+	emptyCur(_a.Currency)
+	emptyCur(_b.Currency)
+	return proto.Equal(_a, _b)
 }
 
 var forbiddenStatusConversions = []pair[pb.BillingStatus]{}
@@ -792,8 +826,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
-	log.Debug("Got invoice from db", zap.Any("invoice", t.Invoice))
-	if proto.Equal(t.Invoice, req) {
+	if invoicesEqual(t.Invoice, req) {
 		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
 		return connect.NewResponse(t.Invoice), nil
 	}
@@ -865,6 +898,17 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
+
+	nocloud.Log(log, &elpb.Event{
+		Uuid:      upd.GetUuid(),
+		Entity:    "Invoices",
+		Action:    "update",
+		Scope:     "database",
+		Rc:        0,
+		Ts:        time.Now().Unix(),
+		Snapshot:  &elpb.Snapshot{},
+		Requestor: requester,
+	})
 
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
 	if err != nil {
