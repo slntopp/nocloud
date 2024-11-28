@@ -38,6 +38,7 @@ type Currency struct {
 	Format    string      `json:"format"`
 	Rounding  pb.Rounding `json:"rounding"`
 	Code      string      `json:"code"`
+	Default   bool        `json:"default"`
 	driver.DocumentMeta
 }
 
@@ -55,6 +56,7 @@ func CurrencyFromPb(currency *pb.Currency) Currency {
 		Format:    currency.GetFormat(),
 		Rounding:  currency.GetRounding(),
 		Code:      currency.GetCode(),
+		Default:   currency.GetDefault(),
 	}
 }
 
@@ -333,6 +335,7 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool, m
 			Format    string      `json:"format"`
 			Rounding  pb.Rounding `json:"rounding"`
 			Code      string      `json:"code"`
+			Default   bool        `json:"default"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
