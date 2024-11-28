@@ -50,10 +50,10 @@ func HandleConvertionError[T any](resp *connect.Response[T], conv PricesConverte
 }
 
 func NewConverter(header http.Header, curr CurrencyController) PricesConverter {
+	def := Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME, Precision: 2, Rounding: bpb.Rounding_ROUND_HALF}
 	code := header.Get(CurrencyHeader)
-	if code == "" {
-		fmt.Println("skipping: no desired currency")
-		return PricesConverter{currencies: curr, failed: true}
+	if code == "" || code == schema.DEFAULT_CURRENCY_NAME {
+		return PricesConverter{currencies: curr, target: def, rate: 1}
 	}
 	ctx := context.Background()
 	c, err := curr.GetByCode(ctx, code)
