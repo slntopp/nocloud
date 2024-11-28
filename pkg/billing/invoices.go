@@ -65,6 +65,8 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	}
 	_a := proto.Clone(a).(*pb.Invoice)
 	_b := proto.Clone(b).(*pb.Invoice)
+	_a.Total = 0 // It calculated based on items anyway
+	_b.Total = 0
 	emptyCur(_a.Currency)
 	emptyCur(_b.Currency)
 	return proto.Equal(_a, _b)
