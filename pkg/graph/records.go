@@ -283,7 +283,7 @@ func (ctrl *recordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 	}
 
 	query += ` 
-   LET currency = DOCUMENT(@@currencies, TO_STRING(record.currency.id))
+   LET currency = DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(record.currency.id)))
    RETURN merge(record, {uuid: record._key, currency: currency})
 ) 
 RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}`

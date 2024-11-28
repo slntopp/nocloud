@@ -3,6 +3,7 @@ package billing
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -70,6 +71,13 @@ func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.R
 	if req.Currency.Title == "" || req.Currency.Code == "" {
 		return nil, status.Error(codes.InvalidArgument, "title and code must be provided")
 	}
+	if req.Currency.Default {
+		for _, currency := range currencies {
+			if currency.Default {
+				return nil, status.Error(codes.AlreadyExists, "default currency already exists")
+			}
+		}
+	}
 	for _, currency := range currencies {
 		if currency.GetCode() == req.Currency.Code {
 			return nil, status.Error(codes.AlreadyExists, "currency with this code already exists")
@@ -106,8 +114,15 @@ func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.R
 	if req.Currency.Title == "" || req.Currency.Code == "" {
 		return nil, status.Error(codes.InvalidArgument, "title and code must be provided")
 	}
+	if req.Currency.Default {
+		for _, currency := range currencies {
+			if currency.Default {
+				return nil, status.Error(codes.AlreadyExists, "default currency already exists")
+			}
+		}
+	}
 	for _, currency := range currencies {
-		if currency.GetCode() == req.Currency.Code {
+		if currency.GetCode() == req.Currency.Code && currency.GetId() != req.GetCurrency().GetId() {
 			return nil, status.Error(codes.AlreadyExists, "currency with this code already exists")
 		}
 	}
@@ -118,6 +133,111 @@ func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.R
 		return nil, err
 	}
 	return connect.NewResponse(&pb.UpdateCurrencyResponse{}), nil
+}
+
+func (s *CurrencyServiceServer) ChangeDefaultCurrency(ctx context.Context, r *connect.Request[pb.ChangeDefaultCurrencyRequest]) (*connect.Response[pb.ChangeDefaultCurrencyResponse], error) {
+	log := s.log.Named("ChangeDefaultCurrency")
+	req := r.Msg
+	log.Debug("Request received", zap.Any("request", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+	def := &pb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME}
+
+	if req.GetId() == def.GetId() {
+		return nil, status.Error(codes.InvalidArgument, "Can't use root currency(NCU) as default currency")
+	}
+
+	trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
+		Exclusive: []string{schema.CUR_COL, schema.CUR2CUR},
+	}, &driver.BeginTransactionOptions{})
+	if err != nil {
+		log.Error("Failed to start transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to begin operation")
+	}
+	ctx = driver.WithTransactionID(ctx, trID)
+	abort := func() {
+		if err := s.db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{}); err != nil {
+			log.Error("Failed to abort transaction")
+		}
+	}
+
+	currencies, err := s.ctrl.GetCurrencies(ctx, true)
+	if err != nil {
+		abort()
+		log.Error("Failed to get currencies", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get existing currencies")
+	}
+	var prev *pb.Currency
+	var next *pb.Currency
+	var defaultsCount int
+	for _, currency := range currencies {
+		if currency.Default {
+			prev = currency
+			defaultsCount++
+		}
+		if req.GetId() == currency.GetId() {
+			next = currency
+		}
+	}
+	if defaultsCount > 1 {
+		abort()
+		log.Error("FATAL: More than 1 default currency. Fix it")
+		return nil, status.Error(codes.Internal, "Fatal error: DB contains more than 1 default currency")
+	}
+	if next == nil {
+		abort()
+		return nil, status.Error(codes.InvalidArgument, "Currency you want to make default not found")
+	}
+	if next.Default {
+		abort()
+		return nil, status.Error(codes.InvalidArgument, "This currency is already default currency")
+	}
+	if prev != nil {
+		prev.Default = false
+		if err = s.ctrl.UpdateCurrency(ctx, prev); err != nil {
+			abort()
+			log.Error("Failed to remove old default currency mark", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to remove old default currency")
+		}
+	}
+	next.Default = true
+	if err = s.ctrl.UpdateCurrency(ctx, next); err != nil {
+		abort()
+		log.Error("Failed to mark default", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to mark default")
+	}
+	zeroRate := func(from, to *pb.Currency) error {
+		if _, _, err = s.ctrl.GetExchangeRateDirect(ctx, from, to); err != nil {
+			if driver.IsNotFoundGeneral(err) {
+				if err = s.ctrl.CreateExchangeRate(ctx, from, to, 1, 0); err != nil {
+					log.Error("Failed to create new exchange rate", zap.Error(err))
+					return status.Error(codes.Internal, "Failed to create new exchange rate. Error: "+err.Error())
+				}
+			} else {
+				log.Error("Failed to get direct rate", zap.Error(err))
+				return status.Error(codes.Internal, "Failed to get direct rate. Error: "+err.Error())
+			}
+		} else {
+			if err = s.ctrl.UpdateExchangeRate(ctx, from, to, 1, 0); err != nil {
+				log.Error("Failed to update rate", zap.Error(err))
+				return status.Error(codes.Internal, "Failed to update new rate. Error: "+err.Error())
+			}
+		}
+		return nil
+	}
+	if errors.Join(zeroRate(next, def), zeroRate(def, next)); err != nil {
+		abort()
+		return nil, err
+	}
+
+	if err = s.db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
+		log.Error("Failed to commit transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to commit operation result")
+	}
+
+	return connect.NewResponse(&pb.ChangeDefaultCurrencyResponse{}), nil
 }
 
 func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *connect.Request[pb.GetExchangeRateRequest]) (*connect.Response[pb.GetExchangeRateResponse], error) {

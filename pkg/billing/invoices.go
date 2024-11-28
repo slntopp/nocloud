@@ -278,7 +278,7 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 			vars["count"] = limit
 		}
 	}
-	query += ` RETURN merge(t, {uuid: t._key, currency: DOCUMENT(@@currencies, TO_STRING(t.currency.id))})`
+	query += ` RETURN merge(t, {uuid: t._key, currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(t.currency.id)))})`
 
 	log.Debug("Ready to retrieve invoices", zap.String("query", query), zap.Any("vars", vars))
 

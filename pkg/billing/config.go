@@ -73,8 +73,12 @@ var (
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
 			Currency: &pb.Currency{
-				Id:    schema.DEFAULT_CURRENCY_ID,
-				Title: schema.DEFAULT_CURRENCY_NAME,
+				Id:        schema.DEFAULT_CURRENCY_ID,
+				Title:     schema.DEFAULT_CURRENCY_NAME,
+				Public:    false,
+				Precision: 2,
+				Rounding:  pb.Rounding_ROUND_HALF,
+				Code:      "NCU",
 			},
 		},
 		Description: "Default currency for platform",
@@ -168,8 +172,12 @@ func MakeCurrencyConf(log *zap.Logger, settingsClient *spb.SettingsServiceClient
 
 	if conf.Currency == nil {
 		conf.Currency = &pb.Currency{
-			Id:    schema.DEFAULT_CURRENCY_ID,
-			Title: schema.DEFAULT_CURRENCY_NAME,
+			Id:        schema.DEFAULT_CURRENCY_ID,
+			Title:     schema.DEFAULT_CURRENCY_NAME,
+			Public:    false,
+			Precision: 2,
+			Rounding:  pb.Rounding_ROUND_HALF,
+			Code:      "NCU",
 		}
 	}
 	return conf

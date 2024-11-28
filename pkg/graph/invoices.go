@@ -193,13 +193,28 @@ func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 	return tx, nil
 }
 
+const getInvoice = `
+FOR inv IN @@invoices
+FILTER inv._key == @uuid
+RETURN MERGE(inv, { currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(inv.currency.id))), uuid: inv._key })
+`
+
 func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
 	var tx = &Invoice{
 		Invoice:           &pb.Invoice{},
 		InvoiceNumberMeta: &InvoiceNumberMeta{},
 	}
 	result := map[string]interface{}{}
-	meta, err := ctrl.col.ReadDocument(ctx, uuid, &result)
+	cur, err := ctrl.col.Database().Query(ctx, getInvoice, map[string]interface{}{
+		"@currencies": schema.CUR_COL,
+		"@invoices":   schema.INVOICES_COL,
+		"uuid":        uuid,
+	})
+	if err != nil {
+		ctrl.log.Error("Failed to query invoice", zap.Error(err))
+		return nil, err
+	}
+	meta, err := cur.ReadDocument(ctx, &result)
 	if err != nil {
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
 		return nil, err
