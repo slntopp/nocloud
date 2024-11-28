@@ -208,13 +208,27 @@ func (s *CurrencyServiceServer) ChangeDefaultCurrency(ctx context.Context, r *co
 		log.Error("Failed to mark default", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to mark default")
 	}
-	err = errors.Join(s.ctrl.DeleteExchangeRate(ctx, next, def),
-		s.ctrl.DeleteExchangeRate(ctx, def, next))
-	if err = errors.Join(s.ctrl.CreateExchangeRate(ctx, next, def, 1, 0),
-		s.ctrl.CreateExchangeRate(ctx, def, next, 1, 0)); err != nil && !driver.IsNotFoundGeneral(err) {
-		abort()
-		log.Error("Failed to perform operation", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to perform operation. Error: "+err.Error())
+	zeroRate := func(from, to *pb.Currency) error {
+		if _, _, err = s.ctrl.GetExchangeRateDirect(ctx, from, to); err != nil {
+			if driver.IsNotFoundGeneral(err) {
+				if err = s.ctrl.CreateExchangeRate(ctx, from, to, 1, 0); err != nil {
+					log.Error("Failed to create new exchange rate", zap.Error(err))
+					return status.Error(codes.Internal, "Failed to create new exchange rate. Error: "+err.Error())
+				}
+			} else {
+				log.Error("Failed to get direct rate", zap.Error(err))
+				return status.Error(codes.Internal, "Failed to get direct rate. Error: "+err.Error())
+			}
+		} else {
+			if err = s.ctrl.UpdateExchangeRate(ctx, from, to, 1, 0); err != nil {
+				log.Error("Failed to update rate", zap.Error(err))
+				return status.Error(codes.Internal, "Failed to update new rate. Error: "+err.Error())
+			}
+		}
+		return nil
+	}
+	if errors.Join(zeroRate(next, def), zeroRate(def, next)); err != nil {
+		return nil, err
 	}
 
 	if err = s.db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{}); err != nil {
