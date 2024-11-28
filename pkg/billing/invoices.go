@@ -283,6 +283,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
 	defCurr := MakeCurrencyConf(log, &s.settingsClient).Currency
 
+	if t == nil {
+		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
+	}
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
 	}
@@ -769,6 +772,9 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requester", requester))
 
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
+	}
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
 	}
