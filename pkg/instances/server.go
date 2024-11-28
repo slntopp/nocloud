@@ -608,15 +608,15 @@ outer:
 			continue
 		}
 		foundInstance := false
-		for _, item := range inv.GetItems() {
-			if item.GetInstance() == "" {
+		for _, i := range inv.GetInstances() {
+			if i == "" {
 				continue
 			}
-			if item.GetInstance() == req.GetUuid() {
+			if i == req.GetUuid() {
 				foundInstance = true
 				continue
 			}
-			if !s.ca.HasAccess(ctx, acc.GetUuid(), driver.NewDocumentID(schema.INSTANCES_COL, item.GetInstance()), accesspb.Level_ADMIN) {
+			if !s.ca.HasAccess(ctx, acc.GetUuid(), driver.NewDocumentID(schema.INSTANCES_COL, i), accesspb.Level_ADMIN) {
 				continue outer
 			}
 		}

@@ -251,7 +251,14 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		isTaxed = "1"
 	}
 
-	body.TaxRate = ptr(floatAsString(tax))
+	if tax == 0 {
+		// If pass it as 0.0 then it will be omitted as default value or nil and
+		// WHMCS will consider it like we don't want to change tax rate
+		// If you pass 0.000000001 then it will not be omitted and WHMCS will round it to zero :(
+		body.TaxRate = floatAsString(0.000001)
+	} else {
+		body.TaxRate = floatAsString(tax)
+	}
 
 	// Delete all existing invoice items
 	toDelete := make([]int, 0)
@@ -466,21 +473,12 @@ skipStatus:
 	tax := float64(whmcsInv.TaxRate / 100)
 	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 
-	// Found linked instances
-	linked := make([]string, 0)
-	for _, item := range inv.GetItems() {
-		if item.GetInstance() == "" {
-			continue
-		}
-		linked = append(linked, item.GetInstance())
-	}
-
 	whmcsItems := whmcsInv.Items.Items
 	ncItems := slices.Clone(inv.GetItems())
+	synced := len(whmcsItems) == len(ncItems)
 	newItems := make([]*pb.Item, 0)
-	synced := true
 	var total float64
-	for j, item := range whmcsItems {
+	for _, item := range whmcsItems {
 		var price float64
 		whmcsAmount := float64(item.Amount)
 		if g.taxExcluded {
@@ -507,19 +505,12 @@ skipStatus:
 			synced = false
 		}
 
-		// Preserve linked instances even if invoice was updated from whmcs
-		inst := ""
-		if j < len(linked) {
-			inst = linked[j]
-		}
-
 		total += price
 		newItems = append(newItems, &pb.Item{
 			Description: item.Description,
 			Amount:      1,
 			Price:       price,
 			Unit:        "Pcs",
-			Instance:    inst,
 		})
 	}
 	total = graph.Round(total, cur.Precision, cur.Rounding)
@@ -528,9 +519,6 @@ skipStatus:
 	if !synced {
 		if inv.Type != pb.ActionType_WHMCS_INVOICE {
 			warning = "[WARNING]: THIS INVOICE ITEMS WERE UPDATED DIRECTLY FROM WHMCS.\n"
-		}
-		if len(linked) > len(whmcsItems) && inv.Type != pb.ActionType_WHMCS_INVOICE && inv.Type != pb.ActionType_NO_ACTION && inv.Type != pb.ActionType_BALANCE {
-			warning += "[CRITICAL] YOU DELETED SOME ITEMS FROM WHMCS: THIS IS FUNCTIONAL INVOICE AND INSTANCES MAY BE NOT LINKED!\n"
 		}
 		inv.Items = newItems
 		inv.Total = total

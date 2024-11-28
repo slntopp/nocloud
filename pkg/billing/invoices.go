@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
-	"math"
 	"slices"
 	"strings"
 	"time"
@@ -27,13 +26,50 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
-func compareFloat(a, b float64, precisionDigits int) bool {
-	return math.Abs(a-b) < math.Pow10(-precisionDigits)
-}
-
 type pair[T any] struct {
 	f T
 	s T
+}
+
+func invoicesEqual(a, b *pb.Invoice) bool {
+	emptyCur := func(c *pb.Currency) {
+		if c == nil {
+			return
+		}
+		c.Public = true
+		c.Precision = 0
+		c.Format = ""
+		c.Title = ""
+		c.Code = ""
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Transactions == nil {
+		a.Transactions = []string{}
+	}
+	if a.Instances == nil {
+		a.Instances = []string{}
+	}
+	if a.Meta == nil {
+		a.Meta = make(map[string]*structpb.Value)
+	}
+	if b.Transactions == nil {
+		b.Transactions = []string{}
+	}
+	if b.Instances == nil {
+		b.Instances = []string{}
+	}
+	if b.Meta == nil {
+		b.Meta = make(map[string]*structpb.Value)
+	}
+	_a := proto.Clone(a).(*pb.Invoice)
+	_b := proto.Clone(b).(*pb.Invoice)
+	_a.Total = 0 // It calculated based on items anyway
+	_b.Total = 0
+	emptyCur(_a.Currency)
+	emptyCur(_b.Currency)
+	return proto.Equal(_a, _b)
 }
 
 var forbiddenStatusConversions = []pair[pb.BillingStatus]{}
@@ -279,9 +315,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requester", requester))
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-	defCurr := MakeCurrencyConf(ctx, log, &s.settingsClient).Currency
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	defCurr := MakeCurrencyConf(log, &s.settingsClient).Currency
 
+	if t == nil {
+		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
+	}
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
 	}
@@ -309,6 +348,15 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 	if t.Transactions == nil {
 		t.Transactions = []string{}
+	}
+	if t.Instances == nil {
+		t.Instances = []string{}
+	}
+	for _, i := range t.GetInstances() {
+		if exists, err := s.instances.Exists(ctx, i); err != nil || !exists {
+			log.Error("Given linked instance dont exists", zap.String("instance", i), zap.Error(err))
+			return nil, status.Error(codes.InvalidArgument, "Instance you want to link do not exist")
+		}
 	}
 
 	// Rounding invoice items
@@ -345,6 +393,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 	if t.Meta[graph.InvoiceTaxMetaKey] == nil {
 		t.Meta[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
+	}
+	if t.Meta["creator"] == nil {
+		t.Meta["creator"] = structpb.NewStringValue(requester)
 	}
 
 	t.Number = strNum
@@ -441,8 +492,8 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	var strNum string
 	var num int
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -541,7 +592,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		log.Warn("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Account not found")
 	}
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	balance := acc.GetBalance()
 	accCurrency := acc.Currency
@@ -621,7 +672,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	if inv.UserId != clientId {
 		return nil, status.Error(codes.PermissionDenied, "No access to this invoice")
 	}
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	balance := acc.GetBalance()
 	accCurrency := acc.Currency
@@ -756,6 +807,9 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requester", requester))
 
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
+	}
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		req.Status = pb.BillingStatus_DRAFT
 	}
@@ -773,6 +827,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if err != nil {
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
+	}
+	if invoicesEqual(t.Invoice, req) {
+		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
+		return connect.NewResponse(t.Invoice), nil
 	}
 	old := proto.Clone(t.Invoice).(*pb.Invoice)
 
@@ -792,6 +850,18 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Created = req.GetCreated()
 	}
 
+	if req.Instances == nil {
+		req.Instances = make([]string, 0)
+	}
+	if !slices.Equal(t.GetInstances(), req.GetInstances()) {
+		for _, i := range req.GetInstances() {
+			if exists, err := s.instances.Exists(ctx, i); err != nil || !exists {
+				log.Error("Given linked instance dont exists", zap.String("instance", i), zap.Error(err))
+				return nil, status.Error(codes.InvalidArgument, "Instance you want to link do not exist")
+			}
+		}
+	}
+
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
@@ -799,6 +869,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Total = req.GetTotal()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
+	t.Instances = req.GetInstances()
 	if t.Items == nil {
 		t.Items = make([]*pb.Item, 0)
 	}
@@ -830,6 +901,17 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
+	nocloud.Log(log, &elpb.Event{
+		Uuid:      upd.GetUuid(),
+		Entity:    "Invoices",
+		Action:    "update",
+		Scope:     "database",
+		Rc:        0,
+		Ts:        time.Now().Unix(),
+		Snapshot:  &elpb.Snapshot{},
+		Requestor: requester,
+	})
+
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
@@ -837,11 +919,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 
 	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
+		log.Info("Updating invoice through gateway")
 		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
 			log.Error("Failed to update invoice through gateway", zap.Error(err))
 		}
 	}
 
+	log.Info("Invoice updated", zap.Any("invoice", t.GetUuid()))
 	return connect.NewResponse(t.Invoice), nil
 }
 
@@ -976,7 +1060,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	log = log.With(zap.String("instance", req.GetInstance()), zap.String("requester", requester))
 	log.Debug("Request received")
 
-	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.INSTANCES_COL, req.GetInstance()), access.Level_ADMIN) {
 		log.Warn("Not enough access rights")
@@ -1122,15 +1206,15 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       cost,
-				Instance:    inst.GetUuid(),
 			},
 		},
-		Total:    cost,
-		Type:     pb.ActionType_INSTANCE_RENEWAL,
-		Created:  now,
-		Deadline: dueDate, // Until when invoice should be paid
-		Account:  acc.GetUuid(),
-		Currency: acc.Currency,
+		Total:     cost,
+		Type:      pb.ActionType_INSTANCE_RENEWAL,
+		Instances: []string{inst.GetUuid()},
+		Created:   now,
+		Deadline:  dueDate, // Until when invoice should be paid
+		Account:   acc.GetUuid(),
+		Currency:  acc.Currency,
 		Meta: map[string]*structpb.Value{
 			"creator":               structpb.NewStringValue(requester),
 			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
@@ -1189,8 +1273,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		}
 
 	case pb.ActionType_INSTANCE_START:
-		for _, item := range inv.GetItems() {
-			i := item.GetInstance()
+		for _, i := range inv.GetInstances() {
 			if i == "" {
 				continue
 			}
@@ -1234,10 +1317,8 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
-		for _, item := range inv.GetItems() {
-			i := item.GetInstance()
+		for _, i := range inv.GetInstances() {
 			if i == "" {
-				log.Debug("Instance item is empty")
 				continue
 			}
 			log := log.With(zap.String("instance", i))
@@ -1282,15 +1363,14 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 
 	switch inv.GetType() {
 	case pb.ActionType_INSTANCE_START:
-		for _, item := range inv.GetItems() {
-			id := item.GetInstance()
-			if id == "" {
+		for _, i := range inv.GetInstances() {
+			if i == "" {
 				continue
 			}
-			log := log.With(zap.String("instance", id))
+			log := log.With(zap.String("instance", i))
 
 			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   id,
+				Uuid:   i,
 				Method: "suspend",
 			})
 			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
@@ -1301,10 +1381,8 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
-		for _, item := range inv.GetItems() {
-			i := item.GetInstance()
+		for _, i := range inv.GetInstances() {
 			if i == "" {
-				log.Debug("Instance item is empty")
 				continue
 			}
 			log := log.With(zap.String("instance", i))

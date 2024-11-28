@@ -113,7 +113,6 @@ retry:
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       invCost,
-				Instance:    instance.GetUuid(),
 			},
 		},
 		Meta: map[string]*structpb.Value{
@@ -121,12 +120,13 @@ retry:
 			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
-		Total:    invCost,
-		Type:     bpb.ActionType_INSTANCE_START,
-		Created:  now,
-		Deadline: now + (int64(time.Hour.Seconds()) * 24 * 5),
-		Account:  acc.GetUuid(),
-		Currency: accCurrency,
+		Total:     invCost,
+		Type:      bpb.ActionType_INSTANCE_START,
+		Instances: []string{instance.GetUuid()},
+		Created:   now,
+		Deadline:  now + (int64(time.Hour.Seconds()) * 24 * 5),
+		Account:   acc.GetUuid(),
+		Currency:  accCurrency,
 	}
 	invResp, err := s.CreateInvoice(ctxWithRoot(ctx), connect.NewRequest(&bpb.CreateInvoiceRequest{
 		Invoice:     inv,
@@ -169,7 +169,7 @@ init:
 	}
 
 	s.InstancesConsumerStatus.Status.Status = healthpb.Status_RUNNING
-	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	for msg := range records {
 		log.Debug("Received a message")

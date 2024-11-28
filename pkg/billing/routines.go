@@ -96,8 +96,8 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 	log := s.log.Named("AccountSuspendRoutine")
 
 start:
-	suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
-	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
+	suspConf := MakeSuspendConf(log, &s.settingsClient)
+	routineConf := MakeRoutineConf(log, &s.settingsClient)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{monFreqKey}, upd)
@@ -181,9 +181,9 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 start:
 
-	routineConf := MakeRoutineConf(ctx, log, &s.settingsClient)
-	roundingConf := MakeRoundingConf(ctx, log, &s.settingsClient)
-	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	routineConf := MakeRoutineConf(log, &s.settingsClient)
+	roundingConf := MakeRoundingConf(log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{monFreqKey, currencyKey}, upd)

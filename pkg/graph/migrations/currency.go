@@ -11,13 +11,13 @@ import (
 
 var LEGACY_CURRENCIES = []*pb.Currency{
 	{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME},
-	{Id: 1, Title: "USD"},
-	{Id: 2, Title: "EUR"},
-	{Id: 3, Title: "BYN"},
-	{Id: 4, Title: "PLN"},
-	{Id: 5, Title: "EUR_COLO"},
-	{Id: 6, Title: "EUR_TECH"},
-	{Id: 7, Title: "RUB"},
+	{Id: 1, Title: "USD", Code: "USD", Public: true, Precision: 2},
+	{Id: 2, Title: "EUR", Code: "EUR", Public: true, Precision: 2},
+	{Id: 3, Title: "BYN", Code: "BYN", Public: true, Precision: 2},
+	{Id: 4, Title: "PLN", Code: "PLN", Public: true, Precision: 2},
+	{Id: 5, Title: "EUR_COLO", Code: "EUR_COLO", Public: true, Precision: 2},
+	{Id: 6, Title: "EUR_TECH", Code: "EUR_TECH", Public: true, Precision: 2},
+	{Id: 7, Title: "RUB", Code: "RUB", Public: true, Precision: 0},
 }
 
 const NumericToObjectCurrency = `
