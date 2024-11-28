@@ -251,7 +251,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		isTaxed = "1"
 	}
 
-	body.TaxRate = ptr(floatAsString(tax))
+	body.TaxRate = floatAsString(tax)
 
 	// Delete all existing invoice items
 	toDelete := make([]int, 0)
