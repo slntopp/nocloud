@@ -46,8 +46,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Conte
 	invoices := make([]*graph.Invoice, 0)
 	const days15 = int64(3600 * 24 * 15)
 	const days10 = int64(3600 * 24 * 10)
-	invConf := MakeInvoicesConf(ctx, log, &s.settingsClient)
-	currConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 	var expiringPercentage = 0.9
 	if invConf.IssueRenewalInvoiceAfter > 0 && invConf.IssueRenewalInvoiceAfter <= 1 {
 		expiringPercentage = invConf.IssueRenewalInvoiceAfter
@@ -307,14 +307,15 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 
 	inv := &graph.Invoice{
 		Invoice: &pb.Invoice{
-			Status:   pb.BillingStatus_UNPAID,
-			Items:    []*pb.Item{},
-			Type:     pb.ActionType_INSTANCE_RENEWAL,
-			Created:  now,
-			Account:  acc.GetUuid(),
-			Currency: acc.Currency,
+			Status:    pb.BillingStatus_UNPAID,
+			Items:     []*pb.Item{},
+			Instances: make([]string, 0),
+			Type:      pb.ActionType_INSTANCE_RENEWAL,
+			Created:   now,
+			Account:   acc.GetUuid(),
+			Currency:  acc.Currency,
 			Meta: map[string]*structpb.Value{
-				"creator":               structpb.NewStringValue(schema.ROOT_ACCOUNT_KEY),
+				"creator":               structpb.NewStringValue("system"),
 				graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 			},
 		},
@@ -342,9 +343,9 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		cost *= rate // Convert from NCU to  account's currency
 		cost = cost + (cost * tax)
 		initCost *= rate
+		totalNoDiscount += initCost
 		initCost = initCost + (initCost * tax)
 		total += cost
-		totalNoDiscount += initCost
 
 		expireDate := time.Unix(d.ExpireAt, 0)
 		var untilDate time.Time
@@ -378,9 +379,9 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			Amount:      1,
 			Unit:        "Pcs",
 			Price:       cost,
-			Instance:    d.Instance.GetUuid(),
 		}
 		inv.Items = append(inv.Items, item)
+		inv.Instances = append(inv.Instances, d.Instance.GetUuid())
 		expirations = append(expirations, d.ExpireAt)
 	}
 	inv.SetBillingData(&billingData)

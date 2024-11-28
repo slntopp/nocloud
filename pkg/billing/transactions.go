@@ -137,7 +137,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 			vars["count"] = limit
 		}
 	}
-	query += ` RETURN MERGE(t, {currency: DOCUMENT(@@currencies, TO_STRING(t.currency.id))})`
+	query += ` RETURN MERGE(t, {currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(t.currency.id)))})`
 
 	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
 
@@ -234,8 +234,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	if r.Transaction.Priority == pb.Priority_URGENT && r.Transaction.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
-		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
+		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
+		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -308,7 +308,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	} else {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
 			"@transactions":  schema.TRANSACTIONS_COL,
@@ -450,8 +450,8 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 	if t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
-		suspConf := MakeSuspendConf(ctx, log, &s.settingsClient)
+		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
+		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -611,7 +611,7 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
-	currencyConf := MakeCurrencyConf(ctx, log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
@@ -660,7 +660,7 @@ func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount floa
 		return nil, nil
 	}
 	if curr == nil {
-		conf := MakeCurrencyConf(ctx, s.log, &s.settingsClient)
+		conf := MakeCurrencyConf(s.log, &s.settingsClient)
 		curr = conf.Currency
 	}
 	resp, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{

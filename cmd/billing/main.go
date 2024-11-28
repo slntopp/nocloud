@@ -240,6 +240,7 @@ func main() {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	billing.SetupSettingsContext(ctx)
 
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
@@ -302,8 +303,7 @@ func main() {
 	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
 	router.PathPrefix(path).Handler(handler)
 
-	migrations.MigrateOldInvoicesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL),
-		graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile, instancesFile)
+	migrations.MigrateOldInvoicesInstancesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL))
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 

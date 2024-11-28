@@ -222,7 +222,7 @@ GRAPH @permissions SORT path.edges[0].level
         )
     RETURN MERGE(path.vertices[-1], {
         uuid: path.vertices[-1]._key,
-        currency: DOCUMENT(@@currencies, TO_STRING(path.vertices[-1].currency.id)),
+        currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(path.vertices[-1].currency.id))),
 	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key, username: cred.username }
 	})
 `
@@ -319,7 +319,7 @@ OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
 // FILTER edge.level > 0 // TODO: ensure all edges have level
     LET perm = path.edges[0]
-    LET currency = DOCUMENT(@@currencies, TO_STRING(node.currency.id))
+    LET currency = DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(node.currency.id)))
 	RETURN MERGE(node, { uuid: node._key, currency: currency, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 `
 
@@ -396,7 +396,7 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
                    RETURN n
         )
         
-		RETURN MERGE(node, { uuid: node._key, currency: DOCUMENT(@@currencies, TO_STRING(node.currency.id)), active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key, username: cred.username } })
+		RETURN MERGE(node, { uuid: node._key, currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(node.currency.id))), active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key, username: cred.username } })
 	)
 	
 	LET active = LENGTH(

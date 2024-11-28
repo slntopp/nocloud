@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -55,9 +54,6 @@ func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsControl
 	col := GetEnsureCollection(log, ctx, db, schema.RECORDS_COL)
 
 	log.Info("Creating Records controller")
-
-	migrations.UpdateNumericCurrencyToDynamic(log, col)
-	migrations.UpdateTotalAndCostFields(log, col)
 
 	return &recordsController{
 		log: log, col: col, db: db,
@@ -287,7 +283,7 @@ func (ctrl *recordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 	}
 
 	query += ` 
-   LET currency = DOCUMENT(@@currencies, TO_STRING(record.currency.id))
+   LET currency = DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(record.currency.id)))
    RETURN merge(record, {uuid: record._key, currency: currency})
 ) 
 RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}`

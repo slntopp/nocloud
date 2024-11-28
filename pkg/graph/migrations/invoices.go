@@ -158,3 +158,33 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	}
 	log.Info("Migrated old invoices to new")
 }
+
+const migrateOldLinkedInstancesToNew = `
+FOR inv IN @@invoices
+   FILTER !inv.instances || LENGTH(inv.instances) == 0
+   LET newInstancesResp = (
+      FILTER IS_ARRAY(inv.items)
+      FOR item IN inv.items
+         FILTER IS_STRING(item.instance) && LENGTH(item.instance) > 0
+         RETURN item.instance
+   )
+   LET newItemsResp = (
+      FILTER IS_ARRAY(inv.items)
+      FOR item IN inv.items
+         RETURN UNSET(item, "instance")
+   )
+   LET newInstances = LENGTH(newInstancesResp) > 0 ? newInstancesResp : []
+   LET newItems = LENGTH(newItemsResp) > 0 ? newItemsResp : []
+   UPDATE inv WITH { instances: newInstances, items: newItems } IN @@invoices
+`
+
+func MigrateOldInvoicesInstancesToNew(log *zap.Logger, invoices driver.Collection) {
+	db := invoices.Database()
+	_, err := db.Query(context.TODO(), migrateOldLinkedInstancesToNew, map[string]interface{}{
+		"@invoices": invoices.Name(),
+	})
+	if err != nil {
+		log.Fatal("Error migrating old linked invoices instances to new", zap.Error(err))
+	}
+	log.Info("Migrated old linked invoices instances to new")
+}

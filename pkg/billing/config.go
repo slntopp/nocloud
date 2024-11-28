@@ -19,6 +19,12 @@ const (
 	invKey      string = "billing-invoices"
 )
 
+var _ctx context.Context
+
+func SetupSettingsContext(ctx context.Context) {
+	_ctx = ctx
+}
+
 type RoutineConf struct {
 	Frequency int `json:"freq"` // Frequency in Seconds
 }
@@ -67,8 +73,12 @@ var (
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
 			Currency: &pb.Currency{
-				Id:    schema.DEFAULT_CURRENCY_ID,
-				Title: schema.DEFAULT_CURRENCY_NAME,
+				Id:        schema.DEFAULT_CURRENCY_ID,
+				Title:     schema.DEFAULT_CURRENCY_NAME,
+				Public:    false,
+				Precision: 2,
+				Rounding:  pb.Rounding_ROUND_HALF,
+				Code:      "NCU",
 			},
 		},
 		Description: "Default currency for platform",
@@ -141,8 +151,8 @@ var (
 	}
 )
 
-func MakeRoutineConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf RoutineConf) {
-	sc.Setup(log, ctx, settingsClient)
+func MakeRoutineConf(log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf RoutineConf) {
+	sc.Setup(log, _ctx, settingsClient)
 
 	if err := sc.Fetch(monFreqKey, &conf, routineSetting); err != nil {
 		conf = routineSetting.Value
@@ -151,8 +161,8 @@ func MakeRoutineConf(ctx context.Context, log *zap.Logger, settingsClient *spb.S
 	return conf
 }
 
-func MakeCurrencyConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf CurrencyConf) {
-	sc.Setup(log, ctx, settingsClient)
+func MakeCurrencyConf(log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf CurrencyConf) {
+	sc.Setup(log, _ctx, settingsClient)
 
 	if err := sc.Fetch(currencyKey, &conf, currencySetting); err != nil {
 		conf = currencySetting.Value
@@ -162,15 +172,19 @@ func MakeCurrencyConf(ctx context.Context, log *zap.Logger, settingsClient *spb.
 
 	if conf.Currency == nil {
 		conf.Currency = &pb.Currency{
-			Id:    schema.DEFAULT_CURRENCY_ID,
-			Title: schema.DEFAULT_CURRENCY_NAME,
+			Id:        schema.DEFAULT_CURRENCY_ID,
+			Title:     schema.DEFAULT_CURRENCY_NAME,
+			Public:    false,
+			Precision: 2,
+			Rounding:  pb.Rounding_ROUND_HALF,
+			Code:      "NCU",
 		}
 	}
 	return conf
 }
 
-func MakeRoundingConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf RoundingConf) {
-	sc.Setup(log, ctx, settingsClient)
+func MakeRoundingConf(log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf RoundingConf) {
+	sc.Setup(log, _ctx, settingsClient)
 
 	if err := sc.Fetch(roundingKey, &conf, roundingSetting); err != nil {
 		conf = roundingSetting.Value
@@ -179,8 +193,8 @@ func MakeRoundingConf(ctx context.Context, log *zap.Logger, settingsClient *spb.
 	return conf
 }
 
-func MakeSuspendConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf SuspendConf) {
-	sc.Setup(log, ctx, settingsClient)
+func MakeSuspendConf(log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf SuspendConf) {
+	sc.Setup(log, _ctx, settingsClient)
 
 	if err := sc.Fetch(suspKey, &conf, suspendedSetting); err != nil {
 		conf = suspendedSetting.Value
@@ -189,8 +203,8 @@ func MakeSuspendConf(ctx context.Context, log *zap.Logger, settingsClient *spb.S
 	return conf
 }
 
-func MakeInvoicesConf(ctx context.Context, log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf InvoicesConf) {
-	sc.Setup(log, ctx, settingsClient)
+func MakeInvoicesConf(log *zap.Logger, settingsClient *spb.SettingsServiceClient) (conf InvoicesConf) {
+	sc.Setup(log, _ctx, settingsClient)
 
 	if err := sc.Fetch(invKey, &conf, invoicesSetting); err != nil {
 		conf = invoicesSetting.Value

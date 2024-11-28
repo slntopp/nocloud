@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -67,8 +66,6 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 
 	transactions := NewTransactionsController(log, db)
 	currencies := NewCurrencyController(log, db)
-
-	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return &invoicesController{
 		log: log, col: col, transactions: transactions, currencies: currencies,
@@ -196,13 +193,28 @@ func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 	return tx, nil
 }
 
+const getInvoice = `
+FOR inv IN @@invoices
+FILTER inv._key == @uuid
+RETURN MERGE(inv, { currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(inv.currency.id))), uuid: inv._key })
+`
+
 func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
 	var tx = &Invoice{
 		Invoice:           &pb.Invoice{},
 		InvoiceNumberMeta: &InvoiceNumberMeta{},
 	}
 	result := map[string]interface{}{}
-	meta, err := ctrl.col.ReadDocument(ctx, uuid, &result)
+	cur, err := ctrl.col.Database().Query(ctx, getInvoice, map[string]interface{}{
+		"@currencies": schema.CUR_COL,
+		"@invoices":   schema.INVOICES_COL,
+		"uuid":        uuid,
+	})
+	if err != nil {
+		ctrl.log.Error("Failed to query invoice", zap.Error(err))
+		return nil, err
+	}
+	meta, err := cur.ReadDocument(ctx, &result)
 	if err != nil {
 		ctrl.log.Error("Failed to read invoice", zap.Error(err))
 		return nil, err

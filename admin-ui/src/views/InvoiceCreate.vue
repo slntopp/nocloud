@@ -58,8 +58,7 @@
             :disabled="isEdit || isBalanceInvoice"
             :filter="defaultFilterObject"
             label="Instances"
-            v-model="selectedInstances"
-            return-object
+            v-model="newInvoice.instances"
             multiple
             item-text="title"
             item-value="uuid"
@@ -144,7 +143,6 @@
           :show-delete="!isBalanceInvoice"
           :account="newInvoice.account"
           :items="newInvoice.items"
-          :instances="instances"
           @click:delete="deleteInvoiceItem"
         />
       </div>
@@ -328,8 +326,6 @@ const store = useStore();
 const router = useRouter();
 const { getInvoiceStatusColor, getTotalColor } = useInvoices();
 
-const selectedInstances = ref([]);
-
 const newInvoice = ref({
   account: null,
   status: "DRAFT",
@@ -340,6 +336,7 @@ const newInvoice = ref({
   meta: {
     note: "",
   },
+  instances: [],
 });
 
 const requiredRule = ref([(val) => !!val || "Field required"]);
@@ -455,8 +452,6 @@ const setInvoice = () => {
       created: formatSecondsToDateString(invoice.value.created),
     };
 
-    selectedInstances.value = invoice.value.items?.map((item) => item.instance);
-
     if (isBalanceInvoice.value) {
       setTimeout(() => {
         newInvoice.value.items = invoice.value.items;
@@ -487,6 +482,7 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       items: newInvoice.value.items,
       meta: newInvoice.value.meta,
       status: status ? status : newInvoice.value.status,
+      instances: newInvoice.value.instances,
       deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
       type: newInvoice.value.type,
     };
@@ -580,7 +576,6 @@ const addInvoiceItem = () => {
   newInvoice.value.items.push({
     description: "",
     price: 0,
-    instance: "",
     amount: 1,
     unit: "Pcs",
   });
@@ -595,7 +590,7 @@ const deleteInvoiceItem = (index) => {
 
 const onChangeAccount = async () => {
   if (!isEdit.value && !isDraft.value) {
-    selectedInstances.value = null;
+    newInvoice.value.instances = [];
   }
 
   const account = newInvoice.value.account?.uuid;
@@ -625,16 +620,21 @@ const onChangeAccount = async () => {
 };
 
 const onChangeInstance = () => {
-  if (!selectedInstances.value || !selectedInstances.value.length) {
+  if (!newInvoice.value.instances || !newInvoice.value.instances.length) {
     return;
   }
   const newItems = [];
 
-  selectedInstances.value.forEach((instance) => {
-    const { price, title, uuid } = instance;
+  newInvoice.value.instances.forEach((uuid) => {
+    const { price, title } = instances.value.find(
+      (instance) => instance.uuid === uuid
+    );
+    if (!price && !title) {
+      return;
+    }
 
     const existedProduct = newInvoice.value.items.find(
-      (item) => item.description.includes(title) && item.instance === uuid
+      (item) => item.description === title
     );
 
     if (existedProduct) {
@@ -644,7 +644,6 @@ const onChangeInstance = () => {
         price: price,
         amount: 1,
         description: title,
-        instance: uuid,
         unit: "Pcs",
       });
     }
@@ -712,24 +711,12 @@ const changeInvoiceStatus = async (status, params = null) => {
   }
 };
 
-watch(instances, (instances) => {
-  if (isEdit.value) {
-    const instancesUuid = [
-      ...new Set(invoice.value.items?.map((item) => item.instance)),
-    ];
-    selectedInstances.value = instances.filter((instance) =>
-      instancesUuid.includes(instance.uuid)
-    );
-  }
-});
-
 watch(isBalanceInvoice, (value) => {
   if (value) {
     newInvoice.value.items = [
       {
         description: topUpItemMessage.value,
         price: newInvoice.value.total,
-        instance: "",
         amount: 1,
         unit: "Pcs",
       },
@@ -738,7 +725,7 @@ watch(isBalanceInvoice, (value) => {
     newInvoice.value.items = [];
   }
 
-  selectedInstances.value = [];
+  newInvoice.value.instances = [];
 });
 
 watch(

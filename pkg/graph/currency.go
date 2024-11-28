@@ -93,9 +93,6 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 		db:    db,
 	}
 
-	log.Info("Migrating old currency template to dynamic")
-	ctrl.migrateToDynamic()
-
 	log.Info("Ensuring hash index on currency code")
 	_, _, err := col.EnsureHashIndex(ctx, []string{"code"}, &driver.EnsureHashIndexOptions{Unique: true})
 	if err != nil {
