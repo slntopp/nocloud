@@ -3,7 +3,6 @@ package billing
 import (
 	"context"
 	"fmt"
-	"github.com/google/go-cmp/cmp"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"slices"
 	"strings"
@@ -830,7 +829,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
-	fmt.Println("Difference", cmp.Diff(t.Invoice, req, cmp.AllowUnexported(pb.Invoice{})))
+	fmt.Println("Printing difference")
+	fmt.Printf("Passed %+v", req)
+	fmt.Println()
+	fmt.Printf("DB %+v", t.Invoice)
 	if invoicesEqual(t.Invoice, req) {
 		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
 		return connect.NewResponse(t.Invoice), nil
