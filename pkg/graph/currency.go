@@ -360,6 +360,7 @@ func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool, m
 			Format:    doc.Format,
 			Rounding:  doc.Rounding,
 			Code:      doc.Code,
+			Default:   doc.Default,
 		})
 	}
 
