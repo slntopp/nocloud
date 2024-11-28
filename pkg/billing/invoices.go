@@ -41,6 +41,7 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 		c.Format = ""
 		c.Title = ""
 		c.Code = ""
+		c.Default = false
 	}
 	if a == nil || b == nil {
 		return false
