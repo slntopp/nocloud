@@ -196,7 +196,7 @@ func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 const getInvoice = `
 FOR inv IN @@invoices
 FILTER inv._key == @uuid
-RETURN MERGE(inv, { currency: DOCUMENT(@@currencies, TO_STRING(inv.currency.id)), uuid: inv._key })
+RETURN MERGE(inv, { currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(inv.currency.id))), uuid: inv._key })
 `
 
 func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice, error) {
