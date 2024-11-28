@@ -137,7 +137,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 			vars["count"] = limit
 		}
 	}
-	query += ` RETURN MERGE(t, {currency: DOCUMENT(@@currencies, TO_STRING(t.currency.id))})`
+	query += ` RETURN MERGE(t, {currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(t.currency.id)))})`
 
 	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
 
