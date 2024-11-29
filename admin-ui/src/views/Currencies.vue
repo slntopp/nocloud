@@ -110,7 +110,7 @@
           :loading="updatingCurrencyId === item.id"
           dense
           hide-details
-          :disabled="!!updatingCurrencyId"
+          :disabled="!!updatingCurrencyId || item.default"
           v-model.number="item.rate.value"
         />
       </template>
@@ -278,30 +278,33 @@ const saveCurrency = async (item) => {
           format: item.format,
           rounding: item.rounding,
           public: item.public,
+          default: item.default,
         },
       })
     );
 
-    if (item.rate.isExists) {
-      await currenciesClient.value.updateExchangeRate(
-        UpdateExchangeRateRequest.fromJson({
-          rate: item.rate.value,
-          to: { id: item.id },
-          from: { id: 0 },
-        })
-      );
-    } else {
-      await currenciesClient.value.createExchangeRate(
-        CreateExchangeRateRequest.fromJson({
-          rate: item.rate.value,
-          to: { id: item.id },
-          from: { id: 0 },
-        })
-      );
+    if (!item.default) {
+      if (item.rate.isExists) {
+        await currenciesClient.value.updateExchangeRate(
+          UpdateExchangeRateRequest.fromJson({
+            rate: item.rate.value,
+            to: { id: item.id },
+            from: { id: 0 },
+          })
+        );
+      } else {
+        await currenciesClient.value.createExchangeRate(
+          CreateExchangeRateRequest.fromJson({
+            rate: item.rate.value,
+            to: { id: item.id },
+            from: { id: 0 },
+          })
+        );
 
-      currenciesItems.value = currenciesItems.value.map((c) =>
-        c.id === item.id ? { ...c, rate: { ...c.rate, isExists: true } } : c
-      );
+        currenciesItems.value = currenciesItems.value.map((c) =>
+          c.id === item.id ? { ...c, rate: { ...c.rate, isExists: true } } : c
+        );
+      }
     }
 
     originalCurrenciesItems.value = originalCurrenciesItems.value.map((c) =>
@@ -335,21 +338,19 @@ const changeDefaultCurrency = async () => {
 watch([currencies, rates], () => {
   newDefaultCurrency.value = defaultCurrency.value.id;
 
-  const items = currencies.value
-    .filter((v) => !v.default)
-    .map((currency) => {
-      const rate = rates.value.find(
-        (val) => val.to.id == currency.id && !val.from.id
-      );
+  const items = currencies.value.map((currency) => {
+    const rate = rates.value.find(
+      (val) => val.to.id == currency.id && !val.from.id
+    );
 
-      return {
-        ...currency,
-        rate: {
-          value: rate?.rate || 0,
-          isExists: !!rate,
-        },
-      };
-    });
+    return {
+      ...currency,
+      rate: {
+        value: rate?.rate || 0,
+        isExists: !!rate,
+      },
+    };
+  });
   currenciesItems.value = JSON.parse(JSON.stringify(items));
   originalCurrenciesItems.value = JSON.parse(JSON.stringify(items));
 });
