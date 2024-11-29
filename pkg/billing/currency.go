@@ -116,7 +116,7 @@ func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.R
 	}
 	if req.Currency.Default {
 		for _, currency := range currencies {
-			if currency.Default {
+			if currency.Default && req.GetCurrency().GetId() != currency.GetId() {
 				return nil, status.Error(codes.AlreadyExists, "default currency already exists")
 			}
 		}
