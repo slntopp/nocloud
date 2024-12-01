@@ -527,8 +527,7 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 	otherCols := []string{schema.NS2ACC, schema.ACC2NS, schema.NS2SERV,
 		schema.ACC2CRED, schema.CUR2CUR, schema.SP2BP}
 	// Other collections in Permissions graph but not presented in schema (this part is cringe, must fix it somehow)
-	importedCols := []string{"Accounts2IcsLinks", "Accounts2NocalCalendars", "Instances2Runs", "Namespaces2NocalCalendars",
-		"Namespaces2NodemeshWorkflows", "Namespaces2Runs", "NocalCalendars2NocalEvents", "NodemeshWorkflows2NodemeshRuns"}
+	importedCols := []string{"Instances2Runs", "Namespaces2Runs"}
 	otherCols = append(otherCols, importedCols...)
 
 	if req.Account != nil {

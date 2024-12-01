@@ -439,7 +439,7 @@ func filterInstances(instances []*ipb.Instance) []*ipb.Instance {
 		if inst.BillingPlan == nil {
 			continue
 		}
-		if inst.GetStatus() == statuses.NoCloudStatus_DEL || inst.GetStatus() == statuses.NoCloudStatus_INIT || inst.GetStatus() == statuses.NoCloudStatus_UNSPECIFIED {
+		if inst.GetStatus() == statuses.NoCloudStatus_DEL || inst.GetStatus() == statuses.NoCloudStatus_UNSPECIFIED {
 			continue
 		}
 		if inst.GetState().GetState() == states.NoCloudState_DELETED || inst.GetState().GetState() == states.NoCloudState_PENDING ||
