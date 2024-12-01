@@ -194,12 +194,12 @@ func main() {
 	log.Info("Billing Service registered")
 
 	log.Info("Registering Services Server")
-	path, handler := cc.NewServicesServiceHandler(server, interceptors)
+	path, handler := cc.NewServicesServiceHandler(server, interceptors, connect.WithReadMaxBytes(100*1024*1024))
 	router.PathPrefix(path).Handler(handler)
 	log.Info("Services Server registered", zap.String("path", path))
 
 	log.Info("Registering Instances Server")
-	path, handler = ic.NewInstancesServiceHandler(iserver, interceptors)
+	path, handler = ic.NewInstancesServiceHandler(iserver, interceptors, connect.WithReadMaxBytes(100*1024*1024))
 	router.PathPrefix(path).Handler(handler)
 	log.Info("Instances Server registered", zap.String("path", path))
 
