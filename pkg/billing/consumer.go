@@ -100,15 +100,16 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 		if inv, err = s.executePostPaidActions(ctx, log, inv, currConf.Currency); err != nil {
 			return fmt.Errorf("failed to execute postpaid actions: %w", err)
 		}
+		inv.Processed = time.Now().Unix()
 	}
 
 	if event.GetKey() == billing.InvoiceReturned {
 		if inv, err = s.executePostRefundActions(ctx, log, inv); err != nil {
 			return fmt.Errorf("failed to execute postrefund actions: %w", err)
 		}
+		inv.Returned = time.Now().Unix()
 	}
 
-	inv.Processed = time.Now().Unix()
 	if _, err = s.invoices.Update(ctx, inv); err != nil {
 		return fmt.Errorf("failed to update invoice: %w", err)
 	}
