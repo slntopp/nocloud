@@ -112,18 +112,13 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 	col := GetEnsureCollection(log, ctx, db, schema.INSTANCES_COL)
 	ig2inst := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
-	channel, err := conn.Channel()
-	if err != nil {
-		log.Fatal("Failed to init channel", zap.Error(err))
-	}
-
 	bp_ctrl := NewBillingPlansController(log, db)
 	addons := NewAddonsController(log, db)
 	acc := NewAccountsController(log, db)
 	inv := NewInvoicesController(log, db)
 	cur := NewCurrencyController(log, db)
 
-	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: bp_ctrl,
+	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, bp_ctrl: bp_ctrl,
 		addons: addons, inv: inv, acc: acc, cur: cur, ps: ps.NewPubSub[*epb.Event](conn, log), ansPs: ps.NewPubSub[*pb.Context](conn, log)}
 }
 
