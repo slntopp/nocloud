@@ -265,7 +265,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 
 func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
 	log = s.log.Named("ConsumeCreatedInstances")
-	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, billing.Topic("instances"))
+	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"))
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
