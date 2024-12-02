@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/cors"
+	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud-proto/health/healthconnect"
@@ -278,7 +279,8 @@ func main() {
 
 	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, promoCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
-	go records.Consume(ctx)
+	recPs := nps.NewPubSub[*pb.Record](rbmq, log)
+	go records.Consume(ctx, recPs)
 
 	log.Info("Starting Daily Cron Job")
 	go server.DailyCronJob(ctx, log, token, dailyCronTime)

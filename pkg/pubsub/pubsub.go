@@ -18,7 +18,9 @@ type PubSub[T proto.Message] struct {
 }
 
 type ConsumeOptions struct {
-	NonDurable bool
+	Durable   bool
+	NoWait    bool
+	Exclusive bool
 }
 
 func NewPubSub[T proto.Message](conn rabbitmq.Connection, log *zap.Logger) *PubSub[T] {
@@ -46,33 +48,45 @@ func (ps *PubSub[T]) Channel() rabbitmq.Channel {
 	return ps.ch
 }
 
-func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...*ConsumeOptions) (<-chan amqp091.Delivery, error) {
+func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOptions) (<-chan amqp091.Delivery, error) {
+	var (
+		exclusive bool
+		durable   = true
+		noWait    bool
+	)
+	if len(options) > 0 {
+		o := options[0]
+		exclusive = o.Exclusive
+		durable = o.Durable
+		noWait = o.NoWait
+	}
+
 	log := ps.log.Named("Consume." + name)
 	ch, err := ps.conn.Channel()
 	if err != nil {
 		log.Error("Failed to open channel", zap.Error(err))
 		return nil, err
 	}
-	if err := ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil); err != nil {
+	if err := ch.ExchangeDeclare(exchange, "topic", durable, false, false, noWait, nil); err != nil {
 		log.Error("Failed to declare a exchange", zap.Error(err))
 		return nil, err
 	}
 	topic = exchange + "." + topic
 	q, err := ch.QueueDeclare(
-		name, true, false, true, false, nil,
+		name, durable, false, exclusive, noWait, nil,
 	)
 	if err != nil {
 		log.Error("Failed to declare a queue", zap.Error(err))
 		return nil, err
 	}
 
-	err = ch.QueueBind(q.Name, topic, exchange, false, nil)
+	err = ch.QueueBind(q.Name, topic, exchange, noWait, nil)
 	if err != nil {
 		log.Error("Failed to bind a queue", zap.Error(err))
 		return nil, err
 	}
 
-	msgs, err := ch.Consume(q.Name, name, false, false, false, false, nil)
+	msgs, err := ch.Consume(q.Name, name, false, exclusive, false, noWait, nil)
 	if err != nil {
 		log.Error("Failed to register a consumer", zap.Error(err))
 		return nil, err
