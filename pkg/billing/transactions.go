@@ -666,7 +666,7 @@ func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount floa
 		conf := MakeCurrencyConf(s.log, &s.settingsClient)
 		curr = conf.Currency
 	}
-	resp, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+	resp, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
 		Exec:     time.Now().Unix(),
 		Priority: pb.Priority_URGENT,
 		Account:  account,
