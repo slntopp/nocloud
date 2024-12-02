@@ -82,17 +82,6 @@ LET account = LAST( // Find Instance owner Account
     )
 RETURN account`
 
-const instanceInstanceGroup = `
-LET ig = LAST( // Find Instance instance group
-    FOR node, edge, path IN 1
-    INBOUND DOCUMENT(@@instances, @instance)
-    GRAPH @permissions
-    FILTER path.edges[*].role == ["owner"]
-    FILTER IS_SAME_COLLECTION(node, @@igs)
-        RETURN node
-    )
-RETURN ig`
-
 const invoicesByPaymentDate = `
 FOR invoice IN @@invoices
 FILTER invoice.payment && invoice.payment > 0
