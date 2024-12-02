@@ -67,9 +67,11 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		log.Error("Failed to open channel", zap.Error(err))
 		return nil, err
 	}
-	if err := ch.ExchangeDeclare(exchange, "topic", durable, false, false, noWait, nil); err != nil {
-		log.Error("Failed to declare a exchange", zap.Error(err))
-		return nil, err
+	if exchange != "" {
+		if err := ch.ExchangeDeclare(exchange, "topic", durable, false, false, noWait, nil); err != nil {
+			log.Error("Failed to declare a exchange", zap.Error(err))
+			return nil, err
+		}
 	}
 	topic = exchange + "." + topic
 	q, err := ch.QueueDeclare(
