@@ -34,18 +34,6 @@ type pair[T any] struct {
 }
 
 func invoicesEqual(a, b *pb.Invoice) bool {
-	emptyCur := func(c *pb.Currency) {
-		if c == nil {
-			return
-		}
-		c.Public = true
-		c.Precision = 0
-		c.Format = ""
-		c.Rounding = pb.Rounding_ROUND_HALF
-		c.Title = ""
-		c.Code = ""
-		c.Default = false
-	}
 	if a == nil || b == nil {
 		return false
 	}
@@ -69,10 +57,15 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	}
 	_a := proto.Clone(a).(*pb.Invoice)
 	_b := proto.Clone(b).(*pb.Invoice)
+	if (_a.Currency == nil && _b.Currency != nil) ||
+		(_a.Currency != nil && _b.Currency == nil) ||
+		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
+		return false
+	}
+	_a.Currency = nil
+	_b.Currency = nil
 	_a.Total = 0 // It calculated based on items anyway
 	_b.Total = 0
-	emptyCur(_a.Currency)
-	emptyCur(_b.Currency)
 	return proto.Equal(_a, _b)
 }
 
