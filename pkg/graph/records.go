@@ -63,8 +63,8 @@ func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsControl
 const checkOverlappingQuery = `
 let n = @record
 RETURN COUNT(FOR r IN @@records
-FILTER r.instance != "" && r.instance == n.instance
-FILTER (r.resource != "" && r.resource == n.resource) || (r.product != "" && r.product == n.product) || (r.addon != "" && r.addon == n.addon)
+FILTER TO_STRING(r.instance) != "" && r.instance == n.instance
+FILTER (TO_STRING(r.resource) != "" && r.resource == n.resource) || (TO_STRING(r.product) != "" && r.product == n.product) || (TO_STRING(r.addon) != "" && r.addon == n.addon)
 FILTER (n.start < r.end && n.start >= r.start) || (n.start <= r.start && r.start > n.end)
     RETURN r) == 0
 `
