@@ -27,6 +27,8 @@ import (
 	"github.com/slntopp/nocloud-proto/notes"
 	servicespb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
+	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
 	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
 	"slices"
@@ -99,6 +101,8 @@ type instancesController struct {
 	channel rabbitmq.Channel
 
 	bp_ctrl BillingPlansController
+
+	ps *ps.PubSub[*epb.Event]
 }
 
 func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) InstancesController {
@@ -126,19 +130,6 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 		log.Fatal("Failed to init exchange", zap.Error(err))
 	}
 
-	err = channel.ExchangeDeclare(
-		"instances",
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		log.Fatal("Failed to init exchange", zap.Error(err))
-	}
-
 	bp_ctrl := NewBillingPlansController(log, db)
 	addons := NewAddonsController(log, db)
 	acc := NewAccountsController(log, db)
@@ -146,7 +137,7 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 	cur := NewCurrencyController(log, db)
 
 	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: bp_ctrl,
-		addons: addons, inv: inv, acc: acc, cur: cur}
+		addons: addons, inv: inv, acc: acc, cur: cur, ps: ps.NewPubSub[*epb.Event](conn, log)}
 }
 
 // CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
@@ -401,26 +392,16 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 	} else {
 		log.Error("Failed to parse", zap.Error(err))
 	}
-	log.Info("Publishing creation event", zap.Any("instance", i.GetUuid()))
 	e := epb.Event{
 		Uuid: i.GetUuid(),
+		Key:  services_registry.InstanceCreated,
 		Data: make(map[string]*structpb.Value),
 	}
 	if promo, ok := ctx.Value(CreationPromocodeKey).(string); ok {
 		e.Data["promocode"] = structpb.NewStringValue(promo)
 	}
-	body, err = proto.Marshal(&e)
-	if err == nil {
-		err = ctrl.channel.PublishWithContext(ctx, "instances", "created_instance", false, false, amqp091.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp091.Persistent,
-			Body:         body,
-		})
-		if err != nil {
-			log.Error("Failed to publish", zap.Error(err))
-		}
-	} else {
-		log.Error("Failed to parse", zap.Error(err))
+	if err = ctrl.ps.Publish(ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"), &e); err != nil {
+		log.Error("Failed to publish instance creating", zap.Error(err))
 	}
 
 	return meta.Key, nil

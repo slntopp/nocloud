@@ -204,7 +204,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.invoiceCreatedHandler(ctx, log, data)
 	default:
-		log.Error("Unknown event", zap.String("event", resp.Event))
+		log.Warn("Unknown event", zap.String("event", resp.Event))
 		return
 	}
 	if innerErr != nil {

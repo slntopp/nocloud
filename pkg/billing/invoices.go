@@ -3,7 +3,9 @@ package billing
 import (
 	"context"
 	"fmt"
+	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"github.com/slntopp/nocloud/pkg/pubsub/billing"
 	"slices"
 	"strings"
 	"time"
@@ -32,18 +34,6 @@ type pair[T any] struct {
 }
 
 func invoicesEqual(a, b *pb.Invoice) bool {
-	emptyCur := func(c *pb.Currency) {
-		if c == nil {
-			return
-		}
-		c.Public = true
-		c.Precision = 0
-		c.Format = ""
-		c.Rounding = pb.Rounding_ROUND_HALF
-		c.Title = ""
-		c.Code = ""
-		c.Default = false
-	}
 	if a == nil || b == nil {
 		return false
 	}
@@ -67,10 +57,15 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	}
 	_a := proto.Clone(a).(*pb.Invoice)
 	_b := proto.Clone(b).(*pb.Invoice)
+	if (_a.Currency == nil && _b.Currency != nil) ||
+		(_a.Currency != nil && _b.Currency == nil) ||
+		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
+		return false
+	}
+	_a.Currency = nil
+	_b.Currency = nil
 	_a.Total = 0 // It calculated based on items anyway
 	_b.Total = 0
-	emptyCur(_a.Currency)
-	emptyCur(_b.Currency)
 	return proto.Equal(_a, _b)
 }
 
@@ -86,17 +81,6 @@ LET account = LAST( // Find Instance owner Account
         RETURN node
     )
 RETURN account`
-
-const instanceInstanceGroup = `
-LET ig = LAST( // Find Instance instance group
-    FOR node, edge, path IN 1
-    INBOUND DOCUMENT(@@instances, @instance)
-    GRAPH @permissions
-    FILTER path.edges[*].role == ["owner"]
-    FILTER IS_SAME_COLLECTION(node, @@igs)
-        RETURN node
-    )
-RETURN ig`
 
 const invoicesByPaymentDate = `
 FOR invoice IN @@invoices
@@ -417,6 +401,16 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
+	if err = s.invoicesPublisher(&epb.Event{
+		Uuid: r.GetUuid(),
+		Key:  billing.InvoiceCreated,
+		Data: map[string]*structpb.Value{
+			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
+		},
+	}); err != nil {
+		log.Error("Failed to publish invoice creation", zap.Error(err))
+	}
+
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      r.GetUuid(),
 		Entity:    "Invoices",
@@ -427,13 +421,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Snapshot:  &elpb.Snapshot{},
 		Requestor: requester,
 	})
-
-	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice, !req.Msg.GetIsSendEmail()); err != nil {
-			log.Error("Failed to create invoice through gateway", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
-		}
-	}
 
 	inv, err := s.invoices.Get(ctx, r.GetUuid())
 	if err != nil {
@@ -483,24 +470,16 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 	nowBeforeActions := time.Now().Unix()
-	var nowAfterActions int64
 	newInv.Status = newStatus
-
-	acc, err := s.accounts.Get(ctx, newInv.GetAccount())
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get account")
-	}
 
 	var strNum string
 	var num int
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
-	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
 	} else if newStatus == pb.BillingStatus_RETURNED {
-		goto returning
+		goto quit
 	} else {
 		goto quit
 	}
@@ -521,26 +500,21 @@ payment:
 	newInv.NumericNumber = num
 	newInv.NumberTemplate = invConf.Template
 
-	if newInv, err = s.executePostPaidActions(ctx, log, newInv, currConf.Currency); err != nil {
-		log.Error("FATAL: Failed to execute postpaid actions after invoice was paid")
-	}
-	goto quit
-
-returning:
-	newInv.Returned = nowBeforeActions
-	if newInv, err = s.executePostRefundActions(ctx, log, newInv); err != nil {
-		log.Error("FATAL: Failed to execute post refund actions after invoice was returned")
-	}
-	goto quit
-
 quit:
-	nowAfterActions = time.Now().Unix()
-	newInv.Processed = nowAfterActions
-
 	_, err = s.invoices.Replace(ctx, newInv)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
+	}
+
+	if err = s.invoicesPublisher(&epb.Event{
+		Uuid: old.GetUuid(),
+		Key:  billing.InvoiceStatusToKey(newStatus),
+		Data: map[string]*structpb.Value{
+			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
+		},
+	}); err != nil {
+		log.Error("Failed to publish invoice status update", zap.Error(err))
 	}
 
 	nocloud.Log(log, &elpb.Event{
@@ -553,12 +527,6 @@ quit:
 		Snapshot:  &elpb.Snapshot{},
 		Requestor: requester,
 	})
-
-	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, newInv.Invoice, old.Invoice); err != nil {
-			log.Error("Failed to update invoice through gateway", zap.Error(err))
-		}
-	}
 
 	log.Info("Finished invoice update status")
 	return connect.NewResponse(newInv.Invoice), nil
@@ -911,6 +879,16 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
+	if err = s.invoicesPublisher(&epb.Event{
+		Uuid: old.GetUuid(),
+		Key:  billing.InvoiceUpdated,
+		Data: map[string]*structpb.Value{
+			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, r.Header())),
+		},
+	}); err != nil {
+		log.Error("Failed to publish invoice update", zap.Error(err))
+	}
+
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      upd.GetUuid(),
 		Entity:    "Invoices",
@@ -921,19 +899,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		Snapshot:  &elpb.Snapshot{},
 		Requestor: requester,
 	})
-
-	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get account")
-	}
-
-	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
-		log.Info("Updating invoice through gateway")
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
-			log.Error("Failed to update invoice through gateway", zap.Error(err))
-		}
-	}
 
 	log.Info("Invoice updated", zap.Any("invoice", t.GetUuid()))
 	return connect.NewResponse(t.Invoice), nil

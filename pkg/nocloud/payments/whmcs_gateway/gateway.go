@@ -201,7 +201,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	return nil
 }
 
-func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *pb.Invoice) error {
+func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -233,14 +233,14 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
 	}
 
-	if inv.Status != old.Status {
-		body.Status = ptr(statusToWhmcs(inv.Status))
-		if inv.Status == pb.BillingStatus_PAID {
+	body.Status = nil
+	if inv.Status != statusToNoCloud(whmcsInv.Status) {
+		if inv.Status == pb.BillingStatus_PAID && whmcsInv.Status != statusToWhmcs(pb.BillingStatus_PAID) {
 			if err = g.PayInvoice(ctx, int(id.GetNumberValue())); err != nil {
 				return fmt.Errorf("failed to pay invoice: %w", err)
 			}
-			body.Status = nil
 		}
+		body.Status = ptr(statusToWhmcs(inv.Status))
 	}
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())

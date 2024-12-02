@@ -33,6 +33,8 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
+	nps "github.com/slntopp/nocloud/pkg/pubsub"
+	billingps "github.com/slntopp/nocloud/pkg/pubsub/billing"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -240,14 +242,23 @@ func main() {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	billing.SetupSettingsContext(ctx)
+
+	ps := nps.NewPubSub[*epb.Event](rbmq, log)
+	invoicesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, billingps.Topic("invoices"))
 
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw)
-	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher)
 	log.Info("Starting Currencies Service")
+	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
+
+	log.Info("Registering new consumers")
+	go server.ConsumeInvoiceStatusActions(log, ctx, ps)
+	go server.ConsumeInvoiceWhmcsSync(log, ctx, ps)
+	go server.ConsumeCreatedInstances(log, ctx, ps)
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
@@ -260,9 +271,6 @@ func main() {
 
 	log.Info("Starting Account Suspension Routine")
 	go server.SuspendAccountsRoutine(ctx)
-
-	log.Info("Starting Instances Creation Consumer")
-	go server.ConsumeCreatedInstances(ctx)
 
 	log.Info("Registering BillingService Server")
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
