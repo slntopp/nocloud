@@ -233,12 +233,14 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
 	}
 
-	body.Status = ptr(statusToWhmcs(inv.Status))
-	if inv.Status == pb.BillingStatus_PAID && whmcsInv.Status != statusToWhmcs(pb.BillingStatus_PAID) {
-		if err = g.PayInvoice(ctx, int(id.GetNumberValue())); err != nil {
-			return fmt.Errorf("failed to pay invoice: %w", err)
+	body.Status = nil
+	if inv.Status != statusToNoCloud(whmcsInv.Status) {
+		if inv.Status == pb.BillingStatus_PAID && whmcsInv.Status != statusToWhmcs(pb.BillingStatus_PAID) {
+			if err = g.PayInvoice(ctx, int(id.GetNumberValue())); err != nil {
+				return fmt.Errorf("failed to pay invoice: %w", err)
+			}
 		}
-		body.Status = nil
+		body.Status = ptr(statusToWhmcs(inv.Status))
 	}
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
