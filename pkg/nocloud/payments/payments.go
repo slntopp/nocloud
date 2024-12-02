@@ -14,7 +14,7 @@ import (
 
 type PaymentGateway interface {
 	CreateInvoice(context.Context, *pb.Invoice, ...bool) error
-	UpdateInvoice(context.Context, *pb.Invoice, *pb.Invoice) error
+	UpdateInvoice(context.Context, *pb.Invoice) error
 	PaymentURI(context.Context, *pb.Invoice) (string, error)
 	//AddClient(types.CreateUserParams) (int, error)
 }
