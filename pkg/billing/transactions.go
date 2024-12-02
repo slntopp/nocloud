@@ -535,7 +535,7 @@ LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
 	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
+	TO DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(currency.id)))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
@@ -560,7 +560,7 @@ LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
 	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
+	TO DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(currency.id)))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
