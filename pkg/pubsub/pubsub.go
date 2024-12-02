@@ -2,6 +2,8 @@ package ps
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"go.uber.org/zap"
@@ -10,6 +12,15 @@ import (
 )
 
 const DEFAULT_EXCHANGE = "nocloud"
+
+var errNoNack = errors.New("no nack")
+
+func IsNoNackErr(err error) bool {
+	return errors.Is(err, errNoNack)
+}
+func NoNackErr(err error) error {
+	return fmt.Errorf("%w: %w", errNoNack, err)
+}
 
 type PubSub[T proto.Message] struct {
 	log  *zap.Logger

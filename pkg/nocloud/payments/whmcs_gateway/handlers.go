@@ -8,6 +8,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -124,7 +125,7 @@ func unmarshal[T any](b []byte) (T, error) {
 	return res, nil
 }
 
-func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
+func (g *WhmcsGateway) HandleWhmcsEvent(log *zap.Logger, body []byte) error {
 	log = log.Named("WhmcsHandler")
 
 	resp := struct {
@@ -132,7 +133,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 	}{}
 	if err := json.Unmarshal(body, &resp); err != nil {
 		log.Error("Error decoding request", zap.Error(err), zap.String("body", string(body)))
-		return
+		return ps.NoNackErr(err)
 	}
 
 	log.Info("Event received", zap.String("event", resp.Event), zap.String("body", string(body)))
@@ -149,7 +150,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		data, err := unmarshal[InvoicePaid](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
-			return
+			return ps.NoNackErr(err)
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
@@ -157,7 +158,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		data, err := unmarshal[InvoiceModified](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
-			return
+			return ps.NoNackErr(err)
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
@@ -165,7 +166,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		data, err := unmarshal[InvoiceCancelled](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
-			return
+			return ps.NoNackErr(err)
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
@@ -173,7 +174,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		data, err := unmarshal[InvoiceRefunded](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
-			return
+			return ps.NoNackErr(err)
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
@@ -181,7 +182,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		data, err := unmarshal[InvoiceUnpaid](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
-			return
+			return ps.NoNackErr(err)
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
@@ -189,7 +190,7 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		data, err := unmarshal[UpdateInvoiceTotal](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
-			return
+			return ps.NoNackErr(err)
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
@@ -199,15 +200,17 @@ func (g *WhmcsGateway) handleWhmcsEvent(log *zap.Logger, body []byte) {
 		data, err := unmarshal[InvoiceCreated](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
-			return
+			return ps.NoNackErr(err)
 		}
 		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.invoiceCreatedHandler(ctx, log, data)
 	default:
 		log.Warn("Unknown event", zap.String("event", resp.Event))
-		return
+		return ps.NoNackErr(fmt.Errorf("unknown event: %s", resp.Event))
 	}
 	if innerErr != nil {
 		log.Error("Error handling event", zap.Error(innerErr))
+		return innerErr
 	}
+	return nil
 }

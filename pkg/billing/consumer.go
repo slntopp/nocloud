@@ -10,6 +10,7 @@ import (
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"github.com/slntopp/nocloud/pkg/pubsub/billing"
@@ -20,6 +21,52 @@ import (
 	"strings"
 	"time"
 )
+
+func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, _ context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
+	log = log.Named("ConsumeInvoiceBackwardWhmcsSync")
+	msgs, err := p.Consume("whmcs-backward-sync", ps.DEFAULT_EXCHANGE, billing.Topic("whmcs-events"))
+	if err != nil {
+		log.Fatal("Failed to start consumer")
+		return
+	}
+
+	for msg := range msgs {
+		var event epb.Event
+		if err = proto.Unmarshal(msg.Body, &event); err != nil {
+			log.Error("Failed to unmarshal event. Incorrect delivery", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Error("Failed to acknowledge the delivery", zap.Error(err))
+			}
+			continue
+		}
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+		body, ok := event.GetData()["body"]
+		if !ok {
+			log.Error("Failed to unmarshal event. No body. Incorrect delivery")
+			if err = msg.Ack(false); err != nil {
+				log.Error("Failed to acknowledge the delivery", zap.Error(err))
+			}
+			continue
+		}
+		if err = gw.HandleWhmcsEvent(log, []byte(body.GetStringValue())); err != nil {
+			if !ps.IsNoNackErr(err) {
+				log.Error("Failed to process whmcs sync", zap.Error(err))
+				if err = msg.Nack(false, false); err != nil {
+					log.Error("Failed to nack the delivery", zap.Error(err))
+				}
+			} else {
+				log.Warn("Failed to process whmcs sync", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+			}
+			continue
+		}
+		if err = msg.Ack(false); err != nil {
+			log.Error("Failed to acknowledge the delivery", zap.Error(err))
+		}
+	}
+}
 
 func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx context.Context, event *epb.Event) error {
 	if event.GetData()["gw-callback"].GetBoolValue() {
@@ -70,7 +117,7 @@ func (s *BillingServiceServer) ConsumeInvoiceWhmcsSync(log *zap.Logger, ctx cont
 			}
 			continue
 		}
-		log.Debug("Pubsub event received", zap.Any("event", event))
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
 		if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
 			log.Error("Failed to process whmcs sync", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {

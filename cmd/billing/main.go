@@ -175,7 +175,6 @@ func main() {
 	transactCtrl := graph.NewTransactionsController(log, db)
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
-	//restInterceptor := rest_auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
 
 	router := mux.NewRouter()
@@ -195,11 +194,8 @@ func main() {
 	manager := invoices_manager.NewInvoicesManager(bClient, invoicesCtrl, authInterceptor)
 	payments.RegisterGateways(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
 
-	// Register WHMCS hooks handler (hooks for invoices status e.g.)
+	// Register whmcs gateway
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
-	//whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
-	//whmcsRouter.Use(restInterceptor.JwtMiddleWare)
-	//whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -259,6 +255,7 @@ func main() {
 	go server.ConsumeInvoiceStatusActions(log, ctx, ps)
 	go server.ConsumeInvoiceWhmcsSync(log, ctx, ps)
 	go server.ConsumeCreatedInstances(log, ctx, ps)
+	go server.ConsumeInvoiceBackwardWhmcsSync(log, ctx, ps, whmcsGw)
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
