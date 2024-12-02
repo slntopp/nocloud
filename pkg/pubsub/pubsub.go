@@ -49,6 +49,10 @@ func (ps *PubSub[T]) Channel() rabbitmq.Channel {
 
 func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...*ConsumeOptions) (<-chan amqp091.Delivery, error) {
 	log := ps.log.Named("Consume." + name)
+	if err := ps.ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil); err != nil {
+		log.Error("Failed to declare a exchange", zap.Error(err))
+		return nil, err
+	}
 	topic = exchange + "." + topic
 	q, err := ps.Channel().QueueDeclare(
 		name, true, false, true, false, nil,
