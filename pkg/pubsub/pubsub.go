@@ -25,8 +25,7 @@ func NewPubSub[T proto.Message](conn rabbitmq.Connection, log *zap.Logger) *PubS
 	log = log.Named("PubSub")
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatal("Failed to open channel", zap.Error(err))
-		return nil
+		log.Fatal("Failed to open a channel", zap.Error(err))
 	}
 	return &PubSub[T]{
 		log:  log,
@@ -41,20 +40,25 @@ func (ps *PubSub[T]) Channel() rabbitmq.Channel {
 	}
 	ch, err := ps.conn.Channel()
 	if err != nil {
-		ps.log.Fatal("Failed to reopen channel", zap.Error(err))
-		return nil
+		ps.log.Fatal("Failed to reopen a channel", zap.Error(err))
 	}
-	return ch
+	ps.ch = ch
+	return ps.ch
 }
 
 func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...*ConsumeOptions) (<-chan amqp091.Delivery, error) {
 	log := ps.log.Named("Consume." + name)
-	if err := ps.ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil); err != nil {
+	ch, err := ps.conn.Channel()
+	if err != nil {
+		log.Error("Failed to open channel", zap.Error(err))
+		return nil, err
+	}
+	if err := ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil); err != nil {
 		log.Error("Failed to declare a exchange", zap.Error(err))
 		return nil, err
 	}
 	topic = exchange + "." + topic
-	q, err := ps.Channel().QueueDeclare(
+	q, err := ch.QueueDeclare(
 		name, true, false, true, false, nil,
 	)
 	if err != nil {
@@ -62,13 +66,13 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...*ConsumeOp
 		return nil, err
 	}
 
-	err = ps.Channel().QueueBind(q.Name, topic, exchange, false, nil)
+	err = ch.QueueBind(q.Name, topic, exchange, false, nil)
 	if err != nil {
 		log.Error("Failed to bind a queue", zap.Error(err))
 		return nil, err
 	}
 
-	msgs, err := ps.Channel().Consume(q.Name, name, false, false, false, false, nil)
+	msgs, err := ch.Consume(q.Name, name, false, false, false, false, nil)
 	if err != nil {
 		log.Error("Failed to register a consumer", zap.Error(err))
 		return nil, err
