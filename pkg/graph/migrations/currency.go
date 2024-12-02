@@ -10,7 +10,7 @@ import (
 )
 
 var LEGACY_CURRENCIES = []*pb.Currency{
-	{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME},
+	{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME, Code: schema.DEFAULT_CURRENCY_NAME, Public: false, Precision: 2},
 	{Id: 1, Title: "USD", Code: "USD", Public: true, Precision: 2},
 	{Id: 2, Title: "EUR", Code: "EUR", Public: true, Precision: 2},
 	{Id: 3, Title: "BYN", Code: "BYN", Public: true, Precision: 2},
