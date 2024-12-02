@@ -365,14 +365,14 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER t.exec != null
 FILTER t.exec <= @now
 FILTER !t.processed
-    LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
+    LET account = t.account != "" ? DOCUMENT(CONCAT(@accounts, "/", t.account)) : null
 	// Prefer user currency to default if present
 	FILTER account != null
 	LET currency = account.currency != null ? account.currency : @currency
 	LET rate = PRODUCT(
 		FOR vertex, edge IN OUTBOUND
 		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency.id)))
-		TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
+		TO DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(currency.id)))
 		GRAPH @graph
 		FILTER edge
 			RETURN edge.rate
