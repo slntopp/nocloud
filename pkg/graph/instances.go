@@ -102,7 +102,8 @@ type instancesController struct {
 
 	bp_ctrl BillingPlansController
 
-	ps *ps.PubSub[*epb.Event]
+	ps    *ps.PubSub[*epb.Event]
+	ansPs *ps.PubSub[*pb.Context]
 }
 
 func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) InstancesController {
@@ -117,19 +118,6 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 		log.Fatal("Failed to init channel", zap.Error(err))
 	}
 
-	err = channel.ExchangeDeclare(
-		"hooks",
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		log.Fatal("Failed to init exchange", zap.Error(err))
-	}
-
 	bp_ctrl := NewBillingPlansController(log, db)
 	addons := NewAddonsController(log, db)
 	acc := NewAccountsController(log, db)
@@ -137,7 +125,7 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 	cur := NewCurrencyController(log, db)
 
 	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: bp_ctrl,
-		addons: addons, inv: inv, acc: acc, cur: cur, ps: ps.NewPubSub[*epb.Event](conn, log)}
+		addons: addons, inv: inv, acc: acc, cur: cur, ps: ps.NewPubSub[*epb.Event](conn, log), ansPs: ps.NewPubSub[*pb.Context](conn, log)}
 }
 
 // CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
@@ -378,19 +366,8 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 		Sp:       sp,
 		Event:    spb.NoCloudStatus_INIT.String(),
 	}
-	body, err := proto.Marshal(&c)
-	if err == nil {
-		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp091.Persistent,
-			Body:         body,
-		})
-
-		if err != nil {
-			log.Error("Failed to publish", zap.Error(err))
-		}
-	} else {
-		log.Error("Failed to parse", zap.Error(err))
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
 	}
 	e := epb.Event{
 		Uuid: i.GetUuid(),
@@ -568,20 +545,8 @@ func (ctrl *instancesController) Update(ctx context.Context, sp string, inst, ol
 		Sp:       sp,
 		Event:    "UPDATE",
 	}
-	log.Debug("publishing to ansible_hooks", zap.Any("c", c))
-	body, err := proto.Marshal(&c)
-	if err == nil {
-		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp091.Persistent,
-			Body:         body,
-		})
-
-		if err != nil {
-			log.Error("Failed to publish", zap.Error(err))
-		}
-	} else {
-		log.Error("Failed to parse", zap.Error(err))
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
 	}
 
 	return nil
@@ -630,30 +595,19 @@ func (ctrl *instancesController) Delete(ctx context.Context, group string, i *pb
 	}
 
 	sp, err := ctrl.getSp(ctx, i.GetUuid())
-
-	if err == nil {
-		c := pb.Context{
-			Instance: i.GetUuid(),
-			Sp:       sp,
-			Event:    spb.NoCloudStatus_DEL.String(),
-		}
-		body, err := proto.Marshal(&c)
-		if err == nil {
-			err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-				ContentType:  "text/plain",
-				DeliveryMode: amqp091.Persistent,
-				Body:         body,
-			})
-
-			if err != nil {
-				log.Error("Failed to publish", zap.Error(err))
-			}
-		} else {
-			log.Error("Failed to parse", zap.Error(err))
-		}
-	} else {
+	if err != nil {
 		log.Error("Failed to get sp", zap.Error(err))
+		return nil
 	}
+	c := pb.Context{
+		Instance: i.GetUuid(),
+		Sp:       sp,
+		Event:    spb.NoCloudStatus_DEL.String(),
+	}
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
+	}
+
 	return nil
 }
 
