@@ -33,7 +33,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
 	nps "github.com/slntopp/nocloud/pkg/pubsub"
 	billingps "github.com/slntopp/nocloud/pkg/pubsub/billing"
 	"golang.org/x/net/http2"
@@ -176,7 +175,7 @@ func main() {
 	transactCtrl := graph.NewTransactionsController(log, db)
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
-	restInterceptor := rest_auth.NewInterceptor(log, rdb, SIGNING_KEY)
+	//restInterceptor := rest_auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
 
 	router := mux.NewRouter()
@@ -198,9 +197,9 @@ func main() {
 
 	// Register WHMCS hooks handler (hooks for invoices status e.g.)
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
-	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
-	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
-	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
+	//whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
+	//whmcsRouter.Use(restInterceptor.JwtMiddleWare)
+	//whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
