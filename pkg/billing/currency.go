@@ -362,9 +362,21 @@ func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Re
 }
 
 func (s *CurrencyServiceServer) GetExchangeRates(ctx context.Context, r *connect.Request[pb.GetExchangeRatesRequest]) (*connect.Response[pb.GetExchangeRatesResponse], error) {
+	var currencies map[int32]*pb.Currency
+	curr, err := s.ctrl.GetCurrencies(ctx, true)
+	if err != nil {
+		return nil, err
+	}
+	for _, cur := range curr {
+		currencies[cur.Id] = cur
+	}
 	rates, err := s.ctrl.GetExchangeRates(ctx)
 	if err != nil {
 		return nil, err
+	}
+	for _, rate := range rates {
+		rate.From = currencies[rate.From.GetId()]
+		rate.To = currencies[rate.To.GetId()]
 	}
 
 	return connect.NewResponse(&pb.GetExchangeRatesResponse{Rates: rates}), nil
