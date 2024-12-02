@@ -31,7 +31,8 @@ type client struct {
 }
 
 func (c *client) Channel() (Channel, error) {
-	return c.Connection.Channel()
+	ch, err := c.Connection.Channel()
+	return ch, err
 }
 
 func NewRabbitMQConnection(conn *amqp.Connection) Connection {
