@@ -36,7 +36,6 @@ import (
 	"time"
 
 	"github.com/arangodb/go-driver"
-	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
@@ -779,29 +778,17 @@ func (ctrl *instancesController) SetStatus(ctx context.Context, inst *pb.Instanc
 	}
 
 	sp, err := ctrl.getSp(ctx, inst.GetUuid())
-
-	if err == nil {
-		c := pb.Context{
-			Instance: inst.GetUuid(),
-			Sp:       sp,
-			Event:    status.String(),
-		}
-		body, err := proto.Marshal(&c)
-		if err == nil {
-			err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-				ContentType:  "text/plain",
-				DeliveryMode: amqp091.Persistent,
-				Body:         body,
-			})
-
-			if err != nil {
-				log.Error("Failed to publish", zap.Error(err))
-			}
-		} else {
-			log.Error("Failed to parse", zap.Error(err))
-		}
-	} else {
+	if err != nil {
 		log.Error("Failed to get sp", zap.Error(err))
+		return nil
+	}
+	c := pb.Context{
+		Instance: inst.GetUuid(),
+		Sp:       sp,
+		Event:    status.String(),
+	}
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
 	}
 
 	return nil
