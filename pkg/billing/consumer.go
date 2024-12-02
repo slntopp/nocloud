@@ -76,6 +76,7 @@ func (s *BillingServiceServer) ConsumeInvoiceWhmcsSync(log *zap.Logger, ctx cont
 			if err = msg.Nack(false, false); err != nil {
 				log.Error("Failed to nack the delivery", zap.Error(err))
 			}
+			continue
 		}
 		if err = msg.Ack(false); err != nil {
 			log.Error("Failed to acknowledge the delivery", zap.Error(err))
@@ -138,6 +139,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx 
 			if err = msg.Nack(false, false); err != nil {
 				log.Error("Failed to nack the delivery", zap.Error(err))
 			}
+			continue
 		}
 		if err = msg.Ack(false); err != nil {
 			log.Error("Failed to acknowledge the delivery", zap.Error(err))
@@ -287,6 +289,7 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx cont
 			if err = msg.Nack(false, false); err != nil {
 				log.Error("Failed to nack the delivery", zap.Error(err))
 			}
+			continue
 		}
 		if err = msg.Ack(false); err != nil {
 			log.Error("Failed to acknowledge the delivery", zap.Error(err))
