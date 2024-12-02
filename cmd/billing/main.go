@@ -242,6 +242,7 @@ func main() {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	billing.SetupSettingsContext(ctx)
 
 	ps := nps.NewPubSub[*epb.Event](rbmq, log)
