@@ -107,6 +107,8 @@ type BillingServiceServer struct {
 	rootToken string
 
 	whmcsGateway *whmcs_gateway.WhmcsGateway
+
+	invoicesPublisher func(event *epb.Event) error
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
@@ -114,34 +116,35 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
-		rbmq:            conn,
-		log:             log,
-		nss:             nss,
-		plans:           plans,
-		transactions:    transactions,
-		records:         records,
-		currencies:      currencies,
-		accounts:        accounts,
-		invoices:        invoices,
-		services:        services,
-		descriptions:    descriptions,
-		instances:       instances,
-		sp:              sp,
-		addons:          addons,
-		promocodes:      promocodes,
-		ca:              ca,
-		db:              db,
-		rdb:             rdb,
-		drivers:         drivers,
-		settingsClient:  settingsClient,
-		accClient:       accClient,
-		eventsClient:    eventsClient,
-		instancesClient: instClient,
-		rootToken:       token,
-		whmcsGateway:    whmcsGateway,
+		rbmq:              conn,
+		log:               log,
+		nss:               nss,
+		plans:             plans,
+		transactions:      transactions,
+		records:           records,
+		currencies:        currencies,
+		accounts:          accounts,
+		invoices:          invoices,
+		services:          services,
+		descriptions:      descriptions,
+		instances:         instances,
+		sp:                sp,
+		addons:            addons,
+		promocodes:        promocodes,
+		ca:                ca,
+		db:                db,
+		rdb:               rdb,
+		drivers:           drivers,
+		settingsClient:    settingsClient,
+		accClient:         accClient,
+		eventsClient:      eventsClient,
+		instancesClient:   instClient,
+		rootToken:         token,
+		whmcsGateway:      whmcsGateway,
+		invoicesPublisher: invPub,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
