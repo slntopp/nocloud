@@ -138,12 +138,18 @@
                 </v-dialog>
                 <v-chip outlined color="primary" class="mr-4">
                   {{
-                    [totalNewPrice?.toFixed(2), defaultCurrency?.title].join(
-                      " "
-                    )
+                    [
+                      formatPrice(totalNewPrice, defaultCurrency),
+                      defaultCurrency?.title,
+                    ].join(" ")
                   }}
                   /
-                  {{ [accountTotalNewPrice, accountCurrency?.title].join(" ") }}
+                  {{
+                    [
+                      formatPrice(accountTotalNewPrice, accountCurrency),
+                      accountCurrency?.title,
+                    ].join(" ")
+                  }}
                 </v-chip>
               </div>
             </td>
@@ -188,6 +194,7 @@ import useInstancePrices from "@/hooks/useInstancePrices";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
+import { formatPrice } from "../../../functions";
 
 const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -240,9 +247,10 @@ const service = computed(() =>
 const isPriceModelCanBeChange = computed(() => ["cloud"].includes(type.value));
 
 const setTotalNewPrice = () => {
-  totalNewPrice.value = +pricesItems.value
-    .reduce((acc, i) => +i.price + acc, 0)
-    .toFixed(2);
+  totalNewPrice.value = +pricesItems.value.reduce(
+    (acc, i) => +i.price + acc,
+    0
+  );
 };
 
 const onUpdatePrice = (item, isAccount) => {
@@ -327,12 +335,12 @@ const setBasePrices = () => {
   let total = 0;
 
   pricesItems.value = pricesItems.value.map((i) => {
-    i.basePrice = (i.basePrice / plnRate.value).toFixed(2);
+    i.basePrice = i.basePrice / plnRate.value;
     total += +i.basePrice || 0;
     return i;
   });
 
-  totalBasePrice.value = total.toFixed(2);
+  totalBasePrice.value = total;
 };
 
 watch(accountRate, () => {

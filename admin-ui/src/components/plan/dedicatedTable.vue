@@ -279,6 +279,7 @@ import {
   ListAddonsRequest,
 } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 import planAddonsTable from "@/components/planAddonsTable.vue";
+import useCurrency from "@/hooks/useCurrency";
 
 export default {
   name: "dedicated-table",
@@ -336,6 +337,11 @@ export default {
     tabs: ["Tariffs", "Custom addons"],
     planAddons: [],
   }),
+  setup() {
+    const { convertFrom } = useCurrency();
+
+    return { convertFrom };
+  },
   methods: {
     getBillingPeriod,
     setRefreshedPlans() {
@@ -620,9 +626,8 @@ export default {
       return `${duration} ${planCode} ${name}`;
     },
     convertPrice(price) {
-      return (price * this.plnRate).toFixed(2);
+      return this.convertFrom(price, { code: "PLN" });
     },
-
     createPlanGroup(plan) {
       this.createGroup({ type: "plan", path: "group" }, plan);
     },
@@ -823,15 +828,6 @@ export default {
     },
     filteredPlans() {
       return this.plans;
-    },
-    plnRate() {
-      if (this.defaultCurrency.title === "PLN") {
-        return 1;
-      }
-      return this.rates.find(
-        (r) =>
-          r.from.title === "PLN" && r.to.title === this.defaultCurrency.title
-      )?.rate;
     },
     addonsClient() {
       return this.$store.getters["addons/addonsClient"];

@@ -126,9 +126,19 @@
                 </v-dialog>
 
                 <v-chip color="primary" outlined>
-                  {{ [totalPrice, defaultCurrency?.title].join(" ") }}
+                  {{
+                    [
+                      formatPrice(totalPrice, defaultCurrency),
+                      defaultCurrency?.title,
+                    ].join(" ")
+                  }}
                   /
-                  {{ [totalAccountPrice, accountCurrency?.title].join(" ") }}
+                  {{
+                    [
+                      formatPrice(totalAccountPrice, accountCurrency),
+                      accountCurrency?.title,
+                    ].join(" ")
+                  }}
                 </v-chip>
               </div>
             </td>
@@ -163,14 +173,9 @@ import { useStore } from "@/store";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
+import { formatPrice } from "../../../functions";
 
-const props = defineProps([
-  "template",
-  "service",
-  "sp",
-  "account",
-  "addons",
-]);
+const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh"]);
 
 const { template, service, account, addons } = toRefs(props);
@@ -195,13 +200,11 @@ const dueDate = computed(() =>
 );
 
 const totalPrice = computed(() => {
-  return billingItems.value.reduce((acc, i) => acc + +i.price, 0)?.toFixed(2);
+  return billingItems.value.reduce((acc, i) => acc + +i.price, 0);
 });
 
 const totalAccountPrice = computed(() => {
-  return billingItems.value
-    .reduce((acc, i) => acc + +i.accountPrice, 0)
-    ?.toFixed(2);
+  return billingItems.value.reduce((acc, i) => acc + +i.accountPrice, 0);
 });
 
 const billingPlan = computed(() => template.value.billingPlan);

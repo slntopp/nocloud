@@ -31,13 +31,17 @@
       no-hide-uuid
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
-        <v-chip>{{ `${item.total} ${item.currency?.title}` }}</v-chip>
+        <v-chip>{{
+          `${formatPrice(item.total || 0, item.currency)} ${
+            item.currency?.title
+          }`
+        }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
         <v-chip>{{
-          item.totalDefault
-            ? `${item.totalDefault} ${defaultCurrency?.title}`
-            : item.totalDefault
+          `${formatPrice(item.totalDefault || 0, item.currency)} ${
+            defaultCurrency?.title
+          }`
         }}</v-chip>
       </template>
       <template v-slot:[`item.exec`]="{ value }">
@@ -117,6 +121,7 @@ import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import { useRouter } from "vue-router/composables";
+import { formatPrice } from "../functions";
 
 const props = defineProps({
   filters: { type: Object },
@@ -250,7 +255,7 @@ const fetchReports = async () => {
     const { records: result } = await api.reports.list(requestOptions.value);
     reports.value = result.map((r) => {
       return {
-        total: -r.cost.toFixed(2),
+        total: -r.cost,
         start: r.start,
         end: r.end,
         duration: `${formatSecondsToDate(

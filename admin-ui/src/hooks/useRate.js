@@ -21,8 +21,8 @@ const useRate = (currency = ref()) => {
 
     rate.value = store.getters["currencies/rates"].find(
       (rate) =>
-        rate.from.title === fetchedCurrency.title &&
-        rate.to.title === defaultCurrency.value.title
+        rate.from.code == fetchedCurrency.code &&
+        rate.to.code == defaultCurrency.value.code
     ).rate;
     return rate.value;
   };
