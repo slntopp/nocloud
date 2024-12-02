@@ -60,6 +60,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		durable = o.Durable
 		noWait = o.NoWait
 	}
+	topic = exchange + "." + topic
 
 	log := ps.log.Named("Consume." + name)
 	ch, err := ps.conn.Channel()
@@ -67,25 +68,26 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		log.Error("Failed to open channel", zap.Error(err))
 		return nil, err
 	}
+
 	if exchange != "" {
 		if err := ch.ExchangeDeclare(exchange, "topic", durable, false, false, noWait, nil); err != nil {
 			log.Error("Failed to declare a exchange", zap.Error(err))
 			return nil, err
 		}
 	}
-	topic = exchange + "." + topic
-	q, err := ch.QueueDeclare(
-		name, durable, false, exclusive, noWait, nil,
-	)
+
+	q, err := ch.QueueDeclare(name, durable, false, exclusive, noWait, nil)
 	if err != nil {
 		log.Error("Failed to declare a queue", zap.Error(err))
 		return nil, err
 	}
 
-	err = ch.QueueBind(q.Name, topic, exchange, noWait, nil)
-	if err != nil {
-		log.Error("Failed to bind a queue", zap.Error(err))
-		return nil, err
+	if exchange != "" {
+		err = ch.QueueBind(q.Name, topic, exchange, noWait, nil)
+		if err != nil {
+			log.Error("Failed to bind a queue", zap.Error(err))
+			return nil, err
+		}
 	}
 
 	msgs, err := ch.Consume(q.Name, name, false, exclusive, false, noWait, nil)
