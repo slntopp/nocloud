@@ -206,7 +206,7 @@ func (g *WhmcsGateway) HandleWhmcsEvent(log *zap.Logger, body []byte) error {
 		innerErr = g.invoiceCreatedHandler(ctx, log, data)
 	default:
 		log.Warn("Unknown event", zap.String("event", resp.Event))
-		return ps.NoNackErr(fmt.Errorf("unknown event: %s", resp.Event))
+		return nil
 	}
 	if innerErr != nil {
 		log.Error("Error handling event", zap.Error(innerErr))
