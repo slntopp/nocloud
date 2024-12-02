@@ -30,6 +30,7 @@ func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx cont
 	if err != nil {
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
+	log.Debug("getting account", zap.String("uuid", inv.GetAccount()))
 	acc, err := s.accounts.Get(ctx, inv.GetAccount())
 	if err != nil {
 		return fmt.Errorf("failed to get account: %w", err)
