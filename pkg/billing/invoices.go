@@ -44,6 +44,7 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 		c.Rounding = pb.Rounding_ROUND_HALF
 		c.Title = ""
 		c.Code = ""
+		c.Rounding = pb.Rounding_ROUND_HALF
 		c.Default = false
 	}
 	if a == nil || b == nil {
