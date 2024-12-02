@@ -39,6 +39,7 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 		c.Public = true
 		c.Precision = 0
 		c.Format = ""
+		c.Rounding = pb.Rounding_ROUND_HALF
 		c.Title = ""
 		c.Code = ""
 		c.Default = false
