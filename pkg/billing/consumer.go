@@ -70,7 +70,7 @@ func (s *BillingServiceServer) ConsumeInvoiceWhmcsSync(log *zap.Logger, ctx cont
 			}
 			continue
 		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+		log.Debug("Pubsub event received", zap.Any("event", event))
 		if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
 			log.Error("Failed to process whmcs sync", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
