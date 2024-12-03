@@ -316,7 +316,7 @@ func main() {
 	handler = cors.New(cors.Options{
 		AllowedOrigins:      []string{"*"},
 		AllowedMethods:      []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
-		AllowedHeaders:      []string{"*", "Connect-Protocol-Version"},
+		AllowedHeaders:      []string{"*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
 		AllowCredentials:    true,
 		AllowPrivateNetwork: true,
 	}).Handler(h2c.NewHandler(router, &http2.Server{}))

@@ -280,7 +280,7 @@ func main() {
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
 		AllowCredentials: true,
 	}).Handler(gwmux)
@@ -288,7 +288,7 @@ func main() {
 	// AdminUI Handler
 	ui_handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
 		AllowCredentials: true,
 	}).Handler(AdminUIHandler())
