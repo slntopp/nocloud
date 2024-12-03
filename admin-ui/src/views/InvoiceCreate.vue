@@ -389,6 +389,11 @@ const changeStatusBtns = [
     disabled: ["TERMINATED", "DRAFT", "RETURNED"],
   },
   {
+    title: "Unpaid",
+    status: "UNPAID",
+    disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
+  },
+  {
     title: "cancel",
     status: "CANCELED",
     disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
