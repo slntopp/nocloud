@@ -3,6 +3,7 @@ package billing
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	bpb "github.com/slntopp/nocloud-proto/billing"
@@ -33,7 +34,7 @@ func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, 
 	for msg := range msgs {
 		var event epb.Event
 		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery", zap.Error(err))
+			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
@@ -42,24 +43,14 @@ func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, 
 		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
 		body, ok := event.GetData()["body"]
 		if !ok {
-			log.Error("Failed to unmarshal event. No body. Incorrect delivery")
+			log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
 			continue
 		}
 		if err = gw.HandleWhmcsEvent(log, []byte(body.GetStringValue())); err != nil {
-			if !ps.IsNoNackErr(err) {
-				log.Error("Failed to process whmcs sync", zap.Error(err))
-				if err = msg.Nack(false, false); err != nil {
-					log.Error("Failed to nack the delivery", zap.Error(err))
-				}
-			} else {
-				log.Warn("Failed to process whmcs sync", zap.Error(err))
-				if err = msg.Ack(false); err != nil {
-					log.Error("Failed to acknowledge the delivery", zap.Error(err))
-				}
-			}
+			ps.HandleAckNack(log, msg, err)
 			continue
 		}
 		if err = msg.Ack(false); err != nil {
@@ -70,14 +61,13 @@ func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, 
 
 func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx context.Context, event *epb.Event) error {
 	if event.GetData()["gw-callback"].GetBoolValue() {
-		log.Info("skipped gateway callback event")
+		log.Debug("skipped gateway callback event")
 		return nil
 	}
 	inv, err := s.invoices.Get(ctx, event.GetUuid())
 	if err != nil {
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
-	log.Debug("getting account", zap.String("uuid", inv.GetAccount()))
 	acc, err := s.accounts.Get(ctx, inv.GetAccount())
 	if err != nil {
 		return fmt.Errorf("failed to get account: %w", err)
@@ -111,7 +101,7 @@ func (s *BillingServiceServer) ConsumeInvoiceWhmcsSync(log *zap.Logger, ctx cont
 	for msg := range msgs {
 		var event epb.Event
 		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery", zap.Error(err))
+			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
@@ -119,10 +109,7 @@ func (s *BillingServiceServer) ConsumeInvoiceWhmcsSync(log *zap.Logger, ctx cont
 		}
 		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
 		if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
-			log.Error("Failed to process whmcs sync", zap.Error(err))
-			if err = msg.Nack(false, false); err != nil {
-				log.Error("Failed to nack the delivery", zap.Error(err))
-			}
+			ps.HandleAckNack(log, msg, err)
 			continue
 		}
 		if err = msg.Ack(false); err != nil {
@@ -154,11 +141,11 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 		if inv, err = s.executePostRefundActions(ctx, log, inv); err != nil {
 			return fmt.Errorf("failed to execute postrefund actions: %w", err)
 		}
-		inv.Returned = time.Now().Unix()
 	}
 
 	if _, err = s.invoices.Update(ctx, inv); err != nil {
-		return fmt.Errorf("failed to update invoice: %w", err)
+		log.Error("Failed to update invoice after actions were applied", zap.Error(err))
+		return ps.NoNackErr(fmt.Errorf("failed to update invoice: %w", err))
 	}
 
 	return nil
@@ -175,7 +162,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx 
 	for msg := range msgs {
 		var event epb.Event
 		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery", zap.Error(err))
+			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
@@ -183,10 +170,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx 
 		}
 		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
 		if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
-			log.Error("Failed to process invoice action", zap.Error(err))
-			if err = msg.Nack(false, false); err != nil {
-				log.Error("Failed to nack the delivery", zap.Error(err))
-			}
+			ps.HandleAckNack(log, msg, err)
 			continue
 		}
 		if err = msg.Ack(false); err != nil {
@@ -215,7 +199,10 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		if err = s.promocodes.AddEntry(ctx, promo.GetStringValue(), &pb.EntryResource{
 			Instance: &event.Uuid,
 		}); err != nil {
-			log.Error("FATAL: Failed to link instance with promocode on instance creation", zap.Error(err), zap.String("promocode", promo.GetStringValue()))
+			if !errors.Is(err, graph.ErrAlreadyExists) {
+				log.Error("Failed to link instance with promocode on instance creation", zap.Error(err), zap.String("promocode", promo.GetStringValue()))
+				return fmt.Errorf("failed to link promocode: %w", err)
+			}
 		}
 	}
 
@@ -324,7 +311,7 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx cont
 	for msg := range msgs {
 		var event epb.Event
 		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery", zap.Error(err))
+			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
@@ -333,10 +320,7 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx cont
 		curConf := MakeCurrencyConf(log, &s.settingsClient)
 		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
 		if err = s.ProcessInstanceCreation(log, ctx, &event, curConf, time.Now().Unix()); err != nil {
-			log.Error("Failed to process invoice action", zap.Error(err))
-			if err = msg.Nack(false, false); err != nil {
-				log.Error("Failed to nack the delivery", zap.Error(err))
-			}
+			ps.HandleAckNack(log, msg, err)
 			continue
 		}
 		if err = msg.Ack(false); err != nil {

@@ -90,7 +90,7 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 }
 
 func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*pb.Record]) {
-	log := s.log.Named("Consumer")
+	log := s.log.Named("RecordsConsumer")
 
 	records, err := pubsub.Consume("records", "", "records", ps.ConsumeOptions{
 		Durable:   true,
@@ -111,22 +111,19 @@ func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*p
 		err = proto.Unmarshal(msg.Body, &record)
 		log.Debug("Message unmarshalled", zap.Any("record", &record))
 		if err != nil {
-			log.Error("Failed to unmarshal record", zap.Error(err))
+			log.Error("Failed to unmarshal record. Skip", zap.Error(err))
 			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+				log.Error("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 			}
 			continue
 		}
 		err := s.ProcessRecord(ctx, &record, currencyConf, time.Now().Unix())
 		if err != nil {
-			log.Error("Failed to process record", zap.Error(err))
-			if err = msg.Nack(false, false); err != nil {
-				log.Warn("Failed to nack the delivery while unmarshal message", zap.Error(err))
-			}
+			ps.HandleAckNack(log, msg, err)
 			continue
 		}
 		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			log.Error("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 		}
 		continue
 	}
@@ -145,7 +142,6 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	}
 
 	isSkip, err := s.checkRecord(ctx, record, log)
-
 	if isSkip && err == nil {
 		log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
 		return nil
@@ -221,6 +217,11 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	record.Cost = itemPrice
 
 	recordId := s.records.Create(ctx, record)
+	if recordId == "" {
+		log.Warn("No record id. Skipping")
+		return nil
+	}
+
 	log.Debug("Record created", zap.String("record_id", recordId.Key()))
 	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	if record.Priority != pb.Priority_NORMAL {

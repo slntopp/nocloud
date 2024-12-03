@@ -34,6 +34,20 @@ type ConsumeOptions struct {
 	Exclusive bool
 }
 
+func HandleAckNack(log *zap.Logger, del amqp091.Delivery, err error) {
+	if !IsNoNackErr(err) {
+		log.Error("Failed to process delivery event (nack)", zap.Error(err))
+		if err = del.Nack(false, false); err != nil {
+			log.Error("Failed to nack the delivery", zap.Error(err))
+		}
+	} else {
+		log.Warn("Failed to process delivery event (ack)", zap.Error(err))
+		if err = del.Ack(false); err != nil {
+			log.Error("Failed to acknowledge the delivery", zap.Error(err))
+		}
+	}
+}
+
 func NewPubSub[T proto.Message](conn rabbitmq.Connection, log *zap.Logger) *PubSub[T] {
 	log = log.Named("PubSub")
 	ch, err := conn.Channel()

@@ -210,6 +210,9 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	}
 
 	rec := s.records.Create(ctx, recBody)
+	if rec == "" {
+		return nil, status.Error(codes.Internal, "Failed to create record")
+	}
 
 	if t.GetRecords() == nil {
 		t.Records = []string{}

@@ -31,6 +31,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// Errors
+
+var ErrAlreadyExists = errors.New("resource already exists")
+
+// ---
+
 type ContextKey string
 
 const (

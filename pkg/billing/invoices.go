@@ -425,13 +425,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Requestor: requester,
 	})
 
-	inv, err := s.invoices.Get(ctx, r.GetUuid())
-	if err != nil {
-		log.Error("Failed to get invoice", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get invoice")
-	}
-
-	resp := connect.NewResponse(inv.Invoice)
+	resp := connect.NewResponse(r.Invoice)
 	return resp, nil
 }
 
@@ -482,6 +476,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
 	} else if newStatus == pb.BillingStatus_RETURNED {
+		newInv.Returned = nowBeforeActions
 		goto quit
 	} else {
 		goto quit
@@ -507,7 +502,7 @@ quit:
 	_, err = s.invoices.Replace(ctx, newInv)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
+		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
 	if err = s.invoicesPublisher(&epb.Event{
