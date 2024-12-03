@@ -6,7 +6,6 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -27,7 +26,7 @@ func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, err
 			return inv.Invoice, nil
 		}
 	}
-	return nil, ps.NoNackErr(ErrNotFound)
+	return nil, ErrNotFound
 }
 
 func (g *WhmcsGateway) GetInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, error) {
