@@ -2,9 +2,11 @@ package billing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/pubsub/billing"
 	"slices"
 	"strings"
@@ -624,6 +626,15 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	if err != nil {
 		log.Warn("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Invoice not found")
+	}
+
+	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
+	if err == nil {
+		return s.PayWithBalance(ctx, connect.NewRequest(&pb.PayWithBalanceRequest{InvoiceUuid: ncInv.GetUuid(), WhmcsId: 0}))
+	}
+	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
+		log.Error("Failed to ensure that whmcs invoice exists in NoCloud", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error. Couldn't find your invoice")
 	}
 
 	acc, err := s.accounts.Get(ctx, requester)
