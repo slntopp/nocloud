@@ -630,6 +630,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 
 	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
 	if err == nil {
+		log.Info("Found NoCloud invoice with this whmcs_id. Redirecting to pay it on NoCloud", zap.Int64("whmcs_id", invId))
 		return s.PayWithBalance(ctx, connect.NewRequest(&pb.PayWithBalanceRequest{InvoiceUuid: ncInv.GetUuid(), WhmcsId: 0}))
 	}
 	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
