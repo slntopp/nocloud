@@ -54,7 +54,8 @@
       </v-col>
       <v-col class="d-flex justify-end px-1">
         <v-chip color="primary" outlined
-          >Price: {{ price }} {{ accountCurrency?.title }}</v-chip
+          >Price: {{ formatPrice(price, accountCurrency) }}
+          {{ accountCurrency?.title }}</v-chip
         >
       </v-col>
       <v-col class="px-1 d-flex justify-end">
@@ -70,6 +71,7 @@ import { useStore } from "@/store";
 import confirmDialog from "@/components/confirmDialog.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
+import { formatPrice } from "../../functions";
 
 const props = defineProps({
   template: {},

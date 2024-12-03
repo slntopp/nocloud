@@ -45,7 +45,8 @@
             />
           </template>
           <template v-slot:[`item.price`]="{ value }">
-            {{ value }} {{ defaultCurrency?.title }}
+            {{ formatPrice(value, defaultCurrency) }}
+            {{ defaultCurrency?.title }}
           </template>
           <template v-slot:[`item.gpu.model`]="{ item }">
             <template v-if="item.gpu.model !== ''">
@@ -121,6 +122,7 @@ import NocloudTable from "@/components/table.vue";
 import { getMarginedValue } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import planAddonsTable from "@/components/planAddonsTable.vue";
+import { formatPrice } from "../../functions";
 
 const props = defineProps({
   fee: { type: Object, required: true },
@@ -246,7 +248,7 @@ const fetchFlavours = async () => {
         const planCode = `${period} ${flavour.id}`;
         const price = convertFrom(
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]],
-          { title: "PLN" }
+          { code: "PLN" }
         );
 
         newFlavours.push({

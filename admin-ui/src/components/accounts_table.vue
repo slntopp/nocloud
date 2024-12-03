@@ -194,23 +194,26 @@ const filter = computed(() => {
     balance: Object.keys(total).length ? total : undefined,
   };
 });
-const accounts = computed(() => {
-  return store.getters["accounts/all"].map((a) => ({
-    ...a,
-    access: {
-      ...a.access,
-      color: colorChip(a.access.level),
-    },
-    balance: a.balance || 0,
-    currency: a.currency || defaultCurrency.value,
-    data: {
-      ...a.data,
-      regular_payment:
-        a.data?.regular_payment === undefined ||
-        a.data?.regular_payment === true,
-    },
-  }));
-});
+const accounts = computed(() =>
+  store.getters["accounts/all"].map((a) => {
+    const currency = a.currency || defaultCurrency.value;
+    return {
+      ...a,
+      access: {
+        ...a.access,
+        color: colorChip(a.access.level),
+      },
+      balance: a.balance,
+      currency,
+      data: {
+        ...a.data,
+        regular_payment:
+          a.data?.regular_payment === undefined ||
+          a.data?.regular_payment === true,
+      },
+    };
+  })
+);
 const total = computed(() => store.getters["accounts/total"]);
 
 const requestOptions = computed(() => ({

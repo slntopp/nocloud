@@ -160,7 +160,12 @@
     <template v-slot:[`item.accountPrice`]="{ item }">
       <span v-if="!isAccountsLoading">
         <template v-if="item.estimate">
-          {{ convertTo(item.estimate, getAccount(item.account)?.currency) }}
+          {{
+            formatPrice(
+              convertTo(item.estimate, getAccount(item.account)?.currency),
+              getAccount(item.account)?.currency
+            )
+          }}
           {{ getAccount(item.account)?.currency?.title }}
         </template>
         <template v-else> - </template>
@@ -171,7 +176,12 @@
 
     <template v-slot:[`item.balance`]="{ item }">
       <span v-if="!isAccountsLoading">
-        {{ (getAccount(item.account)?.balance || 0).toFixed(2) }}
+        {{
+          formatPrice(
+            getAccount(item.account)?.balance || 0,
+            getAccount(item.account)?.currency
+          )
+        }}
         {{ getAccount(item.account)?.currency?.title }}
       </span>
 
@@ -185,6 +195,7 @@ import nocloudTable from "@/components/table.vue";
 import {
   debounce,
   formatDateToTimestamp,
+  formatPrice,
   formatSecondsToDate,
   getBillingPeriod,
   getShortName,

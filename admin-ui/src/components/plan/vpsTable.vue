@@ -170,6 +170,7 @@ import {
   ListAddonsRequest,
 } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 import planAddonsTable from "@/components/planAddonsTable.vue";
+import useCurrency from "@/hooks/useCurrency";
 
 export default {
   name: "vps-table",
@@ -251,6 +252,11 @@ export default {
 
     planAddons: [],
   }),
+  setup() {
+    const { convertFrom } = useCurrency();
+
+    return { convertFrom };
+  },
   methods: {
     testConfig() {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
@@ -648,7 +654,7 @@ export default {
       });
     },
     convertPrice(price) {
-      return (price * this.plnRate).toFixed(2);
+      return this.convertFrom(price, { code: "PLN" });
     },
     async refreshPlans() {
       try {
@@ -792,18 +798,6 @@ export default {
   computed: {
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
-    },
-    rates() {
-      return this.$store.getters["currencies/rates"];
-    },
-    plnRate() {
-      if (this.defaultCurrency?.title === "PLN") {
-        return 1;
-      }
-      return this.rates.find(
-        (r) =>
-          r.to?.title === this.defaultCurrency?.title && r.from?.title === "PLN"
-      )?.rate;
     },
     addonsClient() {
       return this.$store.getters["addons/addonsClient"];
