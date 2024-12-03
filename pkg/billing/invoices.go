@@ -824,12 +824,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetReturned() != 0 && t.GetReturned() != 0 {
 		t.Returned = req.GetReturned()
 	}
-	if req.GetDeadline() != 0 && t.GetDeadline() != 0 {
-		t.Deadline = req.GetDeadline()
-	}
 	if req.GetCreated() != 0 {
 		t.Created = req.GetCreated()
 	}
+	t.Deadline = req.GetDeadline()
 
 	if req.Instances == nil {
 		req.Instances = make([]string, 0)
