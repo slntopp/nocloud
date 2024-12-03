@@ -126,10 +126,10 @@ const defaultLayouts = computed(() => ({
     title: "Unpaid",
     filter: { status: [2] },
     fields: ["status"],
-    id: "id" + Math.random().toString(16).slice(2),
+    id: "id-unpaid",
   },
   overdue: {
-    id: "id" + Math.random().toString(16).slice(2),
+    id: "id-overdue",
     title: "Overdue",
     fields: ["deadline", "status"],
     filter: {

@@ -389,6 +389,11 @@ const changeStatusBtns = [
     disabled: ["TERMINATED", "DRAFT", "RETURNED"],
   },
   {
+    title: "Unpaid",
+    status: "UNPAID",
+    disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
+  },
+  {
     title: "cancel",
     status: "CANCELED",
     disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
@@ -445,7 +450,9 @@ const setInvoice = () => {
       ...invoice.value,
       items: invoice.value.items || [],
       total: invoice.value.total || 0,
-      deadline: formatSecondsToDateString(invoice.value.deadline),
+      deadline: invoice.value.deadline
+        ? formatSecondsToDateString(invoice.value.deadline)
+        : null,
       payment: formatSecondsToDateString(invoice.value.payment),
       returned: formatSecondsToDateString(invoice.value.returned),
       processed: formatSecondsToDateString(invoice.value.processed),
@@ -482,9 +489,10 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       items: newInvoice.value.items,
       meta: newInvoice.value.meta,
       status: status ? status : newInvoice.value.status,
-      instances: newInvoice.value.instances,
+      instances: newInvoice.value.instances || [],
       deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
       type: newInvoice.value.type,
+      processed: invoice.value?.processed || 0,
     };
 
     if (!isEdit.value && !invoice.value?.uuid) {

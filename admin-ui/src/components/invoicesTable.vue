@@ -153,6 +153,10 @@ onMounted(() => {
       fetchInvoices();
     },
   });
+
+  if (!noSearch.value) {
+    store.commit("appSearch/setFields", searchFields.value);
+  }
 });
 
 const invoices = computed(() => store.getters["invoices/all"]);
@@ -382,8 +386,8 @@ watch(invoices, () => {
   });
 });
 
-watch(searchFields, () => {
-  if (!props.noSearch) {
+watch([searchFields, noSearch], () => {
+  if (!noSearch.value) {
     store.commit("appSearch/setFields", searchFields.value);
   }
 });
