@@ -255,6 +255,10 @@ func getWithAccess[T Accessible](ctx context.Context, db driver.Database, from d
 	return o, nil
 }
 
+func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, from driver.DocumentID, id driver.DocumentID) (T, error) {
+	return getWithAccess[T](ctx, db, from, id)
+}
+
 const deleteEdgeQuery = `
 FOR edge IN @@collection
     FILTER edge._from == @fromDocID && edge._to == @toDocID

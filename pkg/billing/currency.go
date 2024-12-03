@@ -116,7 +116,7 @@ func (s *CurrencyServiceServer) UpdateCurrency(ctx context.Context, r *connect.R
 	}
 	if req.Currency.Default {
 		for _, currency := range currencies {
-			if currency.Default {
+			if currency.Default && req.GetCurrency().GetId() != currency.GetId() {
 				return nil, status.Error(codes.AlreadyExists, "default currency already exists")
 			}
 		}
@@ -258,6 +258,11 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *conne
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
+	if req.GetTo().GetId() != schema.DEFAULT_CURRENCY_ID &&
+		req.GetFrom().GetId() != schema.DEFAULT_CURRENCY_ID {
+		return nil, status.Error(codes.InvalidArgument, "Can't create rate with 2 platform currencies. One edge must be root currency")
+	}
+
 	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission)
 	if err != nil {
 		log.Error("Error creating Exchange rate", zap.Error(err))
@@ -357,9 +362,21 @@ func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Re
 }
 
 func (s *CurrencyServiceServer) GetExchangeRates(ctx context.Context, r *connect.Request[pb.GetExchangeRatesRequest]) (*connect.Response[pb.GetExchangeRatesResponse], error) {
+	var currencies = make(map[int32]*pb.Currency)
+	curr, err := s.ctrl.GetCurrencies(ctx, true)
+	if err != nil {
+		return nil, err
+	}
+	for _, cur := range curr {
+		currencies[cur.Id] = cur
+	}
 	rates, err := s.ctrl.GetExchangeRates(ctx)
 	if err != nil {
 		return nil, err
+	}
+	for _, rate := range rates {
+		rate.From = currencies[rate.From.GetId()]
+		rate.To = currencies[rate.To.GetId()]
 	}
 
 	return connect.NewResponse(&pb.GetExchangeRatesResponse{Rates: rates}), nil

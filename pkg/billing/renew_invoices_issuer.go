@@ -28,6 +28,8 @@ type accountPool struct {
 	InstExpRecords map[string][]*dpb.ExpirationRecord
 }
 
+const InstanceConfigAutoRenewKey = "auto_renew"
+
 func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Context, log *zap.Logger) {
 	log = log.Named("InvoicesIssuer")
 	log.Info("Starting Invoice Expiring Instances Cron Job")
@@ -74,6 +76,9 @@ func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Conte
 			for _, inst := range ig.GetInstances() {
 				log := log.With(zap.String("instance", inst.GetUuid()))
 				if inst.GetProduct() == "" {
+					continue
+				}
+				if inst.GetConfig()[InstanceConfigAutoRenewKey].GetBoolValue() {
 					continue
 				}
 				acc, err := s.instances.GetInstanceOwner(ctx, inst.GetUuid())
@@ -439,7 +444,7 @@ func filterInstances(instances []*ipb.Instance) []*ipb.Instance {
 		if inst.BillingPlan == nil {
 			continue
 		}
-		if inst.GetStatus() == statuses.NoCloudStatus_DEL || inst.GetStatus() == statuses.NoCloudStatus_INIT || inst.GetStatus() == statuses.NoCloudStatus_UNSPECIFIED {
+		if inst.GetStatus() == statuses.NoCloudStatus_DEL || inst.GetStatus() == statuses.NoCloudStatus_UNSPECIFIED {
 			continue
 		}
 		if inst.GetState().GetState() == states.NoCloudState_DELETED || inst.GetState().GetState() == states.NoCloudState_PENDING ||

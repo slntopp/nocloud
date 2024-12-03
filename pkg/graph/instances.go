@@ -27,6 +27,8 @@ import (
 	"github.com/slntopp/nocloud-proto/notes"
 	servicespb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
+	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
 	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
 	"slices"
@@ -34,7 +36,6 @@ import (
 	"time"
 
 	"github.com/arangodb/go-driver"
-	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
@@ -99,6 +100,9 @@ type instancesController struct {
 	channel rabbitmq.Channel
 
 	bp_ctrl BillingPlansController
+
+	ps    *ps.PubSub[*epb.Event]
+	ansPs *ps.PubSub[*pb.Context]
 }
 
 func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.Connection) InstancesController {
@@ -108,45 +112,14 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn rabbitmq.C
 	col := GetEnsureCollection(log, ctx, db, schema.INSTANCES_COL)
 	ig2inst := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
-	channel, err := conn.Channel()
-	if err != nil {
-		log.Fatal("Failed to init channel", zap.Error(err))
-	}
-
-	err = channel.ExchangeDeclare(
-		"hooks",
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		log.Fatal("Failed to init exchange", zap.Error(err))
-	}
-
-	err = channel.ExchangeDeclare(
-		"instances",
-		"topic",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
-	if err != nil {
-		log.Fatal("Failed to init exchange", zap.Error(err))
-	}
-
 	bp_ctrl := NewBillingPlansController(log, db)
 	addons := NewAddonsController(log, db)
 	acc := NewAccountsController(log, db)
 	inv := NewInvoicesController(log, db)
 	cur := NewCurrencyController(log, db)
 
-	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: bp_ctrl,
-		addons: addons, inv: inv, acc: acc, cur: cur}
+	return &instancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, bp_ctrl: bp_ctrl,
+		addons: addons, inv: inv, acc: acc, cur: cur, ps: ps.NewPubSub[*epb.Event](conn, log), ansPs: ps.NewPubSub[*pb.Context](conn, log)}
 }
 
 // CalculateInstanceEstimatePrice return estimate periodic price for current instance in NCU currency
@@ -387,40 +360,19 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 		Sp:       sp,
 		Event:    spb.NoCloudStatus_INIT.String(),
 	}
-	body, err := proto.Marshal(&c)
-	if err == nil {
-		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp091.Persistent,
-			Body:         body,
-		})
-
-		if err != nil {
-			log.Error("Failed to publish", zap.Error(err))
-		}
-	} else {
-		log.Error("Failed to parse", zap.Error(err))
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
 	}
-	log.Info("Publishing creation event", zap.Any("instance", i.GetUuid()))
 	e := epb.Event{
 		Uuid: i.GetUuid(),
+		Key:  services_registry.InstanceCreated,
 		Data: make(map[string]*structpb.Value),
 	}
 	if promo, ok := ctx.Value(CreationPromocodeKey).(string); ok {
 		e.Data["promocode"] = structpb.NewStringValue(promo)
 	}
-	body, err = proto.Marshal(&e)
-	if err == nil {
-		err = ctrl.channel.PublishWithContext(ctx, "instances", "created_instance", false, false, amqp091.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp091.Persistent,
-			Body:         body,
-		})
-		if err != nil {
-			log.Error("Failed to publish", zap.Error(err))
-		}
-	} else {
-		log.Error("Failed to parse", zap.Error(err))
+	if err = ctrl.ps.Publish(ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"), &e); err != nil {
+		log.Error("Failed to publish instance creating", zap.Error(err))
 	}
 
 	return meta.Key, nil
@@ -587,20 +539,8 @@ func (ctrl *instancesController) Update(ctx context.Context, sp string, inst, ol
 		Sp:       sp,
 		Event:    "UPDATE",
 	}
-	log.Debug("publishing to ansible_hooks", zap.Any("c", c))
-	body, err := proto.Marshal(&c)
-	if err == nil {
-		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-			ContentType:  "text/plain",
-			DeliveryMode: amqp091.Persistent,
-			Body:         body,
-		})
-
-		if err != nil {
-			log.Error("Failed to publish", zap.Error(err))
-		}
-	} else {
-		log.Error("Failed to parse", zap.Error(err))
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
 	}
 
 	return nil
@@ -649,30 +589,19 @@ func (ctrl *instancesController) Delete(ctx context.Context, group string, i *pb
 	}
 
 	sp, err := ctrl.getSp(ctx, i.GetUuid())
-
-	if err == nil {
-		c := pb.Context{
-			Instance: i.GetUuid(),
-			Sp:       sp,
-			Event:    spb.NoCloudStatus_DEL.String(),
-		}
-		body, err := proto.Marshal(&c)
-		if err == nil {
-			err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-				ContentType:  "text/plain",
-				DeliveryMode: amqp091.Persistent,
-				Body:         body,
-			})
-
-			if err != nil {
-				log.Error("Failed to publish", zap.Error(err))
-			}
-		} else {
-			log.Error("Failed to parse", zap.Error(err))
-		}
-	} else {
+	if err != nil {
 		log.Error("Failed to get sp", zap.Error(err))
+		return nil
 	}
+	c := pb.Context{
+		Instance: i.GetUuid(),
+		Sp:       sp,
+		Event:    spb.NoCloudStatus_DEL.String(),
+	}
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
+	}
+
 	return nil
 }
 
@@ -844,29 +773,17 @@ func (ctrl *instancesController) SetStatus(ctx context.Context, inst *pb.Instanc
 	}
 
 	sp, err := ctrl.getSp(ctx, inst.GetUuid())
-
-	if err == nil {
-		c := pb.Context{
-			Instance: inst.GetUuid(),
-			Sp:       sp,
-			Event:    status.String(),
-		}
-		body, err := proto.Marshal(&c)
-		if err == nil {
-			err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
-				ContentType:  "text/plain",
-				DeliveryMode: amqp091.Persistent,
-				Body:         body,
-			})
-
-			if err != nil {
-				log.Error("Failed to publish", zap.Error(err))
-			}
-		} else {
-			log.Error("Failed to parse", zap.Error(err))
-		}
-	} else {
+	if err != nil {
 		log.Error("Failed to get sp", zap.Error(err))
+		return nil
+	}
+	c := pb.Context{
+		Instance: inst.GetUuid(),
+		Sp:       sp,
+		Event:    status.String(),
+	}
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
 	}
 
 	return nil

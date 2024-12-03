@@ -18,14 +18,13 @@ package graph
 import (
 	"context"
 	"fmt"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	hasher "github.com/slntopp/nocloud-proto/hasher"
 	spb "github.com/slntopp/nocloud-proto/services"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 	nocloud "github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
