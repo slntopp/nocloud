@@ -25,7 +25,7 @@ import (
 
 func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
 	log = log.Named("ConsumeInvoiceBackwardWhmcsSync")
-	msgs, err := p.Consume("whmcs-backward-sync", ps.DEFAULT_EXCHANGE, billing.Topic(".#"))
+	msgs, err := p.Consume("whmcs-backward-sync", ps.DEFAULT_EXCHANGE, billing.Topic("#"))
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
