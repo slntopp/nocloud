@@ -222,10 +222,13 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 
 	for msg := range msgs {
 		log.Info("Received a message from dlx", zap.Any("routine_key", msg.RoutingKey))
-		var req T
-		err := proto.Unmarshal(msg.Body, req)
+		var req = new(T)
+		err := proto.Unmarshal(msg.Body, *req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Error("Failed to ack the delivery", zap.Error(err))
+			}
 			continue
 		}
 		log.Info("Unmarshalled message", zap.Any("message", req))
