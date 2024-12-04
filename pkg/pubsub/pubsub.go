@@ -133,6 +133,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		}
 	}
 
+retry:
 	var params amqp091.Table
 	if withRetry {
 		params = amqp091.Table{
@@ -141,6 +142,14 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 	}
 	q, err := ch.QueueDeclare(name, durable, false, exclusive, noWait, params)
 	if err != nil {
+		var amqpErr amqp091.Error
+		if errors.As(err, &amqpErr) {
+			if amqpErr.Code == amqp091.PreconditionFailed {
+				if _, err = ch.QueueDelete(name, false, false, false); err == nil {
+					goto retry
+				}
+			}
+		}
 		log.Error("Failed to declare a queue", zap.Error(err))
 		return nil, err
 	}
