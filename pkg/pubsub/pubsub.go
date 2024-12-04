@@ -249,6 +249,11 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 			if err = msg.Nack(false, false); err != nil {
 				log.Error("Failed to nack the delivery", zap.Error(err))
 			}
+			continue
+		}
+		log.Info("x-death not found", zap.Any("routine_key", msg.RoutingKey))
+		if err = msg.Ack(false); err != nil {
+			log.Error("Failed to ack the delivery", zap.Error(err))
 		}
 	}
 }
