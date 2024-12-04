@@ -7,9 +7,13 @@ import (
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"github.com/slntopp/nocloud/pkg/pubsub/billing"
+	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
+	"golang.org/x/sync/errgroup"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -18,7 +22,6 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
-	instancespb "github.com/slntopp/nocloud-proto/instances"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -1300,21 +1303,32 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
+		_z := 0
+		errs := &_z
+		m := &sync.Mutex{}
+		g := &errgroup.Group{}
 		for _, i := range inv.GetInstances() {
-			if i == "" {
-				continue
-			}
-			log := log.With(zap.String("instance", i))
-
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "free_renew",
+			id := i
+			g.Go(func() error {
+				if err := s.instanceCommandsPub(&epb.Event{
+					Uuid: id,
+					Key:  services_registry.CommandInstanceInvoke,
+					Type: "free_renew",
+				}); err != nil {
+					m.Lock()
+					*errs = *errs + 1
+					m.Unlock()
+					return err
+				}
+				return nil
 			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to renew instance", zap.Error(err))
-				continue
+		}
+		if err = g.Wait(); err != nil {
+			if *errs == len(inv.GetInstances()) {
+				return inv, fmt.Errorf("failed to publish free_renew command: %w", err)
 			}
+			log.Error("FATAL: somehow published only some of free_renew commands", zap.Error(err), zap.Int("errs", *errs), zap.Int("instances", len(inv.GetInstances())))
+			return inv, ps.NoNackErr(fmt.Errorf("failed to publish free_renew command for some instances, but not for all: %w", err))
 		}
 	}
 
@@ -1346,39 +1360,61 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 
 	switch inv.GetType() {
 	case pb.ActionType_INSTANCE_START:
+		_z := 0
+		errs := &_z
+		m := &sync.Mutex{}
+		g := &errgroup.Group{}
 		for _, i := range inv.GetInstances() {
-			if i == "" {
-				continue
-			}
-			log := log.With(zap.String("instance", i))
-
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "suspend",
+			id := i
+			g.Go(func() error {
+				if err := s.instanceCommandsPub(&epb.Event{
+					Uuid: id,
+					Key:  services_registry.CommandInstanceInvoke,
+					Type: "suspend",
+				}); err != nil {
+					m.Lock()
+					*errs = *errs + 1
+					m.Unlock()
+					return err
+				}
+				return nil
 			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to suspend instance", zap.Error(err))
-				continue
+		}
+		if err := g.Wait(); err != nil {
+			if *errs == len(inv.GetInstances()) {
+				return inv, fmt.Errorf("failed to publish suspend command: %w", err)
 			}
+			log.Error("FATAL: somehow published only some of suspend commands", zap.Error(err), zap.Int("errs", *errs), zap.Int("instances", len(inv.GetInstances())))
+			return inv, ps.NoNackErr(fmt.Errorf("failed to publish suspend command for some instances, but not for all: %w", err))
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
+		_z := 0
+		errs := &_z
+		m := &sync.Mutex{}
+		g := &errgroup.Group{}
 		for _, i := range inv.GetInstances() {
-			if i == "" {
-				continue
-			}
-			log := log.With(zap.String("instance", i))
-
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "cancel_renew",
+			id := i
+			g.Go(func() error {
+				if err := s.instanceCommandsPub(&epb.Event{
+					Uuid: id,
+					Key:  services_registry.CommandInstanceInvoke,
+					Type: "cancel_renew",
+				}); err != nil {
+					m.Lock()
+					*errs = *errs + 1
+					m.Unlock()
+					return err
+				}
+				return nil
 			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to cancel renew instance", zap.Error(err))
-				continue
+		}
+		if err := g.Wait(); err != nil {
+			if *errs == len(inv.GetInstances()) {
+				return inv, fmt.Errorf("failed to publish cancel_renew command: %w", err)
 			}
+			log.Error("FATAL: somehow published only some of cancel_renew commands", zap.Error(err), zap.Int("errs", *errs), zap.Int("instances", len(inv.GetInstances())))
+			return inv, ps.NoNackErr(fmt.Errorf("failed to publish cancel_renew command for some instances, but not for all: %w", err))
 		}
 	}
 

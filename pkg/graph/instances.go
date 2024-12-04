@@ -394,7 +394,7 @@ const updatePlanQuery = `
 UPDATE DOCUMENT(@key) WITH { billing_plan: @billingPlan } IN @@collection
 `
 
-func (ctrl *instancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
+func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
@@ -529,9 +529,10 @@ func (ctrl *instancesController) Update(ctx context.Context, sp string, inst, ol
 
 	nocloud.Log(log, event)
 
-	sp, err = ctrl.getSp(ctx, uuid)
+	sp, err := ctrl.getSp(ctx, uuid)
 	if err != nil {
-		return err
+		log.Error("Failed to get sp to publish ansible hook", zap.Error(err))
+		return nil
 	}
 
 	c := pb.Context{
@@ -590,7 +591,7 @@ func (ctrl *instancesController) Delete(ctx context.Context, group string, i *pb
 
 	sp, err := ctrl.getSp(ctx, i.GetUuid())
 	if err != nil {
-		log.Error("Failed to get sp", zap.Error(err))
+		log.Error("Failed to get sp to publish ansible hook", zap.Error(err))
 		return nil
 	}
 	c := pb.Context{

@@ -297,6 +297,12 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	sp, err := s.ig_ctrl.GetSP(ctx, ig.GetUuid())
+	if err != nil {
+		log.Error("Failed to get sp", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	if ig.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
@@ -312,7 +318,7 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
 	}
 
-	newId, err := s.ctrl.Create(ctx, igId, "", req.GetInstance())
+	newId, err := s.ctrl.Create(ctx, igId, sp.GetUuid(), req.GetInstance())
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
