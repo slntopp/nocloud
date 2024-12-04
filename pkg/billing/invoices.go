@@ -48,30 +48,22 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	if a.Items == nil {
-		a.Items = []*pb.Item{}
+	prepare := func(i *pb.Invoice) {
+		if i.Items == nil {
+			i.Items = []*pb.Item{}
+		}
+		if i.Transactions == nil {
+			i.Transactions = []string{}
+		}
+		if i.Instances == nil {
+			i.Instances = []string{}
+		}
+		if i.Meta == nil {
+			i.Meta = make(map[string]*structpb.Value)
+		}
 	}
-	if a.Transactions == nil {
-		a.Transactions = []string{}
-	}
-	if a.Instances == nil {
-		a.Instances = []string{}
-	}
-	if a.Meta == nil {
-		a.Meta = make(map[string]*structpb.Value)
-	}
-	if b.Items == nil {
-		b.Items = []*pb.Item{}
-	}
-	if b.Transactions == nil {
-		b.Transactions = []string{}
-	}
-	if b.Instances == nil {
-		b.Instances = []string{}
-	}
-	if b.Meta == nil {
-		b.Meta = make(map[string]*structpb.Value)
-	}
+	prepare(a)
+	prepare(b)
 	if len(a.Items) != len(b.Items) {
 		return false
 	}
