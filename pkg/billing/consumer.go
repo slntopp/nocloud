@@ -23,38 +23,61 @@ import (
 	"time"
 )
 
-func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, _ context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
+func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
 	log = log.Named("ConsumeInvoiceBackwardWhmcsSync")
-	msgs, err := p.Consume("whmcs-backward-sync", ps.DEFAULT_EXCHANGE, billing.Topic("whmcs-events"))
+	msgs, err := p.Consume("whmcs-backward-sync", ps.DEFAULT_EXCHANGE, billing.Topic(".#"))
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
 	}
 
 	for msg := range msgs {
-		var event epb.Event
-		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+		if msg.RoutingKey == billing.Topic("whmcs-events") {
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				continue
+			}
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+			body, ok := event.GetData()["body"]
+			if !ok {
+				log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				continue
+			}
+			if err = gw.HandleWhmcsEvent(log, []byte(body.GetStringValue())); err != nil {
+				ps.HandleAckNack(log, msg, err)
+				continue
+			}
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
-			continue
-		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
-		body, ok := event.GetData()["body"]
-		if !ok {
-			log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
+		} else if msg.RoutingKey == billing.Topic("invoices") {
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				continue
+			}
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+			if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
+				ps.HandleAckNack(log, msg, err)
+				continue
+			}
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
-			continue
-		}
-		if err = gw.HandleWhmcsEvent(log, []byte(body.GetStringValue())); err != nil {
-			ps.HandleAckNack(log, msg, err)
-			continue
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Error("Failed to acknowledge the delivery", zap.Error(err))
+		} else {
+			if err = msg.Ack(false); err != nil {
+				log.Error("Failed to acknowledge the delivery", zap.Error(err))
+			}
 		}
 	}
 }
