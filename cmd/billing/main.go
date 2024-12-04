@@ -255,9 +255,8 @@ func main() {
 
 	log.Info("Registering new consumers")
 	go server.ConsumeInvoiceStatusActions(log, ctx, ps)
-	//go server.ConsumeInvoiceWhmcsSync(log, ctx, ps)
 	go server.ConsumeCreatedInstances(log, ctx, ps)
-	go server.ConsumeInvoiceBackwardWhmcsSync(log, ctx, ps, whmcsGw)
+	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw)
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {

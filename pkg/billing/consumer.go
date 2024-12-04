@@ -23,16 +23,16 @@ import (
 	"time"
 )
 
-func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
-	log = log.Named("ConsumeInvoiceBackwardWhmcsSync")
-	msgs, err := p.Consume("whmcs-backward-sync", ps.DEFAULT_EXCHANGE, billing.Topic("#"))
+func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
+	log = log.Named("ConsumeWhmcsSync")
+	msgs, err := p.Consume("whmcs-syncer", ps.DEFAULT_EXCHANGE, billing.Topic("#"))
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
 	}
 
 	for msg := range msgs {
-		log.Debug("routine key", zap.String("key", msg.RoutingKey))
+		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
 		if msg.RoutingKey == msg.Exchange+"."+billing.Topic("whmcs-events") {
 			var event epb.Event
 			if err = proto.Unmarshal(msg.Body, &event); err != nil {
@@ -58,6 +58,7 @@ func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, 
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
+			// Handle nocloud create/update invoices events to sync whmcs invoices with them
 		} else if msg.RoutingKey == msg.Exchange+"."+billing.Topic("invoices") {
 			var event epb.Event
 			if err = proto.Unmarshal(msg.Body, &event); err != nil {
@@ -112,34 +113,6 @@ func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx cont
 		return fmt.Errorf("failed to update invoice on whmcs: %w", err)
 	}
 	return nil
-}
-
-func (s *BillingServiceServer) ConsumeInvoiceWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
-	log = log.Named("ConsumeInvoiceWhmcsSync")
-	msgs, err := p.Consume("whmcs-sync", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"))
-	if err != nil {
-		log.Fatal("Failed to start consumer")
-		return
-	}
-
-	for msg := range msgs {
-		var event epb.Event
-		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
-			if err = msg.Ack(false); err != nil {
-				log.Error("Failed to acknowledge the delivery", zap.Error(err))
-			}
-			continue
-		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
-		if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
-			ps.HandleAckNack(log, msg, err)
-			continue
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Error("Failed to acknowledge the delivery", zap.Error(err))
-		}
-	}
 }
 
 func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx context.Context, event *epb.Event) error {
