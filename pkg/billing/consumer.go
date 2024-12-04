@@ -33,7 +33,7 @@ func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, 
 
 	for msg := range msgs {
 		log.Debug("routine key", zap.String("key", msg.RoutingKey))
-		if msg.RoutingKey == billing.Topic("whmcs-events") {
+		if msg.RoutingKey == msg.Exchange+"."+billing.Topic("whmcs-events") {
 			var event epb.Event
 			if err = proto.Unmarshal(msg.Body, &event); err != nil {
 				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
@@ -58,7 +58,7 @@ func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, 
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
-		} else if msg.RoutingKey == billing.Topic("invoices") {
+		} else if msg.RoutingKey == msg.Exchange+"."+billing.Topic("invoices") {
 			var event epb.Event
 			if err = proto.Unmarshal(msg.Body, &event); err != nil {
 				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
