@@ -65,14 +65,11 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	}
 	prepare(a)
 	prepare(b)
-	fmt.Println("comparing items len")
 	if len(a.Items) != len(b.Items) {
 		return false
 	}
-	fmt.Println("comparing items")
 	for i := range a.Items {
 		if a.Items[i] == nil && b.Items[i] != nil || b.Items[i] == nil && a.Items[i] != nil {
-			fmt.Println("item is nil")
 			return false
 		}
 		if a.Items[i] == nil {
@@ -81,11 +78,9 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 		i1 := a.Items[i]
 		i2 := b.Items[i]
 		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit {
-			fmt.Println("item is not equal")
 			return false
 		}
 		if !equalFloats(i1.Price, i2.Price) {
-			fmt.Println("item is not equal in price")
 			return false
 		}
 	}
@@ -94,7 +89,6 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	if (_a.Currency == nil && _b.Currency != nil) ||
 		(_a.Currency != nil && _b.Currency == nil) ||
 		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
-		fmt.Println("currency is not equal")
 		return false
 	}
 	_a.Currency = nil
@@ -105,17 +99,10 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	_b.Total = 0
 	patch, err := jsondiff.Compare(_a, _b)
 	if err != nil {
-		fmt.Println("Error while comparing invoices", err)
+		fmt.Println("error while comparing invoices", err)
 		return false
 	}
-	if len(patch) > 0 {
-		for i, p := range patch {
-			fmt.Println("Patch difference", i, p.String())
-		}
-		return false
-	}
-	fmt.Println("Invoices are equal")
-	return true
+	return len(patch) == 0
 }
 
 var forbiddenStatusConversions = make([]pair[pb.BillingStatus], 0)
@@ -208,12 +195,12 @@ func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery strin
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetInvoice")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	req := r.Msg
-	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
-	acc := requestor
+	acc := requester
 
 	query := `FOR t IN @@invoices`
 	vars := map[string]interface{}{
@@ -228,13 +215,13 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) && requestor != req.GetAccount() {
+		if !s.ca.HasAccess(ctx, requester, node, access.Level_ADMIN) && requester != req.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
 	} else {
-		if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 			query += ` FILTER t.account == @acc && t.status != @statusDraft && t.status != @statusTerm`
 			vars["acc"] = acc
 			vars["statusDraft"] = pb.BillingStatus_DRAFT
@@ -583,7 +570,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	log := s.log.Named("PayWithBalance")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requester))
+	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
 	if req.WhmcsId != 0 {
 		return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
