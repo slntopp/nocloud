@@ -11,6 +11,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/pubsub/billing"
 	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
 	"golang.org/x/sync/errgroup"
+	"math"
 	"slices"
 	"strings"
 	"sync"
@@ -38,9 +39,17 @@ type pair[T any] struct {
 	s T
 }
 
+func equalFloats(a, b float64) bool {
+	const equalFloatsEpsilon = 0.0001
+	return a == b || math.Abs(a-b) < equalFloatsEpsilon
+}
+
 func invoicesEqual(a, b *pb.Invoice) bool {
 	if a == nil || b == nil {
 		return false
+	}
+	if a.Items == nil {
+		a.Items = []*pb.Item{}
 	}
 	if a.Transactions == nil {
 		a.Transactions = []string{}
@@ -51,6 +60,9 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	if a.Meta == nil {
 		a.Meta = make(map[string]*structpb.Value)
 	}
+	if b.Items == nil {
+		b.Items = []*pb.Item{}
+	}
 	if b.Transactions == nil {
 		b.Transactions = []string{}
 	}
@@ -59,6 +71,22 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	}
 	if b.Meta == nil {
 		b.Meta = make(map[string]*structpb.Value)
+	}
+	if len(a.Items) != len(b.Items) {
+		return false
+	}
+	for i := range a.Items {
+		if a.Items[i] == nil && b.Items[i] != nil || b.Items[i] == nil && a.Items[i] != nil {
+			return false
+		}
+		if a.Items[i] == nil {
+			continue
+		}
+		i1 := a.Items[i]
+		i2 := b.Items[i]
+		if i1.Amount != i2.Amount || i1.Description != i2.Description || !equalFloats(i1.Price, i2.Price) || i1.Unit != i2.Unit {
+			return false
+		}
 	}
 	_a := proto.Clone(a).(*pb.Invoice)
 	_b := proto.Clone(b).(*pb.Invoice)
@@ -69,12 +97,14 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	}
 	_a.Currency = nil
 	_b.Currency = nil
+	_a.Items = nil
+	_b.Items = nil
 	_a.Total = 0 // It calculated based on items anyway
 	_b.Total = 0
 	return proto.Equal(_a, _b)
 }
 
-var forbiddenStatusConversions = []pair[pb.BillingStatus]{}
+var forbiddenStatusConversions = make([]pair[pb.BillingStatus], 0)
 
 const instanceOwner = `
 LET account = LAST( // Find Instance owner Account
