@@ -12,6 +12,8 @@ import (
 )
 
 const DEFAULT_EXCHANGE = "nocloud"
+const dlx = "nocloud.dlx"
+const dlxQueue = "dlx-queue"
 
 var errNoNack = errors.New("no nack")
 
@@ -29,9 +31,11 @@ type PubSub[T proto.Message] struct {
 }
 
 type ConsumeOptions struct {
-	Durable   bool
-	NoWait    bool
-	Exclusive bool
+	Durable    bool
+	NoWait     bool
+	Exclusive  bool
+	WithRetry  bool
+	MaxRetries int
 }
 
 func HandleAckNack(log *zap.Logger, del amqp091.Delivery, err error) {
@@ -75,15 +79,19 @@ func (ps *PubSub[T]) Channel() rabbitmq.Channel {
 
 func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOptions) (<-chan amqp091.Delivery, error) {
 	var (
-		exclusive bool
-		durable   = true
-		noWait    bool
+		exclusive  bool
+		durable    = true
+		noWait     bool
+		withRetry  = true
+		maxRetries = 3
 	)
 	if len(options) > 0 {
 		o := options[0]
 		exclusive = o.Exclusive
 		durable = o.Durable
 		noWait = o.NoWait
+		withRetry = o.WithRetry
+		maxRetries = o.MaxRetries
 	}
 	topic = exchange + "." + topic
 
@@ -94,6 +102,30 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		return nil, err
 	}
 
+	var dlxQ *amqp091.Queue
+	if withRetry {
+		err = ch.ExchangeDeclare(dlx, "topic", durable, false, false, false, nil)
+		if err != nil {
+			log.Error("Failed to declare a dlx", zap.Error(err))
+			return nil, err
+		}
+		_dlxQ, err := ch.QueueDeclare(name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
+			"x-dead-letter-exchange": exchange,
+			"x-overflow":             "reject-publish",
+			"x-message-ttl":          5000,
+		})
+		if err != nil {
+			log.Error("Failed to declare a dlx queue", zap.Error(err))
+			return nil, err
+		}
+		err = ch.QueueBind(_dlxQ.Name, topic, dlx, false, nil)
+		if err != nil {
+			log.Error("Failed to bind dlx queue", zap.Error(err))
+			return nil, err
+		}
+		dlxQ = &_dlxQ
+	}
+
 	if exchange != "" {
 		if err := ch.ExchangeDeclare(exchange, "topic", durable, false, false, noWait, nil); err != nil {
 			log.Error("Failed to declare a exchange", zap.Error(err))
@@ -101,7 +133,13 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		}
 	}
 
-	q, err := ch.QueueDeclare(name, durable, false, exclusive, noWait, nil)
+	var params amqp091.Table
+	if withRetry {
+		params = amqp091.Table{
+			"x-dead-letter-exchange": dlx,
+		}
+	}
+	q, err := ch.QueueDeclare(name, durable, false, exclusive, noWait, params)
 	if err != nil {
 		log.Error("Failed to declare a queue", zap.Error(err))
 		return nil, err
@@ -121,6 +159,9 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		return nil, err
 	}
 
+	if dlxQ != nil {
+		go ps.consumeDlx(log, ch, dlxQ.Name, maxRetries)
+	}
 	return msgs, nil
 }
 
@@ -169,4 +210,45 @@ func (ps *PubSub[T]) ConsumerInit(name, exchange, topic string, processor func(o
 		}
 	}()
 	return nil
+}
+
+func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue string, maxRetries int) {
+	log = log.Named("DLX." + dlxQueue)
+
+	msgs, err := ch.Consume(dlxQueue, dlxQueue, false, false, false, false, nil)
+	if err != nil {
+		log.Fatal("Failed to register a dlx consumer", zap.Error(err))
+	}
+
+	for msg := range msgs {
+		log.Info("Received a message from dlx", zap.Any("routine_key", msg.RoutingKey))
+		var req T
+		err := proto.Unmarshal(msg.Body, req)
+		if err != nil {
+			log.Error("Failed to unmarshal request", zap.Error(err))
+			continue
+		}
+		log.Info("Unmarshalled message", zap.Any("message", req))
+		if msg.Headers["x-death"] != nil {
+			deaths := msg.Headers["x-death"].([]interface{})
+			log.Info("Dead lettered message info", zap.Any("deaths", deaths))
+			total := int64(0)
+			for _, death := range deaths {
+				deathMap := death.(amqp091.Table)
+				count := deathMap["count"].(int64)
+				total += count
+			}
+			if total > int64(maxRetries) {
+				log.Info("Max retries reached", zap.Int64("total", total))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to ack the delivery", zap.Error(err))
+				}
+				continue
+			}
+			log.Info("Retrying again", zap.Int64("current", total), zap.Int("max", maxRetries))
+			if err = msg.Nack(false, false); err != nil {
+				log.Error("Failed to nack the delivery", zap.Error(err))
+			}
+		}
+	}
 }
