@@ -183,7 +183,7 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 		return fmt.Errorf("failed to update invoice: %w", err)
 	}
 
-	return nil
+	return commit()
 }
 
 func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
