@@ -32,6 +32,7 @@ func (s *BillingServiceServer) ConsumeInvoiceBackwardWhmcsSync(log *zap.Logger, 
 	}
 
 	for msg := range msgs {
+		log.Debug("routine key", zap.String("key", msg.RoutingKey))
 		if msg.RoutingKey == billing.Topic("whmcs-events") {
 			var event epb.Event
 			if err = proto.Unmarshal(msg.Body, &event); err != nil {
