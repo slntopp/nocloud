@@ -10,6 +10,7 @@ import (
 	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"github.com/slntopp/nocloud/pkg/pubsub/billing"
 	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
+	"github.com/wI2L/jsondiff"
 	"golang.org/x/sync/errgroup"
 	"math"
 	"slices"
@@ -93,7 +94,18 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	_b.Items = nil
 	_a.Total = 0 // It calculated based on items anyway
 	_b.Total = 0
-	return proto.Equal(_a, _b)
+	patch, err := jsondiff.Compare(_a, _b)
+	if err != nil {
+		fmt.Println("Error while comparing invoices", err)
+		return false
+	}
+	if len(patch) > 0 {
+		for i, p := range patch {
+			fmt.Println("Patch difference", i, p.String())
+		}
+		return false
+	}
+	return true
 }
 
 var forbiddenStatusConversions = make([]pair[pb.BillingStatus], 0)
