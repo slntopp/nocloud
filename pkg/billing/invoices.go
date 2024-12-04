@@ -1268,7 +1268,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
 			if err != nil {
 				log.Error("Failed to get instance to start", zap.Error(err))
-				continue
+				return nil, fmt.Errorf("failed to get instance to start: %w", err)
 			}
 			instOld.Uuid = instOld.Key
 			// Set auto_start to true. After next driver monitoring instance will be started
@@ -1278,10 +1278,6 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			cfg := instNew.Config
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
-			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err))
-				continue
-			}
 			// Add balance to compensate instance first payment
 			acc, err := s.instances.GetInstanceOwner(ctx, i)
 			if err != nil {
@@ -1299,6 +1295,11 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency())
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
+			}
+			// Update instance in the end due to publish operations inside
+			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
+				log.Error("Failed to update instance", zap.Error(err))
+				return nil, fmt.Errorf("failed to update instance: %w", err)
 			}
 		}
 
@@ -1346,11 +1347,11 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 		tr, err := s.transactions.Get(ctx, trId)
 		if err != nil {
 			log.Error("Failed to get transaction", zap.Error(err))
-			continue
+			return nil, fmt.Errorf("failed to get transaction: %w", err)
 		}
 		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency()); err != nil {
 			log.Error("Failed to apply transaction", zap.Error(err))
-			continue
+			return nil, fmt.Errorf("failed to apply transaction: %w", err)
 		}
 		if tr != nil {
 			transactions = append(transactions, tr.GetUuid())

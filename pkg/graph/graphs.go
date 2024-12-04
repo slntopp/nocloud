@@ -41,6 +41,7 @@ type ContextKey string
 
 const (
 	AQLTransactionContextKey ContextKey = "aql-transaction"
+	hasEmbeddedTransaction   ContextKey = "has-embedded-transaction"
 )
 
 type TransactionsAPI interface {
@@ -66,6 +67,48 @@ func Round(amount float64, precision int32, mode pb.Rounding) float64 {
 	} else {
 		return math.Floor(amount*math.Pow10(int(precision))) / math.Pow10(int(precision))
 	}
+}
+
+func BeginTransaction(ctx context.Context, db driver.Database, cols driver.TransactionCollections) (context.Context, error) {
+	if _, ok := driver.HasTransactionID(ctx); ok {
+		return context.WithValue(ctx, hasEmbeddedTransaction, true), nil
+	}
+	trID, err := db.BeginTransaction(ctx, cols, &driver.BeginTransactionOptions{})
+	if err != nil {
+		return ctx, fmt.Errorf("error while starting transaction: %w", err)
+	}
+	ctx = driver.WithTransactionID(ctx, trID)
+	return context.WithValue(ctx, hasEmbeddedTransaction, false), nil
+}
+
+func AbortTransaction(ctx context.Context, db driver.Database) error {
+	trID, ok := driver.HasTransactionID(ctx)
+	if !ok {
+		return nil
+	}
+	if val, ok := ctx.Value(hasEmbeddedTransaction).(bool); ok && val {
+		return nil
+	}
+	err := db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
+	if err != nil {
+		return fmt.Errorf("error while aborting transaction: %w", err)
+	}
+	return nil
+}
+
+func CommitTransaction(ctx context.Context, db driver.Database) error {
+	trID, ok := driver.HasTransactionID(ctx)
+	if !ok {
+		return nil
+	}
+	if val, ok := ctx.Value(hasEmbeddedTransaction).(bool); ok && val {
+		return nil
+	}
+	err := db.CommitTransaction(ctx, trID, &driver.CommitTransactionOptions{})
+	if err != nil {
+		return fmt.Errorf("error while committing transaction: %w", err)
+	}
+	return nil
 }
 
 func deleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {

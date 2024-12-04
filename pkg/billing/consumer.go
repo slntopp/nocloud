@@ -122,13 +122,41 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 
 	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
+	ctx, err := graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
+		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.INSTANCES_COL, schema.INVOICES_COL, schema.ACCOUNTS_COL},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to start transaction: %w", err)
+	}
+	abort := func() {
+		if err := graph.AbortTransaction(ctx, s.db); err != nil {
+			log.Error("Failed to abort transaction")
+		}
+	}
+	commit := func() error {
+		if err := graph.CommitTransaction(ctx, s.db); err != nil {
+			log.Error("Failed to commit transaction")
+			return err
+		}
+		return nil
+	}
+
 	inv, err := s.invoices.Get(ctx, event.GetUuid())
 	if err != nil {
+		abort()
 		return fmt.Errorf("failed to get invoice: %w", err)
 	}
 
+	// No Nack error means that situation is not reversible, so we basically commit transaction with scary log if we got this error
+	// Otherwise we're reverting entire operation by aborting transaction
+
 	if event.GetKey() == billing.InvoicePaid {
 		if inv, err = s.executePostPaidActions(ctx, log, inv, currConf.Currency); err != nil {
+			if ps.IsNoNackErr(err) {
+				_ = commit()
+			} else {
+				abort()
+			}
 			return fmt.Errorf("failed to execute postpaid actions: %w", err)
 		}
 		inv.Processed = time.Now().Unix()
@@ -136,13 +164,23 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 
 	if event.GetKey() == billing.InvoiceReturned {
 		if inv, err = s.executePostRefundActions(ctx, log, inv); err != nil {
+			if ps.IsNoNackErr(err) {
+				_ = commit()
+			} else {
+				abort()
+			}
 			return fmt.Errorf("failed to execute postrefund actions: %w", err)
 		}
 	}
 
 	if _, err = s.invoices.Update(ctx, inv); err != nil {
 		log.Error("Failed to update invoice after actions were applied", zap.Error(err))
-		return ps.NoNackErr(fmt.Errorf("failed to update invoice: %w", err))
+		if inv.GetType() == bpb.ActionType_INSTANCE_RENEWAL || inv.GetType() == bpb.ActionType_INSTANCE_START {
+			_ = commit()
+			return ps.NoNackErr(fmt.Errorf("failed to update invoice: %w", err))
+		}
+		abort()
+		return fmt.Errorf("failed to update invoice: %w", err)
 	}
 
 	return nil
