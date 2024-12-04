@@ -65,11 +65,14 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	}
 	prepare(a)
 	prepare(b)
+	fmt.Println("comparing items len")
 	if len(a.Items) != len(b.Items) {
 		return false
 	}
+	fmt.Println("comparing items")
 	for i := range a.Items {
 		if a.Items[i] == nil && b.Items[i] != nil || b.Items[i] == nil && a.Items[i] != nil {
+			fmt.Println("item is nil")
 			return false
 		}
 		if a.Items[i] == nil {
@@ -77,7 +80,12 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 		}
 		i1 := a.Items[i]
 		i2 := b.Items[i]
-		if i1.Amount != i2.Amount || i1.Description != i2.Description || !equalFloats(i1.Price, i2.Price) || i1.Unit != i2.Unit {
+		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit {
+			fmt.Println("item is not equal")
+			return false
+		}
+		if !equalFloats(i1.Price, i2.Price) {
+			fmt.Println("item is not equal in price")
 			return false
 		}
 	}
@@ -86,6 +94,7 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	if (_a.Currency == nil && _b.Currency != nil) ||
 		(_a.Currency != nil && _b.Currency == nil) ||
 		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
+		fmt.Println("currency is not equal")
 		return false
 	}
 	_a.Currency = nil
@@ -105,6 +114,7 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 		}
 		return false
 	}
+	fmt.Println("Invoices are equal")
 	return true
 }
 
