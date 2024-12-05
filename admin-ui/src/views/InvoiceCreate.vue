@@ -505,6 +505,7 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       router.push({ name: "Invoices" });
     } else {
       data.uuid = invoice.value.uuid;
+      data.number = invoice.value.number;
 
       if (newInvoice.value.created) {
         data.created = getInvoiceDateTs(
