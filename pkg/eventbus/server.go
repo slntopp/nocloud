@@ -127,10 +127,13 @@ init:
 		goto init
 	}
 
-	queue, _ := ch.QueueDeclare(
+	queue, err := ch.QueueDeclare(
 		"events",
 		true, false, false, false, nil,
 	)
+	if err != nil {
+		log.Fatal("Failed to declare a queue", zap.Error(err))
+	}
 
 	events, err := ch.Consume(queue.Name, "events", false, false, false, false, nil)
 	if err != nil {
