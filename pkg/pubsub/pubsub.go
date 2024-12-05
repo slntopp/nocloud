@@ -265,10 +265,9 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 	}
 
 	for msg := range msgs {
-		log.Info("Received a message from dlx", zap.Any("routine_key", msg.RoutingKey), zap.String("exchange", msg.Exchange))
+		log := log.With(zap.String("routing_key", msg.RoutingKey))
 		if msg.Headers["x-death"] != nil {
 			deaths := msg.Headers["x-death"].([]interface{})
-			log.Info("Dead lettered message info", zap.Any("deaths", deaths))
 			total := int64(0)
 			if len(deaths) == 0 {
 				goto nack
@@ -283,20 +282,20 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 			}
 			total--
 			if total >= int64(maxRetries) {
-				log.Info("Max retries reached", zap.Int64("retries_did", total), zap.Int("max", maxRetries))
+				log.Debug("Max retries reached", zap.Int64("retries_done", total), zap.Int("max", maxRetries))
 				if err = msg.Ack(false); err != nil {
 					log.Error("Failed to ack the delivery", zap.Error(err))
 				}
 				continue
 			}
 		nack:
-			log.Info("Retrying again", zap.Int64("current", total+1), zap.Int("max", maxRetries))
+			log.Debug("Retrying...", zap.Int64("current_retry", total+1), zap.Int("max", maxRetries))
 			if err = msg.Nack(false, false); err != nil {
 				log.Error("Failed to nack the delivery", zap.Error(err))
 			}
 			continue
 		}
-		log.Info("x-death not found", zap.Any("routine_key", msg.RoutingKey))
+		log.Error("Header x-death not found. This should not happen in DLX queue")
 		if err = msg.Ack(false); err != nil {
 			log.Error("Failed to ack the delivery", zap.Error(err))
 		}
