@@ -40,9 +40,9 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 			}
 			continue
 		}
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
 		if event.Type == "whmcs-event" {
-			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 			body, ok := event.GetData()["body"]
 			if !ok {
 				log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
@@ -60,7 +60,6 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 			}
 			// Handle nocloud create/update invoices events to sync whmcs invoices with them
 		} else if event.GetUuid() != "" {
-			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 			if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
 				ps.HandleAckNack(log, msg, err)
 				continue
