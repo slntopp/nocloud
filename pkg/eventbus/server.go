@@ -154,12 +154,6 @@ init:
 		}
 		log.Debug("Received a message", zap.String("routine_key", msg.RoutingKey), zap.Any("event", event))
 
-		log.Info("ignoring")
-		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-		}
-		continue
-
 		handler, ok := handlers[event.Key]
 		if !ok {
 			log.Warn("Handler not fount", zap.String("handler", event.Key))
