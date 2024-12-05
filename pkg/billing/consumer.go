@@ -23,38 +23,6 @@ import (
 	"time"
 )
 
-func (s *BillingServiceServer) DebugConsumer(log *zap.Logger, _ context.Context, p *ps.PubSub[*epb.Event]) {
-	log = log.Named("DebugConsumer")
-	opt := ps.ConsumeOptions{
-		Durable:    true,
-		NoWait:     false,
-		Exclusive:  false,
-		WithRetry:  false,
-		DelayMilli: 0,
-		MaxRetries: 0,
-	}
-	msgs, err := p.Consume(".", "", "", opt)
-	if err != nil {
-		log.Fatal("Failed to start consumer")
-		return
-	}
-	for msg := range msgs {
-		log := log.With(zap.String("routing_key", msg.RoutingKey))
-		var event epb.Event
-		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event", zap.Error(err))
-			if err = msg.Ack(false); err != nil {
-				log.Error("Failed to acknowledge the delivery", zap.Error(err))
-			}
-			continue
-		}
-		log.Debug("Got event from '.' queue", zap.Any("event", event))
-		if err = msg.Ack(false); err != nil {
-			log.Error("Failed to acknowledge the delivery", zap.Error(err))
-		}
-	}
-}
-
 func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
 	log = log.Named("ConsumeWhmcsSync")
 	opt := ps.ConsumeOptions{

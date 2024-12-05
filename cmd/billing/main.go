@@ -263,7 +263,6 @@ func main() {
 	go server.ConsumeInvoiceStatusActions(log, ctx, ps)
 	go server.ConsumeCreatedInstances(log, ctx, ps)
 	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw)
-	go server.DebugConsumer(log, ctx, ps)
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
