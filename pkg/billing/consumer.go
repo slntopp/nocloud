@@ -30,8 +30,8 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 		NoWait:     false,
 		Exclusive:  false,
 		WithRetry:  true,
-		DelayMilli: 10 * 1000, // Every 5 minute
-		MaxRetries: 15,        // 3 hours in general
+		DelayMilli: 150 * 1000, // Every 2.5 minute
+		MaxRetries: 72,         // 3 hours in general
 	}
 	msgs, err := p.Consume("whmcs-syncer", ps.DEFAULT_EXCHANGE, billing.Topic("#"), opt)
 	if err != nil {
@@ -102,7 +102,6 @@ func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx cont
 	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
 
 	if event.GetKey() == billing.InvoiceCreated {
-		return fmt.Errorf("error for test")
 		if err = gw.CreateInvoice(ctx, inv.Invoice); err != nil {
 			return fmt.Errorf("failed to create invoice on whmcs: %w", err)
 		}
