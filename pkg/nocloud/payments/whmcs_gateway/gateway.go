@@ -3,6 +3,7 @@ package whmcs_gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/go-querystring/query"
 	"github.com/google/uuid"
@@ -426,6 +427,9 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	}
 	inv, err := g.getInvoiceByWhmcsId(invoiceId)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return ps.NoNackErr(fmt.Errorf("error syncWhmcsInvoice: %w", err))
+		}
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 
