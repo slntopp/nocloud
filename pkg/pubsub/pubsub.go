@@ -259,15 +259,16 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 				count := deathMap["count"].(int64)
 				total += count
 			}
-			if total > int64(maxRetries) {
-				log.Info("Max retries reached", zap.Int64("total", total))
+			total--
+			if total >= int64(maxRetries) {
+				log.Info("Max retries reached", zap.Int64("retries_did", total), zap.Int("max", maxRetries))
 				if err = msg.Ack(false); err != nil {
 					log.Error("Failed to ack the delivery", zap.Error(err))
 				}
 				continue
 			}
 		nack:
-			log.Info("Retrying again", zap.Int64("current", total), zap.Int("max", maxRetries))
+			log.Info("Retrying again", zap.Int64("current", total+1), zap.Int("max", maxRetries))
 			if err = msg.Nack(false, false); err != nil {
 				log.Error("Failed to nack the delivery", zap.Error(err))
 			}
