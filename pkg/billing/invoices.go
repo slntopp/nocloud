@@ -1297,7 +1297,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			log := log.With(zap.String("instance", i))
 
 			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
-			if err != nil {
+			if err != nil || instOld.Instance == nil {
 				log.Error("Failed to get instance to start", zap.Error(err))
 				return nil, fmt.Errorf("failed to get instance to start: %w", err)
 			}
