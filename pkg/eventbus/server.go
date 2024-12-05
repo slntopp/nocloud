@@ -129,10 +129,10 @@ init:
 
 	queue, _ := ch.QueueDeclare(
 		"events",
-		true, false, false, true, nil,
+		true, false, false, false, nil,
 	)
 
-	events, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	events, err := ch.Consume(queue.Name, "events", false, false, false, false, nil)
 	if err != nil {
 		log.Error("Failed to register a consumer", zap.Error(err))
 		time.Sleep(time.Second)
