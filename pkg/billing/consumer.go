@@ -32,16 +32,16 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 	}
 
 	for msg := range msgs {
-		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
-		if msg.RoutingKey == msg.Exchange+"."+billing.Topic("whmcs-events") {
-			var event epb.Event
-			if err = proto.Unmarshal(msg.Body, &event); err != nil {
-				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
-				if err = msg.Ack(false); err != nil {
-					log.Error("Failed to acknowledge the delivery", zap.Error(err))
-				}
-				continue
+		var event epb.Event
+		if err = proto.Unmarshal(msg.Body, &event); err != nil {
+			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
+			continue
+		}
+		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
+		if event.Type == "whmcs-event" {
 			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 			body, ok := event.GetData()["body"]
 			if !ok {
@@ -59,15 +59,7 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
 			// Handle nocloud create/update invoices events to sync whmcs invoices with them
-		} else if msg.RoutingKey == msg.Exchange+"."+billing.Topic("invoices") {
-			var event epb.Event
-			if err = proto.Unmarshal(msg.Body, &event); err != nil {
-				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
-				if err = msg.Ack(false); err != nil {
-					log.Error("Failed to acknowledge the delivery", zap.Error(err))
-				}
-				continue
-			}
+		} else if event.GetUuid() != "" {
 			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 			if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
 				ps.HandleAckNack(log, msg, err)
