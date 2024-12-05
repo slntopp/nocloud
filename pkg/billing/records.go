@@ -272,6 +272,8 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			}
 		}
 	}
+
+	log.Info("Record processed", zap.String("record_id", recordId.Key()))
 	return nil
 }
 
