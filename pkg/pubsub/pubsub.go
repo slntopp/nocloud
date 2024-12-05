@@ -110,7 +110,9 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 			return nil, err
 		}
 	retryDlxQ:
-		_dlxQ, err := ch.QueueDeclare(name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{})
+		_dlxQ, err := ch.QueueDeclare(name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
+			"x-dead-letter-exchange": exchange,
+		})
 		if err != nil {
 			var amqpErr amqp091.Error
 			if errors.As(err, &amqpErr) {
