@@ -43,6 +43,11 @@ retry:
 	q, err := ch.QueueDeclare(name, durable, autoDelete, exclusive, noWait, args)
 	if err != nil {
 		if strings.Contains(err.Error(), "PRECONDITION_FAILED") && !retried {
+			ch, err := conn.Channel()
+			if err != nil {
+				return amqp091.Queue{}, fmt.Errorf("failed to open new channel: %w", err)
+			}
+			defer ch.Close()
 			if _, err = ch.QueueDelete(name, false, false, false); err != nil {
 				return amqp091.Queue{}, err
 			}
