@@ -1,16 +1,28 @@
 <template>
-  <v-chip :small="small" :color="chipColor">
+  <v-chip v-if="!onlyColor" :small="small" :color="chipColor">
     {{ state }} {{ isDetached ? "(Hided)" : "" }}
     {{ isFreezed ? "(Freezed)" : "" }}
   </v-chip>
+  <v-btn
+    v-else
+    fab
+    :color="chipColor"
+    x-small
+    style="width: 15px; height: 15px"
+  >
+  </v-btn>
 </template>
 
 <script setup>
 import { computed, toRefs } from "vue";
 import { getState } from "@/functions";
 
-const props = defineProps(["template", "small"]);
-const { template } = toRefs(props);
+const props = defineProps({
+  template: {},
+  small: {},
+  onlyColor: { type: Boolean, default: false },
+});
+const { template, onlyColor } = toRefs(props);
 
 const state = computed(() => {
   return getState(template.value);
