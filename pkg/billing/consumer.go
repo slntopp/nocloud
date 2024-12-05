@@ -48,7 +48,7 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 			}
 			continue
 		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routing_key", msg.RoutingKey))
 		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
 		if event.Type == "whmcs-event" {
 			body, ok := event.GetData()["body"]
