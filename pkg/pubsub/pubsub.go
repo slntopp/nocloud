@@ -104,23 +104,26 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 
 	var dlxQ *amqp091.Queue
 	if withRetry {
-		err = ch.ExchangeDeclare(dlx, "topic", durable, false, false, false, nil)
+		err = ch.ExchangeDeclare(dlx, "direct", durable, false, false, false, nil)
 		if err != nil {
 			log.Error("Failed to declare a dlx", zap.Error(err))
 			return nil, err
 		}
-		_dlxQ, err := ch.QueueDeclare(name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
-			"x-dead-letter-exchange":    exchange,
-			"x-dead-letter-routing-key": name,
-			"x-overflow":                "reject-publish",
-			"x-message-ttl":             5000,
-		})
+	retryDlxQ:
+		_dlxQ, err := ch.QueueDeclare(name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{})
 		if err != nil {
+			var amqpErr amqp091.Error
+			if errors.As(err, &amqpErr) {
+				if amqpErr.Code == amqp091.PreconditionFailed {
+					if _, err = ch.QueueDelete(name+"."+dlxQueue, false, false, false); err == nil {
+						goto retryDlxQ
+					}
+				}
+			}
 			log.Error("Failed to declare a dlx queue", zap.Error(err))
 			return nil, err
 		}
-		err = ch.QueueBind(_dlxQ.Name, topic, dlx, false, nil)
-		if err != nil {
+		if err = ch.QueueBind(_dlxQ.Name, name, dlx, false, nil); err != nil {
 			log.Error("Failed to bind dlx queue", zap.Error(err))
 			return nil, err
 		}
@@ -138,7 +141,8 @@ retry:
 	var params amqp091.Table
 	if withRetry {
 		params = amqp091.Table{
-			"x-dead-letter-exchange": dlx,
+			"x-dead-letter-exchange":    dlx,
+			"x-dead-letter-routing-key": name,
 		}
 	}
 	q, err := ch.QueueDeclare(name, durable, false, exclusive, noWait, params)
@@ -160,6 +164,13 @@ retry:
 		if err != nil {
 			log.Error("Failed to bind a queue", zap.Error(err))
 			return nil, err
+		}
+		if withRetry {
+			err = ch.QueueBind(q.Name, q.Name, exchange, false, nil)
+			if err != nil {
+				log.Error("Failed to bind a queue", zap.Error(err))
+				return nil, err
+			}
 		}
 	}
 
