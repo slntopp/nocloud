@@ -143,7 +143,6 @@ init:
 	}
 
 	for msg := range events {
-		log.Debug("Received a message")
 		var event pb.Event
 		err = proto.Unmarshal(msg.Body, &event)
 		if err != nil {
@@ -153,6 +152,7 @@ init:
 			}
 			continue
 		}
+		log.Debug("Received a message", zap.String("routine_key", msg.RoutingKey), zap.Any("event", event))
 
 		handler, ok := handlers[event.Key]
 		if !ok {
