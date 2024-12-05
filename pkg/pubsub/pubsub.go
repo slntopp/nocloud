@@ -32,9 +32,13 @@ func NoNackErr(err error) error {
 	return fmt.Errorf("%w: %w", errNoNack, err)
 }
 
-func queueDeclare(ch rabbitmq.Channel, name string, durable, autoDelete, exclusive, noWait bool, args amqp091.Table) (amqp091.Queue, error) {
+func queueDeclare(conn rabbitmq.Connection, name string, durable, autoDelete, exclusive, noWait bool, args amqp091.Table) (amqp091.Queue, error) {
 	retried := false
 retry:
+	ch, err := conn.Channel()
+	if err != nil {
+		return amqp091.Queue{}, fmt.Errorf("failed to open new channel: %w", err)
+	}
 	q, err := ch.QueueDeclare(name, durable, autoDelete, exclusive, noWait, args)
 	if err != nil {
 		if strings.Contains(err.Error(), "PRECONDITION_FAILED") && !retried {
@@ -141,7 +145,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 			log.Error("Failed to declare a dlx ttl", zap.Error(err))
 			return nil, err
 		}
-		dlxQ, err := queueDeclare(ch, name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
+		dlxQ, err := queueDeclare(ps.conn, name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
 			"x-dead-letter-exchange": dlxTTL,
 		})
 		if err != nil {
@@ -149,7 +153,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 			return nil, err
 		}
 		queueDlx = dlxQ
-		dlxQTtl, err := queueDeclare(ch, name+"."+dlxQueueTTL, durable, false, false, false, map[string]interface{}{
+		dlxQTtl, err := queueDeclare(ps.conn, name+"."+dlxQueueTTL, durable, false, false, false, map[string]interface{}{
 			"x-dead-letter-exchange": exchange,
 			"x-message-ttl":          delayMilli,
 		})
@@ -181,7 +185,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 			"x-dead-letter-routing-key": name,
 		}
 	}
-	q, err := queueDeclare(ch, name, durable, false, exclusive, noWait, params)
+	q, err := queueDeclare(ps.conn, name, durable, false, exclusive, noWait, params)
 	if err != nil {
 		log.Error("Failed to declare a queue", zap.Error(err))
 		return nil, err
