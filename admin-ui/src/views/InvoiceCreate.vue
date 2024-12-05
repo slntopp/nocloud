@@ -65,7 +65,27 @@
             :items="instances"
             @change="onChangeInstance"
             :loading="isInstancesLoading"
-          />
+          >
+            <template v-slot:selection="{ item }">
+              <div class="mr-1">
+                <span>
+                  {{ item.title }}
+                  ({{ item.uuid.slice(0, 6) }})
+                </span>
+              </div>
+              <instance-state only-color small :template="item" />
+            </template>
+
+            <template v-slot:item="{ item }">
+              <div>
+                <span>
+                  {{ item.title }}
+                  ({{ item.uuid.slice(0, 6) }})
+                </span>
+                <instance-state only-color small :template="item" />
+              </div>
+            </template>
+          </v-autocomplete>
         </div>
 
         <div class="item" v-if="isBalanceInvoice">
@@ -313,6 +333,7 @@ import {
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import useInvoices from "../hooks/useInvoices";
 import confirmDialog from "@/components/confirmDialog.vue";
+import InstanceState from "@/components/ui/instanceState.vue";
 
 const props = defineProps({
   invoice: {},
@@ -617,6 +638,7 @@ const onChangeAccount = async () => {
     const data = await instancesAccountMap.value[account];
 
     instancesAccountMap.value[account] = data.map((response) => ({
+      ...response,
       uuid: response.uuid,
       title: response.title,
       price: response.estimate,
@@ -647,7 +669,7 @@ const onChangeInstance = () => {
     );
 
     if (existedProduct) {
-      newItems.push(existedProduct);
+      newItems.push(JSON.parse(JSON.stringify(existedProduct)));
     } else {
       newItems.push({
         price: price,
