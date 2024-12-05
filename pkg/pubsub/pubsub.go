@@ -5,9 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
 	"time"
 )
@@ -283,6 +287,27 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 			total--
 			if total >= int64(maxRetries) {
 				log.Debug("Max retries reached", zap.Int64("retries_done", total), zap.Int("max", maxRetries))
+				obj := structpb.Value{}
+				if err = proto.Unmarshal(msg.Body, &obj); err != nil {
+					log.Error("Failed to unmarshal event tol structpb.Value", zap.Error(err))
+				}
+				b, err := protojson.Marshal(&obj)
+				if err != nil {
+					log.Error("Failed to marshal event to json", zap.Error(err))
+				}
+				nocloud.Log(log, &elpb.Event{
+					Entity:    "system",
+					Uuid:      "no_uuid",
+					Scope:     "errors",
+					Action:    "system_action_deadlined",
+					Rc:        int32(total),
+					Requestor: "system",
+					Ts:        time.Now().Unix(),
+					Priority:  1,
+					Snapshot: &elpb.Snapshot{
+						Diff: fmt.Sprintf("System action were declined after max retries (%d). RoutineKey: %s; RawDeliveredMessage: %s", total, msg.RoutingKey, string(b)),
+					},
+				})
 				if err = msg.Ack(false); err != nil {
 					log.Error("Failed to ack the delivery", zap.Error(err))
 				}
