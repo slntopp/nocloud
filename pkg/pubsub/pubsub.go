@@ -311,6 +311,7 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 				if err != nil {
 					log.Error("Failed to marshal message. Probably couldn't find proto.Message type", zap.Error(err))
 				}
+				diffTmpl := `{"value":"%s","op":"ERROR","path":"LOG"}`
 				nocloud.Log(log, &elpb.Event{
 					Entity:    "system",
 					Uuid:      "no_uuid",
@@ -321,7 +322,9 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 					Ts:        time.Now().Unix(),
 					Priority:  1,
 					Snapshot: &elpb.Snapshot{
-						Diff: fmt.Sprintf("System action were declined after max retries (%d). RoutineKey: %s; RawDeliveredMessage: %s", total, msg.RoutingKey, string(js)),
+						Diff: fmt.Sprintf(diffTmpl,
+							fmt.Sprintf("System action were declined after max retries (%d). RoutineKey: %s; RawDeliveredMessage: %s",
+								total, msg.RoutingKey, string(js))),
 					},
 				})
 				if err = msg.Ack(false); err != nil {
