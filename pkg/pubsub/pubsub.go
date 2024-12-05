@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rabbitmq/amqp091-go"
+	epb "github.com/slntopp/nocloud-proto/events"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
 	"time"
 )
@@ -54,6 +55,16 @@ retry:
 		}
 	}
 	return q, err
+}
+
+func unwrapProtoMessage(b []byte) (proto.Message, error) {
+	types := []proto.Message{&epb.Event{}, &ipb.Context{}}
+	for _, t := range types {
+		if err := proto.Unmarshal(b, t); err == nil {
+			return t, nil
+		}
+	}
+	return nil, fmt.Errorf("not found")
 }
 
 type PubSub[T proto.Message] struct {
@@ -295,13 +306,10 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 			total--
 			if total >= int64(maxRetries) {
 				log.Debug("Max retries reached", zap.Int64("retries_done", total), zap.Int("max", maxRetries))
-				obj := structpb.Value{}
-				if err = proto.Unmarshal(msg.Body, &obj); err != nil {
-					log.Error("Failed to unmarshal event tol structpb.Value", zap.Error(err))
-				}
-				b, err := protojson.Marshal(&obj)
+				t, _ := unwrapProtoMessage(msg.Body)
+				js, err := protojson.Marshal(t)
 				if err != nil {
-					log.Error("Failed to marshal event to json", zap.Error(err))
+					log.Error("Failed to marshal message. Probably couldn't find proto.Message type", zap.Error(err))
 				}
 				nocloud.Log(log, &elpb.Event{
 					Entity:    "system",
@@ -313,7 +321,7 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 					Ts:        time.Now().Unix(),
 					Priority:  1,
 					Snapshot: &elpb.Snapshot{
-						Diff: fmt.Sprintf("System action were declined after max retries (%d). RoutineKey: %s; RawDeliveredMessage: %s", total, msg.RoutingKey, string(b)),
+						Diff: fmt.Sprintf("System action were declined after max retries (%d). RoutineKey: %s; RawDeliveredMessage: %s", total, msg.RoutingKey, string(js)),
 					},
 				})
 				if err = msg.Ack(false); err != nil {
