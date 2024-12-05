@@ -42,7 +42,7 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 				}
 				continue
 			}
-			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 			body, ok := event.GetData()["body"]
 			if !ok {
 				log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
@@ -68,7 +68,7 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 				}
 				continue
 			}
-			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 			if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
 				ps.HandleAckNack(log, msg, err)
 				continue
@@ -205,7 +205,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx 
 			}
 			continue
 		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 		if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
 			ps.HandleAckNack(log, msg, err)
 			continue
@@ -355,7 +355,7 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx cont
 			continue
 		}
 		curConf := MakeCurrencyConf(log, &s.settingsClient)
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 		if err = s.ProcessInstanceCreation(log, ctx, &event, curConf, time.Now().Unix()); err != nil {
 			ps.HandleAckNack(log, msg, err)
 			continue
