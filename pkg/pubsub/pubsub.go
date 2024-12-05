@@ -8,12 +8,16 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
+	"strings"
 	"time"
 )
 
 const DEFAULT_EXCHANGE = "nocloud"
+
 const dlx = "nocloud.dlx"
-const dlxQueue = "dlx-queue"
+const dlxTTL = "nocloud.dlx.ttl"
+const dlxQueue = "dlx-queue-proc"
+const dlxQueueTTL = "dlx-queue-ttl"
 
 var errNoNack = errors.New("no nack")
 
@@ -22,6 +26,22 @@ func IsNoNackErr(err error) bool {
 }
 func NoNackErr(err error) error {
 	return fmt.Errorf("%w: %w", errNoNack, err)
+}
+
+func queueDeclare(ch rabbitmq.Channel, name string, durable, autoDelete, exclusive, noWait bool, args amqp091.Table) (amqp091.Queue, error) {
+	retried := false
+retry:
+	q, err := ch.QueueDeclare(name, durable, autoDelete, exclusive, noWait, args)
+	if err != nil {
+		if strings.Contains(err.Error(), "PRECONDITION_FAILED") && !retried {
+			if _, err = ch.QueueDelete(name, false, false, false); err != nil {
+				return amqp091.Queue{}, err
+			}
+			retried = true
+			goto retry
+		}
+	}
+	return q, err
 }
 
 type PubSub[T proto.Message] struct {
@@ -36,6 +56,7 @@ type ConsumeOptions struct {
 	Exclusive  bool
 	WithRetry  bool
 	MaxRetries int
+	DelayMilli int
 }
 
 func HandleAckNack(log *zap.Logger, del amqp091.Delivery, err error) {
@@ -84,6 +105,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		noWait     bool
 		withRetry  = true
 		maxRetries = 3
+		delayMilli = 5000
 	)
 	if len(options) > 0 {
 		o := options[0]
@@ -92,6 +114,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		noWait = o.NoWait
 		withRetry = o.WithRetry
 		maxRetries = o.MaxRetries
+		delayMilli = o.DelayMilli
 	}
 	topic = exchange + "." + topic
 
@@ -102,34 +125,42 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		return nil, err
 	}
 
-	var dlxQ *amqp091.Queue
+	var queueDlx amqp091.Queue
 	if withRetry {
-		err = ch.ExchangeDeclare(dlx, "direct", durable, false, false, false, nil)
+		err = ch.ExchangeDeclare(dlx, "direct", true, false, false, false, nil)
 		if err != nil {
 			log.Error("Failed to declare a dlx", zap.Error(err))
 			return nil, err
 		}
-	retryDlxQ:
-		_dlxQ, err := ch.QueueDeclare(name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
-			"x-dead-letter-exchange": exchange,
+		err = ch.ExchangeDeclare(dlxTTL, "direct", true, false, false, false, nil)
+		if err != nil {
+			log.Error("Failed to declare a dlx ttl", zap.Error(err))
+			return nil, err
+		}
+		dlxQ, err := queueDeclare(ch, name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
+			"x-dead-letter-exchange": dlxTTL,
 		})
 		if err != nil {
-			var amqpErr amqp091.Error
-			if errors.As(err, &amqpErr) {
-				if amqpErr.Code == amqp091.PreconditionFailed {
-					if _, err = ch.QueueDelete(name+"."+dlxQueue, false, false, false); err == nil {
-						goto retryDlxQ
-					}
-				}
-			}
 			log.Error("Failed to declare a dlx queue", zap.Error(err))
 			return nil, err
 		}
-		if err = ch.QueueBind(_dlxQ.Name, name, dlx, false, nil); err != nil {
+		queueDlx = dlxQ
+		dlxQTtl, err := queueDeclare(ch, name+"."+dlxQueueTTL, durable, false, false, false, map[string]interface{}{
+			"x-dead-letter-exchange": exchange,
+			"x-message-ttl":          delayMilli,
+		})
+		if err != nil {
+			log.Error("Failed to declare a dlx ttl queue", zap.Error(err))
+			return nil, err
+		}
+		if err = ch.QueueBind(dlxQ.Name, name, dlx, false, nil); err != nil {
 			log.Error("Failed to bind dlx queue", zap.Error(err))
 			return nil, err
 		}
-		dlxQ = &_dlxQ
+		if err = ch.QueueBind(dlxQTtl.Name, name, dlxTTL, false, nil); err != nil {
+			log.Error("Failed to bind dlx ttl queue", zap.Error(err))
+			return nil, err
+		}
 	}
 
 	if exchange != "" {
@@ -139,7 +170,6 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		}
 	}
 
-retry:
 	var params amqp091.Table
 	if withRetry {
 		params = amqp091.Table{
@@ -147,16 +177,8 @@ retry:
 			"x-dead-letter-routing-key": name,
 		}
 	}
-	q, err := ch.QueueDeclare(name, durable, false, exclusive, noWait, params)
+	q, err := queueDeclare(ch, name, durable, false, exclusive, noWait, params)
 	if err != nil {
-		var amqpErr amqp091.Error
-		if errors.As(err, &amqpErr) {
-			if amqpErr.Code == amqp091.PreconditionFailed {
-				if _, err = ch.QueueDelete(name, false, false, false); err == nil {
-					goto retry
-				}
-			}
-		}
 		log.Error("Failed to declare a queue", zap.Error(err))
 		return nil, err
 	}
@@ -182,8 +204,8 @@ retry:
 		return nil, err
 	}
 
-	if dlxQ != nil {
-		go ps.consumeDlx(log, ch, dlxQ.Name, maxRetries)
+	if withRetry {
+		go ps.consumeDlx(log, ch, queueDlx.Name, q.Name, maxRetries)
 	}
 	return msgs, nil
 }
@@ -235,7 +257,7 @@ func (ps *PubSub[T]) ConsumerInit(name, exchange, topic string, processor func(o
 	return nil
 }
 
-func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue string, maxRetries int) {
+func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue string, originalQueue string, maxRetries int) {
 	log = log.Named("DLX." + dlxQueue)
 	msgs, err := ch.Consume(dlxQueue, dlxQueue, false, false, false, false, nil)
 	if err != nil {
@@ -253,7 +275,7 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 			}
 			for _, death := range deaths {
 				deathMap := death.(amqp091.Table)
-				if deathMap["queue"].(string) == dlxQueue {
+				if deathMap["queue"].(string) != originalQueue {
 					continue
 				}
 				count := deathMap["count"].(int64)
