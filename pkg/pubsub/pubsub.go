@@ -33,21 +33,19 @@ func NoNackErr(err error) error {
 }
 
 func queueDeclare(conn rabbitmq.Connection, name string, durable, autoDelete, exclusive, noWait bool, args amqp091.Table) (amqp091.Queue, error) {
+	channel := func() (rabbitmq.Channel, func()) {
+		ch, _ := conn.Channel()
+		return ch, func() { _ = ch.Close() }
+	}
 	retried := false
 retry:
-	ch, err := conn.Channel()
-	if err != nil {
-		return amqp091.Queue{}, fmt.Errorf("failed to open new channel: %w", err)
-	}
-	defer ch.Close()
+	ch, term := channel()
+	defer term()
 	q, err := ch.QueueDeclare(name, durable, autoDelete, exclusive, noWait, args)
 	if err != nil {
 		if strings.Contains(err.Error(), "PRECONDITION_FAILED") && !retried {
-			ch, err := conn.Channel()
-			if err != nil {
-				return amqp091.Queue{}, fmt.Errorf("failed to open new channel: %w", err)
-			}
-			defer ch.Close()
+			ch, term = channel()
+			defer term()
 			if _, err = ch.QueueDelete(name, false, false, false); err != nil {
 				return amqp091.Queue{}, err
 			}
