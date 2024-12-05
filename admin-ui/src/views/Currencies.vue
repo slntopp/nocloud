@@ -63,9 +63,10 @@
     </div>
 
     <nocloud-table
-      table-name="currencies-table"
+      table-name="currencies-rates-table"
       class="mt-4"
-      item-key="id"
+      item-key="uid"
+      sort-by="uid"
       :items="currenciesItems"
       :headers="currenciesHeaders"
       :loading="isLoading"
@@ -107,6 +108,7 @@
       <template v-slot:[`item.rate`]="{ item }">
         <v-text-field
           type="number"
+          step="any"
           :loading="updatingCurrencyId === item.id"
           dense
           hide-details
@@ -118,6 +120,7 @@
       <template v-slot:[`item.precision`]="{ item }">
         <v-text-field
           type="number"
+          step="any"
           :loading="updatingCurrencyId === item.id"
           dense
           hide-details
@@ -173,6 +176,7 @@ import {
 const store = useStore();
 
 const currenciesHeaders = [
+  { text: "ID", value: "id", width: 50, sortable: true },
   { text: "Code", value: "code", width: 200, sortable: false },
   { text: "Title", value: "title", sortable: false },
   { text: "Rate", value: "rate", sortable: false },
@@ -225,6 +229,7 @@ const roundingItems = computed(() =>
       text: val.split("_")[1],
       value: Rounding[val],
     }))
+    .map((val) => (val.text === "HALF" ? { ...val, text: "STANDART" } : val))
 );
 const editedCurrencies = computed(() =>
   currenciesItems.value.reduce((acc, item, index) => {
@@ -345,6 +350,7 @@ watch([currencies, rates], () => {
 
     return {
       ...currency,
+      uid: (currency.id || 0).toString(),
       rate: {
         value: rate?.rate || 0,
         isExists: !!rate,
