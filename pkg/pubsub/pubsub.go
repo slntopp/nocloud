@@ -237,7 +237,6 @@ func (ps *PubSub[T]) ConsumerInit(name, exchange, topic string, processor func(o
 
 func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue string, maxRetries int) {
 	log = log.Named("DLX." + dlxQueue)
-
 	msgs, err := ch.Consume(dlxQueue, dlxQueue, false, false, false, false, nil)
 	if err != nil {
 		log.Fatal("Failed to register a dlx consumer", zap.Error(err))
@@ -249,8 +248,14 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 			deaths := msg.Headers["x-death"].([]interface{})
 			log.Info("Dead lettered message info", zap.Any("deaths", deaths))
 			total := int64(0)
+			if len(deaths) == 0 {
+				goto nack
+			}
 			for _, death := range deaths {
 				deathMap := death.(amqp091.Table)
+				if deathMap["queue"].(string) == dlxQueue {
+					continue
+				}
 				count := deathMap["count"].(int64)
 				total += count
 			}
@@ -261,6 +266,7 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 				}
 				continue
 			}
+		nack:
 			log.Info("Retrying again", zap.Int64("current", total), zap.Int("max", maxRetries))
 			if err = msg.Nack(false, false); err != nil {
 				log.Error("Failed to nack the delivery", zap.Error(err))
