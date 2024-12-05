@@ -231,7 +231,7 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 	}
 
 	for msg := range msgs {
-		log.Info("Received a message from dlx", zap.Any("routine_key", msg.RoutingKey))
+		log.Info("Received a message from dlx", zap.Any("routine_key", msg.RoutingKey), zap.String("exchange", msg.Exchange))
 		log.Info("Message body", zap.Any("message", string(msg.Body)))
 		if msg.Headers["x-death"] != nil {
 			deaths := msg.Headers["x-death"].([]interface{})
