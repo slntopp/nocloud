@@ -25,7 +25,15 @@ import (
 
 func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
 	log = log.Named("ConsumeWhmcsSync")
-	msgs, err := p.Consume("whmcs-syncer", ps.DEFAULT_EXCHANGE, billing.Topic("#"))
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
+	}
+	msgs, err := p.Consume("whmcs-syncer", ps.DEFAULT_EXCHANGE, billing.Topic("#"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
@@ -180,7 +188,15 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 
 func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
 	log = log.Named("ConsumeInvoiceStatusActions")
-	msgs, err := p.Consume("postpaid-postrefund-actions", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"))
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
+	}
+	msgs, err := p.Consume("postpaid-postrefund-actions", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
@@ -329,7 +345,15 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 
 func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
 	log = s.log.Named("ConsumeCreatedInstances")
-	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"))
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
+	}
+	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return

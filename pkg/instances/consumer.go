@@ -38,7 +38,15 @@ func (s *InstancesServer) ProcessInvokeCommands(_ *zap.Logger, ctx context.Conte
 
 func (s *InstancesServer) ConsumeInvokeCommands(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
 	log = log.Named("ConsumeInvokeCommands")
-	msgs, err := p.Consume("instances-invoke", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances-commands"))
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
+	}
+	msgs, err := p.Consume("instances-invoke", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances-commands"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
