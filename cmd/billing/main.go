@@ -156,6 +156,12 @@ func main() {
 	}
 	defer conn.Close()
 	rbmq := rabbitmq.NewRabbitMQConnection(conn)
+	ch, err := rbmq.Channel()
+	if err != nil {
+		log.Fatal("Failed to open a channel", zap.Error(err))
+	}
+	_, _ = ch.QueueDelete(".", false, false, false)
+	ch.Close()
 
 	// Initialize controllers
 	accountsCtrl := graph.NewAccountsController(log, db)
