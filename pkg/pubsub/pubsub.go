@@ -231,16 +231,7 @@ func (ps *PubSub[T]) consumeDlx(log *zap.Logger, ch rabbitmq.Channel, dlxQueue s
 
 	for msg := range msgs {
 		log.Info("Received a message from dlx", zap.Any("routine_key", msg.RoutingKey))
-		var req = new(T)
-		err := proto.Unmarshal(msg.Body, *req)
-		if err != nil {
-			log.Error("Failed to unmarshal request", zap.Error(err))
-			if err = msg.Ack(false); err != nil {
-				log.Error("Failed to ack the delivery", zap.Error(err))
-			}
-			continue
-		}
-		log.Info("Unmarshalled message", zap.Any("message", req))
+		log.Info("Message body", zap.Any("message", string(msg.Body)))
 		if msg.Headers["x-death"] != nil {
 			deaths := msg.Headers["x-death"].([]interface{})
 			log.Info("Dead lettered message info", zap.Any("deaths", deaths))
