@@ -134,7 +134,7 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 		o := options[0]
 		exclusive = o.Exclusive
 		durable = o.Durable
-		noWait = o.NoWait
+		noWait = false
 		withRetry = o.WithRetry
 		maxRetries = o.MaxRetries
 		delayMilli = o.DelayMilli
