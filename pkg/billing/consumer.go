@@ -94,7 +94,6 @@ func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx cont
 	gw := payments.GetPaymentGateway(acc.GetPaymentsGateway())
 
 	if event.GetKey() == billing.InvoiceCreated {
-		return fmt.Errorf("explicit error for test")
 		if err = gw.CreateInvoice(ctx, inv.Invoice); err != nil {
 			return fmt.Errorf("failed to create invoice on whmcs: %w", err)
 		}
