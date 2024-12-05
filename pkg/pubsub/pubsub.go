@@ -110,9 +110,10 @@ func (ps *PubSub[T]) Consume(name, exchange, topic string, options ...ConsumeOpt
 			return nil, err
 		}
 		_dlxQ, err := ch.QueueDeclare(name+"."+dlxQueue, durable, false, false, false, map[string]interface{}{
-			"x-dead-letter-exchange": exchange,
-			"x-overflow":             "reject-publish",
-			"x-message-ttl":          5000,
+			"x-dead-letter-exchange":    exchange,
+			"x-dead-letter-routing-key": name,
+			"x-overflow":                "reject-publish",
+			"x-message-ttl":             5000,
 		})
 		if err != nil {
 			log.Error("Failed to declare a dlx queue", zap.Error(err))
