@@ -7,7 +7,7 @@
     :small="small"
   >
     {{ title }}{{ abs ? Math.abs(balance) : balance }}
-    {{ (!hideCurrency && (currency?.title || defaultCurrency?.title)) || "" }}
+    {{ (!hideCurrency && (currency?.code || defaultCurrency?.code)) || "" }}
   </v-chip>
 </template>
 
@@ -33,6 +33,10 @@ export default {
       if (this.logedInUser) {
         const { balance = 0 } = this.$store.getters["auth/userdata"];
         value = balance;
+      }
+
+      if (value < 0.01 && value > -1) {
+        return 0;
       }
 
       return formatPrice(value, this.currency || this.defaultCurrency);

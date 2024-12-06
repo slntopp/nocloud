@@ -270,7 +270,7 @@ const searchFields = computed(() => [
     type: "select",
     items: store.getters["currencies/all"]
       .filter((c) => c.title !== "NCU")
-      .map((c) => ({ text: c.title, value: c.id })),
+      .map((c) => ({ text: c.code, value: c.id })),
   },
   {
     title: "Access level",
