@@ -729,7 +729,7 @@ export function formatPrice(price, { precision, rounding } = {}) {
   precision = precision || 0;
   rounding = rounding || "ROUND_HALF";
 
-  if (price < 0.01) {
+  if (price < 0.01 && price > -1) {
     return price;
   }
 
