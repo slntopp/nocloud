@@ -25,24 +25,32 @@ import (
 
 func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
 	log = log.Named("ConsumeWhmcsSync")
-	msgs, err := p.Consume("whmcs-syncer", ps.DEFAULT_EXCHANGE, billing.Topic("#"))
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 150 * 1000, // Every 2.5 minute
+		MaxRetries: 72,         // 3 hours in general
+	}
+	msgs, err := p.Consume("whmcs-syncer", ps.DEFAULT_EXCHANGE, billing.Topic("#"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
 	}
 
 	for msg := range msgs {
-		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
-		if msg.RoutingKey == msg.Exchange+"."+billing.Topic("whmcs-events") {
-			var event epb.Event
-			if err = proto.Unmarshal(msg.Body, &event); err != nil {
-				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
-				if err = msg.Ack(false); err != nil {
-					log.Error("Failed to acknowledge the delivery", zap.Error(err))
-				}
-				continue
+		var event epb.Event
+		if err = proto.Unmarshal(msg.Body, &event); err != nil {
+			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
-			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+			continue
+		}
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routing_key", msg.RoutingKey))
+		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
+		if event.Type == "whmcs-event" {
 			body, ok := event.GetData()["body"]
 			if !ok {
 				log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
@@ -59,16 +67,7 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
 			// Handle nocloud create/update invoices events to sync whmcs invoices with them
-		} else if msg.RoutingKey == msg.Exchange+"."+billing.Topic("invoices") {
-			var event epb.Event
-			if err = proto.Unmarshal(msg.Body, &event); err != nil {
-				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
-				if err = msg.Ack(false); err != nil {
-					log.Error("Failed to acknowledge the delivery", zap.Error(err))
-				}
-				continue
-			}
-			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+		} else if event.GetUuid() != "" {
 			if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
 				ps.HandleAckNack(log, msg, err)
 				continue
@@ -189,7 +188,15 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 
 func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
 	log = log.Named("ConsumeInvoiceStatusActions")
-	msgs, err := p.Consume("postpaid-postrefund-actions", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"))
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
+	}
+	msgs, err := p.Consume("postpaid-postrefund-actions", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
@@ -204,7 +211,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx 
 			}
 			continue
 		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 		if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
 			ps.HandleAckNack(log, msg, err)
 			continue
@@ -338,7 +345,15 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 
 func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
 	log = s.log.Named("ConsumeCreatedInstances")
-	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"))
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
+	}
+	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer")
 		return
@@ -354,7 +369,7 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx cont
 			continue
 		}
 		curConf := MakeCurrencyConf(log, &s.settingsClient)
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
 		if err = s.ProcessInstanceCreation(log, ctx, &event, curConf, time.Now().Unix()); err != nil {
 			ps.HandleAckNack(log, msg, err)
 			continue

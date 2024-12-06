@@ -279,6 +279,7 @@ func (ctrl *instancesController) GetWithAccess(ctx context.Context, from driver.
 		o.GetAccess().Level = access.Level_ROOT
 	}
 
+	ctrl.log.Debug("GetInstanceWithAccess", zap.Any("instance", o), zap.Any("meta", meta))
 	return o, nil
 }
 

@@ -91,12 +91,15 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 
 func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*pb.Record]) {
 	log := s.log.Named("RecordsConsumer")
-
-	records, err := pubsub.Consume("records", "", "records", ps.ConsumeOptions{
-		Durable:   true,
-		NoWait:    true,
-		Exclusive: false,
-	})
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
+	}
+	records, err := pubsub.Consume("records", "", "records", opt)
 	if err != nil {
 		log.Fatal("Failed to consume records", zap.Error(err))
 		return
@@ -269,6 +272,8 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			}
 		}
 	}
+
+	log.Info("Record processed", zap.String("record_id", recordId.Key()))
 	return nil
 }
 

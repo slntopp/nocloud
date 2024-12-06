@@ -178,5 +178,7 @@ func EventLoggingHandler(_ context.Context, log *zap.Logger, event *pb.Event, _ 
 	nocloud.Log(log, logEvent)
 	log.Debug("Logged event", zap.Any("event", logEvent))
 
+	event.Type = "log"
+	event.Uuid = scope
 	return event, nil
 }
