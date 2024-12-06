@@ -297,6 +297,12 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	sp, err := s.ig_ctrl.GetSP(ctx, ig.GetUuid())
+	if err != nil {
+		log.Error("Failed to get sp", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	if ig.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
@@ -312,7 +318,7 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
 	}
 
-	newId, err := s.ctrl.Create(ctx, igId, "", req.GetInstance())
+	newId, err := s.ctrl.Create(ctx, igId, sp.GetUuid(), req.GetInstance())
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -524,11 +530,16 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, _req *connect.Re
 	usedCols := []string{schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, schema.INVOICES_COL, schema.TRANSACTIONS_COL, schema.RECORDS_COL,
 		schema.SERV2IG, schema.IG2INST, schema.IG2SP}
 	// Collection connected in Permissions graph with some collections from usedCols
-	otherCols := []string{schema.NS2ACC, schema.ACC2NS, schema.NS2SERV,
-		schema.ACC2CRED, schema.CUR2CUR, schema.SP2BP}
-	// Other collections in Permissions graph but not presented in schema (this part is cringe, must fix it somehow)
-	importedCols := []string{"Instances2Runs", "Namespaces2Runs"}
-	otherCols = append(otherCols, importedCols...)
+	gr, err := s.db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
+	if err != nil {
+		log.Error("Failed to get permissions graph", zap.Error(err))
+		return nil, fmt.Errorf("Internal error. Try again later")
+	}
+	edges := gr.EdgeDefinitions()
+	otherCols := make([]string, 0)
+	for _, e := range edges {
+		otherCols = append(otherCols, e.Collection)
+	}
 
 	if req.Account != nil {
 		trID, err := s.db.BeginTransaction(ctx, driver.TransactionCollections{
@@ -1108,7 +1119,7 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 	log.Debug("Result", zap.Any("result", &result))
 	resp := connect.NewResponse(&result)
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 const countInstancesQuery = `
@@ -1355,7 +1366,7 @@ func (s *InstancesServer) Get(ctx context.Context, _req *connect.Request[pb.Inst
 
 	resp := connect.NewResponse(&result)
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 func (s *InstancesServer) transferToAccount(ctx context.Context, log *zap.Logger, uuid string, account string) (err error) {

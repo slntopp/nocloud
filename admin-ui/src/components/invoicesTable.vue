@@ -38,7 +38,11 @@
 
     <template v-slot:[`item.total`]="{ item }">
       <v-chip :color="getTotalColor(item)" abs>
-        {{ `${item.total || 0} ${item.currency?.title || defaultCurrency.title}` }}
+        {{
+          `${formatPrice(item.total, item.currency)} ${
+            item.currency?.title || defaultCurrency.title
+          }`
+        }}
       </v-chip>
     </template>
 
@@ -86,7 +90,7 @@
 
 <script setup>
 import nocloudTable from "@/components/table.vue";
-import { debounce, formatSecondsToDate } from "../functions";
+import { debounce, formatPrice, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
@@ -149,6 +153,10 @@ onMounted(() => {
       fetchInvoices();
     },
   });
+
+  if (!noSearch.value) {
+    store.commit("appSearch/setFields", searchFields.value);
+  }
 });
 
 const invoices = computed(() => store.getters["invoices/all"]);
@@ -378,8 +386,8 @@ watch(invoices, () => {
   });
 });
 
-watch(searchFields, () => {
-  if (!props.noSearch) {
+watch([searchFields, noSearch], () => {
+  if (!noSearch.value) {
     store.commit("appSearch/setFields", searchFields.value);
   }
 });

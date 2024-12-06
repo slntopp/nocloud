@@ -29,6 +29,10 @@ func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, err
 	return nil, ErrNotFound
 }
 
+func (g *WhmcsGateway) GetInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, error) {
+	return g.getInvoiceByWhmcsId(whmcsInvoiceId)
+}
+
 func (g *WhmcsGateway) GetAccountByWhmcsId(whmcsUserId int) (*rpb.Account, error) {
 	acc, _, _, err := g.accounts.ListImproved(context.Background(), schema.ROOT_ACCOUNT_KEY, 100, 0, 0, "", "", map[string]*structpb.Value{
 		fmt.Sprintf("data.%s", userIdField): structpb.NewNumberValue(float64(whmcsUserId)),

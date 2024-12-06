@@ -1,6 +1,7 @@
 import yaml from "yaml";
 import XlsxService from "@/services/XlsxService";
 import store from "@/store";
+import { Rounding } from "nocloud-proto/proto/es/billing/billing_pb";
 
 export function isObject(item) {
   return item && typeof item === "object" && !Array.isArray(item);
@@ -721,4 +722,27 @@ export function getShortName(name = "", maxLength = 30) {
   return name.length > maxLength + 3
     ? name.slice(0, maxLength - 3) + "..."
     : name;
+}
+
+export function formatPrice(price, { precision, rounding } = {}) {
+  price = +price || 0;
+  precision = precision || 0;
+  rounding = rounding || "ROUND_HALF";
+
+  if (price < 0.01) {
+    return price;
+  }
+
+  if (price == 0) {
+    return 0;
+  }
+
+  if (Rounding.ROUND_HALF === Rounding[rounding]) {
+    return price.toFixed(precision).toString();
+  }
+
+  const fn =
+    Rounding[rounding] === Rounding.ROUND_DOWN ? Math.floor : Math.round;
+
+  return fn(price * Math.pow(10, precision)) / Math.pow(10, precision);
 }

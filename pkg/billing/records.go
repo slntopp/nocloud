@@ -20,6 +20,7 @@ import (
 	"fmt"
 	spb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"time"
 
 	"connectrpc.com/connect"
@@ -88,26 +89,20 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 	}
 }
 
-func (s *RecordsServiceServer) Consume(ctx context.Context) {
-	log := s.log.Named("Consumer")
-init:
-	ch, err := s.rbmq.Channel()
-	if err != nil {
-		log.Error("Failed to open a channel", zap.Error(err))
-		time.Sleep(time.Second)
-		goto init
+func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*pb.Record]) {
+	log := s.log.Named("RecordsConsumer")
+	opt := ps.ConsumeOptions{
+		Durable:    true,
+		NoWait:     false,
+		Exclusive:  false,
+		WithRetry:  true,
+		DelayMilli: 300 * 1000, // Every 5 minute
+		MaxRetries: 36,         // 3 hours in general
 	}
-
-	queue, _ := ch.QueueDeclare(
-		"records",
-		true, false, false, true, nil,
-	)
-
-	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	records, err := pubsub.Consume("records", "", "records", opt)
 	if err != nil {
-		log.Error("Failed to register a consumer", zap.Error(err))
-		time.Sleep(time.Second)
-		goto init
+		log.Fatal("Failed to consume records", zap.Error(err))
+		return
 	}
 
 	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
@@ -119,18 +114,19 @@ init:
 		err = proto.Unmarshal(msg.Body, &record)
 		log.Debug("Message unmarshalled", zap.Any("record", &record))
 		if err != nil {
-			log.Error("Failed to unmarshal record", zap.Error(err))
+			log.Error("Failed to unmarshal record. Skip", zap.Error(err))
 			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+				log.Error("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 			}
 			continue
 		}
 		err := s.ProcessRecord(ctx, &record, currencyConf, time.Now().Unix())
 		if err != nil {
-			log.Error("Failed to process record", zap.Error(err))
+			ps.HandleAckNack(log, msg, err)
+			continue
 		}
 		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			log.Error("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 		}
 		continue
 	}
@@ -149,7 +145,6 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	}
 
 	isSkip, err := s.checkRecord(ctx, record, log)
-
 	if isSkip && err == nil {
 		log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
 		return nil
@@ -175,7 +170,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	_, ok := bp.Products[record.Product]
 	if _, okWithAddon := bp.Products[inst.GetProduct()]; (!ok && record.Product != "") || (!okWithAddon && record.Addon != "") {
 		log.Error("Invalid record. Addon record or product record, but no product in billing plan", zap.Any("record", &record))
-		return fmt.Errorf("invalid record. Addon record or product record, but no product in billing plan")
+		return nil
 	}
 
 	var (
@@ -197,7 +192,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	} else if record.Addon != "" {
 		if inst.Product == nil || *inst.Product == "" {
 			log.Error("Invalid record. Record is addon record but no product for instance", zap.Any("record", &record))
-			return fmt.Errorf("invalid record. Record is addon record but no product for instance")
+			return nil
 		}
 		product := bp.Products[*inst.Product]
 		addon, err := s.addons.Get(ctx, record.Addon)
@@ -209,8 +204,8 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		resType = "addon"
 		resource = record.Addon
 	} else {
-		log.Warn("Invalid record. Record has no item", zap.Any("record", &record))
-		return fmt.Errorf("invalid record. Record has no item")
+		log.Error("Invalid record. Record has no item", zap.Any("record", &record))
+		return nil
 	}
 	log.Debug("Got item price", zap.Any("itemPrice", itemPrice))
 	record.Meta["no_discount_price"] = structpb.NewStringValue(fmt.Sprintf("%.2f %s", itemPrice, currencyConf.Currency.GetTitle()))
@@ -225,6 +220,11 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	record.Cost = itemPrice
 
 	recordId := s.records.Create(ctx, record)
+	if recordId == "" {
+		log.Warn("No record id. Skipping")
+		return nil
+	}
+
 	log.Debug("Record created", zap.String("record_id", recordId.Key()))
 	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	if record.Priority != pb.Priority_NORMAL {
@@ -272,6 +272,8 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			}
 		}
 	}
+
+	log.Info("Record processed", zap.String("record_id", recordId.Key()))
 	return nil
 }
 

@@ -108,9 +108,9 @@
           {{ item.quantity?.toFixed(2) }} {{ item.unit }}
         </template>
         <template v-slot:[`item.total`]="{ item }">
-          {{ totalPrices[item.name]?.toFixed(2) }}
+          {{ formatPrice(totalPrices[item.name], defaultCurrency) }}
           {{ defaultCurrency?.title }} /
-          {{ totalAccountPrices[item.name]?.toFixed(2) }}
+          {{ formatPrice(totalAccountPrices[item.name], accountCurrency) }}
           {{ accountCurrency?.title }}
         </template>
         <template v-slot:body.append>
@@ -209,6 +209,7 @@ import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
+import { formatPrice } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -253,9 +254,10 @@ const availableTarrifs = computed(() =>
 
 const billingPlan = computed(() => template.value.billingPlan);
 const totalPrice = computed(() =>
-  Object.keys(totalPrices.value || {})
-    .reduce((acc, key) => acc + totalPrices.value[key], 0)
-    .toFixed(2)
+  Object.keys(totalPrices.value || {}).reduce(
+    (acc, key) => acc + totalPrices.value[key],
+    0
+  )
 );
 
 const totalPrices = computed(() => {

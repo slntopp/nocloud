@@ -15,13 +15,13 @@ const useCurrency = () => {
   const convertFrom = (price, currency) => {
     let rate;
 
-    if (currency?.title === defaultCurrency.value?.title) {
+    if (currency?.code == defaultCurrency.value?.code) {
       rate = 1;
     } else {
       rate = rates.value.find(
         (r) =>
-          r.to.title === defaultCurrency.value?.title &&
-          r.from.title === currency?.title
+          [defaultCurrency.value?.code, "NCU"].includes(r.to.code) &&
+          r.from.code == currency?.code
       )?.rate;
     }
 
@@ -31,13 +31,13 @@ const useCurrency = () => {
   const convertTo = (price, currency) => {
     let rate;
 
-    if (currency?.title === defaultCurrency.value?.title) {
+    if (currency?.code === defaultCurrency.value?.code) {
       rate = 1;
     } else {
       rate = rates.value.find(
         (r) =>
-          r.to.title === currency?.title &&
-          r.from.title === defaultCurrency.value?.title
+          r.to.code == currency?.code &&
+          [defaultCurrency.value?.code, "NCU"].includes(r.from.code)
       )?.rate;
     }
 

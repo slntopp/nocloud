@@ -350,7 +350,7 @@ export default {
     },
     currencies() {
       return this.$store.getters["currencies/all"].filter(
-        (c) => c.title !== "NCU"
+        (c) => c.code != this.defaultCurrency.code
       );
     },
     changeStateButtons() {

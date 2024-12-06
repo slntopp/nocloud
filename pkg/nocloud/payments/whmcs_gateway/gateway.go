@@ -3,11 +3,13 @@ package whmcs_gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/go-querystring/query"
 	"github.com/google/uuid"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"math"
@@ -124,7 +126,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 		return fmt.Errorf("whmcs user not found")
 	}
 
-	var sendEmail = (inv.Status != pb.BillingStatus_DRAFT) || (len(noEmail) > 0 && noEmail[0])
+	var sendEmail = (inv.Status != pb.BillingStatus_DRAFT) || !(len(noEmail) > 0 && noEmail[0])
 
 	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
 	taxed := "0"
@@ -166,7 +168,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	// Set whmcs invoice id to invoice meta
 	invoice, err := g.invMan.InvoicesController().Get(ctx, inv.GetUuid())
 	if err != nil {
-		return err
+		return ps.NoNackErr(err)
 	}
 	meta := invoice.GetMeta()
 	if meta == nil {
@@ -195,13 +197,13 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	meta["note"] = structpb.NewStringValue(newNote)
 	invoice.Meta = meta
 	if _, err := g.invMan.InvoicesController().Update(ctx, invoice); err != nil {
-		return err
+		return ps.NoNackErr(err)
 	}
 
 	return nil
 }
 
-func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *pb.Invoice) error {
+func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -233,14 +235,14 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old *
 		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
 	}
 
-	if inv.Status != old.Status {
-		body.Status = ptr(statusToWhmcs(inv.Status))
-		if inv.Status == pb.BillingStatus_PAID {
+	body.Status = nil
+	if inv.Status != statusToNoCloud(whmcsInv.Status) {
+		if inv.Status == pb.BillingStatus_PAID && whmcsInv.Status != statusToWhmcs(pb.BillingStatus_PAID) {
 			if err = g.PayInvoice(ctx, int(id.GetNumberValue())); err != nil {
 				return fmt.Errorf("failed to pay invoice: %w", err)
 			}
-			body.Status = nil
 		}
+		body.Status = ptr(statusToWhmcs(inv.Status))
 	}
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
@@ -319,6 +321,9 @@ func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int) error
 	body.TransId = uuid.New().String()
 	body.Date = time.Now().Format("2006-01-02 15:04:05")
 	body.Gateway = "system"
+	if inv.Balance <= 0 {
+		body.Amount = ptr(inv.Total)
+	}
 
 	q, err := query.Values(body)
 	if err != nil {
@@ -422,6 +427,9 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 	}
 	inv, err := g.getInvoiceByWhmcsId(invoiceId)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return ps.NoNackErr(fmt.Errorf("error syncWhmcsInvoice: %w", err))
+		}
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 	}
 

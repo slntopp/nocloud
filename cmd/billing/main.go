@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/cors"
+	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud-proto/health/healthconnect"
@@ -32,7 +33,9 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
+	nps "github.com/slntopp/nocloud/pkg/pubsub"
+	billingps "github.com/slntopp/nocloud/pkg/pubsub/billing"
+	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -153,6 +156,12 @@ func main() {
 	}
 	defer conn.Close()
 	rbmq := rabbitmq.NewRabbitMQConnection(conn)
+	ch, err := rbmq.Channel()
+	if err != nil {
+		log.Fatal("Failed to open a channel", zap.Error(err))
+	}
+	_, _ = ch.QueueDelete(".", false, false, false)
+	ch.Close()
 
 	// Initialize controllers
 	accountsCtrl := graph.NewAccountsController(log, db)
@@ -173,7 +182,6 @@ func main() {
 	transactCtrl := graph.NewTransactionsController(log, db)
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
-	restInterceptor := rest_auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
 
 	router := mux.NewRouter()
@@ -193,11 +201,8 @@ func main() {
 	manager := invoices_manager.NewInvoicesManager(bClient, invoicesCtrl, authInterceptor)
 	payments.RegisterGateways(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
 
-	// Register WHMCS hooks handler (hooks for invoices status e.g.)
+	// Register whmcs gateway
 	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
-	whmcsRouter := router.PathPrefix("/nocloud.billing.Whmcs").Subrouter()
-	whmcsRouter.Use(restInterceptor.JwtMiddleWare)
-	whmcsRouter.Path("/hooks").HandlerFunc(whmcsGw.BuildWhmcsHooksHandler(log))
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -240,14 +245,24 @@ func main() {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	billing.SetupSettingsContext(ctx)
+
+	ps := nps.NewPubSub[*epb.Event](rbmq, log)
+	invoicesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, billingps.Topic("invoices"))
+	instancesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, services_registry.Topic("instances-commands"))
 
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw)
-	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher, instancesPublisher)
 	log.Info("Starting Currencies Service")
+	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
+
+	log.Info("Registering new consumers")
+	go server.ConsumeInvoiceStatusActions(log, ctx, ps)
+	go server.ConsumeCreatedInstances(log, ctx, ps)
+	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw)
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
@@ -261,16 +276,14 @@ func main() {
 	log.Info("Starting Account Suspension Routine")
 	go server.SuspendAccountsRoutine(ctx)
 
-	log.Info("Starting Instances Creation Consumer")
-	go server.ConsumeCreatedInstances(ctx)
-
 	log.Info("Registering BillingService Server")
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
 	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, promoCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
-	go records.Consume(ctx)
+	recPs := nps.NewPubSub[*pb.Record](rbmq, log)
+	go records.Consume(ctx, recPs)
 
 	log.Info("Starting Daily Cron Job")
 	go server.DailyCronJob(ctx, log, token, dailyCronTime)
@@ -310,7 +323,7 @@ func main() {
 	handler = cors.New(cors.Options{
 		AllowedOrigins:      []string{"*"},
 		AllowedMethods:      []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
-		AllowedHeaders:      []string{"*", "Connect-Protocol-Version"},
+		AllowedHeaders:      []string{"*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
 		AllowCredentials:    true,
 		AllowPrivateNetwork: true,
 	}).Handler(h2c.NewHandler(router, &http2.Server{}))

@@ -205,7 +205,7 @@ func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddon
 
 	resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: filteredAddons})
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAddonsRequest]) (*connect.Response[pb.CountAddonsResponse], error) {

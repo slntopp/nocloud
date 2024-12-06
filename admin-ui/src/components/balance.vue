@@ -12,6 +12,8 @@
 </template>
 
 <script>
+import { formatPrice } from "../functions";
+
 export default {
   name: "balance-display",
   props: {
@@ -27,21 +29,21 @@ export default {
   },
   computed: {
     balance() {
+      let value = this.value || 0;
       if (this.logedInUser) {
         const { balance = 0 } = this.$store.getters["auth/userdata"];
-
-        return parseFloat(balance).toFixed(2);
+        value = balance;
       }
 
-      return parseFloat(this.value || 0).toFixed(2);
+      return formatPrice(value, this.currency || this.defaultCurrency);
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
     colorChip() {
-      if (this.balance > 0) {
+      if (+this.balance > 0) {
         return this["positive-color"] || "success";
-      } else if (this.balance < 0) {
+      } else if (+this.balance < 0) {
         return this["negative-color"] || "error";
       } else {
         return "gray";

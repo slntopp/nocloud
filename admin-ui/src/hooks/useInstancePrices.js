@@ -6,13 +6,13 @@ const useInstancePrices = (instance, account) => {
 
   const accountCurrency = computed(() => account?.currency);
   const accountRate = computed(() => {
-    if (defaultCurrency.value?.title === accountCurrency.value?.title) {
+    if (defaultCurrency.value?.code == accountCurrency.value?.code) {
       return 1;
     }
     return rates.value.find(
       (r) =>
-        r.to?.title === accountCurrency.value?.title &&
-        r.from?.title === defaultCurrency.value?.title
+        r.to?.code == accountCurrency.value?.code &&
+        r.from?.code == defaultCurrency.value?.code
     );
   });
 

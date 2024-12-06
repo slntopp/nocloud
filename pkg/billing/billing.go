@@ -107,6 +107,9 @@ type BillingServiceServer struct {
 	rootToken string
 
 	whmcsGateway *whmcs_gateway.WhmcsGateway
+
+	invoicesPublisher   func(event *epb.Event) error
+	instanceCommandsPub func(event *epb.Event) error
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
@@ -114,34 +117,36 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
-		rbmq:            conn,
-		log:             log,
-		nss:             nss,
-		plans:           plans,
-		transactions:    transactions,
-		records:         records,
-		currencies:      currencies,
-		accounts:        accounts,
-		invoices:        invoices,
-		services:        services,
-		descriptions:    descriptions,
-		instances:       instances,
-		sp:              sp,
-		addons:          addons,
-		promocodes:      promocodes,
-		ca:              ca,
-		db:              db,
-		rdb:             rdb,
-		drivers:         drivers,
-		settingsClient:  settingsClient,
-		accClient:       accClient,
-		eventsClient:    eventsClient,
-		instancesClient: instClient,
-		rootToken:       token,
-		whmcsGateway:    whmcsGateway,
+		rbmq:                conn,
+		log:                 log,
+		nss:                 nss,
+		plans:               plans,
+		transactions:        transactions,
+		records:             records,
+		currencies:          currencies,
+		accounts:            accounts,
+		invoices:            invoices,
+		services:            services,
+		descriptions:        descriptions,
+		instances:           instances,
+		sp:                  sp,
+		addons:              addons,
+		promocodes:          promocodes,
+		ca:                  ca,
+		db:                  db,
+		rdb:                 rdb,
+		drivers:             drivers,
+		settingsClient:      settingsClient,
+		accClient:           accClient,
+		eventsClient:        eventsClient,
+		instancesClient:     instClient,
+		rootToken:           token,
+		whmcsGateway:        whmcsGateway,
+		invoicesPublisher:   invPub,
+		instanceCommandsPub: instPub,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
@@ -710,7 +715,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
-			rate, _, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
+			rate, _, err = s.currencies.GetExchangeRate(ctx, defaultCur, cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
@@ -736,7 +741,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 	log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
 	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 const countPlansQuery = `
@@ -905,7 +910,7 @@ func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, r *conn
 	if r.Msg.GetAnonymously() && p.Public {
 		resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
 		conv.SetResponseHeader(resp.Header())
-		return resp, nil
+		return graph.HandleConvertionError(resp, conv)
 	}
 
 	if !ok && !p.Public {
@@ -914,7 +919,7 @@ func (s *BillingServiceServer) _HandleGetSinglePlan(ctx context.Context, r *conn
 
 	resp := connect.NewResponse(&pb.ListResponse{Pool: []*pb.Plan{p.Plan}, Total: 1})
 	conv.SetResponseHeader(resp.Header())
-	return resp, nil
+	return graph.HandleConvertionError(resp, conv)
 }
 
 /*

@@ -33,7 +33,16 @@
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
         {{
-          `${convertTo(item.total, item.currency)} ${defaultCurrency?.title}`
+          `${formatPrice(
+            convertTo(item.total, item.currency),
+            defaultCurrency
+          )} ${defaultCurrency?.title}`
+        }}
+      </template>
+
+      <template v-slot:[`item.totalPreview`]="{ item }">
+        {{
+          `${formatPrice(item.total, item.currency)} ${item.currency?.title}`
         }}
       </template>
     </nocloud-table>
@@ -48,6 +57,7 @@ import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
 import { getShortName } from "@/functions";
+import { formatPrice } from "../functions";
 
 const store = useStore();
 const { convertTo, defaultCurrency } = useCurrency();

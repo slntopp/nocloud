@@ -127,12 +127,15 @@ init:
 		goto init
 	}
 
-	queue, _ := ch.QueueDeclare(
+	queue, err := ch.QueueDeclare(
 		"events",
-		true, false, false, true, nil,
+		true, false, false, false, nil,
 	)
+	if err != nil {
+		log.Fatal("Failed to declare a queue", zap.Error(err))
+	}
 
-	events, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	events, err := ch.Consume(queue.Name, "events", false, false, false, false, nil)
 	if err != nil {
 		log.Error("Failed to register a consumer", zap.Error(err))
 		time.Sleep(time.Second)
@@ -140,7 +143,6 @@ init:
 	}
 
 	for msg := range events {
-		log.Debug("Received a message")
 		var event pb.Event
 		err = proto.Unmarshal(msg.Body, &event)
 		if err != nil {
@@ -150,6 +152,7 @@ init:
 			}
 			continue
 		}
+		log.Debug("Received a message", zap.String("routine_key", msg.RoutingKey), zap.Any("event", event))
 
 		handler, ok := handlers[event.Key]
 		if !ok {

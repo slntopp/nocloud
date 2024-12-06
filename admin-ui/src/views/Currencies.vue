@@ -17,9 +17,19 @@
                 :rules="rules.required"
               />
             </v-col>
-            <v-col>
+
+            <v-col cols="12">
+              <v-text-field
+                dense
+                label="Title"
+                v-model="newCurrency.code"
+                :rules="rules.required"
+              />
+            </v-col>
+
+            <v-col class="d-flex justify-end">
               <v-btn
-                :disabled="!newCurrency.title"
+                :disabled="!newCurrency.title || !newCurrency.code"
                 :loading="isCreateCurrencyLoading"
                 @click="createCurrency"
                 >Create</v-btn
@@ -29,148 +39,119 @@
         </v-card>
       </v-dialog>
 
-      <v-text-field
+      <v-select
         dense
-        readonly
         label="Default currency"
         class="d-inline-block"
         style="width: 200px"
-        :value="defaultCurrency?.title"
+        :items="currencies"
+        item-text="code"
+        item-value="id"
+        v-model="newDefaultCurrency"
       />
+
+      <template v-if="newDefaultCurrency !== defaultCurrency.id">
+        <confirm-dialog
+          @confirm="changeDefaultCurrency"
+          :loading="isChangeDefaultCurrencyLoading"
+        >
+          <v-btn class="ml-3" :loading="isChangeDefaultCurrencyLoading"
+            >Change default currency</v-btn
+          >
+        </confirm-dialog>
+      </template>
     </div>
 
     <nocloud-table
-      table-name="currencies-table"
+      table-name="currencies-rates-table"
       class="mt-4"
-      item-key="id"
-      :items="currencies"
+      item-key="uid"
+      sort-by="uid"
+      :items="currenciesItems"
       :headers="currenciesHeaders"
       :loading="isLoading"
       :footer-error="fetchError"
       :show-select="false"
-      show-expand
-      :expanded.sync="expanded"
     >
-      <template v-slot:expanded-item="{ headers, item }">
-        <td :colspan="headers.length" style="padding: 0">
-          <v-card color="background-light">
-            <div class="d-flex align-center">
-              <v-card-title>Rates</v-card-title>
-
-              <v-dialog max-width="400" v-model="isCreateRateOpen">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn v-bind="attrs" v-on="on"> Add </v-btn>
-                </template>
-                <v-card class="pa-4">
-                  <v-row dense>
-                    <v-col cols="12">
-                      <v-autocomplete
-                        dense
-                        label="To"
-                        v-model="newRate.to"
-                        item-text="title"
-                        item-value="id"
-                        return-object
-                        :items="getCurrenciesTo(item)"
-                      />
-                    </v-col>
-                    <v-col cols="12">
-                      <v-text-field
-                        dense
-                        type="number"
-                        label="Rate"
-                        v-model="newRate.rate"
-                        :rules="rules.number"
-                      />
-                    </v-col>
-                    <v-col>
-                      <v-btn
-                        :loading="isCreateRateLoading"
-                        @click="createRate(item)"
-                        >Save</v-btn
-                      >
-                    </v-col>
-                  </v-row>
-                </v-card>
-              </v-dialog>
-            </div>
-
-            <nocloud-table
-              table-name="rates-table"
-              class="mt-4"
-              :items="getRates(item)"
-              :headers="ratesHeaders"
-            >
-              <template v-slot:[`item.from`]="{ item }">
-                {{ item.from.title }}
-              </template>
-              <template v-slot:[`item.to`]="{ item }">
-                {{ item.to.title }}
-              </template>
-              <template v-slot:[`item.rate`]="{ item }">
-                <v-text-field
-                  dense
-                  type="number"
-                  style="width: 200px"
-                  :value="Math.round(item.rate * 100) / 100"
-                  @input="item.rate = $event"
-                  :rules="rules.number"
-                />
-              </template>
-
-              <template v-slot:[`item.commission`]="{ item }">
-                <v-text-field
-                  dense
-                  type="number"
-                  style="width: 200px"
-                  :value="item.commission"
-                  @input="item.commission = $event"
-                />
-              </template>
-
-              <template v-slot:[`item.actions`]="{ item }">
-                <div class="d-flex justify-end">
-                  <v-btn
-                    class="ml-2"
-                    @click="editRate(item)"
-                    :loading="isEditRateLoading"
-                  >
-                    Save
-                    <v-icon class="ml-2">
-                      mdi-content-save-edit-outline
-                    </v-icon>
-                  </v-btn>
-
-                  <confirm-dialog
-                    :loading="isDeleteRateLoading"
-                    @confirm="deleteRate(item)"
-                  >
-                    <v-btn class="ml-2" :loading="isDeleteRateLoading">
-                      Delete
-                      <v-icon class="ml-2" title="Save edit">
-                        mdi-delete-outline
-                      </v-icon>
-                    </v-btn>
-                  </confirm-dialog>
-                </div>
-              </template>
-            </nocloud-table>
-          </v-card>
-        </td>
-      </template>
-
-      <template v-slot:[`item.public`]="{ item }">
+      <template v-slot:[`item.code`]="{ item }">
         <div>
-          <v-switch
+          <v-text-field
             :loading="updatingCurrencyId === item.id"
             dense
             hide-details
             :disabled="!!updatingCurrencyId"
-            :input-value="item.public"
-            @change="
-              updateCurrencyPublic(item, $event)
-            "
+            v-model="item.code"
           />
+        </div>
+      </template>
+
+      <template v-slot:[`item.title`]="{ item }">
+        <v-text-field
+          :loading="updatingCurrencyId === item.id"
+          dense
+          hide-details
+          :disabled="!!updatingCurrencyId"
+          v-model="item.title"
+        />
+      </template>
+
+      <template v-slot:[`item.public`]="{ item }">
+        <v-switch
+          :loading="updatingCurrencyId === item.id"
+          dense
+          hide-details
+          :disabled="!!updatingCurrencyId"
+          v-model="item.public"
+        />
+      </template>
+
+      <template v-slot:[`item.rate`]="{ item }">
+        <v-text-field
+          type="number"
+          step="any"
+          :loading="updatingCurrencyId === item.id"
+          dense
+          hide-details
+          :disabled="!!updatingCurrencyId || item.default"
+          v-model.number="item.rate.value"
+        />
+      </template>
+
+      <template v-slot:[`item.precision`]="{ item }">
+        <v-text-field
+          type="number"
+          step="any"
+          :loading="updatingCurrencyId === item.id"
+          dense
+          hide-details
+          :disabled="!!updatingCurrencyId"
+          v-model.number="item.precision"
+        />
+      </template>
+
+      <template v-slot:[`item.rounding`]="{ item }">
+        <v-select
+          :loading="updatingCurrencyId === item.id"
+          dense
+          hide-details
+          :disabled="!!updatingCurrencyId"
+          v-model="item.rounding"
+          item-text="text"
+          item-value="value"
+          :items="roundingItems"
+        />
+      </template>
+
+      <template v-slot:[`item.actions`]="{ item }">
+        <div class="d-flex justify-end">
+          <v-btn
+            :disabled="!editedCurrencies[item.id]"
+            @click="saveCurrency(item)"
+            icon
+            ><v-icon :color="editedCurrencies[item.id] ? 'primary' : ''"
+              >mdi-content-save</v-icon
+            ></v-btn
+          >
         </div>
       </template>
     </nocloud-table>
@@ -179,45 +160,41 @@
 
 <script setup>
 import { useStore } from "@/store";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { onMounted } from "vue";
 import {
+  ChangeDefaultCurrencyRequest,
   CreateCurrencyRequest,
   CreateExchangeRateRequest,
-  DeleteExchangeRateRequest,
+  Rounding,
   UpdateCurrencyRequest,
   UpdateExchangeRateRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
-import { watch } from "vue";
 
 const store = useStore();
 
 const currenciesHeaders = [
-  { text: "Name ", value: "title" },
-  { text: "Public ", value: "public" },
-];
-const ratesHeaders = [
-  { text: "To", value: "to" },
-  { text: "Rate ", value: "rate" },
-  { text: "Commission ", value: "commission" },
-  { text: "Actions", value: "actions", sortable: false },
+  { text: "ID", value: "id", width: 50, sortable: true },
+  { text: "Code", value: "code", width: 200, sortable: false },
+  { text: "Title", value: "title", sortable: false },
+  { text: "Rate", value: "rate", sortable: false },
+  { text: "Precision", value: "precision", width: 100, sortable: false },
+  { text: "Rounding", value: "rounding", width: 150, sortable: false },
+  { text: "Public ", value: "public", width: 100, sortable: false },
+  { text: "Actions ", value: "actions", width: 100, sortable: false },
 ];
 
+const currenciesItems = ref([]);
+const originalCurrenciesItems = ref([]);
+const newDefaultCurrency = ref();
 const fetchError = ref("");
-const expanded = ref([]);
-
 const isCreateCurrencyOpen = ref(false);
+const isChangeDefaultCurrencyLoading = ref(false);
 const isCreateCurrencyLoading = ref(false);
-const newCurrency = ref({ title: "" });
+const newCurrency = ref({ title: "", code: "" });
 const updatingCurrencyId = ref("");
-
-const isCreateRateOpen = ref(false);
-const isCreateRateLoading = ref(false);
-const isEditRateLoading = ref(false);
-const isDeleteRateLoading = ref(false);
-const newRate = ref({ from: "", to: "", rate: "1" });
 
 const rules = ref({
   number: [
@@ -239,16 +216,28 @@ const currenciesClient = computed(
   () => store.getters["currencies/currencyClient"]
 );
 
-const currencies = computed(() => store.getters["currencies/all"]);
+const rates = computed(() => store.getters["currencies/rates"]);
+const currencies = computed(() =>
+  store.getters["currencies/all"].filter((c) => !!c.id)
+);
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isLoading = computed(() => store.getters["currencies/isLoading"]);
-
-const rates = computed(() =>
-  store.getters["currencies/rates"].map((c) => ({
-    ...c,
-    rate: c.rate?.toString(),
-    commission: c.commission?.toString(),
-  }))
+const roundingItems = computed(() =>
+  Object.keys(Rounding)
+    .filter((v) => !Number.isInteger(+v))
+    .map((val) => ({
+      text: val.split("_")[1],
+      value: Rounding[val],
+    }))
+    .map((val) => (val.text === "HALF" ? { ...val, text: "STANDART" } : val))
+);
+const editedCurrencies = computed(() =>
+  currenciesItems.value.reduce((acc, item, index) => {
+    acc[item.id] =
+      JSON.stringify(item) !==
+      JSON.stringify(originalCurrenciesItems.value[index]);
+    return acc;
+  }, {})
 );
 
 const fetchCurrencies = async (silent = false) => {
@@ -268,7 +257,7 @@ const createCurrency = async () => {
       CreateCurrencyRequest.fromJson({ currency: newCurrency.value })
     );
 
-    newCurrency.value = { title: "" };
+    newCurrency.value = { title: "", code: "" };
     isCreateCurrencyOpen.value = false;
 
     fetchCurrencies();
@@ -280,90 +269,52 @@ const createCurrency = async () => {
   }
 };
 
-const getRates = (item) => {
-  return rates.value.filter((rate) => rate.from.id === item.id);
-};
-
-const getCurrenciesTo = (item) => {
-  const rates = getRates(item);
-
-  return currencies.value.filter(
-    (currency) => !rates.find((rate) => rate.to.id === currency.id)
-  );
-};
-
-const createRate = async (currency) => {
+const saveCurrency = async (item) => {
   try {
-    isCreateRateLoading.value = true;
-
-    await currenciesClient.value.createExchangeRate(
-      CreateExchangeRateRequest.fromJson({ ...newRate.value, from: currency })
-    );
-
-    newRate.value = {};
-    fetchCurrencies(true);
-
-    isCreateRateOpen.value = false;
-  } catch (err) {
-    const message = err.response?.data?.message ?? err.message ?? err;
-    store.commit("snackbar/showSnackbarError", { message: message });
-  } finally {
-    isCreateRateLoading.value = false;
-  }
-};
-
-const editRate = async (item) => {
-  try {
-    isEditRateLoading.value = true;
-
-    await currenciesClient.value.updateExchangeRate(
-      UpdateExchangeRateRequest.fromJson({
-        rate: item.rate,
-        commission: item.commission,
-        from: item.from,
-        to: item.to,
-      })
-    );
-
-    fetchCurrencies(true);
-  } catch (err) {
-    const message = err.response?.data?.message ?? err.message ?? err;
-    store.commit("snackbar/showSnackbarError", { message: message });
-  } finally {
-    isEditRateLoading.value = false;
-  }
-};
-
-const deleteRate = async (item) => {
-  try {
-    isDeleteRateLoading.value = true;
-
-    await currenciesClient.value.deleteExchangeRate(
-      DeleteExchangeRateRequest.fromJson({ from: item.from, to: item.to })
-    );
-
-    fetchCurrencies(true);
-  } catch (err) {
-    const message = err.response?.data?.message ?? err.message ?? err;
-    store.commit("snackbar/showSnackbarError", { message: message });
-  } finally {
-    isDeleteRateLoading.value = false;
-  }
-};
-
-const updateCurrencyPublic = async (item, value) => {
-  try {
-    updatingCurrencyId.value = item.uuid;
-    console.log(value);
-    
+    updatingCurrencyId.value = item.id;
 
     await currenciesClient.value.updateCurrency(
       UpdateCurrencyRequest.fromJson({
-        currency:{...item,
-          public: value},
+        currency: {
+          code: item.code,
+          title: item.title,
+          id: item.id,
+          precision: item.precision,
+          format: item.format,
+          rounding: item.rounding,
+          public: item.public,
+          default: item.default,
+        },
       })
     );
-    item.public = value;
+
+    if (!item.default) {
+      if (item.rate.isExists) {
+        await currenciesClient.value.updateExchangeRate(
+          UpdateExchangeRateRequest.fromJson({
+            rate: item.rate.value,
+            to: { id: item.id },
+            from: { id: 0 },
+          })
+        );
+      } else {
+        await currenciesClient.value.createExchangeRate(
+          CreateExchangeRateRequest.fromJson({
+            rate: item.rate.value,
+            to: { id: item.id },
+            from: { id: 0 },
+          })
+        );
+
+        currenciesItems.value = currenciesItems.value.map((c) =>
+          c.id === item.id ? { ...c, rate: { ...c.rate, isExists: true } } : c
+        );
+      }
+    }
+
+    originalCurrenciesItems.value = originalCurrenciesItems.value.map((c) =>
+      c.id === item.id ? JSON.parse(JSON.stringify(item)) : c
+    );
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
@@ -371,9 +322,62 @@ const updateCurrencyPublic = async (item, value) => {
   }
 };
 
-watch(isCreateRateOpen, () => {
-  if (!isCreateRateOpen.value) {
-    newRate.value = {};
+const changeDefaultCurrency = async () => {
+  try {
+    isChangeDefaultCurrencyLoading.value = true;
+
+    await currenciesClient.value.changeDefaultCurrency(
+      ChangeDefaultCurrencyRequest.fromJson({
+        id: newDefaultCurrency.value,
+      })
+    );
+
+    await fetchCurrencies();
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    isChangeDefaultCurrencyLoading.value = false;
+  }
+};
+
+watch([currencies, rates], () => {
+  newDefaultCurrency.value = defaultCurrency.value.id;
+
+  const items = currencies.value.map((currency) => {
+    const rate = rates.value.find(
+      (val) => val.to.id == currency.id && !val.from.id
+    );
+
+    return {
+      ...currency,
+      uid: (currency.id || 0).toString(),
+      rate: {
+        value: rate?.rate || 0,
+        isExists: !!rate,
+      },
+    };
+  });
+  currenciesItems.value = JSON.parse(JSON.stringify(items));
+  originalCurrenciesItems.value = JSON.parse(JSON.stringify(items));
+});
+
+watch(rates, async () => {
+  if (
+    defaultCurrency.value &&
+    rates.value.length &&
+    !rates.value.find(
+      (rate) => rate.to.id == defaultCurrency.value.id && !rate.from.id
+    )
+  ) {
+    await currenciesClient.value.createExchangeRate(
+      CreateExchangeRateRequest.fromJson({
+        rate: 1,
+        to: { id: defaultCurrency.value.id },
+        from: { id: 0 },
+      })
+    );
+
+    fetchCurrencies();
   }
 });
 </script>

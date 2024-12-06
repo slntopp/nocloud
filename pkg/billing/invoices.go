@@ -2,10 +2,20 @@ package billing
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
+	"github.com/slntopp/nocloud/pkg/pubsub/billing"
+	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
+	"github.com/wI2L/jsondiff"
+	"golang.org/x/sync/errgroup"
+	"math"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -14,7 +24,6 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
-	instancespb "github.com/slntopp/nocloud-proto/instances"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -31,48 +40,72 @@ type pair[T any] struct {
 	s T
 }
 
+func equalFloats(a, b float64) bool {
+	const equalFloatsEpsilon = 0.0001
+	return a == b || math.Abs(a-b) < equalFloatsEpsilon
+}
+
 func invoicesEqual(a, b *pb.Invoice) bool {
-	emptyCur := func(c *pb.Currency) {
-		if c == nil {
-			return
-		}
-		c.Public = true
-		c.Precision = 0
-		c.Format = ""
-		c.Title = ""
-		c.Code = ""
-	}
 	if a == nil || b == nil {
 		return false
 	}
-	if a.Transactions == nil {
-		a.Transactions = []string{}
+	prepare := func(i *pb.Invoice) {
+		if i.Items == nil {
+			i.Items = []*pb.Item{}
+		}
+		if i.Transactions == nil {
+			i.Transactions = []string{}
+		}
+		if i.Instances == nil {
+			i.Instances = []string{}
+		}
+		if i.Meta == nil {
+			i.Meta = make(map[string]*structpb.Value)
+		}
 	}
-	if a.Instances == nil {
-		a.Instances = []string{}
+	prepare(a)
+	prepare(b)
+	if len(a.Items) != len(b.Items) {
+		return false
 	}
-	if a.Meta == nil {
-		a.Meta = make(map[string]*structpb.Value)
-	}
-	if b.Transactions == nil {
-		b.Transactions = []string{}
-	}
-	if b.Instances == nil {
-		b.Instances = []string{}
-	}
-	if b.Meta == nil {
-		b.Meta = make(map[string]*structpb.Value)
+	for i := range a.Items {
+		if a.Items[i] == nil && b.Items[i] != nil || b.Items[i] == nil && a.Items[i] != nil {
+			return false
+		}
+		if a.Items[i] == nil {
+			continue
+		}
+		i1 := a.Items[i]
+		i2 := b.Items[i]
+		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit {
+			return false
+		}
+		if !equalFloats(i1.Price, i2.Price) {
+			return false
+		}
 	}
 	_a := proto.Clone(a).(*pb.Invoice)
 	_b := proto.Clone(b).(*pb.Invoice)
+	if (_a.Currency == nil && _b.Currency != nil) ||
+		(_a.Currency != nil && _b.Currency == nil) ||
+		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
+		return false
+	}
+	_a.Currency = nil
+	_b.Currency = nil
+	_a.Items = nil
+	_b.Items = nil
 	_a.Total = 0 // It calculated based on items anyway
 	_b.Total = 0
-	emptyCur(_a.Currency)
-	emptyCur(_b.Currency)
-	return proto.Equal(_a, _b)
+	patch, err := jsondiff.Compare(_a, _b)
+	if err != nil {
+		fmt.Println("error while comparing invoices", err)
+		return false
+	}
+	return len(patch) == 0
 }
 
-var forbiddenStatusConversions = []pair[pb.BillingStatus]{}
+var forbiddenStatusConversions = make([]pair[pb.BillingStatus], 0)
 
 const instanceOwner = `
 LET account = LAST( // Find Instance owner Account
@@ -84,17 +117,6 @@ LET account = LAST( // Find Instance owner Account
         RETURN node
     )
 RETURN account`
-
-const instanceInstanceGroup = `
-LET ig = LAST( // Find Instance instance group
-    FOR node, edge, path IN 1
-    INBOUND DOCUMENT(@@instances, @instance)
-    GRAPH @permissions
-    FILTER path.edges[*].role == ["owner"]
-    FILTER IS_SAME_COLLECTION(node, @@igs)
-        RETURN node
-    )
-RETURN ig`
 
 const invoicesByPaymentDate = `
 FOR invoice IN @@invoices
@@ -173,12 +195,12 @@ func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery strin
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetInvoice")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	req := r.Msg
-	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
-	acc := requestor
+	acc := requester
 
 	query := `FOR t IN @@invoices`
 	vars := map[string]interface{}{
@@ -193,13 +215,13 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) && requestor != req.GetAccount() {
+		if !s.ca.HasAccess(ctx, requester, node, access.Level_ADMIN) && requester != req.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
 	} else {
-		if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
 			query += ` FILTER t.account == @acc && t.status != @statusDraft && t.status != @statusTerm`
 			vars["acc"] = acc
 			vars["statusDraft"] = pb.BillingStatus_DRAFT
@@ -397,6 +419,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Meta["creator"] == nil {
 		t.Meta["creator"] = structpb.NewStringValue(requester)
 	}
+	if acc.GetPaymentsGateway() == "whmcs" || acc.GetPaymentsGateway() == "" {
+		t.Meta["whmcs_sync_required"] = structpb.NewBoolValue(true)
+	}
 
 	t.Number = strNum
 	t.Created = now.Unix()
@@ -415,6 +440,16 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
+	if err = s.invoicesPublisher(&epb.Event{
+		Uuid: r.GetUuid(),
+		Key:  billing.InvoiceCreated,
+		Data: map[string]*structpb.Value{
+			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
+		},
+	}); err != nil {
+		log.Error("Failed to publish invoice creation", zap.Error(err))
+	}
+
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      r.GetUuid(),
 		Entity:    "Invoices",
@@ -426,20 +461,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Requestor: requester,
 	})
 
-	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).CreateInvoice(ctx, r.Invoice, !req.Msg.GetIsSendEmail()); err != nil {
-			log.Error("Failed to create invoice through gateway", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to create invoice through gateway")
-		}
-	}
-
-	inv, err := s.invoices.Get(ctx, r.GetUuid())
-	if err != nil {
-		log.Error("Failed to get invoice", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get invoice")
-	}
-
-	resp := connect.NewResponse(inv.Invoice)
+	resp := connect.NewResponse(r.Invoice)
 	return resp, nil
 }
 
@@ -481,24 +503,17 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 	nowBeforeActions := time.Now().Unix()
-	var nowAfterActions int64
 	newInv.Status = newStatus
-
-	acc, err := s.accounts.Get(ctx, newInv.GetAccount())
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get account")
-	}
 
 	var strNum string
 	var num int
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
-	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
 	} else if newStatus == pb.BillingStatus_RETURNED {
-		goto returning
+		newInv.Returned = nowBeforeActions
+		goto quit
 	} else {
 		goto quit
 	}
@@ -519,26 +534,21 @@ payment:
 	newInv.NumericNumber = num
 	newInv.NumberTemplate = invConf.Template
 
-	if newInv, err = s.executePostPaidActions(ctx, log, newInv, currConf.Currency); err != nil {
-		log.Error("FATAL: Failed to execute postpaid actions after invoice was paid")
-	}
-	goto quit
-
-returning:
-	newInv.Returned = nowBeforeActions
-	if newInv, err = s.executePostRefundActions(ctx, log, newInv); err != nil {
-		log.Error("FATAL: Failed to execute post refund actions after invoice was returned")
-	}
-	goto quit
-
 quit:
-	nowAfterActions = time.Now().Unix()
-	newInv.Processed = nowAfterActions
-
 	_, err = s.invoices.Replace(ctx, newInv)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
+		return nil, status.Error(codes.Internal, "Failed to update invoice")
+	}
+
+	if err = s.invoicesPublisher(&epb.Event{
+		Uuid: old.GetUuid(),
+		Key:  billing.InvoiceStatusToKey(newStatus),
+		Data: map[string]*structpb.Value{
+			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
+		},
+	}); err != nil {
+		log.Error("Failed to publish invoice status update", zap.Error(err))
 	}
 
 	nocloud.Log(log, &elpb.Event{
@@ -552,12 +562,6 @@ quit:
 		Requestor: requester,
 	})
 
-	if !payments.GetGatewayCallbackValue(ctx, req.Header()) {
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, newInv.Invoice, old.Invoice); err != nil {
-			log.Error("Failed to update invoice through gateway", zap.Error(err))
-		}
-	}
-
 	log.Info("Finished invoice update status")
 	return connect.NewResponse(newInv.Invoice), nil
 }
@@ -566,7 +570,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	log := s.log.Named("PayWithBalance")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requester))
+	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
 	if req.WhmcsId != 0 {
 		return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
@@ -656,6 +660,16 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	if err != nil {
 		log.Warn("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Invoice not found")
+	}
+
+	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
+	if err == nil {
+		log.Info("Found NoCloud invoice with this whmcs_id. Redirecting to pay it on NoCloud", zap.Int64("whmcs_id", invId))
+		return s.PayWithBalance(ctx, connect.NewRequest(&pb.PayWithBalanceRequest{InvoiceUuid: ncInv.GetUuid(), WhmcsId: 0}))
+	}
+	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
+		log.Error("Failed to ensure that whmcs invoice exists in NoCloud", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error. Couldn't find your invoice")
 	}
 
 	acc, err := s.accounts.Get(ctx, requester)
@@ -828,6 +842,14 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
+	fmt.Println("Printing difference")
+	fmt.Println("Items passed", req.Items)
+	fmt.Println("Items db", t.Items)
+	fmt.Println("Inst passed", req.Instances)
+	fmt.Println("Inst db", t.Instances)
+	fmt.Printf("Passed %+v", req)
+	fmt.Println()
+	fmt.Printf("DB %+v", t.Invoice)
 	if invoicesEqual(t.Invoice, req) {
 		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
 		return connect.NewResponse(t.Invoice), nil
@@ -843,12 +865,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetReturned() != 0 && t.GetReturned() != 0 {
 		t.Returned = req.GetReturned()
 	}
-	if req.GetDeadline() != 0 && t.GetDeadline() != 0 {
-		t.Deadline = req.GetDeadline()
-	}
 	if req.GetCreated() != 0 {
 		t.Created = req.GetCreated()
 	}
+	t.Deadline = req.GetDeadline()
 
 	if req.Instances == nil {
 		req.Instances = make([]string, 0)
@@ -901,6 +921,16 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
+	if err = s.invoicesPublisher(&epb.Event{
+		Uuid: old.GetUuid(),
+		Key:  billing.InvoiceUpdated,
+		Data: map[string]*structpb.Value{
+			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, r.Header())),
+		},
+	}); err != nil {
+		log.Error("Failed to publish invoice update", zap.Error(err))
+	}
+
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      upd.GetUuid(),
 		Entity:    "Invoices",
@@ -911,19 +941,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		Snapshot:  &elpb.Snapshot{},
 		Requestor: requester,
 	})
-
-	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get account")
-	}
-
-	if !payments.GetGatewayCallbackValue(ctx, r.Header()) {
-		log.Info("Updating invoice through gateway")
-		if err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).UpdateInvoice(ctx, upd.Invoice, old); err != nil {
-			log.Error("Failed to update invoice through gateway", zap.Error(err))
-		}
-	}
 
 	log.Info("Invoice updated", zap.Any("invoice", t.GetUuid()))
 	return connect.NewResponse(t.Invoice), nil
@@ -1280,9 +1297,9 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			log := log.With(zap.String("instance", i))
 
 			instOld, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
-			if err != nil {
+			if err != nil || instOld.Instance == nil {
 				log.Error("Failed to get instance to start", zap.Error(err))
-				continue
+				return nil, fmt.Errorf("failed to get instance to start: %w", err)
 			}
 			instOld.Uuid = instOld.Key
 			// Set auto_start to true. After next driver monitoring instance will be started
@@ -1292,10 +1309,6 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			cfg := instNew.Config
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
-			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Error("Failed to update instance", zap.Error(err))
-				continue
-			}
 			// Add balance to compensate instance first payment
 			acc, err := s.instances.GetInstanceOwner(ctx, i)
 			if err != nil {
@@ -1314,24 +1327,40 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
+			// Update instance in the end due to publish operations inside
+			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
+				log.Error("Failed to update instance", zap.Error(err))
+				return nil, fmt.Errorf("failed to update instance: %w", err)
+			}
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
+		_z := 0
+		errs := &_z
+		m := &sync.Mutex{}
+		g := &errgroup.Group{}
 		for _, i := range inv.GetInstances() {
-			if i == "" {
-				continue
-			}
-			log := log.With(zap.String("instance", i))
-
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "free_renew",
+			id := i
+			g.Go(func() error {
+				if err := s.instanceCommandsPub(&epb.Event{
+					Uuid: id,
+					Key:  services_registry.CommandInstanceInvoke,
+					Type: "free_renew",
+				}); err != nil {
+					m.Lock()
+					*errs = *errs + 1
+					m.Unlock()
+					return err
+				}
+				return nil
 			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to renew instance", zap.Error(err))
-				continue
+		}
+		if err = g.Wait(); err != nil {
+			if *errs == len(inv.GetInstances()) {
+				return inv, fmt.Errorf("failed to publish free_renew command: %w", err)
 			}
+			log.Error("FATAL: somehow published only some of free_renew commands", zap.Error(err), zap.Int("errs", *errs), zap.Int("instances", len(inv.GetInstances())))
+			return inv, ps.NoNackErr(fmt.Errorf("failed to publish free_renew command for some instances, but not for all: %w", err))
 		}
 	}
 
@@ -1349,11 +1378,11 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 		tr, err := s.transactions.Get(ctx, trId)
 		if err != nil {
 			log.Error("Failed to get transaction", zap.Error(err))
-			continue
+			return nil, fmt.Errorf("failed to get transaction: %w", err)
 		}
 		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency()); err != nil {
 			log.Error("Failed to apply transaction", zap.Error(err))
-			continue
+			return nil, fmt.Errorf("failed to apply transaction: %w", err)
 		}
 		if tr != nil {
 			transactions = append(transactions, tr.GetUuid())
@@ -1363,39 +1392,61 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 
 	switch inv.GetType() {
 	case pb.ActionType_INSTANCE_START:
+		_z := 0
+		errs := &_z
+		m := &sync.Mutex{}
+		g := &errgroup.Group{}
 		for _, i := range inv.GetInstances() {
-			if i == "" {
-				continue
-			}
-			log := log.With(zap.String("instance", i))
-
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "suspend",
+			id := i
+			g.Go(func() error {
+				if err := s.instanceCommandsPub(&epb.Event{
+					Uuid: id,
+					Key:  services_registry.CommandInstanceInvoke,
+					Type: "suspend",
+				}); err != nil {
+					m.Lock()
+					*errs = *errs + 1
+					m.Unlock()
+					return err
+				}
+				return nil
 			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to suspend instance", zap.Error(err))
-				continue
+		}
+		if err := g.Wait(); err != nil {
+			if *errs == len(inv.GetInstances()) {
+				return inv, fmt.Errorf("failed to publish suspend command: %w", err)
 			}
+			log.Error("FATAL: somehow published only some of suspend commands", zap.Error(err), zap.Int("errs", *errs), zap.Int("instances", len(inv.GetInstances())))
+			return inv, ps.NoNackErr(fmt.Errorf("failed to publish suspend command for some instances, but not for all: %w", err))
 		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
+		_z := 0
+		errs := &_z
+		m := &sync.Mutex{}
+		g := &errgroup.Group{}
 		for _, i := range inv.GetInstances() {
-			if i == "" {
-				continue
-			}
-			log := log.With(zap.String("instance", i))
-
-			invokeReq := connect.NewRequest(&instancespb.InvokeRequest{
-				Uuid:   i,
-				Method: "cancel_renew",
+			id := i
+			g.Go(func() error {
+				if err := s.instanceCommandsPub(&epb.Event{
+					Uuid: id,
+					Key:  services_registry.CommandInstanceInvoke,
+					Type: "cancel_renew",
+				}); err != nil {
+					m.Lock()
+					*errs = *errs + 1
+					m.Unlock()
+					return err
+				}
+				return nil
 			})
-			invokeReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-			if _, err := s.instancesClient.Invoke(ctx, invokeReq); err != nil {
-				log.Error("Failed to cancel renew instance", zap.Error(err))
-				continue
+		}
+		if err := g.Wait(); err != nil {
+			if *errs == len(inv.GetInstances()) {
+				return inv, fmt.Errorf("failed to publish cancel_renew command: %w", err)
 			}
+			log.Error("FATAL: somehow published only some of cancel_renew commands", zap.Error(err), zap.Int("errs", *errs), zap.Int("instances", len(inv.GetInstances())))
+			return inv, ps.NoNackErr(fmt.Errorf("failed to publish cancel_renew command for some instances, but not for all: %w", err))
 		}
 	}
 

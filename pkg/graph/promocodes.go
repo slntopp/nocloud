@@ -315,7 +315,7 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 	_, ok := findEntry(promo.Uses, entry)
 	if ok {
 		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
-		return fmt.Errorf("promocode already used on given resource")
+		return fmt.Errorf("%w: promocode already used on given resource", ErrAlreadyExists)
 	}
 
 	entry.Exec = time.Now().Unix()

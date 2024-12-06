@@ -210,6 +210,9 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	}
 
 	rec := s.records.Create(ctx, recBody)
+	if rec == "" {
+		return nil, status.Error(codes.Internal, "Failed to create record")
+	}
 
 	if t.GetRecords() == nil {
 		t.Records = []string{}
@@ -535,7 +538,7 @@ LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
 	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
+	TO DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(currency.id)))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
@@ -560,7 +563,7 @@ LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
 	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
+	TO DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(currency.id)))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
@@ -656,6 +659,9 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 }
 
 func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency) (*pb.Transaction, error) {
+	if account == "" {
+		return nil, fmt.Errorf("account is required")
+	}
 	if amount == 0 {
 		return nil, nil
 	}
@@ -663,7 +669,7 @@ func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount floa
 		conf := MakeCurrencyConf(s.log, &s.settingsClient)
 		curr = conf.Currency
 	}
-	resp, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+	resp, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
 		Exec:     time.Now().Unix(),
 		Priority: pb.Priority_URGENT,
 		Account:  account,

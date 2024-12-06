@@ -91,9 +91,9 @@
           </div>
         </template>
         <template v-slot:[`item.total`]="{ item }">
-          {{ totalPrices[item.name] }}
+          {{ formatPrice(totalPrices[item.name], defaultCurrency) }}
           {{ defaultCurrency?.title }} /
-          {{ totalAccountPrices[item.name] }}
+          {{ formatPrice(totalAccountPrices[item.name], accountCurrency) }}
           {{ accountCurrency?.title }}
         </template>
         <template v-slot:body.append>
@@ -108,8 +108,9 @@
             <td>
               <div class="d-flex justify-end">
                 <v-chip color="primary" outlined>
-                  {{ totalPrice }}
-                  {{ defaultCurrency?.title }} / {{ totalAccountPrice }}
+                  {{ formatPrice(totalPrice, defaultCurrency) }}
+                  {{ defaultCurrency?.title }} /
+                  {{ formatPrice(totalAccountPrice, accountCurrency) }}
                   {{ accountCurrency?.title }}
                 </v-chip>
               </div>
@@ -142,6 +143,7 @@ import routeTextField from "@/components/ui/routeTextField.vue";
 import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import DatePicker from "../../ui/datePicker.vue";
+import { formatPrice } from "../../../functions";
 
 const props = defineProps(["template", "plans", "service", "sp", "account"]);
 const emit = defineEmits(["refresh", "update"]);

@@ -24,6 +24,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	ccb "github.com/slntopp/nocloud-proto/billing/billingconnect"
+	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud-proto/health/healthconnect"
 	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
@@ -33,6 +34,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
+	pubsub "github.com/slntopp/nocloud/pkg/pubsub"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc/metadata"
@@ -240,10 +242,11 @@ func main() {
 	}
 	wg.Wait()
 
-	ctx := metadata.AppendToOutgoingContext(
-		context.Background(), "authorization", "bearer "+token,
-	)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	go iserver.MonitoringRoutine(ctx)
+	_ps := pubsub.NewPubSub[*epb.Event](rabbitmq.NewRabbitMQConnection(rbmq), log)
+	go iserver.ConsumeInvokeCommands(log, ctx, _ps)
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 
