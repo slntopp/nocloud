@@ -905,17 +905,23 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 	}
 
-	patch := map[string]interface{}{}
+	vars := map[string]interface{}{}
+	query := fmt.Sprintf("UPDATE @invoice WITH {")
 	if req.Transactions != nil {
-		patch["transactions"] = req.GetTransactions()
+		query += ` transactions: @transactions,`
+		vars["transactions"] = req.GetTransactions()
 	}
 	if req.Items != nil {
-		patch["items"] = req.GetItems()
+		query += ` items: @items,`
+		vars["items"] = req.GetItems()
 	}
 	if req.Instances != nil {
-		patch["instances"] = req.GetInstances()
+		query += ` instances: @instances,`
+		vars["instances"] = req.GetInstances()
 	}
-
+	query += " } IN @@invoices OPTIONS { keepNull: false }"
+	vars["invoice"] = t.GetUuid()
+	vars["@invoices"] = schema.INVOICES_COL
 	// Update + patch transaction
 	if ctx, err = graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
 		Write: []string{schema.INVOICES_COL},
@@ -934,7 +940,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
-	if err = s.invoices.Patch(ctx, upd.GetUuid(), patch); err != nil {
+	if _, err = s.db.Query(ctx, query, vars); err != nil {
 		abort()
 		log.Error("Failed to patch invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
