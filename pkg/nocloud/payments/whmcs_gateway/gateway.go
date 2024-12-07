@@ -537,6 +537,9 @@ skipStatus:
 
 	inv.Transactions = nil
 	inv.Instances = nil
+	if synced {
+		inv.Items = nil
+	}
 	if err = g.invMan.UpdateInvoice(ctx, inv); err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
