@@ -545,6 +545,7 @@ payment:
 	newInv.NumberTemplate = invConf.Template
 
 quit:
+	_newInv := proto.Clone(newInv.Invoice).(*pb.Invoice)
 	newInv.Transactions = nil
 	newInv.Instances = nil
 	newInv.Items = nil
@@ -576,7 +577,7 @@ quit:
 	})
 
 	log.Info("Finished invoice update status")
-	return connect.NewResponse(newInv.Invoice), nil
+	return connect.NewResponse(_newInv), nil
 }
 
 func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Request[pb.PayWithBalanceRequest]) (*connect.Response[pb.PayWithBalanceResponse], error) {
@@ -932,7 +933,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		query += ` instances: @instances,`
 		vars["instances"] = req.GetInstances()
 	}
-	query += " } IN @@invoices OPTIONS { keepNull: false }"
+	query += " } IN @@invoices OPTIONS { keepNull: false } "
 	vars["invoice"] = t.GetUuid()
 	vars["@invoices"] = schema.INVOICES_COL
 	// Update + patch transaction
@@ -957,6 +958,11 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		abort()
 		log.Error("Failed to patch invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
+	}
+	if upd, err = s.invoices.Get(ctx, t.GetUuid()); err != nil {
+		abort()
+		log.Error("Failed to get updated invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get updated invoice")
 	}
 	if err = graph.CommitTransaction(ctx, s.db); err != nil {
 		abort()
@@ -986,7 +992,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	})
 
 	log.Info("Invoice updated", zap.Any("invoice", t.GetUuid()))
-	return connect.NewResponse(t.Invoice), nil
+	return connect.NewResponse(upd.Invoice), nil
 }
 
 func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
