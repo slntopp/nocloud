@@ -326,7 +326,6 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 		invoices = append(invoices, invoice)
 	}
 
-	log.Debug("Invoices retrieved", zap.Any("invoices", invoices))
 	resp := connect.NewResponse(&pb.Invoices{Pool: invoices})
 	return resp, nil
 }
