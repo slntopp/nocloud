@@ -49,6 +49,8 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 	if a == nil || b == nil {
 		return false
 	}
+	_a := proto.Clone(a).(*pb.Invoice)
+	_b := proto.Clone(b).(*pb.Invoice)
 	prepare := func(i *pb.Invoice) {
 		if i.Items == nil {
 			i.Items = []*pb.Item{}
@@ -63,20 +65,20 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 			i.Meta = make(map[string]*structpb.Value)
 		}
 	}
-	prepare(a)
-	prepare(b)
-	if len(a.Items) != len(b.Items) {
+	prepare(_a)
+	prepare(_b)
+	if len(_a.Items) != len(_b.Items) {
 		return false
 	}
-	for i := range a.Items {
-		if a.Items[i] == nil && b.Items[i] != nil || b.Items[i] == nil && a.Items[i] != nil {
+	for i := range _a.Items {
+		if _a.Items[i] == nil && _b.Items[i] != nil || _b.Items[i] == nil && _a.Items[i] != nil {
 			return false
 		}
-		if a.Items[i] == nil {
+		if _a.Items[i] == nil {
 			continue
 		}
-		i1 := a.Items[i]
-		i2 := b.Items[i]
+		i1 := _a.Items[i]
+		i2 := _b.Items[i]
 		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit {
 			return false
 		}
@@ -84,8 +86,6 @@ func invoicesEqual(a, b *pb.Invoice) bool {
 			return false
 		}
 	}
-	_a := proto.Clone(a).(*pb.Invoice)
-	_b := proto.Clone(b).(*pb.Invoice)
 	if (_a.Currency == nil && _b.Currency != nil) ||
 		(_a.Currency != nil && _b.Currency == nil) ||
 		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
@@ -534,7 +534,10 @@ payment:
 	newInv.NumberTemplate = invConf.Template
 
 quit:
-	_, err = s.invoices.Update(ctx, newInv)
+	newInv.Transactions = nil
+	newInv.Instances = nil
+	newInv.Items = nil
+	newInv, err = s.invoices.Update(ctx, newInv)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
@@ -860,56 +863,86 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Created = req.GetCreated()
 	}
 	t.Deadline = req.GetDeadline()
-
-	if req.Instances == nil {
-		req.Instances = make([]string, 0)
-	}
-	if !slices.Equal(t.GetInstances(), req.GetInstances()) {
-		for _, i := range req.GetInstances() {
-			if exists, err := s.instances.Exists(ctx, i); err != nil || !exists {
-				log.Error("Given linked instance dont exists", zap.String("instance", i), zap.Error(err))
-				return nil, status.Error(codes.InvalidArgument, "Instance you want to link do not exist")
-			}
-		}
-	}
-
 	t.Uuid = req.GetUuid()
-	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
 	t.Total = req.GetTotal()
 	t.Type = req.GetType()
-	t.Items = req.GetItems()
-	t.Instances = req.GetInstances()
-	if t.Items == nil {
-		t.Items = make([]*pb.Item, 0)
-	}
 	if req.Currency != nil {
 		t.Currency = req.GetCurrency()
+	}
+	if req.Meta != nil {
+		t.Meta = req.GetMeta()
 	}
 
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
 
-	// Rounding invoice items
-	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
-	if err != nil {
-		log.Error("Failed to get currency", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get currency")
+	if req.Instances != nil {
+		if !slices.Equal(t.GetInstances(), req.GetInstances()) {
+			for _, i := range req.GetInstances() {
+				if exists, err := s.instances.Exists(ctx, i); err != nil || !exists {
+					log.Error("Given linked instance dont exists", zap.String("instance", i), zap.Error(err))
+					return nil, status.Error(codes.InvalidArgument, "Instance you want to link do not exist")
+				}
+			}
+		}
 	}
-	var newTotal float64
-	for _, item := range t.GetItems() {
-		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
-		item.Price = price
-		newTotal += price * float64(item.GetAmount())
-	}
-	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 
+	if req.Items != nil {
+		cur, err := s.currencies.Get(ctx, t.Currency.GetId())
+		if err != nil {
+			log.Error("Failed to get currency", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get currency")
+		}
+		var newTotal float64
+		for _, item := range t.GetItems() {
+			price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
+			item.Price = price
+			newTotal += price * float64(item.GetAmount())
+		}
+		t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
+	}
+
+	patch := map[string]interface{}{}
+	if req.Transactions != nil {
+		patch["transactions"] = req.GetTransactions()
+	}
+	if req.Items != nil {
+		patch["items"] = req.GetItems()
+	}
+	if req.Instances != nil {
+		patch["instances"] = req.GetInstances()
+	}
+
+	// Update + patch transaction
+	if ctx, err = graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
+		Write: []string{schema.INVOICES_COL},
+	}); err != nil {
+		log.Error("Failed to start transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to start transaction")
+	}
+	abort := func() {
+		if err := graph.AbortTransaction(ctx, s.db); err != nil {
+			log.Error("Failed to abort transaction")
+		}
+	}
 	upd, err := s.invoices.Update(ctx, t)
 	if err != nil {
+		abort()
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
+	}
+	if err = s.invoices.Patch(ctx, upd.GetUuid(), patch); err != nil {
+		abort()
+		log.Error("Failed to patch invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update invoice")
+	}
+	if err = graph.CommitTransaction(ctx, s.db); err != nil {
+		abort()
+		log.Error("Failed to commit transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to commit transaction")
 	}
 
 	if err = s.invoicesPublisher(&epb.Event{

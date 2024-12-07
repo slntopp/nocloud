@@ -456,7 +456,6 @@ skipStatus:
 		}
 		if !isDateEqualWithoutTime(time.Unix(inv.Payment, 0), t) {
 			inv.Payment = t.Unix()
-			inv.Processed = inv.Payment
 		}
 	}
 	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
@@ -536,6 +535,8 @@ skipStatus:
 	meta["note"] = structpb.NewStringValue(warning + whmcsInv.Notes)
 	inv.Meta = meta
 
+	inv.Transactions = nil
+	inv.Instances = nil
 	if err = g.invMan.UpdateInvoice(ctx, inv); err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
