@@ -534,7 +534,7 @@ payment:
 	newInv.NumberTemplate = invConf.Template
 
 quit:
-	_, err = s.invoices.Replace(ctx, newInv)
+	_, err = s.invoices.Update(ctx, newInv)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
@@ -906,7 +906,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 
-	upd, err := s.invoices.Replace(ctx, t)
+	upd, err := s.invoices.Update(ctx, t)
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
