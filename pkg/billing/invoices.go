@@ -45,12 +45,23 @@ func equalFloats(a, b float64) bool {
 	return a == b || math.Abs(a-b) < equalFloatsEpsilon
 }
 
-func invoicesEqual(a, b *pb.Invoice) bool {
+func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 	if a == nil || b == nil {
 		return false
 	}
 	_a := proto.Clone(a).(*pb.Invoice)
 	_b := proto.Clone(b).(*pb.Invoice)
+	if ignoreNulls {
+		if _a.Items == nil {
+			_b.Items = nil
+		}
+		if _a.Transactions == nil {
+			_b.Transactions = nil
+		}
+		if _a.Instances == nil {
+			_b.Instances = nil
+		}
+	}
 	prepare := func(i *pb.Invoice) {
 		if i.Items == nil {
 			i.Items = []*pb.Item{}
@@ -821,6 +832,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	log := s.log.Named("UpdateInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg.Invoice
+	ignoreNulls := r.Msg.IgnoreNullFields
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requester", requester))
 
 	if req == nil {
@@ -844,7 +856,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
-	if invoicesEqual(t.Invoice, req) {
+	if invoicesEqual(req, t.Invoice, ignoreNulls) {
 		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
 		return connect.NewResponse(t.Invoice), nil
 	}
@@ -890,8 +902,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 	}
 
-	var newTotal float64
-	if req.Items != nil {
+	if req.Items != nil || !ignoreNulls {
+		var newTotal float64
 		cur, err := s.currencies.Get(ctx, t.Currency.GetId())
 		if err != nil {
 			log.Error("Failed to get currency", zap.Error(err))
@@ -903,20 +915,20 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 			newTotal += price * float64(item.GetAmount())
 		}
 		newTotal = graph.Round(newTotal, cur.Precision, cur.Rounding)
+		t.Total = newTotal
 	}
-	t.Total = newTotal
 
 	vars := map[string]interface{}{}
 	query := fmt.Sprintf("UPDATE @invoice WITH {")
-	if req.Transactions != nil || !r.Msg.IgnoreNullFields {
+	if req.Transactions != nil || !ignoreNulls {
 		query += ` transactions: @transactions,`
 		vars["transactions"] = req.GetTransactions()
 	}
-	if req.Items != nil || !r.Msg.IgnoreNullFields {
+	if req.Items != nil || !ignoreNulls {
 		query += ` items: @items,`
 		vars["items"] = req.GetItems()
 	}
-	if req.Instances != nil || !r.Msg.IgnoreNullFields {
+	if req.Instances != nil || !ignoreNulls {
 		query += ` instances: @instances,`
 		vars["instances"] = req.GetInstances()
 	}
