@@ -842,14 +842,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
-	fmt.Println("Printing difference")
-	fmt.Println("Items passed", req.Items)
-	fmt.Println("Items db", t.Items)
-	fmt.Println("Inst passed", req.Instances)
-	fmt.Println("Inst db", t.Instances)
-	fmt.Printf("Passed %+v", req)
-	fmt.Println()
-	fmt.Printf("DB %+v", t.Invoice)
 	if invoicesEqual(t.Invoice, req) {
 		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
 		return connect.NewResponse(t.Invoice), nil
