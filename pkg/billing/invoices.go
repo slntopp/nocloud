@@ -565,7 +565,7 @@ quit:
 		log.Error("Failed to publish invoice status update", zap.Error(err))
 	}
 
-	diff, _ := jsondiff.Compare(old.Invoice, newInv.Invoice)
+	diff, _ := jsondiff.Compare(_newInv, old.Invoice)
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      old.GetUuid(),
 		Entity:    "Invoices",
@@ -864,6 +864,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Info("Invoice unchanged. Skip", zap.Any("invoice", t.GetUuid()))
 		return connect.NewResponse(t.Invoice), nil
 	}
+	t.Currency = &pb.Currency{Id: t.Currency.GetId()}
 	old := proto.Clone(t.Invoice).(*pb.Invoice)
 
 	if req.GetPayment() != 0 && t.GetPayment() != 0 {
@@ -884,9 +885,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Account = req.GetAccount()
 	t.Total = req.GetTotal()
 	t.Type = req.GetType()
-	if req.Currency != nil {
-		t.Currency = req.GetCurrency()
-	}
 	if req.Meta != nil {
 		t.Meta = req.GetMeta()
 	}
@@ -913,7 +911,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 			log.Error("Failed to get currency", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get currency")
 		}
-		for _, item := range t.GetItems() {
+		for _, item := range req.GetItems() {
 			price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 			item.Price = price
 			newTotal += price * float64(item.GetAmount())
@@ -983,7 +981,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to publish invoice update", zap.Error(err))
 	}
 
-	diff, _ := jsondiff.Compare(old, t.Invoice)
+	diff, _ := jsondiff.Compare(upd.Invoice, old)
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      upd.GetUuid(),
 		Entity:    "Invoices",
