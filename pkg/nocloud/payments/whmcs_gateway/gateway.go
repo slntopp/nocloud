@@ -24,7 +24,7 @@ import (
 
 type NoCloudInvoicesManager interface {
 	CreateInvoice(ctx context.Context, inv *pb.Invoice) error
-	UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoice(ctx context.Context, inv *pb.Invoice, ignoreNulls bool) error
 	UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
@@ -540,7 +540,7 @@ skipStatus:
 	if synced {
 		inv.Items = nil
 	}
-	if err = g.invMan.UpdateInvoice(ctx, inv); err != nil {
+	if err = g.invMan.UpdateInvoice(ctx, inv, true); err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
 	return nil

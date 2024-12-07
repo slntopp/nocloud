@@ -890,32 +890,33 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 	}
 
+	var newTotal float64
 	if req.Items != nil {
 		cur, err := s.currencies.Get(ctx, t.Currency.GetId())
 		if err != nil {
 			log.Error("Failed to get currency", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get currency")
 		}
-		var newTotal float64
 		for _, item := range t.GetItems() {
 			price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 			item.Price = price
 			newTotal += price * float64(item.GetAmount())
 		}
-		t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
+		newTotal = graph.Round(newTotal, cur.Precision, cur.Rounding)
 	}
+	t.Total = newTotal
 
 	vars := map[string]interface{}{}
 	query := fmt.Sprintf("UPDATE @invoice WITH {")
-	if req.Transactions != nil {
+	if req.Transactions != nil || !r.Msg.IgnoreNullFields {
 		query += ` transactions: @transactions,`
 		vars["transactions"] = req.GetTransactions()
 	}
-	if req.Items != nil {
+	if req.Items != nil || !r.Msg.IgnoreNullFields {
 		query += ` items: @items,`
 		vars["items"] = req.GetItems()
 	}
-	if req.Instances != nil {
+	if req.Instances != nil || !r.Msg.IgnoreNullFields {
 		query += ` instances: @instances,`
 		vars["instances"] = req.GetInstances()
 	}
