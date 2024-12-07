@@ -565,6 +565,7 @@ quit:
 		log.Error("Failed to publish invoice status update", zap.Error(err))
 	}
 
+	diff, _ := jsondiff.Compare(old.Invoice, newInv.Invoice)
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      old.GetUuid(),
 		Entity:    "Invoices",
@@ -572,7 +573,7 @@ quit:
 		Scope:     "database",
 		Rc:        0,
 		Ts:        time.Now().Unix(),
-		Snapshot:  &elpb.Snapshot{},
+		Snapshot:  &elpb.Snapshot{Diff: diff.String()},
 		Requestor: requester,
 	})
 
@@ -652,13 +653,15 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
 	}
 	if tr != nil {
-		newInv := resp.Msg
-		if newInv.Transactions == nil {
-			newInv.Transactions = make([]string, 0)
+		respTrans := resp.Msg.Transactions
+		if respTrans == nil {
+			respTrans = make([]string, 0)
 		}
-		newInv.Transactions = append(newInv.Transactions, tr.GetUuid())
-		if _, err = s.invoices.Update(ctx, &graph.Invoice{Invoice: newInv, DocumentMeta: driver.DocumentMeta{Key: newInv.GetUuid()}}); err != nil {
-			log.Error("Failed to update invoice", zap.Error(err))
+		respTrans = append(respTrans, tr.GetUuid())
+		if err = s.invoices.Patch(ctx, resp.Msg.GetUuid(), map[string]interface{}{
+			"transactions": respTrans,
+		}); err != nil {
+			log.Error("Failed to patch invoice", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
 		}
 	}
@@ -980,6 +983,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		log.Error("Failed to publish invoice update", zap.Error(err))
 	}
 
+	diff, _ := jsondiff.Compare(old, t.Invoice)
 	nocloud.Log(log, &elpb.Event{
 		Uuid:      upd.GetUuid(),
 		Entity:    "Invoices",
@@ -987,7 +991,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		Scope:     "database",
 		Rc:        0,
 		Ts:        time.Now().Unix(),
-		Snapshot:  &elpb.Snapshot{},
+		Snapshot:  &elpb.Snapshot{Diff: diff.String()},
 		Requestor: requester,
 	})
 
