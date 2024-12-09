@@ -819,11 +819,12 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 || acc._key LIKE "%s"
 || node._key LIKE "%s"
 || node.config.domain LIKE "%s"
+|| node.data.vpsName LIKE "%s"
 || CONTAINS(TO_STRING(node.state.meta.networking.public), "%s") 
 || CONTAINS(TO_STRING(node.state.meta.networking.private), "%s")
 || CONTAINS(TO_STRING(node.data.ips_history.public), "%s")
 || CONTAINS(TO_STRING(node.data.ips_history.private), "%s")`,
-				"%"+param+"%", "%"+param+"%", "%"+param+"%", "%"+param+"%", "%"+param+"%", param, param, param, param)
+				"%"+param+"%", "%"+param+"%", "%"+param+"%", "%"+param+"%", "%"+param+"%", "%"+param+"%", param, param, param, param)
 
 		} else if key == "email" {
 			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
