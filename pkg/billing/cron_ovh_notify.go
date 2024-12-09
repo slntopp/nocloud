@@ -19,5 +19,6 @@ func (s *BillingServiceServer) NotifyToUpdateOvhPricesCronJob(_ context.Context,
 		Ts:        time.Now().Unix(),
 		Snapshot:  &elpb.Snapshot{Diff: ""},
 		Requestor: "system",
+		Priority:  1,
 	})
 }
