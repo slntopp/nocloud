@@ -7,6 +7,7 @@ import (
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	ipb "github.com/slntopp/nocloud-proto/instances"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -629,7 +630,7 @@ func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]s
 		return _showcasesPlans
 	}
 
-	scs, err := c.showcases.List(context.Background(), schema.ROOT_ACCOUNT_KEY, true)
+	scs, err := c.showcases.List(context.Background(), schema.ROOT_ACCOUNT_KEY, true, &sppb.ListRequest{})
 	if err != nil {
 		c.log.Named("getShowcasesPlansCached").Error("FATAL: failed to list showcases", zap.Error(err))
 		return _showcasesPlans
