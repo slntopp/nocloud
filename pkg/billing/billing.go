@@ -570,6 +570,14 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 				varsKey := "filteredStatuses"
 				query += fmt.Sprintf(` FILTER TO_NUMBER(p.%s) in @%s`, key, varsKey)
 				vars[varsKey] = values
+			} else if key == "uuid" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				varsKey := "filteredPlans"
+				query += fmt.Sprintf(` FILTER p._key in @%s`, varsKey)
+				vars[varsKey] = values
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
