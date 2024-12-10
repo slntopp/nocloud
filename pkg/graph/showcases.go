@@ -109,6 +109,7 @@ func (ctrl *showcasesController) List(ctx context.Context, requestor string, roo
 		}
 	}
 
+	query = fmt.Sprintf(query, filters)
 	c, err := ctrl.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		return nil, err
