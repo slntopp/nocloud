@@ -81,7 +81,7 @@ func (ctrl *showcasesController) List(ctx context.Context, requestor string, roo
 	var filters string
 
 	if len(req.GetExcludeUuids()) > 0 {
-		query += ` FILTER s._key NOT IN @excludeUuids`
+		filters += ` FILTER s._key NOT IN @excludeUuids`
 		vars["excludeUuids"] = req.GetExcludeUuids()
 	}
 
@@ -109,7 +109,7 @@ func (ctrl *showcasesController) List(ctx context.Context, requestor string, roo
 		}
 	}
 
-	query = fmt.Sprintf(query, filters)
+	query = fmt.Sprintf(listQuery, filters)
 	c, err := ctrl.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		return nil, err
