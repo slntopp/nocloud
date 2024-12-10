@@ -93,6 +93,49 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
                     )
                     FILTER LENGTH(result) > 0`)
 			vars[key] = values
+		} else if key == "plan" {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` LET result = (
+                       FILTER IS_ARRAY(p.promo_items)
+                       LET has = (
+                          FOR item IN p.promo_items
+                          FILTER item.plan_promo
+                          FILTER item.plan_promo.billing_plan IN @billingPlans
+                          RETURN true
+                       )
+                       FILTER LENGTH(has) > 0
+                       RETURN true
+                    )
+                    FILTER LENGTH(result) > 0`)
+			vars["billingPlans"] = values
+		} else if key == "showcase" {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` LET result = (
+                       FILTER IS_ARRAY(p.promo_items)
+                       LET has = (
+                          FOR item IN p.promo_items
+                          FILTER item.showcase_promo
+                          FILTER item.showcase_promo.showcase IN @showcasesList
+                          RETURN true
+                       )
+                       FILTER LENGTH(has) > 0
+                       RETURN true
+                    )
+                    FILTER LENGTH(result) > 0`)
+			vars["showcasesList"] = values
+		} else {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER p["%s"] IN @%s`, key, key)
+			vars[key] = values
 		}
 	}
 	return query
