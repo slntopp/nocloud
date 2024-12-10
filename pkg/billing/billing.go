@@ -575,7 +575,7 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
+				query += fmt.Sprintf(` FILTER p["%s"] in @%s`, key, key)
 				vars[key] = values
 			}
 		}
