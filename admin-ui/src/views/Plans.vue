@@ -16,6 +16,10 @@
         filters: { 'meta.isIndividual': [isIndividual] },
       }"
       v-model="selected"
+      @fetch:plans="fetchPlans"
+      :plans="plans"
+      :total="total"
+      :isLoading="isLoading"
     />
   </div>
 </template>
@@ -23,7 +27,7 @@
 <script setup>
 import plansTable from "@/components/plansTable.vue";
 import deletePlansDialog from "@/components/deletePlansDialog.vue";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useStore } from "@/store";
 
 const store = useStore();
@@ -36,6 +40,14 @@ const refetchPlans = () => {
   refetch.value = !refetch.value;
   selected.value = [];
 };
+
+const fetchPlans = (options) => {
+  return store.dispatch("plans/fetch", options);
+};
+
+const plans = computed(() => store.getters["plans/all"]);
+const total = computed(() => store.getters["plans/total"]);
+const isLoading = computed(() => store.getters["plans/loading"]);
 
 onMounted(() => {
   store.commit("reloadBtn/setCallback", {

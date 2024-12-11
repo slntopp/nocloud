@@ -138,12 +138,25 @@ const props = defineProps({
   tableName: { type: String, default: "plans-table" },
   showSelect: { type: Boolean, default: false },
   customParams: { type: Object, default: () => ({}) },
+  customHeaders: { type: Array, default: () => [] },
   refetch: { type: Boolean, default: false },
   noSearch: { type: Boolean, default: false },
+  plans: { type: Array, default: () => [] },
+  total: { type: Number, default: 0 },
+  isLoading: { type: Boolean, default: false },
 });
-const { value, refetch, customParams, noSearch } = toRefs(props);
+const {
+  value,
+  refetch,
+  customParams,
+  noSearch,
+  isLoading,
+  plans,
+  total,
+  customHeaders,
+} = toRefs(props);
 
-const emit = defineEmits(["input", "update:options"]);
+const emit = defineEmits(["input", "update:options", "fetch:plans"]);
 
 const store = useStore();
 useSearch({
@@ -157,17 +170,6 @@ useSearch({
     },
   },
 });
-
-const headers = ref([
-  { text: "Title ", value: "title" },
-  { text: "UUID ", value: "uuid" },
-  { text: "Kind ", value: "kind" },
-  { text: "Type ", value: "type" },
-  { text: "Status ", value: "status" },
-  { text: "Public ", value: "public" },
-  { text: "Auto start ", value: "meta.auto_start" },
-  { text: "Linked instances count ", value: "instanceCount" },
-]);
 
 const fetchError = ref("");
 const options = ref({});
@@ -191,9 +193,21 @@ onMounted(() => {
   fetchUnique();
 });
 
-const plans = computed(() => store.getters["plans/all"]);
-const total = computed(() => store.getters["plans/total"]);
-const isLoading = computed(() => store.getters["plans/loading"]);
+const headers = computed(() => {
+  if (!customHeaders.value.length) {
+    return [
+      { text: "Title ", value: "title" },
+      { text: "UUID ", value: "uuid" },
+      { text: "Kind ", value: "kind" },
+      { text: "Type ", value: "type" },
+      { text: "Status ", value: "status" },
+      { text: "Public ", value: "public" },
+      { text: "Auto start ", value: "meta.auto_start" },
+      { text: "Linked instances count ", value: "instanceCount" },
+    ];
+  }
+  return customHeaders.value;
+});
 
 const filter = computed(() => store.getters["appSearch/filter"]);
 const param = computed(() => store.getters["appSearch/param"]);
@@ -283,13 +297,13 @@ const isJson = computed(() => selectedFileType.value === "JSON");
 const fetchPlans = async () => {
   fetchError.value = "";
   try {
-    await store.dispatch("plans/fetch", requestOptions.value);
+    await emit("fetch:plans", requestOptions.value);
   } catch (e) {
     fetchError.value = e.message;
   }
 };
 
-const fetchPlansDebounced = debounce(fetchPlans, 100);
+const fetchPlansDebounced = debounce(fetchPlans, 300);
 
 const fetchInstancesCount = async () => {
   isInstanceCountLoading.value = true;
@@ -409,6 +423,17 @@ watch(
   },
   { deep: true }
 );
+
+watch(
+  customParams,
+  (newVal, oldVal) => {
+    if (JSON.stringify(newVal) !== JSON.stringify(oldVal)) {
+      fetchPlansDebounced();
+    }
+  },
+  { deep: true }
+);
+
 watch([options, refetch], fetchPlansDebounced);
 
 watch(plans, () => {
