@@ -111,7 +111,10 @@ const routes = [
     redirect: {
       name: "Plugin",
       params: { title: "Chats", url: "/cc.ui/" },
-      query: { url: "/cc.ui/", fullscreen: (window.innerWidth > 768) ? 'false' : 'true'  },
+      query: {
+        url: "/cc.ui/",
+        fullscreen: window.innerWidth > 768 ? "false" : "true",
+      },
     },
   },
   {
@@ -416,6 +419,30 @@ const routes = [
     path: "/invoices/:uuid",
     name: "Invoice page",
     component: () => import("../views/InvoicePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/promocodes",
+    name: "Promocodes",
+    component: () => import("../views/Promocodes.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/promocodes/create",
+    name: "Promocode create",
+    component: () => import("../views/PromocodeCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/promocodes/:uuid",
+    name: "Promocode page",
+    component: () => import("../views/PromocodePage.vue"),
     meta: {
       requireLogin: true,
     },

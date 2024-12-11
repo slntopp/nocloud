@@ -3,8 +3,8 @@
     <v-app
       :style="{
         background: $vuetify.theme.themes[theme].background,
-        width: (isFullscreen && !isNotPlugin) ? '0px' : undefined,
-        height: (isFullscreen && !isNotPlugin) ? '0px' : undefined,
+        width: isFullscreen && !isNotPlugin ? '0px' : undefined,
+        height: isFullscreen && !isNotPlugin ? '0px' : undefined,
       }"
     >
       <div
@@ -153,6 +153,18 @@
                 </v-list-item-content>
               </v-list-item>
 
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Promocodes' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-sale</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Promocodes")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
               <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
                 <v-list-item-icon>
                   <v-icon>mdi-abacus</v-icon>
@@ -210,7 +222,10 @@
                 :to="{
                   name: 'Plugin',
                   params: plugin,
-                  query: { url: plugin.url, fullscreen: (viewport > 768) ? false : true },
+                  query: {
+                    url: plugin.url,
+                    fullscreen: viewport > 768 ? false : true,
+                  },
                 }"
               >
                 <v-list-item-icon>
@@ -340,12 +355,20 @@
         </v-navigation-drawer>
 
         <v-app-bar app color="background" elevation="0">
-          <v-row style="width: 100%" justify="center" align="center" class="flex-nowrap">
+          <v-row
+            style="width: 100%"
+            justify="center"
+            align="center"
+            class="flex-nowrap"
+          >
             <template v-if="isLoggedIn">
-              <v-col :style="(viewport < 600) ? 'padding: 6px' : null">
+              <v-col :style="viewport < 600 ? 'padding: 6px' : null">
                 <app-search />
               </v-col>
-              <v-col class="d-flex justify-start" :style="(viewport < 600) ? 'padding: 6px' : null">
+              <v-col
+                class="d-flex justify-start"
+                :style="viewport < 600 ? 'padding: 6px' : null"
+              >
                 <v-btn
                   v-if="btnStates.visible"
                   :disabled="btnStates.disabled"
@@ -369,7 +392,10 @@
                 </v-btn>
               </v-col>
             </template>
-            <v-col class="d-flex justify-end align-center" :style="(viewport < 600) ? 'padding: 6px' : null">
+            <v-col
+              class="d-flex justify-end align-center"
+              :style="viewport < 600 ? 'padding: 6px' : null"
+            >
               <languages v-if="false" />
               <themes />
               <notifications />
@@ -405,7 +431,7 @@
           color="success"
           :style="{
             position: 'absolute',
-            top: `${overlay.y + ((isFullscreen) ? 0 : 80)}px`,
+            top: `${overlay.y + (isFullscreen ? 0 : 80)}px`,
             right: `30px`,
             zIndex: 100,
             visibility: 'hidden',
@@ -441,7 +467,7 @@ export default {
     languages,
     instancesTableModal,
     userMenu,
-    notifications
+    notifications,
   },
   setup() {
     const { loginHandler } = useLoginClient();
@@ -472,7 +498,7 @@ export default {
       document.title = `${value} | NoCloud`;
     },
     onResize(e) {
-      this.viewport = window.innerWidth
+      this.viewport = window.innerWidth;
       if (!(e instanceof UIEvent)) {
         this.isMenuMinimize = window.innerWidth <= 768;
       }
@@ -571,7 +597,7 @@ export default {
       return this.$route.query["fullscreen"] !== undefined;
     },
     isNotPlugin() {
-      return this.$route.name !== 'Plugin'
+      return this.$route.name !== "Plugin";
     },
     plugins() {
       return this.$store.getters["plugins/all"];
