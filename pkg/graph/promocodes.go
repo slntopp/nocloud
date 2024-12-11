@@ -158,13 +158,50 @@ func (c *promocodesController) Create(ctx context.Context, promo *pb.Promocode) 
 func (c *promocodesController) Update(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error) {
 	log := c.log.Named("Update")
 
-	_, err := c.col.UpdateDocument(ctx, promo.GetUuid(), promo)
+	query := `
+UPDATE @promocode WITH {
+title: @title,
+description: @description,
+code: @code,
+status: @status,
+condition: @condition,
+due_date: @due_date,
+uses_per_user: @uses_per_user,
+limit: @limit,
+one_time: @one_time,
+active_time: @active_time,
+meta: @meta,
+promo_items: @promo_items,
+} IN @@promocodes RETURN NEW
+`
+	cur, err := c.col.Database().Query(ctx, query, map[string]interface{}{
+		"promocode":     promo.GetUuid(),
+		"@promocodes":   schema.PROMOCODES_COL,
+		"title":         promo.GetTitle(),
+		"description":   promo.GetDescription(),
+		"code":          promo.GetCode(),
+		"status":        promo.GetStatus(),
+		"condition":     promo.GetCondition(),
+		"due_date":      promo.GetDueDate(),
+		"uses_per_user": promo.GetUsesPerUser(),
+		"limit":         promo.GetLimit(),
+		"one_time":      promo.GetOneTime(),
+		"active_time":   promo.GetActiveTime(),
+		"meta":          promo.GetMeta(),
+		"promo_items":   promo.GetPromoItems(),
+	})
 	if err != nil {
-		log.Error("Failed to update document", zap.Error(err))
+		log.Error("Failed to update promocode", zap.Error(err))
 		return nil, err
 	}
 
-	return applyCurrentState(promo), nil
+	var _promo *pb.Promocode
+	if _, err = cur.ReadDocument(ctx, _promo); err != nil {
+		log.Error("Failed to read result promocode")
+		return applyCurrentState(promo), nil
+	}
+
+	return applyCurrentState(_promo), nil
 }
 
 func (c *promocodesController) Delete(ctx context.Context, uuid string) error {

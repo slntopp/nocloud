@@ -85,7 +85,6 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
-	r.Msg.Uses = nil
 	promo, err := s.promos.Update(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to update promocode", zap.Error(err))
