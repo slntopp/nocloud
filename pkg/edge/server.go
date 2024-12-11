@@ -18,6 +18,7 @@ package edge
 
 import (
 	"context"
+	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
 	pb "github.com/slntopp/nocloud-proto/edge"
@@ -34,15 +35,16 @@ type EdgeServiceServer struct {
 
 	log *zap.Logger
 	pub s.Pub
+	db  driver.Database
 }
 
-func NewEdgeServiceServer(log *zap.Logger, rbmq rabbitmq.Connection) *EdgeServiceServer {
+func NewEdgeServiceServer(log *zap.Logger, db driver.Database, rbmq rabbitmq.Connection) *EdgeServiceServer {
 	s := s.NewStatesPubSub(log, nil, rbmq)
 	ch := s.Channel()
 	s.TopicExchange(ch, "states")
 
 	return &EdgeServiceServer{
-		log: log, pub: s.Publisher(ch, "states", "instances"),
+		log: log, pub: s.Publisher(ch, "states", "instances"), db: db,
 	}
 }
 
