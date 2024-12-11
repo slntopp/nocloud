@@ -727,7 +727,7 @@ func findEntry(uses []*pb.EntryResource, entry *pb.EntryResource) (int, bool) {
 
 func applyCurrentState(promo *pb.Promocode) *pb.Promocode {
 	expired := promo.GetDueDate() > 0 && time.Now().Unix() >= promo.GetDueDate()
-	taken := int64(len(promo.GetUses())) >= promo.GetLimit()
+	taken := promo.GetLimit() > 0 && int64(len(promo.GetUses())) >= promo.GetLimit()
 
 	if taken {
 		promo.Condition = pb.PromocodeCondition_ALL_TAKEN
