@@ -129,6 +129,10 @@ export default {
           component: () => import("@/components/plan/instances.vue"),
         },
         {
+          title: "Promocodes",
+          component: () => import("@/components/plan/promocodes.vue"),
+        },
+        {
           title: "Event log",
           component: () => import("@/components/plan/history.vue"),
         },

@@ -13,6 +13,7 @@
     >
       <v-tab>Info</v-tab>
       <v-tab>Promo</v-tab>
+      <v-tab>Promocodes</v-tab>
       <v-tab>Template</v-tab>
     </v-tabs>
     <v-tabs-items
@@ -34,6 +35,10 @@
       </v-tab-item>
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
+        <promocodes-tab :template="showcase" />
+      </v-tab-item>
+      <v-tab-item>
+        <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <showcase-template :template="showcase" />
         />
       </v-tab-item>
@@ -48,6 +53,7 @@ import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import ShowcaseCreate from "@/views/ShowcaseCreate.vue";
 import PromoTab from "@/components/showcase/promo.vue";
+import PromocodesTab from "@/components/showcase/promocodes.vue";
 import ShowcaseTemplate from "@/components/showcase/template.vue";
 
 const route = useRoute();
