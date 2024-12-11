@@ -19,11 +19,12 @@ package edge
 import (
 	"context"
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-
+	edpb "github.com/slntopp/nocloud-proto/edge"
 	pb "github.com/slntopp/nocloud-proto/edge"
 	stpb "github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	s "github.com/slntopp/nocloud/pkg/states"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -66,4 +67,51 @@ func (s *EdgeServiceServer) PostState(ctx context.Context, req *stpb.ObjectState
 	s.log.Debug("Publishing state", zap.String("instance", inst), zap.String("state", req.GetState().String()))
 	_, err := s.pub(req)
 	return &pb.Empty{}, err
+}
+
+const ensureConfigMeta = `
+LET inst = DOCUMENT(@@instances, @instance)
+FILTER !inst.config || !inst.config.meta
+LET fixObj = !inst.config ? { meta: {} } : MERGE(inst.config, { meta: {} })
+UPDATE @instance WITH { config: fixObj } IN @@instances
+`
+const updConfig = `
+LET inst = DOCUMENT(@@instances, @instance)
+UPDATE @instance WITH { config: MERGE(inst.config, { meta: MERGE(inst.config.meta, { @field: @value }) }) }
+`
+
+func (s *EdgeServiceServer) PostConfigData(ctx context.Context, req *edpb.ConfigData) (*pb.Empty, error) {
+	log := s.log.Named("PostConfigData")
+
+	inst, ok := ctx.Value(nocloud.NoCloudInstance).(string)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Post Config Data to Instance")
+	}
+
+	if req.Field == "" {
+		return nil, status.Error(codes.InvalidArgument, "Field is empty")
+	}
+	if req.Value == nil {
+		return nil, status.Error(codes.InvalidArgument, "Value is nil")
+	}
+	log.Debug("Publishing config field", zap.String("instance", inst), zap.String("field", req.Field), zap.Any("value", req.Value))
+
+	if _, err := s.db.Query(ctx, ensureConfigMeta, map[string]interface{}{
+		"@instances": schema.INSTANCES_COL,
+		"instance":   inst,
+	}); err != nil {
+		log.Error("Failed to ensure config and meta", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to post config data")
+	}
+	if _, err := s.db.Query(ctx, updConfig, map[string]interface{}{
+		"@instances": schema.INSTANCES_COL,
+		"instance":   inst,
+		"field":      req.Field,
+		"value":      req.Value,
+	}); err != nil {
+		log.Error("Failed to update instance with new config", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to post config data")
+	}
+
+	return &pb.Empty{}, nil
 }
