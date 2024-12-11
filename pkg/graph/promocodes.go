@@ -191,7 +191,7 @@ func (c *promocodesController) Delete(ctx context.Context, uuid string) error {
 func (c *promocodesController) Get(ctx context.Context, uuid string) (*pb.Promocode, error) {
 	log := c.log.Named("Get")
 
-	var promo *pb.Promocode
+	var promo pb.Promocode
 
 	meta, err := c.col.ReadDocument(ctx, uuid, &promo)
 	if err != nil {
@@ -200,7 +200,7 @@ func (c *promocodesController) Get(ctx context.Context, uuid string) (*pb.Promoc
 	}
 
 	promo.Uuid = meta.Key
-	return applyCurrentState(promo), nil
+	return applyCurrentState(&promo), nil
 }
 
 const getByCodeQuery = `FOR p IN @@promocodes FILTER p.code == @code RETURN p`
@@ -219,7 +219,7 @@ func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.
 	if !cur.HasMore() {
 		return nil, fmt.Errorf("promocode with code %s not found", code)
 	}
-	var promo *pb.Promocode
+	var promo pb.Promocode
 	meta, err := cur.ReadDocument(ctx, &promo)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
@@ -227,7 +227,7 @@ func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.
 	}
 
 	promo.Uuid = meta.Key
-	return applyCurrentState(promo), nil
+	return applyCurrentState(&promo), nil
 }
 
 func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error) {
