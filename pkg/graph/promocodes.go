@@ -351,7 +351,7 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 		return err
 	}
 	promo = *applyCurrentStateWithUsed(&promo, entry)
-	if err = invalidStateError(promo.State); err != nil {
+	if err = invalidStateError(promo.Condition); err != nil {
 		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 		return err
 	}
@@ -689,18 +689,17 @@ func findEntry(uses []*pb.EntryResource, entry *pb.EntryResource) (int, bool) {
 }
 
 func applyCurrentState(promo *pb.Promocode) *pb.Promocode {
-	expired := time.Now().Unix() >= promo.GetDueDate()
+	expired := promo.GetDueDate() > 0 && time.Now().Unix() >= promo.GetDueDate()
 	taken := int64(len(promo.GetUses())) >= promo.GetLimit()
 
 	if taken {
-		promo.State = pb.PromocodeState_ALL_TAKEN
+		promo.Condition = pb.PromocodeCondition_ALL_TAKEN
 	}
 	if expired {
-		promo.State = pb.PromocodeState_EXPIRED
+		promo.Condition = pb.PromocodeCondition_EXPIRED
 	}
-
 	if !taken && !expired {
-		promo.State = pb.PromocodeState_USABLE
+		promo.Condition = pb.PromocodeCondition_USABLE
 	}
 
 	return promo
@@ -716,7 +715,7 @@ func applyCurrentStateWithUsed(promo *pb.Promocode, newEntry *pb.EntryResource) 
 		if use.GetAccount() == newEntryAccount {
 			current++
 			if current == maxUsesPerUser {
-				promo.State = pb.PromocodeState_USED
+				promo.Condition = pb.PromocodeCondition_USED
 				break
 			}
 		}
@@ -725,13 +724,13 @@ func applyCurrentStateWithUsed(promo *pb.Promocode, newEntry *pb.EntryResource) 
 	return promo
 }
 
-func invalidStateError(state pb.PromocodeState) error {
+func invalidStateError(state pb.PromocodeCondition) error {
 	switch state {
-	case pb.PromocodeState_EXPIRED:
+	case pb.PromocodeCondition_EXPIRED:
 		return fmt.Errorf("promocode is expired")
-	case pb.PromocodeState_ALL_TAKEN:
+	case pb.PromocodeCondition_ALL_TAKEN:
 		return fmt.Errorf("no promocodes left")
-	case pb.PromocodeState_USED:
+	case pb.PromocodeCondition_USED:
 		return fmt.Errorf("already got maximum uses of this promocode")
 	}
 	return nil
