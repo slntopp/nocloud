@@ -191,7 +191,7 @@ func (c *promocodesController) Delete(ctx context.Context, uuid string) error {
 func (c *promocodesController) Get(ctx context.Context, uuid string) (*pb.Promocode, error) {
 	log := c.log.Named("Get")
 
-	var promo *pb.Promocode
+	var promo = &pb.Promocode{}
 
 	meta, err := c.col.ReadDocument(ctx, uuid, promo)
 	if err != nil {
@@ -219,7 +219,7 @@ func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.
 	if !cur.HasMore() {
 		return nil, fmt.Errorf("promocode with code %s not found", code)
 	}
-	var promo *pb.Promocode
+	var promo = &pb.Promocode{}
 	meta, err := cur.ReadDocument(ctx, promo)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
