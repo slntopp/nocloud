@@ -12,15 +12,12 @@
         return-object
         v-model="selectedAccount"
       />
-      <v-autocomplete
-        v-if="accountsServices?.length > 1"
-        :items="accountsServices"
-        item-text="title"
-        item-value="uuid"
-        label="Service"
-        return-object
-        v-model="selectedService"
+
+      <v-switch
+        label="Do not transfer invoices?"
+        v-model="doNotTransferInvoices"
       />
+
       <v-card-actions class="d-flex justify-end">
         <v-btn @click="emit('input', false)" :disabled="isMoveLoading"
           >Close
@@ -37,106 +34,36 @@
 </template>
 
 <script setup>
-import { computed, defineEmits, defineProps, ref, toRefs } from "vue";
-import api from "@/api";
+import { defineEmits, defineProps, ref, toRefs } from "vue";
 import { useStore } from "@/store";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import { TransferInstanceRequest } from "nocloud-proto/proto/es/instances/instances_pb";
 
-const props = defineProps([
-  "value",
-  "account",
-  "accounts",
-  "namespaces",
-  "services",
-  "template",
-]);
-const { namespaces, services, value, template } = toRefs(props);
+const props = defineProps(["value", "template"]);
+const { value, template } = toRefs(props);
 const emit = defineEmits(["refresh", "input"]);
 
 const store = useStore();
 
 const selectedAccount = ref("");
-const selectedService = ref("");
 const isMoveLoading = ref(false);
-const newIg = ref({});
-
-const namespace = computed(() => {
-  return namespaces.value?.find(
-    (n) => n.access.namespace == selectedAccount.value?.uuid
-  );
-});
-
-const accountsServices = computed(() => {
-  if (!namespace.value) {
-    return null;
-  }
-
-  return services.value?.filter(
-    (s) => s.access.namespace == namespace.value?.uuid
-  );
-});
-
-const servicesInstanceGroups = computed(() => {
-  return (
-    service.value?.instancesGroups.filter(
-      (ig) => ig.type === template.value.type
-    ) || []
-  );
-});
-
-const instancesGroups = computed(() => {
-  if (newIg.value) {
-    return [...servicesInstanceGroups.value, newIg.value];
-  }
-  return servicesInstanceGroups.value;
-});
-
-const service = computed(
-  () => selectedService.value || accountsServices.value?.[0]
-);
+const doNotTransferInvoices = ref(true);
 
 const move = async () => {
   isMoveLoading.value = true;
   try {
-    if (!service.value) {
-      selectedService.value = await api.services.create({
-        namespace: namespaces.value.find(
-          (n) => n.access.namespace == selectedAccount.value.uuid
-        )?.uuid,
-        service: {
-          version: "1",
-          title: selectedAccount.value.title,
-          context: {},
-          instancesGroups: [],
-        },
-      });
-      await api.services.up(service.value.uuid);
-    }
-
-    let newIg = instancesGroups.value.find(
-      (ig) => ig.type === template.value.type && ig.sp === template.value.sp
+    await store.getters["instances/instancesClient"].transferInstance(
+      TransferInstanceRequest.fromJson({
+        uuid: template.value.uuid,
+        account: selectedAccount.value.uuid,
+        doNotTransferInvoices: doNotTransferInvoices.value,
+      })
     );
 
-    if (!newIg) {
-      const newService = JSON.parse(JSON.stringify(service.value));
-      newService.instancesGroups.push({
-        type: template.value.type,
-        sp: template.value.sp,
-        title: selectedAccount.value.title + Date.now(),
-        instances: [],
-      });
-      const data = await api.services._update(newService);
-
-      newIg = data.instancesGroups.find(
-        (ig) => ig.type === template.value.type
-      );
-    }
-
-    await api.instances.move(template.value.uuid, newIg.uuid);
     emit("refresh");
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during move instance",
+      message: e?.rawMessage || "Error during move instance",
     });
   } finally {
     isMoveLoading.value = false;
