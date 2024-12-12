@@ -77,7 +77,7 @@ UPDATE @instance WITH { config: fixObj } IN @@instances
 `
 const updConfig = `
 LET inst = DOCUMENT(@@instances, @instance)
-UPDATE @instance WITH { config: MERGE(inst.config, { meta: MERGE(inst.config.meta, { @field: @value }) }) }
+UPDATE @instance WITH { config: MERGE(inst.config, { meta: MERGE(inst.config.meta, { @field: @value }) }) } IN @@instances
 `
 
 func (s *EdgeServiceServer) PostConfigData(ctx context.Context, req *edpb.ConfigData) (*pb.Empty, error) {
