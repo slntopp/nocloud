@@ -92,7 +92,7 @@ func (s *ShowcasesServer) List(ctx context.Context, req *sppb.ListRequest) (*spp
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	isRoot := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 
-	showcases, err := s.ctrl.List(ctx, requestor, isRoot)
+	showcases, err := s.ctrl.List(ctx, requestor, isRoot, req)
 
 	result := &sppb.Showcases{Showcases: showcases}
 

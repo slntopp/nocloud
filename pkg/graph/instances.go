@@ -536,6 +536,22 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 		return nil
 	}
 
+	if inst.Config == nil {
+		inst.Config = make(map[string]*structpb.Value)
+	}
+	if oldInst.Config == nil {
+		oldInst.Config = make(map[string]*structpb.Value)
+	}
+	if !oldInst.GetConfig()["auto_start"].GetBoolValue() && inst.GetConfig()["auto_start"].GetBoolValue() {
+		c := pb.Context{
+			Instance: uuid,
+			Sp:       sp,
+			Event:    "START",
+		}
+		if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+			log.Error("Failed to publish ansible hook", zap.Error(err))
+		}
+	}
 	c := pb.Context{
 		Instance: uuid,
 		Sp:       sp,

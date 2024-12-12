@@ -93,14 +93,17 @@
                 show-select
                 :custom-params="{
                   showDeleted: false,
-                  anonymously: true,
-                  excludeUuids: relatedPlans.map((p) => p.uuid),
+                  excludeUuids: relatedPlans?.map((p) => p.uuid) || [],
                   filters: {
                     type: [provider.type],
                   },
                 }"
                 table-name="plans-sp-table"
                 v-model="selectedNewPlans"
+                :plans="plans"
+                :total="totalPlans"
+                :isLoading="isPlansLoading"
+                @fetch:plans="fetchPlans"
               />
 
               <v-card-actions class="d-flex justify-end">
@@ -193,16 +196,21 @@ onMounted(async () => {
     provider.value.proxy = { socket: "" };
   }
 
-  fetchPlans();
+  fetchSelectedPlans();
 });
 
-const fetchPlans = async () => {
+const plans = computed(() => store.getters["plans/all"]);
+const totalPlans = computed(() => store.getters["plans/total"]);
+const isPlansLoading = computed(() => store.getters["plans/loading"]);
+
+const fetchSelectedPlans = async () => {
   try {
-    relatedPlans.value = (
-      await store.getters["plans/plansClient"].listPlans({
-        spUuid: template.value.uuid,
-      })
-    ).toJson().pool;
+    relatedPlans.value =
+      (
+        await store.getters["plans/plansClient"].listPlans({
+          spUuid: template.value.uuid,
+        })
+      ).toJson().pool || [];
   } catch (err) {
     console.error(err);
 
@@ -289,6 +297,10 @@ const unbindPlans = async () => {
   } finally {
     isDeleteLoading.value = false;
   }
+};
+
+const fetchPlans = (options) => {
+  return store.dispatch("plans/fetch", options);
 };
 </script>
 

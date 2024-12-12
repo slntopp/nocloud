@@ -139,7 +139,10 @@ const serviceInstanceGroups = computed(() => {
   }
 
   return service.value?.instancesGroups.filter(
-    (ig) => ig.type === type.value && ig.sp === serviceProviderId.value
+    (ig) =>
+      ig.type === type.value &&
+      ig.sp === serviceProviderId.value &&
+      !ig?.data?.imported
   );
 });
 const serviceInstanceGroupTitles = computed(() => {

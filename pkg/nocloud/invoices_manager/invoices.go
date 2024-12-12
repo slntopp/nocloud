@@ -13,7 +13,7 @@ import (
 
 type InvoicesManager interface {
 	CreateInvoice(ctx context.Context, inv *pb.Invoice) error
-	UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoice(ctx context.Context, inv *pb.Invoice, ignoreNulls bool) error
 	UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
@@ -50,10 +50,11 @@ func (i *invoicesManager) CreateInvoice(ctx context.Context, inv *pb.Invoice) er
 	return err
 }
 
-func (i *invoicesManager) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
+func (i *invoicesManager) UpdateInvoice(ctx context.Context, inv *pb.Invoice, ignoreNulls bool) error {
 	req := connect.NewRequest(&pb.UpdateInvoiceRequest{
-		Invoice:     inv,
-		IsSendEmail: true,
+		Invoice:          inv,
+		IsSendEmail:      true,
+		IgnoreNullFields: ignoreNulls,
 	})
 	token, err := i.tm.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {

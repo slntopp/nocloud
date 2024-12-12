@@ -25,6 +25,7 @@ import addons from "./addons";
 import invoices from "./invoices";
 import descriptions from "./descriptions";
 import instances from "./instances";
+import promocodes from "./promocodes";
 
 Vue.use(Vuex);
 
@@ -55,7 +56,8 @@ const store = new Vuex.Store({
     addons,
     invoices,
     descriptions,
-    instances
+    instances,
+    promocodes,
   },
 });
 

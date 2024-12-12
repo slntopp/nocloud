@@ -101,7 +101,6 @@ UPDATE DOCUMENT(@@collection, @key) WITH { state: @state } IN @@collection OPTIO
 func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
 	for msg := range msgs {
-		log.Debug("State Update message", zap.Any("message", msg))
 		var req pb.ObjectState
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {

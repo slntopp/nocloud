@@ -12,7 +12,7 @@ import (
 type ShowcasesController interface {
 	Create(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error)
 	Update(ctx context.Context, showcase *sppb.Showcase) (*sppb.Showcase, error)
-	List(ctx context.Context, requestor string, root bool) ([]*sppb.Showcase, error)
+	List(ctx context.Context, requestor string, root bool, req *sppb.ListRequest) ([]*sppb.Showcase, error)
 	Get(ctx context.Context, uuid string) (*sppb.Showcase, error)
 	Delete(ctx context.Context, uuid string) error
 }
@@ -70,28 +70,47 @@ FOR s IN @@showcases
 	RETURN s
 `
 
-func (ctrl *showcasesController) List(ctx context.Context, requestor string, root bool) ([]*sppb.Showcase, error) {
+func (ctrl *showcasesController) List(ctx context.Context, requestor string, root bool, req *sppb.ListRequest) ([]*sppb.Showcase, error) {
 	ctrl.log.Debug("Getting Showcases")
 
-	params := map[string]interface{}{
+	vars := map[string]interface{}{
 		"@showcases": schema.SHOWCASES_COL,
 	}
 
 	var query string
+	var filters string
 
-	if requestor == "" {
-		query = fmt.Sprintf(listQuery, "FILTER s.public == @public")
-		params["public"] = true
-	} else {
-		if root {
-			query = fmt.Sprintf(listQuery, "")
-		} else {
-			query = fmt.Sprintf(listQuery, "FILTER s.public == @public")
-			params["public"] = true
+	if len(req.GetExcludeUuids()) > 0 {
+		filters += ` FILTER s._key NOT IN @excludeUuids`
+		vars["excludeUuids"] = req.GetExcludeUuids()
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			if key == "" {
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				filters += fmt.Sprintf(` FILTER s["%s"] in @%s`, key, key)
+				vars[key] = values
+			}
 		}
 	}
 
-	c, err := ctrl.col.Database().Query(ctx, query, params)
+	if requestor == "" {
+		filters += " FILTER s.public == @public"
+		vars["public"] = true
+	} else {
+		if !root {
+			filters += " FILTER s.public == @public"
+			vars["public"] = true
+		}
+	}
+
+	query = fmt.Sprintf(listQuery, filters)
+	c, err := ctrl.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
+	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -58,6 +59,14 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 	return res, nil
 }
 
+func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb.ApplySaleRequest]) (*connect.Response[bpb.ApplySaleResponse], error) {
+	log := s.log.Named("ApplySale")
+	_ = ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received")
+
+	return nil, nil
+}
+
 func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Promocode]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("Create")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -85,7 +94,6 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
-	r.Msg.Uses = nil
 	promo, err := s.promos.Update(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to update promocode", zap.Error(err))

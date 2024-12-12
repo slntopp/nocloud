@@ -23,6 +23,7 @@ import (
 	"github.com/rs/cors"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
 	dnspb "github.com/slntopp/nocloud-proto/dns"
+	edgepb "github.com/slntopp/nocloud-proto/edge"
 	eventspb "github.com/slntopp/nocloud-proto/events"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
@@ -275,6 +276,18 @@ func main() {
 	)
 	if err != nil {
 		log.Fatal("Failed to register CurrencyService gateway", zap.Error(err))
+	}
+
+	// Edge
+	log.Info("Registering Edge Gateway")
+	err = edgepb.RegisterEdgeServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register EdgeServices gateway", zap.Error(err))
 	}
 
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))

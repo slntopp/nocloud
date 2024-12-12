@@ -7,6 +7,7 @@ import (
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	ipb "github.com/slntopp/nocloud-proto/instances"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -93,6 +94,49 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
                     )
                     FILTER LENGTH(result) > 0`)
 			vars[key] = values
+		} else if key == "plan" {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` LET result = (
+                       FILTER IS_ARRAY(p.promo_items)
+                       LET has = (
+                          FOR item IN p.promo_items
+                          FILTER item.plan_promo
+                          FILTER item.plan_promo.billing_plan IN @billingPlans
+                          RETURN true
+                       )
+                       FILTER LENGTH(has) > 0
+                       RETURN true
+                    )
+                    FILTER LENGTH(result) > 0`)
+			vars["billingPlans"] = values
+		} else if key == "showcase" {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` LET result = (
+                       FILTER IS_ARRAY(p.promo_items)
+                       LET has = (
+                          FOR item IN p.promo_items
+                          FILTER item.showcase_promo
+                          FILTER item.showcase_promo.showcase IN @showcasesList
+                          RETURN true
+                       )
+                       FILTER LENGTH(has) > 0
+                       RETURN true
+                    )
+                    FILTER LENGTH(result) > 0`)
+			vars["showcasesList"] = values
+		} else {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER p["%s"] IN @%s`, key, key)
+			vars[key] = values
 		}
 	}
 	return query
@@ -114,13 +158,50 @@ func (c *promocodesController) Create(ctx context.Context, promo *pb.Promocode) 
 func (c *promocodesController) Update(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error) {
 	log := c.log.Named("Update")
 
-	_, err := c.col.UpdateDocument(ctx, promo.GetUuid(), promo)
+	query := `
+UPDATE @promocode WITH {
+title: @title,
+description: @description,
+code: @code,
+status: @status,
+condition: @condition,
+due_date: @due_date,
+uses_per_user: @uses_per_user,
+limit: @limit,
+one_time: @one_time,
+active_time: @active_time,
+meta: @meta,
+promo_items: @promo_items,
+} IN @@promocodes RETURN NEW
+`
+	cur, err := c.col.Database().Query(ctx, query, map[string]interface{}{
+		"promocode":     promo.GetUuid(),
+		"@promocodes":   schema.PROMOCODES_COL,
+		"title":         promo.GetTitle(),
+		"description":   promo.GetDescription(),
+		"code":          promo.GetCode(),
+		"status":        promo.GetStatus(),
+		"condition":     promo.GetCondition(),
+		"due_date":      promo.GetDueDate(),
+		"uses_per_user": promo.GetUsesPerUser(),
+		"limit":         promo.GetLimit(),
+		"one_time":      promo.GetOneTime(),
+		"active_time":   promo.GetActiveTime(),
+		"meta":          promo.GetMeta(),
+		"promo_items":   promo.GetPromoItems(),
+	})
 	if err != nil {
-		log.Error("Failed to update document", zap.Error(err))
+		log.Error("Failed to update promocode", zap.Error(err))
 		return nil, err
 	}
 
-	return applyCurrentState(promo), nil
+	var _promo *pb.Promocode
+	if _, err = cur.ReadDocument(ctx, _promo); err != nil {
+		log.Error("Failed to read result promocode")
+		return applyCurrentState(promo), nil
+	}
+
+	return applyCurrentState(_promo), nil
 }
 
 func (c *promocodesController) Delete(ctx context.Context, uuid string) error {
@@ -147,16 +228,16 @@ func (c *promocodesController) Delete(ctx context.Context, uuid string) error {
 func (c *promocodesController) Get(ctx context.Context, uuid string) (*pb.Promocode, error) {
 	log := c.log.Named("Get")
 
-	var promo pb.Promocode
+	var promo = &pb.Promocode{}
 
-	meta, err := c.col.ReadDocument(ctx, uuid, &promo)
+	meta, err := c.col.ReadDocument(ctx, uuid, promo)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
 
 	promo.Uuid = meta.Key
-	return applyCurrentState(&promo), nil
+	return applyCurrentState(promo), nil
 }
 
 const getByCodeQuery = `FOR p IN @@promocodes FILTER p.code == @code RETURN p`
@@ -175,15 +256,15 @@ func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.
 	if !cur.HasMore() {
 		return nil, fmt.Errorf("promocode with code %s not found", code)
 	}
-	var promo pb.Promocode
-	meta, err := cur.ReadDocument(ctx, &promo)
+	var promo = &pb.Promocode{}
+	meta, err := cur.ReadDocument(ctx, promo)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
 
 	promo.Uuid = meta.Key
-	return applyCurrentState(&promo), nil
+	return applyCurrentState(promo), nil
 }
 
 func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error) {
@@ -307,7 +388,7 @@ func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry 
 		return err
 	}
 	promo = *applyCurrentStateWithUsed(&promo, entry)
-	if err = invalidStateError(promo.State); err != nil {
+	if err = invalidStateError(promo.Condition); err != nil {
 		_ = db.AbortTransaction(ctx, trID, &driver.AbortTransactionOptions{})
 		return err
 	}
@@ -586,7 +667,7 @@ func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]s
 		return _showcasesPlans
 	}
 
-	scs, err := c.showcases.List(context.Background(), schema.ROOT_ACCOUNT_KEY, true)
+	scs, err := c.showcases.List(context.Background(), schema.ROOT_ACCOUNT_KEY, true, &sppb.ListRequest{})
 	if err != nil {
 		c.log.Named("getShowcasesPlansCached").Error("FATAL: failed to list showcases", zap.Error(err))
 		return _showcasesPlans
@@ -645,18 +726,17 @@ func findEntry(uses []*pb.EntryResource, entry *pb.EntryResource) (int, bool) {
 }
 
 func applyCurrentState(promo *pb.Promocode) *pb.Promocode {
-	expired := time.Now().Unix() >= promo.GetDueDate()
-	taken := int64(len(promo.GetUses())) >= promo.GetLimit()
+	expired := promo.GetDueDate() > 0 && time.Now().Unix() >= promo.GetDueDate()
+	taken := promo.GetLimit() > 0 && int64(len(promo.GetUses())) >= promo.GetLimit()
 
 	if taken {
-		promo.State = pb.PromocodeState_ALL_TAKEN
+		promo.Condition = pb.PromocodeCondition_ALL_TAKEN
 	}
 	if expired {
-		promo.State = pb.PromocodeState_EXPIRED
+		promo.Condition = pb.PromocodeCondition_EXPIRED
 	}
-
 	if !taken && !expired {
-		promo.State = pb.PromocodeState_USABLE
+		promo.Condition = pb.PromocodeCondition_USABLE
 	}
 
 	return promo
@@ -672,7 +752,7 @@ func applyCurrentStateWithUsed(promo *pb.Promocode, newEntry *pb.EntryResource) 
 		if use.GetAccount() == newEntryAccount {
 			current++
 			if current == maxUsesPerUser {
-				promo.State = pb.PromocodeState_USED
+				promo.Condition = pb.PromocodeCondition_USED
 				break
 			}
 		}
@@ -681,13 +761,13 @@ func applyCurrentStateWithUsed(promo *pb.Promocode, newEntry *pb.EntryResource) 
 	return promo
 }
 
-func invalidStateError(state pb.PromocodeState) error {
+func invalidStateError(state pb.PromocodeCondition) error {
 	switch state {
-	case pb.PromocodeState_EXPIRED:
+	case pb.PromocodeCondition_EXPIRED:
 		return fmt.Errorf("promocode is expired")
-	case pb.PromocodeState_ALL_TAKEN:
+	case pb.PromocodeCondition_ALL_TAKEN:
 		return fmt.Errorf("no promocodes left")
-	case pb.PromocodeState_USED:
+	case pb.PromocodeCondition_USED:
 		return fmt.Errorf("already got maximum uses of this promocode")
 	}
 	return nil

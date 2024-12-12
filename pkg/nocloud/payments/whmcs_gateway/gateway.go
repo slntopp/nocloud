@@ -24,7 +24,7 @@ import (
 
 type NoCloudInvoicesManager interface {
 	CreateInvoice(ctx context.Context, inv *pb.Invoice) error
-	UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
+	UpdateInvoice(ctx context.Context, inv *pb.Invoice, ignoreNulls bool) error
 	UpdateInvoiceStatus(ctx context.Context, id string, newStatus pb.BillingStatus) (*pb.Invoice, error)
 	InvoicesController() graph.InvoicesController
 }
@@ -456,7 +456,6 @@ skipStatus:
 		}
 		if !isDateEqualWithoutTime(time.Unix(inv.Payment, 0), t) {
 			inv.Payment = t.Unix()
-			inv.Processed = inv.Payment
 		}
 	}
 	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
@@ -536,7 +535,12 @@ skipStatus:
 	meta["note"] = structpb.NewStringValue(warning + whmcsInv.Notes)
 	inv.Meta = meta
 
-	if err = g.invMan.UpdateInvoice(ctx, inv); err != nil {
+	inv.Transactions = nil
+	inv.Instances = nil
+	if synced {
+		inv.Items = nil
+	}
+	if err = g.invMan.UpdateInvoice(ctx, inv, true); err != nil {
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
 	return nil

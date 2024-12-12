@@ -32,7 +32,7 @@
             label="Account"
             :value="account?.title"
           />
-          <v-btn v-if="isMoveAvailable" icon @click="moveDialog = true">
+          <v-btn icon @click="moveDialog = true">
             <v-icon size="30">mdi-arrow-up-bold</v-icon>
           </v-btn>
         </div>
@@ -166,8 +166,6 @@
     <move-instance
       @refresh="refreshInstance"
       :account="account"
-      :services="services"
-      :namespaces="namespaces"
       :template="template"
       v-model="moveDialog"
     />
@@ -303,10 +301,6 @@ export default {
     },
     billingLabelComponent() {
       return () => import(`@/components/modules/${this.type}/billingLabel.vue`);
-    },
-    isMoveAvailable() {
-      const blockedTypes = ["ione"];
-      return !blockedTypes.includes(this.type);
     },
     type() {
       return this.template.type;

@@ -187,7 +187,6 @@ func (ctrl *billingPlansController) List(ctx context.Context, spUuid string) ([]
 		if err != nil {
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("plan", &s))
 		s.Uuid = meta.ID.Key()
 		r = append(r, &BillingPlan{&s, meta})
 	}

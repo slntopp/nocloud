@@ -18,7 +18,9 @@ package main
 import (
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"net"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -41,6 +43,10 @@ var (
 	redisHost   string
 	rbmq        string
 	SIGNING_KEY []byte
+
+	arangodbHost string
+	arangodbCred string
+	arangodbName string
 )
 
 func init() {
@@ -53,11 +59,19 @@ func init() {
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
+	viper.SetDefault("DB_HOST", "db:8529")
+	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DB_NAME", schema.DB_NAME)
+
 	port = viper.GetString("PORT")
 
 	rbmq = viper.GetString("RABBITMQ_CONN")
 	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
+	arangodbName = viper.GetString("DB_NAME")
 }
 
 func main() {
@@ -69,6 +83,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
+
+	log.Info("Setting up DB Connection")
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
+	log.Info("DB connection established")
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
@@ -90,7 +108,7 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	server := edge.NewEdgeServiceServer(log, rabbitmq.NewRabbitMQConnection(rbmq))
+	server := edge.NewEdgeServiceServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq))
 	pb.RegisterEdgeServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
