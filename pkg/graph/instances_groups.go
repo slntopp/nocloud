@@ -37,7 +37,7 @@ type InstancesGroupsController interface {
 	Create(ctx context.Context, service driver.DocumentID, g *pb.InstancesGroup) error
 	GetWithAccess(ctx context.Context, from driver.DocumentID, id string) (InstancesGroup, error)
 	Delete(ctx context.Context, service string, g *pb.InstancesGroup) error
-	Update(ctx context.Context, ig, oldIg *pb.InstancesGroup) error
+	Update(ctx context.Context, ig, oldIg *pb.InstancesGroup, updData ...bool) error
 	TransferIG(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error
 	Provide(ctx context.Context, group, sp string) error
 	SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error)
@@ -175,7 +175,7 @@ func (ctrl *instancesGroupsController) Delete(ctx context.Context, service strin
 	return nil
 }
 
-func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb.InstancesGroup) error {
+func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb.InstancesGroup, updData ...bool) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating InstancesGroup", zap.Any("group", ig))
 
@@ -228,7 +228,9 @@ func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 		}
 	}
 
-	ig.Data = nil
+	if len(updData) == 0 || !updData[0] {
+		ig.Data = nil
+	}
 
 	err := hasher.SetHash(ig.ProtoReflect())
 	if err != nil {
@@ -240,6 +242,7 @@ func (ctrl *instancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 		Config:    ig.GetConfig(),
 		Resources: ig.GetResources(),
 		Hash:      ig.GetHash(),
+		Data:      ig.Data,
 	}
 
 	if ig.GetType() != oldIg.GetType() {

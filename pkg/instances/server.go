@@ -1748,7 +1748,7 @@ func (s *InstancesServer) processNebulaIG(ctx context.Context, log *zap.Logger, 
 	destIG.Data["private_ips_free"] = structpb.NewNumberValue(float64(int(destIG.Data["private_ips_free"].GetNumberValue()) + differPrivate))
 	destIG.Data["private_ips_total"] = structpb.NewNumberValue(float64(int(destIG.Data["private_ips_total"].GetNumberValue()) + differPrivate))
 	destIG.Data["imported"] = structpb.NewBoolValue(true)
-	if err := s.ig_ctrl.Update(ctx, destIG, _old); err != nil {
+	if err := s.ig_ctrl.Update(ctx, destIG, _old, true); err != nil {
 		log.Error("Failed to update instances group", zap.Error(err))
 		return fmt.Errorf("failed to update new instances group: %w", err)
 	}
@@ -1761,7 +1761,7 @@ func (s *InstancesServer) processNebulaIG(ctx context.Context, log *zap.Logger, 
 	oldIG.Data["public_ips_total"] = structpb.NewNumberValue(float64(int(oldIG.Data["public_ips_total"].GetNumberValue()) + differPublic))
 	oldIG.Data["private_ips_free"] = structpb.NewNumberValue(float64(int(oldIG.Data["private_ips_free"].GetNumberValue()) + differPrivate))
 	oldIG.Data["private_ips_total"] = structpb.NewNumberValue(float64(int(oldIG.Data["private_ips_total"].GetNumberValue()) + differPrivate))
-	if err := s.ig_ctrl.Update(ctx, oldIG, _old); err != nil {
+	if err := s.ig_ctrl.Update(ctx, oldIG, _old, true); err != nil {
 		log.Error("Failed to update instances group", zap.Error(err))
 		return fmt.Errorf("failed to update old instances group: %w", err)
 	}
