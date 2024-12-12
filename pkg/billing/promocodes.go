@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
+	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -56,6 +57,14 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 		res.Instance = &parts[1]
 	}
 	return res, nil
+}
+
+func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb.ApplySaleRequest]) (*connect.Response[bpb.ApplySaleResponse], error) {
+	log := s.log.Named("ApplySale")
+	_ = ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received")
+
+	return nil, nil
 }
 
 func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Promocode]) (*connect.Response[pb.Promocode], error) {
