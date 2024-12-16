@@ -40,7 +40,7 @@
       <v-chip :color="getTotalColor(item)" abs>
         {{
           `${formatPrice(item.total, item.currency)} ${
-            item.currency?.title || defaultCurrency.title
+            item.currency?.code || defaultCurrency.code
           }`
         }}
       </v-chip>

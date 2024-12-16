@@ -152,7 +152,7 @@
 
     <template v-slot:[`item.estimate`]="{ item }">
       <template v-if="item.estimate">
-        {{ item.estimate }} {{ defaultCurrency?.title }}
+        {{ item.estimate }} {{ defaultCurrency?.code }}
       </template>
       <template v-else> - </template>
     </template>
@@ -166,7 +166,7 @@
               getAccount(item.account)?.currency
             )
           }}
-          {{ getAccount(item.account)?.currency?.title }}
+          {{ getAccount(item.account)?.currency?.code }}
         </template>
         <template v-else> - </template>
       </span>

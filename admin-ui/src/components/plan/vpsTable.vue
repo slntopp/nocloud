@@ -84,13 +84,13 @@
             {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ value }">
-            {{ value }} {{ defaultCurrency?.title }}
+            {{ value }} {{ defaultCurrency?.code }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
               dense
               style="width: 200px"
-              :suffix="defaultCurrency?.title"
+              :suffix="defaultCurrency?.code"
               v-model="item.value"
             />
           </template>
@@ -111,13 +111,13 @@
             {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ value }">
-            {{ value }} {{ defaultCurrency?.title }}
+            {{ value }} {{ defaultCurrency?.code }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
               dense
               style="width: 200px"
-              :suffix="defaultCurrency?.title"
+              :suffix="defaultCurrency?.code"
               v-model="item.value"
             />
           </template>
@@ -141,7 +141,7 @@
             <v-text-field
               dense
               style="width: 200px"
-              :suffix="defaultCurrency?.title"
+              :suffix="defaultCurrency?.code"
               v-model="item.value"
             />
           </template>

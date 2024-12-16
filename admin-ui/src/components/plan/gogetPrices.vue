@@ -49,7 +49,7 @@
               {{ value }} months
             </template>
             <template v-slot:[`item.price`]="{ value }">
-              {{ value }} {{ defaultCurrency?.title }}
+              {{ value }} {{ defaultCurrency?.code }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
               <v-text-field dense style="width: 150px" v-model="item.value" />
