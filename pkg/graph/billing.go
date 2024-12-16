@@ -187,7 +187,7 @@ func (ctrl *billingPlansController) List(ctx context.Context, spUuid string, uui
 		return nil, err
 	}
 	defer c.Close()
-	var r []*BillingPlan
+	r := make([]*BillingPlan, 0)
 	for c.HasMore() {
 		var s pb.Plan
 		meta, err := c.ReadDocument(ctx, &s)
