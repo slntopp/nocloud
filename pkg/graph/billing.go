@@ -175,10 +175,12 @@ func (ctrl *billingPlansController) List(ctx context.Context, spUuid string, uui
 		bindVars["sp"] = spDocId
 	}
 
+	var filters string
 	if len(uuids) > 0 {
-		query = fmt.Sprintf(query, "FILTER plan._key IN @uuids")
+		filters = "FILTER plan._key IN @uuids"
 		bindVars["uuids"] = uuids
 	}
+	query = fmt.Sprintf(query, filters)
 
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
