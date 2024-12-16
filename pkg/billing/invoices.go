@@ -1220,6 +1220,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 
 	now := time.Now().Unix()
 	cost *= rate // Convert from NCU to  account's currency
+	initCost *= rate
 	slices.Sort(periods)
 	slices.Sort(expirings)
 	period := periods[len(periods)-1]
@@ -1264,19 +1265,29 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	renewDescription = strings.TrimSpace(renewDescription)
 
 	tax := acc.GetTaxRate()
-	cost = cost + cost*tax
+	invCost := initCost + initCost*tax
+	sale := (initCost - cost) + (initCost-cost)*tax
 
-	inv := &pb.Invoice{
-		Status: pb.BillingStatus_UNPAID,
-		Items: []*pb.Item{
-			{
-				Description: renewDescription,
-				Amount:      1,
-				Unit:        "Pcs",
-				Price:       cost,
-			},
+	items := []*pb.Item{
+		{
+			Description: renewDescription,
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       invCost,
 		},
-		Total:     cost,
+	}
+	if sale > 0 {
+		items = append(items, &pb.Item{
+			Description: "Скидка по промокоду",
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       -sale,
+		})
+	}
+	inv := &pb.Invoice{
+		Status:    pb.BillingStatus_UNPAID,
+		Items:     items,
+		Total:     invCost - sale,
 		Type:      pb.ActionType_INSTANCE_RENEWAL,
 		Instances: []string{inst.GetUuid()},
 		Created:   now,
@@ -1285,7 +1296,6 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Currency:  acc.Currency,
 		Meta: map[string]*structpb.Value{
 			"creator":               structpb.NewStringValue(requester),
-			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
 	}
