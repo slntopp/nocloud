@@ -175,15 +175,11 @@
     </template>
 
     <template v-slot:[`item.balance`]="{ item }">
-      <span v-if="!isAccountsLoading">
-        {{
-          formatPrice(
-            getAccount(item.account)?.balance || 0,
-            getAccount(item.account)?.currency
-          )
-        }}
-        {{ getAccount(item.account)?.currency?.title }}
-      </span>
+      <balance
+        v-if="!isAccountsLoading"
+        :currency="getAccount(item.account)?.currency"
+        :value="getAccount(item.account)?.balance || 0"
+      />
 
       <v-skeleton-loader type="text" v-else />
     </template>
@@ -209,6 +205,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import Balance from "./balance.vue";
 import useSearch from "@/hooks/useSearch";
 import { UpdateRequest } from "nocloud-proto/proto/es/instances/instances_pb";
 
