@@ -510,6 +510,9 @@ func (c *promocodesController) GetDiscountPriceByInstance(i *ipb.Instance, inclu
 	}
 
 	handleSummary := func(sum Summary, ps PromoSummary) {
+		if ps.Promocode == "" {
+			return
+		}
 		old, ok := sum[ps.Promocode]
 		if !ok {
 			sum[ps.Promocode] = ps

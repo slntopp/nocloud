@@ -337,7 +337,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	for _, d := range data {
 		inst := d.Instance
 		initCost, _ := s.instances.CalculateInstanceEstimatePrice(inst, false)
-		_, summary, err := s.promocodes.GetDiscountPriceByInstance(inst, false)
+		_, summary, err := s.promocodes.GetDiscountPriceByInstance(inst, false, true)
 		if err != nil {
 			log.Error("Error calculating instance estimate price", zap.Error(err))
 			continue
