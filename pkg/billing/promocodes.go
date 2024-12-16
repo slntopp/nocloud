@@ -143,7 +143,7 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 
 	for _, a := range addons {
 		for k, v := range a.GetPeriods() {
-			disc = s.promos.CalculateResourceDiscount(promos, planAddons[a.GetUuid()], "addon", a.GetUuid(), v)
+			disc, _ = s.promos.CalculateResourceDiscount(promos, planAddons[a.GetUuid()], "addon", a.GetUuid(), v)
 			a.GetPeriods()[k] = v - disc
 		}
 	}
@@ -153,14 +153,14 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 			if res == nil {
 				continue
 			}
-			disc = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "resource", res.GetKey(), res.GetPrice())
+			disc, _ = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "resource", res.GetKey(), res.GetPrice())
 			res.Price -= disc
 		}
 		for k, prod := range p.GetProducts() {
 			if prod == nil {
 				continue
 			}
-			disc = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "product", k, prod.GetPrice())
+			disc, _ = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "product", k, prod.GetPrice())
 			prod.Price -= disc
 		}
 	}

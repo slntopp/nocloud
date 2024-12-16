@@ -1192,7 +1192,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	}
 
 	initCost, _ := s.instances.CalculateInstanceEstimatePrice(inst.Instance, false)
-	cost, err := s.promocodes.GetDiscountPriceByInstance(inst.Instance, false)
+	_, summary, err := s.promocodes.GetDiscountPriceByInstance(inst.Instance, false)
 	if err != nil {
 		log.Error("Error calculating instance estimate price", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error calculating instance estimate price")
@@ -1219,7 +1219,6 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	}
 
 	now := time.Now().Unix()
-	cost *= rate // Convert from NCU to  account's currency
 	initCost *= rate
 	slices.Sort(periods)
 	slices.Sort(expirings)
@@ -1266,8 +1265,17 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 
 	tax := acc.GetTaxRate()
 	invCost := initCost + initCost*tax
-	sale := (initCost - cost) + (initCost-cost)*tax
 
+	promoItems := make([]*pb.Item, 0)
+	for _, sum := range summary {
+		price := -sum.DiscountAmount * rate
+		promoItems = append(promoItems, &pb.Item{
+			Description: fmt.Sprintf("Скидка %s (промокод %s)", renewDescription, sum.Code),
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       price + price*tax,
+		})
+	}
 	items := []*pb.Item{
 		{
 			Description: renewDescription,
@@ -1276,18 +1284,11 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 			Price:       invCost,
 		},
 	}
-	if sale > 0 {
-		items = append(items, &pb.Item{
-			Description: "Скидка по промокоду",
-			Amount:      1,
-			Unit:        "Pcs",
-			Price:       -sale,
-		})
-	}
+	items = append(items, promoItems...)
 	inv := &pb.Invoice{
 		Status:    pb.BillingStatus_UNPAID,
 		Items:     items,
-		Total:     invCost - sale,
+		Total:     invCost,
 		Type:      pb.ActionType_INSTANCE_RENEWAL,
 		Instances: []string{inst.GetUuid()},
 		Created:   now,
@@ -1375,7 +1376,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if err != nil {
 				return inv, err
 			}
-			cost, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
+			cost, _, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
 			if err != nil {
 				return inv, fmt.Errorf("failed to get instance price: %w", err)
 			}

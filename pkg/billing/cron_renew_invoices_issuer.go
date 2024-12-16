@@ -327,9 +327,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	}
 
 	var (
-		total           float64
-		totalNoDiscount float64
-		expirations     = make([]int64, 0)
+		expirations = make([]int64, 0)
 	)
 	const monthSecs = 3600 * 24 * 30
 	const daySecs = 3600 * 24
@@ -339,18 +337,13 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	for _, d := range data {
 		inst := d.Instance
 		initCost, _ := s.instances.CalculateInstanceEstimatePrice(inst, false)
-		cost, err := s.promocodes.GetDiscountPriceByInstance(inst, false)
+		_, summary, err := s.promocodes.GetDiscountPriceByInstance(inst, false)
 		if err != nil {
 			log.Error("Error calculating instance estimate price", zap.Error(err))
 			continue
 		}
-
-		cost *= rate // Convert from NCU to  account's currency
-		cost = cost + (cost * tax)
 		initCost *= rate
-		totalNoDiscount += initCost
-		initCost = initCost + (initCost * tax)
-		total += cost
+		initCost = initCost + initCost*tax
 
 		expireDate := time.Unix(d.ExpireAt, 0)
 		var untilDate time.Time
@@ -379,13 +372,25 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		billingData.RenewalData[inst.GetUuid()] = graph.RenewalData{
 			ExpirationTs: d.ExpireAt,
 		}
+
+		promoItems := make([]*pb.Item, 0)
+		for _, sum := range summary {
+			price := -sum.DiscountAmount * rate
+			promoItems = append(promoItems, &pb.Item{
+				Description: fmt.Sprintf("Скидка %s (промокод %s)", renewDescription, sum.Code),
+				Amount:      1,
+				Unit:        "Pcs",
+				Price:       price + price*tax,
+			})
+		}
 		item := &pb.Item{
 			Description: renewDescription,
 			Amount:      1,
 			Unit:        "Pcs",
-			Price:       cost,
+			Price:       initCost,
 		}
 		inv.Items = append(inv.Items, item)
+		inv.Items = append(inv.Items, promoItems...)
 		inv.Instances = append(inv.Instances, d.Instance.GetUuid())
 		expirations = append(expirations, d.ExpireAt)
 	}
@@ -401,9 +406,6 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		dueDate = now + monthSecs
 	}
 	inv.Deadline = dueDate
-
-	inv.Total = total
-	inv.Meta["no_discount_price"] = structpb.NewStringValue(fmt.Sprintf("%.2f %s", totalNoDiscount, acc.Currency.GetTitle()))
 
 	if val, ok := ctx.Value("create_as_draft").(bool); ok && val {
 		inv.Status = pb.BillingStatus_DRAFT

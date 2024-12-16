@@ -300,13 +300,12 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		return fmt.Errorf("failed getting exchange rate: %w", err)
 	}
 	initCost, _ := s.instances.CalculateInstanceEstimatePrice(instance.Instance, true)
-	cost, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)
+	_, summary, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)
 	if err != nil {
 		log.Error("Failed to calculate instance cost", zap.Error(err))
 		return fmt.Errorf("failed to calculate instance cost: %w", err)
 	}
 	initCost *= rate
-	cost *= rate
 
 	bp := instance.GetBillingPlan()
 	product, hasProduct := bp.GetProducts()[instance.GetProduct()]
@@ -321,8 +320,17 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 
 	tax := acc.GetTaxRate()
 	invCost := initCost + initCost*tax
-	sale := (initCost - cost) + (initCost-cost)*tax
 
+	promoItems := make([]*bpb.Item, 0)
+	for _, sum := range summary {
+		price := -sum.DiscountAmount * rate
+		promoItems = append(promoItems, &bpb.Item{
+			Description: fmt.Sprintf("Скидка %s (промокод %s)", startDescription, sum.Code),
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       price + price*tax,
+		})
+	}
 	items := []*bpb.Item{
 		{
 			Description: startDescription,
@@ -331,14 +339,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			Price:       invCost,
 		},
 	}
-	if sale > 0 {
-		items = append(items, &bpb.Item{
-			Description: "Скидка по промокоду",
-			Amount:      1,
-			Unit:        "Pcs",
-			Price:       -sale,
-		})
-	}
+	items = append(items, promoItems...)
 	inv := &bpb.Invoice{
 		Status: bpb.BillingStatus_UNPAID,
 		Items:  items,
@@ -346,7 +347,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			"creator":               structpb.NewStringValue("system"),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
-		Total:     invCost - sale,
+		Total:     invCost,
 		Type:      bpb.ActionType_INSTANCE_START,
 		Instances: []string{instance.GetUuid()},
 		Created:   now,
