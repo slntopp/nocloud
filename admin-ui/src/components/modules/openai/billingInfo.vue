@@ -56,7 +56,7 @@
       >
         <template v-slot:[`item.price`]="{ item }">
           <v-text-field
-            :suffix="defaultCurrency?.title"
+            :suffix="defaultCurrency?.code"
             v-model="item.price"
             @input="updatePrice(item, false)"
             append-icon="mdi-pencil"
@@ -64,7 +64,7 @@
         </template>
         <template v-slot:[`item.accountPrice`]="{ item }">
           <v-text-field
-            :suffix="accountCurrency?.title"
+            :suffix="accountCurrency?.code"
             style="color: var(--v-primary-base)"
             v-model="item.accountPrice"
             @input="updatePrice(item, true)"

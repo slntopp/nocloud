@@ -33,14 +33,14 @@
       <template v-slot:[`item.totalPreview`]="{ item }">
         <v-chip>{{
           `${formatPrice(item.total || 0, item.currency)} ${
-            item.currency?.title
+            item.currency?.code
           }`
         }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
         <v-chip>{{
           `${formatPrice(item.totalDefault || 0, item.currency)} ${
-            defaultCurrency?.title
+            defaultCurrency?.code
           }`
         }}</v-chip>
       </template>

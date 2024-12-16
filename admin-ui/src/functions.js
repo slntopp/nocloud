@@ -730,7 +730,7 @@ export function formatPrice(price, { precision, rounding } = {}) {
   rounding = rounding || "ROUND_HALF";
 
   if (price < 0.01 && price > -1) {
-    return price;
+    return parseFloat(price.toFixed(10));
   }
 
   if (price == 0) {

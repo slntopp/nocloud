@@ -9,7 +9,7 @@
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
           Total:
-          {{ `${newInvoice.total} ${newInvoice.currency?.title}` }}
+          {{ `${newInvoice.total} ${newInvoice.currency?.code}` }}
         </v-chip>
 
         <v-chip :color="getInvoiceStatusColor(newInvoice.status)">
@@ -93,7 +93,7 @@
             type="number"
             label="Total"
             :value="newInvoice.total"
-            :suffix="accountCurrency?.title"
+            :suffix="accountCurrency?.code"
             @input="newInvoice.items[0].price = +$event"
           />
         </div>
