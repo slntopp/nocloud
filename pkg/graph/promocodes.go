@@ -31,6 +31,7 @@ type PromocodesController interface {
 	RemoveEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
 	GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool, filterOneTime ...bool) (float64, error)
 	GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, error)
+	CalculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) float64
 }
 
 type promocodesController struct {
@@ -130,6 +131,13 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
                     )
                     FILTER LENGTH(result) > 0`)
 			vars["showcasesList"] = values
+		} else if key == "uuids" {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER p._key IN @%s`, key)
+			vars[key] = values
 		} else {
 			values := value.GetListValue().AsSlice()
 			if len(values) == 0 {
@@ -585,6 +593,10 @@ func (c *promocodesController) GetDiscountPriceByResource(i *ipb.Instance, defCu
 	}
 
 	return cost, nil
+}
+
+func (c *promocodesController) CalculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) float64 {
+	return c.calculateResourceDiscount(promos, planId, resType, resource, cost)
 }
 
 func (c *promocodesController) calculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) float64 {

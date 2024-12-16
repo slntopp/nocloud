@@ -302,7 +302,7 @@ func main() {
 	path, handler = cc.NewDescriptionsServiceHandler(descriptions, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
-	promocodes := billing.NewPromocodesServer(log, db, promoCtrl, nssCtrl, caCtrl)
+	promocodes := billing.NewPromocodesServer(log, db, promoCtrl, nssCtrl, plansCtrl, addonsCtrl, currCtrl, caCtrl)
 	log.Info("Registering PromocodesService Server")
 	path, handler = cc.NewPromocodesServiceHandler(promocodes, interceptors)
 	router.PathPrefix(path).Handler(handler)

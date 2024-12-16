@@ -1,18 +1,25 @@
 <template>
   <div>
-    <v-btn
+    <confirm-dialog
       v-for="status in statuses"
-      class="mr-2"
-      color="background-light"
       :key="status"
-      :loading="loadingStatus === status"
-      @click="changeStatus(status)"
       :disabled="
         items.length < 1 || (!!loadingStatus && loadingStatus !== status)
       "
+      @confirm="changeStatus(status)"
+      :loading="loadingStatus === status"
     >
-      {{ status }}
-    </v-btn>
+      <v-btn
+        :disabled="
+          items.length < 1 || (!!loadingStatus && loadingStatus !== status)
+        "
+        class="mr-2"
+        color="background-light"
+        :loading="loadingStatus === status"
+      >
+        {{ status }}
+      </v-btn>
+    </confirm-dialog>
   </div>
 </template>
 
@@ -23,6 +30,7 @@ import {
 } from "nocloud-proto/proto/es/billing/promocodes/promocodes_pb";
 import { computed, ref, toRefs } from "vue";
 import { useStore } from "@/store";
+import confirmDialog from "@/components/confirmDialog.vue";
 
 const props = defineProps(["items"]);
 const { items } = toRefs(props);

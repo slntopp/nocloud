@@ -7,6 +7,7 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
+	apb "github.com/slntopp/nocloud-proto/billing/addons"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -14,6 +15,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
 	"strings"
 	"time"
@@ -26,17 +28,25 @@ type PromocodesServer struct {
 
 	promos graph.PromocodesController
 	nss    graph.NamespacesController
+	plans  graph.BillingPlansController
+	addons graph.AddonsController
+	curr   graph.CurrencyController
 	ca     graph.CommonActionsController
 }
 
 func NewPromocodesServer(logger *zap.Logger, db driver.Database,
-	promocodes graph.PromocodesController, nss graph.NamespacesController, ca graph.CommonActionsController) *PromocodesServer {
+	promocodes graph.PromocodesController, nss graph.NamespacesController,
+	plans graph.BillingPlansController, addons graph.AddonsController, curr graph.CurrencyController,
+	ca graph.CommonActionsController) *PromocodesServer {
 	log := logger.Named("PromocodesServer")
 	return &PromocodesServer{
 		log:    log,
 		db:     db,
 		promos: promocodes,
 		nss:    nss,
+		plans:  plans,
+		addons: addons,
+		curr:   curr,
 		ca:     ca,
 	}
 }
@@ -61,10 +71,115 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 
 func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb.ApplySaleRequest]) (*connect.Response[bpb.ApplySaleResponse], error) {
 	log := s.log.Named("ApplySale")
+	req := r.Msg
 	_ = ctx.Value(nocloud.NoCloudAccount).(string)
-	log.Debug("Request received")
+	log.Debug("Request received", zap.Any("body", req))
 
-	return nil, nil
+	var (
+		addons = make([]*apb.Addon, 0)
+		plans  = make([]*bpb.Plan, 0)
+		promos = make([]*pb.Promocode, 0)
+	)
+	stringsToAny := func(s []string) []any {
+		result := make([]any, len(s))
+		for i, v := range s {
+			result[i] = v
+		}
+		return result
+	}
+
+	if len(req.GetPromocodes()) > 0 {
+		l, err := structpb.NewValue(stringsToAny(req.GetPromocodes()))
+		if err != nil {
+			log.Error("Failed to construct structpb.Value", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to convert")
+		}
+		promos, err = s.promos.List(ctx, &pb.ListPromocodesRequest{Filters: map[string]*structpb.Value{
+			"uuids": l,
+		}})
+	}
+	if len(req.GetBillingPlan()) > 0 {
+		_plans, err := s.plans.List(ctx, "", req.GetBillingPlan())
+		if err != nil {
+			log.Error("Failed to list billing plans", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to obtain plans")
+		}
+		for _, p := range _plans {
+			if p != nil {
+				plans = append(plans, p.Plan)
+			}
+		}
+	}
+	if len(req.GetAddons()) > 0 {
+		l, err := structpb.NewValue(stringsToAny(req.GetAddons()))
+		if err != nil {
+			log.Error("Failed to construct structpb.Value", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to convert")
+		}
+		addons, err = s.addons.List(ctx, &apb.ListAddonsRequest{Filters: map[string]*structpb.Value{
+			"uuids": l,
+		}})
+		if err != nil {
+			log.Error("Failed to list addons", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to obtain addons")
+		}
+	}
+
+	planAddons := map[string]string{}
+	if len(plans) > 0 && plans[0] != nil {
+		plan := plans[0]
+		for _, a := range plan.GetAddons() {
+			planAddons[a] = plan.GetUuid()
+		}
+		for _, prod := range plan.GetProducts() {
+			for _, a := range prod.GetAddons() {
+				planAddons[a] = plan.GetUuid()
+			}
+		}
+	}
+
+	// Promocode apply
+	var disc float64
+
+	for _, a := range addons {
+		for k, v := range a.GetPeriods() {
+			disc = s.promos.CalculateResourceDiscount(promos, planAddons[a.GetUuid()], "addon", a.GetUuid(), v)
+			a.GetPeriods()[k] = v - disc
+		}
+	}
+
+	for _, p := range plans {
+		for _, res := range p.GetResources() {
+			if res == nil {
+				continue
+			}
+			disc = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "resource", res.GetKey(), res.GetPrice())
+			res.Price -= disc
+		}
+		for k, prod := range p.GetProducts() {
+			if prod == nil {
+				continue
+			}
+			disc = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "product", k, prod.GetPrice())
+			prod.Price -= disc
+		}
+	}
+
+	//
+
+	conv := graph.NewConverter(r.Header(), s.curr)
+	for _, val := range addons {
+		conv.ConvertObjectPrices(val)
+	}
+	for _, val := range plans {
+		conv.ConvertObjectPrices(val)
+	}
+	resp := connect.NewResponse(&bpb.ApplySaleResponse{
+		BillingPlans: plans,
+		Addons:       addons,
+	})
+	conv.SetResponseHeader(resp.Header())
+	return graph.HandleConvertionError(resp, conv)
 }
 
 func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Promocode]) (*connect.Response[pb.Promocode], error) {

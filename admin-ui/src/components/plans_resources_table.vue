@@ -49,7 +49,7 @@
         <v-text-field
           dense
           type="number"
-          :suffix="defaultCurrency?.title"
+          :suffix="defaultCurrency?.code"
           :value="item.price"
           :rules="priceRules"
           @input="changeResource('price', $event, item.id)"

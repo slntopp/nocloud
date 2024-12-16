@@ -36,13 +36,13 @@
           `${formatPrice(
             convertTo(item.total, item.currency),
             defaultCurrency
-          )} ${defaultCurrency?.title}`
+          )} ${defaultCurrency?.code}`
         }}
       </template>
 
       <template v-slot:[`item.totalPreview`]="{ item }">
         {{
-          `${formatPrice(item.total, item.currency)} ${item.currency?.title}`
+          `${formatPrice(item.total, item.currency)} ${item.currency?.code}`
         }}
       </template>
     </nocloud-table>
@@ -116,7 +116,7 @@ const onUpdateOptions = async (newOptions) => {
     reports.value = result.map((r) => {
       return {
         uuid: r.uuid,
-        totalPreview: `${r.total.toFixed(2)} ${r.currency?.title}`,
+        totalPreview: `${r.total.toFixed(2)} ${r.currency?.code}`,
         total: r.total,
         currency: r.currency,
       };

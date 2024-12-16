@@ -101,7 +101,7 @@
               <v-text-field
                 type="number"
                 label="Amount"
-                :suffix="accountCurrency?.title"
+                :suffix="accountCurrency?.code"
                 v-model.number="transaction.total"
                 :rules="isInvoice ? [] : amountRule"
                 :disabled="isInvoice"

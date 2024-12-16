@@ -177,7 +177,7 @@
             </template>
 
             <template v-slot:[`item.basePrice`]="{ value }">
-              {{ value }} {{ defaultCurrency?.title }}
+              {{ value }} {{ defaultCurrency?.code }}
             </template>
 
             <template v-slot:[`item.price`]="{ item }">
@@ -185,7 +185,7 @@
                 dense
                 style="min-width: 200px"
                 v-model="item.price"
-                :suffix="defaultCurrency?.title"
+                :suffix="defaultCurrency?.code"
               />
             </template>
 
@@ -196,7 +196,7 @@
                 <td :colspan="headers.length - 6">Installation price</td>
                 <td>
                   {{ item.installation_fee.price.value }}
-                  {{ defaultCurrency?.title }}
+                  {{ defaultCurrency?.code }}
                 </td>
                 <td>
                   <v-text-field
@@ -231,7 +231,7 @@
                     }}
                   </template>
                   <template v-slot:[`item.basePrice`]="{ value }">
-                    {{ value }} {{ value ? defaultCurrency?.title : "" }}
+                    {{ value }} {{ value ? defaultCurrency?.code : "" }}
                   </template>
                   <template v-slot:[`item.price`]="{ item }">
                     <span v-if="item.virtual">{{ item.price }}</span>
@@ -239,7 +239,7 @@
                       v-else
                       dense
                       style="width: 200px"
-                      :suffix="defaultCurrency?.title"
+                      :suffix="defaultCurrency?.code"
                       v-model="item.price"
                     />
                   </template>

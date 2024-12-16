@@ -140,6 +140,13 @@ func (c *addonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 				query += fmt.Sprintf(` FILTER (%t && a.system == true) || (!%t && (!a.system || a.system == false))`, value.GetBoolValue(), value.GetBoolValue())
 			} else if key == "search_param" {
 				query += fmt.Sprintf(` FILTER LOWER(a.title) LIKE LOWER("%s") || LOWER(a.group) LIKE LOWER("%s") || a._key LIKE "%s"`, "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
+			} else if key == "uuids" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER a._key in @%s`, key)
+				vars[key] = values
 			} else if key == "plan_uuid" {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -201,7 +208,7 @@ LET searchAddons = UNIQUE(FLATTEN(
 		return nil, err
 	}
 
-	var addons []*pb.Addon
+	addons := make([]*pb.Addon, 0)
 	_, err = cur.ReadDocument(ctx, &addons)
 	if err != nil {
 		log.Error("Failed to read documents", zap.Error(err))

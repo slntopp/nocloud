@@ -98,7 +98,7 @@
             <v-text-field
               dense
               type="number"
-              :suffix="defaultCurrency?.title"
+              :suffix="defaultCurrency?.code"
               :value="item.price"
               :rules="[rules.price]"
               @change="(value) => changeProduct('price', value, item.id)"

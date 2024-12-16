@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	statuspb "github.com/slntopp/nocloud-proto/statuses"
@@ -31,7 +32,7 @@ type BillingPlansController interface {
 	Delete(ctx context.Context, plan *pb.Plan) error
 	Get(ctx context.Context, plan *pb.Plan) (*BillingPlan, error)
 	InstancesCount(ctx context.Context, plan *pb.Plan) (int, error)
-	List(ctx context.Context, spUuid string) ([]*BillingPlan, error)
+	List(ctx context.Context, spUuid string, uuids ...string) ([]*BillingPlan, error)
 	CheckStatus(ctx context.Context, plan *pb.Plan) (statuspb.NoCloudStatus, error)
 }
 
@@ -162,17 +163,25 @@ func (ctrl *billingPlansController) InstancesCount(ctx context.Context, plan *pb
 	return result, nil
 }
 
-func (ctrl *billingPlansController) List(ctx context.Context, spUuid string) ([]*BillingPlan, error) {
+func (ctrl *billingPlansController) List(ctx context.Context, spUuid string, uuids ...string) ([]*BillingPlan, error) {
 	var query string
-	bindVars := make(map[string]interface{}, 0)
+	bindVars := make(map[string]interface{})
 
 	if spUuid == "" {
-		query = `FOR plan IN BillingPlans RETURN plan`
+		query = `FOR plan IN BillingPlans %s RETURN plan`
 	} else {
-		query = `FOR node, edge IN 1 OUTBOUND @sp GRAPH Billing RETURN Document(edge._to)`
+		query = `FOR node, edge IN 1 OUTBOUND @sp GRAPH Billing %s RETURN Document(edge._to)`
 		spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, spUuid)
 		bindVars["sp"] = spDocId
 	}
+
+	var filters string
+	if len(uuids) > 0 {
+		filters = "FILTER plan._key IN @uuids"
+		bindVars["uuids"] = uuids
+	}
+	query = fmt.Sprintf(query, filters)
+
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
@@ -180,7 +189,7 @@ func (ctrl *billingPlansController) List(ctx context.Context, spUuid string) ([]
 		return nil, err
 	}
 	defer c.Close()
-	var r []*BillingPlan
+	r := make([]*BillingPlan, 0)
 	for c.HasMore() {
 		var s pb.Plan
 		meta, err := c.ReadDocument(ctx, &s)

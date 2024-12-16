@@ -52,7 +52,7 @@
             :rules="[rules.required]"
             v-model.number="item.price"
             type="number"
-            :suffix="defaultCurrency?.title"
+            :suffix="defaultCurrency?.code"
           />
         </template>
         <template v-slot:[`item.period`]="{ item }">
