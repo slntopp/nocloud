@@ -80,8 +80,16 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 		plans  = make([]*bpb.Plan, 0)
 		promos = make([]*pb.Promocode, 0)
 	)
+	stringsToAny := func(s []string) []any {
+		result := make([]any, len(s))
+		for i, v := range s {
+			result[i] = v
+		}
+		return result
+	}
+
 	if len(req.GetPromocodes()) > 0 {
-		l, err := structpb.NewValue(r.Msg.GetPromocodes())
+		l, err := structpb.NewValue(stringsToAny(req.GetPromocodes()))
 		if err != nil {
 			log.Error("Failed to construct structpb.Value", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to convert")
@@ -103,7 +111,7 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 		}
 	}
 	if len(req.GetAddons()) > 0 {
-		l, err := structpb.NewValue(req.GetAddons())
+		l, err := structpb.NewValue(stringsToAny(req.GetAddons()))
 		if err != nil {
 			log.Error("Failed to construct structpb.Value", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to convert")
