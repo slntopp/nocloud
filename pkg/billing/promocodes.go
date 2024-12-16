@@ -98,8 +98,8 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 			"uuids": l,
 		}})
 	}
-	if len(req.GetBillingPlans()) > 0 {
-		_plans, err := s.plans.List(ctx, "", r.Msg.GetBillingPlans()...)
+	if len(req.GetBillingPlan()) > 0 {
+		_plans, err := s.plans.List(ctx, "", req.GetBillingPlan())
 		if err != nil {
 			log.Error("Failed to list billing plans", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to obtain plans")
@@ -130,7 +130,7 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 
 	for _, a := range addons {
 		for k, v := range a.GetPeriods() {
-			disc = s.promos.CalculateResourceDiscount(promos, "", "addon", a.GetUuid(), v)
+			disc = s.promos.CalculateResourceDiscount(promos, req.GetBillingPlan(), "addon", a.GetUuid(), v)
 			a.GetPeriods()[k] = v - disc
 		}
 	}
