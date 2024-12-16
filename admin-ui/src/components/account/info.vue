@@ -69,7 +69,7 @@
         <hint-btn hint="Create transaction/invoice">
           <v-chip @click="openTransaction" class="ma-1" color="primary" outlined
             >Balance: {{ account.balance?.toFixed(2) || 0 }}
-            {{ account.currency?.title }}</v-chip
+            {{ account.currency?.code }}</v-chip
           >
         </hint-btn>
       </div>
@@ -509,7 +509,7 @@ export default {
       );
     },
     isCurrencyReadonly() {
-      return this.account.currency && this.account.currency.title !== "NCU";
+      return this.account.currency && this.account.currency.code !== "NCU";
     },
     isLocked() {
       return this.account.status !== "ACTIVE";

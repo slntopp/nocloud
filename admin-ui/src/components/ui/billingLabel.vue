@@ -55,7 +55,7 @@
       <v-col class="d-flex justify-end px-1">
         <v-chip color="primary" outlined
           >Price: {{ formatPrice(price, accountCurrency) }}
-          {{ accountCurrency?.title }}</v-chip
+          {{ accountCurrency?.code }}</v-chip
         >
       </v-col>
       <v-col class="px-1 d-flex justify-end">
