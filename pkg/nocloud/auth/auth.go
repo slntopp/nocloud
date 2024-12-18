@@ -116,7 +116,8 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
 	if info.FullMethod != "/nocloud.registry.AccountsService/Token" &&
 		info.FullMethod != "/nocloud.billing.CurrencyService/GetCurrencies" &&
-		info.FullMethod != "/nocloud.billing.AddonsService/List" {
+		info.FullMethod != "/nocloud.billing.AddonsService/List" &&
+		info.FullMethod != "/nocloud.billing.PromocodesService/GetByCode" {
 		if err != nil {
 			return nil, err
 		}
