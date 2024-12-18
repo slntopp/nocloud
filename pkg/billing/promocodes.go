@@ -246,11 +246,7 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode(), requester)
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, fmt.Errorf("promocode not found")
-	}
-
-	if promo.Status == pb.PromocodeStatus_DELETED && !isAdmin {
-		return nil, fmt.Errorf("promocode not found")
+		return nil, status.Error(codes.Internal, "Failed to get promocode")
 	}
 
 	if r.Msg.BillingPlan != nil {
@@ -261,6 +257,21 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 	}
 
 	if !isAdmin {
+		if promo.Status != pb.PromocodeStatus_ACTIVE {
+			return nil, status.Error(codes.NotFound, "Promocode not found")
+		}
+		if promo.Condition == pb.PromocodeCondition_CONDITION_UNKNOWN {
+			return nil, status.Error(codes.Unknown, "Can't apply")
+		}
+		if promo.Condition == pb.PromocodeCondition_EXPIRED {
+			return nil, status.Error(codes.DeadlineExceeded, "Promocode expired")
+		}
+		if promo.Condition == pb.PromocodeCondition_USED {
+			return nil, status.Error(codes.AlreadyExists, "Already used maximum times")
+		}
+		if promo.Condition == pb.PromocodeCondition_ALL_TAKEN {
+			return nil, status.Error(codes.OutOfRange, "All promocodes were taken")
+		}
 		promo.Uses = nil
 		promo.Limit = 0
 		promo.Created = 0
