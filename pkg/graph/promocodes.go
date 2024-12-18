@@ -29,6 +29,7 @@ type PromocodesController interface {
 	Count(ctx context.Context, req *pb.CountPromocodesRequest) (int64, error)
 	AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
 	RemoveEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
+	IsPlanAffected(ctx context.Context, promo *pb.Promocode, _plan string) (bool, error)
 	GetDiscountPriceByInstance(i *ipb.Instance, includeOneTimePayments bool, filterOneTime ...bool) (float64, Summary, error)
 	GetDiscountPriceByResource(i *ipb.Instance, defCurrency *bpb.Currency, initCost float64, initCurrency *bpb.Currency, resType string, resource string) (float64, PromoSummary, error)
 	CalculateResourceDiscount(promos []*pb.Promocode, planId string, resType string, resource string, cost float64) (float64, PromoSummary)
@@ -365,6 +366,36 @@ func (c *promocodesController) Count(ctx context.Context, req *pb.CountPromocode
 	}
 
 	return int64(len(promo)), nil
+}
+
+func (c *promocodesController) IsPlanAffected(ctx context.Context, promo *pb.Promocode, _plan string) (bool, error) {
+	if promo == nil || _plan == "" {
+		return false, nil
+	}
+	_, err := c.plans.Get(ctx, &bpb.Plan{Uuid: _plan})
+	if err != nil {
+		return false, err
+	}
+	for _, item := range promo.GetPromoItems() {
+		if item.ShowcasePromo != nil {
+			showcasesPlans := c.getShowcasesPlansCached()
+			plansMap, scOk := showcasesPlans[item.GetShowcasePromo().GetShowcase()]
+			if scOk {
+				if _, ok := plansMap[_plan]; ok {
+					return true, nil
+				}
+			}
+		}
+		if item.PlanPromo != nil {
+			if item.GetPlanPromo().GetBillingPlan() == _plan {
+				return true, nil
+			}
+		}
+		if item.AddonPromo != nil {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (c *promocodesController) AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error {
