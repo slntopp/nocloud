@@ -267,7 +267,7 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("can't apply promocode"))
 		}
 		if promo.Condition == pb.PromocodeCondition_EXPIRED {
-			return nil, connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("promocode is expired"))
+			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("promocode is expired"))
 		}
 		if promo.Condition == pb.PromocodeCondition_USED {
 			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("maximum activations per account"))
