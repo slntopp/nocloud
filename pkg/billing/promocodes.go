@@ -246,31 +246,31 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode(), requester)
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get promocode")
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get promocode"))
 	}
 
 	if r.Msg.BillingPlan != nil {
 		if ok, err = s.promos.IsPlanAffected(ctx, promo, r.Msg.GetBillingPlan()); !ok || err != nil {
 			log.Error("Requested promocode doesn't affect passed billing plan", zap.Error(err), zap.Bool("result", ok))
-			return nil, fmt.Errorf("promocode has no effect")
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("promocode has no effect"))
 		}
 	}
 
 	if !isAdmin {
 		if promo.Status != pb.PromocodeStatus_ACTIVE {
-			return nil, status.Error(codes.NotFound, "Promocode not found")
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("promocode not found"))
 		}
 		if promo.Condition == pb.PromocodeCondition_CONDITION_UNKNOWN {
-			return nil, status.Error(codes.Unknown, "Can't apply")
+			return nil, connect.NewError(connect.CodeUnknown, fmt.Errorf("can't apply promocode"))
 		}
 		if promo.Condition == pb.PromocodeCondition_EXPIRED {
-			return nil, status.Error(codes.DeadlineExceeded, "Promocode expired")
+			return nil, connect.NewError(connect.CodeDeadlineExceeded, fmt.Errorf("promocode is expired"))
 		}
 		if promo.Condition == pb.PromocodeCondition_USED {
-			return nil, status.Error(codes.AlreadyExists, "Already used maximum times")
+			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("maximum activations per account"))
 		}
 		if promo.Condition == pb.PromocodeCondition_ALL_TAKEN {
-			return nil, status.Error(codes.OutOfRange, "All promocodes were taken")
+			return nil, connect.NewError(connect.CodeOutOfRange, fmt.Errorf("global limit exceeded"))
 		}
 		promo.Uses = nil
 		promo.Limit = 0
