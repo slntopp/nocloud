@@ -237,11 +237,13 @@ func (s *PromocodesServer) Get(ctx context.Context, r *connect.Request[pb.Promoc
 
 func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.GetPromocodeByCodeRequest]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("GetByCode")
-	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requester, ok := ctx.Value(nocloud.NoCloudAccount).(string)
+	var isAdmin bool
+	if ok {
+		isAdmin = s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
+	}
 
-	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
-
-	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode())
+	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode(), requester)
 	if err != nil {
 		log.Error("Failed to get promocode by code", zap.Error(err))
 		return nil, fmt.Errorf("promocode not found")

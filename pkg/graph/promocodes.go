@@ -24,7 +24,7 @@ type PromocodesController interface {
 	Update(ctx context.Context, promo *pb.Promocode) (*pb.Promocode, error)
 	Delete(ctx context.Context, uuid string) error
 	Get(ctx context.Context, uuid string) (*pb.Promocode, error)
-	GetByCode(ctx context.Context, code string) (*pb.Promocode, error)
+	GetByCode(ctx context.Context, code string, requester ...string) (*pb.Promocode, error)
 	List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error)
 	Count(ctx context.Context, req *pb.CountPromocodesRequest) (int64, error)
 	AddEntry(ctx context.Context, uuid string, entry *pb.EntryResource) error
@@ -258,7 +258,7 @@ func (c *promocodesController) Get(ctx context.Context, uuid string) (*pb.Promoc
 
 const getByCodeQuery = `FOR p IN @@promocodes FILTER p.code == @code RETURN p`
 
-func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.Promocode, error) {
+func (c *promocodesController) GetByCode(ctx context.Context, code string, requester ...string) (*pb.Promocode, error) {
 	log := c.log.Named("GetByCode")
 
 	cur, err := c.col.Database().Query(ctx, getByCodeQuery, map[string]interface{}{
@@ -279,8 +279,13 @@ func (c *promocodesController) GetByCode(ctx context.Context, code string) (*pb.
 		return nil, err
 	}
 
+	var acc *pb.EntryResource
+	if len(requester) > 0 {
+		acc = &pb.EntryResource{Account: requester[0]}
+	}
+
 	promo.Uuid = meta.Key
-	return applyCurrentState(promo), nil
+	return applyCurrentStateWithUsed(promo, acc), nil
 }
 
 func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesRequest) ([]*pb.Promocode, error) {
@@ -791,8 +796,14 @@ func applyCurrentState(promo *pb.Promocode) *pb.Promocode {
 
 func applyCurrentStateWithUsed(promo *pb.Promocode, newEntry *pb.EntryResource) *pb.Promocode {
 	promo = applyCurrentState(promo)
-	newEntryAccount := newEntry.Account
 	maxUsesPerUser := promo.GetUsesPerUser()
+	if maxUsesPerUser <= 0 {
+		return promo
+	}
+	if newEntry == nil || newEntry.Account == "" {
+		return promo
+	}
+	newEntryAccount := newEntry.Account
 
 	current := int64(0)
 	for _, use := range promo.GetUses() {
