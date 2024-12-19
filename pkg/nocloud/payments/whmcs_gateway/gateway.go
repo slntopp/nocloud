@@ -184,13 +184,9 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 		updQuery.Notes = &note
 		q, err = query.Values(updQuery)
 		if err != nil {
-			fmt.Println("WHMCS Gateway: failed to build update invoice query: ", err.Error())
 			q = url.Values{}
 		}
-		_, err := sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
-		if err != nil {
-			fmt.Println("WHMCS Gateway: error cancelling old whmcs invoice: ", err.Error())
-		}
+		_, _ = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
 	}
 
 	meta[invoiceIdField] = structpb.NewNumberValue(float64(invResp.InvoiceId))

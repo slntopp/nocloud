@@ -110,7 +110,6 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 	_b.Total = 0
 	patch, err := jsondiff.Compare(_a, _b)
 	if err != nil {
-		fmt.Println("error while comparing invoices", err)
 		return false
 	}
 	return len(patch) == 0

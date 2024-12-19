@@ -88,8 +88,6 @@ func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 		return nil, fmt.Errorf("failed to do read body, got: %s", err.Error())
 	}
 
-	fmt.Println(string(all))
-
 	if oauth2TypeValue == "bitrix" {
 		var responseBody = map[string]any{}
 		err := json.Unmarshal(all, &responseBody)
