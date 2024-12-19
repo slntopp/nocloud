@@ -101,16 +101,13 @@ func GetActivity(rdb redisdb.Client, user string) (map[string]*timestamppb.Times
 }
 
 func Get(rdb redisdb.Client, user string) ([]*sessions.Session, error) {
-	fmt.Println(user)
 	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions:%s:*", user)).Result()
 	if err != nil {
-		fmt.Println(1)
 		return nil, err
 	}
 
 	data, err := rdb.MGet(context.Background(), keys...).Result()
 	if err != nil {
-		fmt.Println(2)
 		return nil, err
 	}
 
@@ -120,14 +117,11 @@ func Get(rdb redisdb.Client, user string) ([]*sessions.Session, error) {
 
 		bytes, ok := d.(string)
 		if !ok {
-			fmt.Println(3)
 			return nil, fmt.Errorf("invalid data type: %s", keys[i])
 		}
-		fmt.Println(bytes)
 
 		err = proto.Unmarshal([]byte(bytes), session)
 		if err != nil {
-			fmt.Println(4)
 			return nil, err
 		}
 

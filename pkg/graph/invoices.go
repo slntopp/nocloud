@@ -82,12 +82,10 @@ func (i *Invoice) SetBillingData(d *BillingData) {
 	}
 	b, err := json.Marshal(d)
 	if err != nil {
-		fmt.Println("SetBillingData: error marshaling billing data", err)
 		return
 	}
 	s := &structpb.Struct{}
 	if err = protojson.Unmarshal(b, s); err != nil {
-		fmt.Println("SetBillingData: error unmarshalling billing data", err)
 		return
 	}
 	i.Meta[InvoiceRenewalDataKey] = structpb.NewStructValue(s)
@@ -108,12 +106,10 @@ func (i *Invoice) BillingData() *BillingData {
 	s := v.GetStructValue()
 	b, err := protojson.Marshal(s)
 	if err != nil {
-		fmt.Println("BillingData: error marshaling billing data", err)
 		return nil
 	}
 	d := BillingData{}
 	if err = json.Unmarshal(b, &d); err != nil {
-		fmt.Println("BillingData: error unmarshalling billing data", err)
 		return nil
 	}
 	return &d

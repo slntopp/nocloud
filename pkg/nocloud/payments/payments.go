@@ -2,7 +2,6 @@ package payments
 
 import (
 	"context"
-	"fmt"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/nocloud_gateway"
@@ -23,25 +22,21 @@ func GetGatewayCallbackValue(ctx context.Context, h ...http.Header) bool {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		if v, ok := md[string(types.GatewayCallback)]; ok {
-			fmt.Println("FOUND IN INCOMING METADATA")
 			return v[0] == "true"
 		}
 	}
 	md, ok = metadata.FromOutgoingContext(ctx)
 	if ok {
 		if v, ok := md[string(types.GatewayCallback)]; ok {
-			fmt.Println("FOUND IN OUTGOING METADATA")
 			return v[0] == "true"
 		}
 	}
 	if len(h) > 0 {
 		header := h[0].Get(string(types.GatewayCallback))
 		if header != "" {
-			fmt.Println("FOUND IN HEADER METADATA")
 			return header == "true"
 		}
 	}
-	fmt.Println("RETURNING CTX VALUE")
 	val, _ := ctx.Value(types.GatewayCallback).(bool)
 	return val
 }
