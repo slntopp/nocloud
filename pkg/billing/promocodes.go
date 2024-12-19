@@ -72,7 +72,7 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb.ApplySaleRequest]) (*connect.Response[bpb.ApplySaleResponse], error) {
 	log := s.log.Named("ApplySale")
 	req := r.Msg
-	_ = ctx.Value(nocloud.NoCloudAccount).(string)
+	_, _ = ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("body", req))
 
 	var (

@@ -86,6 +86,8 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			}
 		case "/nocloud.billing.CurrencyService/GetExchangeRates":
 			return next(ctx, req)
+		case "/nocloud.billing.PromocodesService/ApplySale":
+			return next(ctx, req)
 		}
 
 		segments := strings.Split(header, " ")

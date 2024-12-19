@@ -112,6 +112,8 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		}
 	case "/nocloud.billing.CurrencyService/GetExchangeRates":
 		return handler(ctx, req)
+	case "/nocloud.billing.PromocodesService/ApplySale":
+		return handler(ctx, req)
 	}
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
 	if info.FullMethod != "/nocloud.registry.AccountsService/Token" &&
