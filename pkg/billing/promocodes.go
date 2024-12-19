@@ -252,13 +252,6 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get promocode"))
 	}
 
-	if r.Msg.BillingPlan != nil {
-		if ok, err = s.promos.IsPlanAffected(ctx, promo, r.Msg.GetBillingPlan()); !ok || err != nil {
-			log.Error("Requested promocode doesn't affect passed billing plan", zap.Error(err), zap.Bool("result", ok))
-			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("promocode has no effect"))
-		}
-	}
-
 	if !isAdmin {
 		if promo.Status != pb.PromocodeStatus_ACTIVE {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("promocode not found"))
@@ -275,6 +268,16 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 		if promo.Condition == pb.PromocodeCondition_ALL_TAKEN {
 			return nil, connect.NewError(connect.CodeOutOfRange, fmt.Errorf("global limit exceeded"))
 		}
+	}
+
+	if r.Msg.BillingPlan != nil {
+		if ok, err = s.promos.IsPlanAffected(ctx, promo, r.Msg.GetBillingPlan()); !ok || err != nil {
+			log.Error("Requested promocode doesn't affect passed billing plan", zap.Error(err), zap.Bool("result", ok))
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("promocode has no effect"))
+		}
+	}
+
+	if !isAdmin {
 		promo.Uses = nil
 		promo.Limit = 0
 		promo.Created = 0
