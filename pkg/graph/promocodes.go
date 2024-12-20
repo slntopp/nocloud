@@ -897,6 +897,9 @@ func filterInactivePromos(promos []*pb.Promocode, instance string, now int64) []
 			promosFiltered = append(promosFiltered, promo)
 			continue
 		}
+		if promo.GetStatus() == pb.PromocodeStatus_DELETED || promo.GetStatus() == pb.PromocodeStatus_SUSPENDED {
+			continue
+		}
 		var entry *pb.EntryResource
 		for _, e := range promo.GetUses() {
 			if e.Instance != nil && *e.Instance == instance {
