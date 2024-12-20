@@ -254,7 +254,7 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 	}
 
 	if !isAdmin {
-		if promo.Status != pb.PromocodeStatus_ACTIVE {
+		if promo.Status != pb.PromocodeStatus_ACTIVE && promo.Status != pb.PromocodeStatus_STATUS_UNKNOWN {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("promocode not found"))
 		}
 		if promo.Condition == pb.PromocodeCondition_CONDITION_UNKNOWN {
