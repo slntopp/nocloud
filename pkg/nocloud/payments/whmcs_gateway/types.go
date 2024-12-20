@@ -1,10 +1,45 @@
 package whmcs_gateway
 
 import (
+	"encoding/json"
+	"fmt"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"strconv"
 	"strings"
 )
+
+type IntOrString int
+
+func (i *IntOrString) UnmarshalJSON(data []byte) error {
+	if string(data) == `""` {
+		if i != nil {
+			*i = 0
+		}
+		return nil
+	}
+
+	var num int
+	if err := json.Unmarshal(data, &num); err == nil {
+		*i = IntOrString(num)
+		return nil
+	}
+
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		parsedNum, err := strconv.Atoi(str)
+		if err != nil {
+			return fmt.Errorf("invalid string value for IntOrString: %s", str)
+		}
+		*i = IntOrString(parsedNum)
+		return nil
+	}
+
+	return fmt.Errorf("IntOrString must be a string or number")
+}
+
+func (i *IntOrString) MarshalJSON() ([]byte, error) {
+	return json.Marshal(strconv.Itoa(int(*i)))
+}
 
 type floatAsString float64
 
@@ -217,35 +252,35 @@ type AddPaymentQuery struct {
 }
 
 type InvoicePaid struct {
-	InvoiceId int `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 }
 
 type InvoiceCancelled struct {
-	InvoiceId int `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 }
 
 type InvoiceRefunded struct {
-	InvoiceId int `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 }
 
 type InvoiceModified struct {
-	InvoiceId int `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 }
 
 type UpdateInvoiceTotal struct {
-	InvoiceId int `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 }
 
 type InvoiceUnpaid struct {
-	InvoiceId int `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 }
 
 type InvoiceDeleted struct {
-	InvoiceId int `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 }
 
 type InvoiceCreated struct {
-	InvoiceId int         `json:"invoiceid"`
+	InvoiceId IntOrString `json:"invoiceid"`
 	Source    string      `json:"source"`
 	Status    string      `json:"status"`
 	User      interface{} `json:"user"`
