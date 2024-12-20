@@ -246,10 +246,10 @@ func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.
 
 	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode(), requester)
 	if err != nil {
+		log.Error("Failed to get promocode by code", zap.Error(err))
 		if strings.Contains(err.Error(), "not found") {
 			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("promocode not found"))
 		}
-		log.Error("Failed to get promocode by code", zap.Error(err))
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get promocode"))
 	}
 
