@@ -60,11 +60,12 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 	if parts[1] == "" {
 		return nil, fmt.Errorf("resource id cannot be empty: %s", resource)
 	}
-	if strings.ToLower(parts[0]) == "invoices" {
+	if parts[0] == "invoices" {
 		res.Invoice = &parts[1]
-	}
-	if strings.ToLower(parts[0]) == "instances" {
+	} else if parts[0] == "instances" {
 		res.Instance = &parts[1]
+	} else {
+		return nil, fmt.Errorf("invalid resource type: %s", parts[0])
 	}
 	return res, nil
 }
@@ -348,6 +349,7 @@ func (s *PromocodesServer) Detach(ctx context.Context, r *connect.Request[pb.Det
 
 func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListPromocodesRequest]) (*connect.Response[pb.ListPromocodesResponse], error) {
 	log := s.log.Named("List")
+	log.Debug("List promocodes request received", zap.Any("request", r))
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	// TODO: maybe refactor somehow
