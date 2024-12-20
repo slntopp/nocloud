@@ -191,6 +191,10 @@ func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Pro
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
+	if r.Msg.Status == pb.PromocodeStatus_STATUS_UNKNOWN {
+		r.Msg.Status = pb.PromocodeStatus_ACTIVE
+	}
+
 	r.Msg.Created = time.Now().Unix()
 	r.Msg.Uses = make([]*pb.EntryResource, 0)
 	promo, err := s.promos.Create(ctx, r.Msg)
@@ -208,6 +212,10 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 
 	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	}
+
+	if r.Msg.Status == pb.PromocodeStatus_STATUS_UNKNOWN {
+		r.Msg.Status = pb.PromocodeStatus_ACTIVE
 	}
 
 	promo, err := s.promos.Update(ctx, r.Msg)
