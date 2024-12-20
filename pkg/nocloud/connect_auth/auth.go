@@ -86,6 +86,8 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			}
 		case "/nocloud.billing.CurrencyService/GetExchangeRates":
 			return next(ctx, req)
+		case "/nocloud.billing.PromocodesService/ApplySale":
+			return next(ctx, req)
 		}
 
 		segments := strings.Split(header, " ")
@@ -96,7 +98,8 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		ctx, err := i.jwtAuthMiddleware(ctx, segments[1])
 		if req.Spec().Procedure != "/nocloud.registry.AccountsService/Token" &&
 			req.Spec().Procedure != "/nocloud.billing.CurrencyService/GetCurrencies" &&
-			req.Spec().Procedure != "/nocloud.billing.AddonsService/List" {
+			req.Spec().Procedure != "/nocloud.billing.AddonsService/List" &&
+			req.Spec().Procedure != "/nocloud.billing.PromocodesService/GetByCode" {
 			if err != nil {
 				return nil, err
 			}

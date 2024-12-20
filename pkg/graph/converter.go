@@ -3,7 +3,6 @@ package graph
 import (
 	"connectrpc.com/connect"
 	"context"
-	"fmt"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
 	ipb "github.com/slntopp/nocloud-proto/instances"
@@ -58,14 +57,12 @@ func NewConverter(header http.Header, curr CurrencyController) PricesConverter {
 	ctx := context.Background()
 	c, err := curr.GetByCode(ctx, code)
 	if err != nil {
-		fmt.Println("error: failed to get currency by code: " + err.Error())
 		return PricesConverter{currencies: curr, failed: true}
 	}
 	rate, _, err := curr.GetExchangeRate(ctx,
 		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME},
 		&bpb.Currency{Id: c.Id, Title: c.Title})
 	if err != nil {
-		fmt.Println("error: failed to get exchange rate: " + err.Error())
 		return PricesConverter{currencies: curr, failed: true}
 	}
 	return PricesConverter{currencies: curr, target: c, rate: rate}
@@ -96,7 +93,6 @@ func (conv *PricesConverter) ConvertObjectPrices(obj interface{}) {
 	case *ipb.Instance:
 		ConvertInstance(val, conv.rate, conv.target.Precision, conv.target.Rounding)
 	default:
-		fmt.Println("error: provided invalid object to convert")
 		return
 	}
 }

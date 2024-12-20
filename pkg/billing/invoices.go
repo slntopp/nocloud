@@ -110,7 +110,6 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 	_b.Total = 0
 	patch, err := jsondiff.Compare(_a, _b)
 	if err != nil {
-		fmt.Println("error while comparing invoices", err)
 		return false
 	}
 	return len(patch) == 0
@@ -1192,7 +1191,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	}
 
 	initCost, _ := s.instances.CalculateInstanceEstimatePrice(inst.Instance, false)
-	cost, err := s.promocodes.GetDiscountPriceByInstance(inst.Instance, false)
+	_, summary, err := s.promocodes.GetDiscountPriceByInstance(inst.Instance, false, true)
 	if err != nil {
 		log.Error("Error calculating instance estimate price", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error calculating instance estimate price")
@@ -1219,7 +1218,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	}
 
 	now := time.Now().Unix()
-	cost *= rate // Convert from NCU to  account's currency
+	initCost *= rate
 	slices.Sort(periods)
 	slices.Sort(expirings)
 	period := periods[len(periods)-1]
@@ -1264,19 +1263,31 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	renewDescription = strings.TrimSpace(renewDescription)
 
 	tax := acc.GetTaxRate()
-	cost = cost + cost*tax
+	invCost := initCost + initCost*tax
 
-	inv := &pb.Invoice{
-		Status: pb.BillingStatus_UNPAID,
-		Items: []*pb.Item{
-			{
-				Description: renewDescription,
-				Amount:      1,
-				Unit:        "Pcs",
-				Price:       cost,
-			},
+	promoItems := make([]*pb.Item, 0)
+	for _, sum := range summary {
+		price := -sum.DiscountAmount * rate
+		promoItems = append(promoItems, &pb.Item{
+			Description: fmt.Sprintf("Скидка %s (промокод %s)", renewDescription, sum.Code),
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       price + price*tax,
+		})
+	}
+	items := []*pb.Item{
+		{
+			Description: renewDescription,
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       invCost,
 		},
-		Total:     cost,
+	}
+	items = append(items, promoItems...)
+	inv := &pb.Invoice{
+		Status:    pb.BillingStatus_UNPAID,
+		Items:     items,
+		Total:     invCost,
 		Type:      pb.ActionType_INSTANCE_RENEWAL,
 		Instances: []string{inst.GetUuid()},
 		Created:   now,
@@ -1285,7 +1296,6 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Currency:  acc.Currency,
 		Meta: map[string]*structpb.Value{
 			"creator":               structpb.NewStringValue(requester),
-			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
 	}
@@ -1365,7 +1375,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if err != nil {
 				return inv, err
 			}
-			cost, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
+			cost, _, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
 			if err != nil {
 				return inv, fmt.Errorf("failed to get instance price: %w", err)
 			}

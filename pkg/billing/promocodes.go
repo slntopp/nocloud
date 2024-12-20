@@ -60,11 +60,12 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 	if parts[1] == "" {
 		return nil, fmt.Errorf("resource id cannot be empty: %s", resource)
 	}
-	if strings.ToLower(parts[0]) == "invoices" {
+	if parts[0] == "invoices" {
 		res.Invoice = &parts[1]
-	}
-	if strings.ToLower(parts[0]) == "instances" {
+	} else if parts[0] == "instances" {
 		res.Instance = &parts[1]
+	} else {
+		return nil, fmt.Errorf("invalid resource type: %s", parts[0])
 	}
 	return res, nil
 }
@@ -72,7 +73,7 @@ func parseEntryResource(resource string) (*pb.EntryResource, error) {
 func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb.ApplySaleRequest]) (*connect.Response[bpb.ApplySaleResponse], error) {
 	log := s.log.Named("ApplySale")
 	req := r.Msg
-	_ = ctx.Value(nocloud.NoCloudAccount).(string)
+	_, _ = ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("body", req))
 
 	var (
@@ -143,7 +144,7 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 
 	for _, a := range addons {
 		for k, v := range a.GetPeriods() {
-			disc = s.promos.CalculateResourceDiscount(promos, planAddons[a.GetUuid()], "addon", a.GetUuid(), v)
+			disc, _ = s.promos.CalculateResourceDiscount(promos, planAddons[a.GetUuid()], "addon", a.GetUuid(), v)
 			a.GetPeriods()[k] = v - disc
 		}
 	}
@@ -153,14 +154,14 @@ func (s *PromocodesServer) ApplySale(ctx context.Context, r *connect.Request[bpb
 			if res == nil {
 				continue
 			}
-			disc = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "resource", res.GetKey(), res.GetPrice())
+			disc, _ = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "resource", res.GetKey(), res.GetPrice())
 			res.Price -= disc
 		}
 		for k, prod := range p.GetProducts() {
 			if prod == nil {
 				continue
 			}
-			disc = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "product", k, prod.GetPrice())
+			disc, _ = s.promos.CalculateResourceDiscount(promos, p.GetUuid(), "product", k, prod.GetPrice())
 			prod.Price -= disc
 		}
 	}
@@ -190,6 +191,10 @@ func (s *PromocodesServer) Create(ctx context.Context, r *connect.Request[pb.Pro
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
 	}
 
+	if r.Msg.Status == pb.PromocodeStatus_STATUS_UNKNOWN {
+		r.Msg.Status = pb.PromocodeStatus_ACTIVE
+	}
+
 	r.Msg.Created = time.Now().Unix()
 	r.Msg.Uses = make([]*pb.EntryResource, 0)
 	promo, err := s.promos.Create(ctx, r.Msg)
@@ -207,6 +212,10 @@ func (s *PromocodesServer) Update(ctx context.Context, r *connect.Request[pb.Pro
 
 	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage promocodes")
+	}
+
+	if r.Msg.Status == pb.PromocodeStatus_STATUS_UNKNOWN {
+		r.Msg.Status = pb.PromocodeStatus_ACTIVE
 	}
 
 	promo, err := s.promos.Update(ctx, r.Msg)
@@ -237,18 +246,44 @@ func (s *PromocodesServer) Get(ctx context.Context, r *connect.Request[pb.Promoc
 
 func (s *PromocodesServer) GetByCode(ctx context.Context, r *connect.Request[pb.GetPromocodeByCodeRequest]) (*connect.Response[pb.Promocode], error) {
 	log := s.log.Named("GetByCode")
-	requester := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
-
-	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode())
-	if err != nil {
-		log.Error("Failed to get promocode by code", zap.Error(err))
-		return nil, fmt.Errorf("promocode not found")
+	requester, ok := ctx.Value(nocloud.NoCloudAccount).(string)
+	var isAdmin bool
+	if ok {
+		isAdmin = s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	}
 
-	if promo.Status == pb.PromocodeStatus_DELETED && !isAdmin {
-		return nil, fmt.Errorf("promocode not found")
+	promo, err := s.promos.GetByCode(ctx, r.Msg.GetCode(), requester)
+	if err != nil {
+		log.Error("Failed to get promocode by code", zap.Error(err))
+		if strings.Contains(err.Error(), "not found") {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("promocode not found"))
+		}
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("failed to get promocode"))
+	}
+
+	if !isAdmin {
+		if promo.Status != pb.PromocodeStatus_ACTIVE && promo.Status != pb.PromocodeStatus_STATUS_UNKNOWN {
+			return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("promocode not found"))
+		}
+		if promo.Condition == pb.PromocodeCondition_CONDITION_UNKNOWN {
+			return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("can't apply promocode"))
+		}
+		if promo.Condition == pb.PromocodeCondition_EXPIRED {
+			return nil, connect.NewError(connect.CodeResourceExhausted, fmt.Errorf("promocode is expired"))
+		}
+		if promo.Condition == pb.PromocodeCondition_USED {
+			return nil, connect.NewError(connect.CodeAlreadyExists, fmt.Errorf("maximum activations per account"))
+		}
+		if promo.Condition == pb.PromocodeCondition_ALL_TAKEN {
+			return nil, connect.NewError(connect.CodeOutOfRange, fmt.Errorf("global limit exceeded"))
+		}
+	}
+
+	if r.Msg.BillingPlan != nil {
+		if ok, err = s.promos.IsPlanAffected(ctx, promo, r.Msg.GetBillingPlan()); !ok || err != nil {
+			log.Error("Requested promocode doesn't affect passed billing plan", zap.Error(err), zap.Bool("result", ok))
+			return nil, connect.NewError(connect.CodeFailedPrecondition, fmt.Errorf("promocode has no effect"))
+		}
 	}
 
 	if !isAdmin {
@@ -322,6 +357,7 @@ func (s *PromocodesServer) Detach(ctx context.Context, r *connect.Request[pb.Det
 
 func (s *PromocodesServer) List(ctx context.Context, r *connect.Request[pb.ListPromocodesRequest]) (*connect.Response[pb.ListPromocodesResponse], error) {
 	log := s.log.Named("List")
+	log.Debug("List promocodes request received", zap.Any("request", r))
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	// TODO: maybe refactor somehow

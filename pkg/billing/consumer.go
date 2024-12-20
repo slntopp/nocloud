@@ -294,17 +294,18 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	if acc.Currency != nil {
 		accCurrency = acc.Currency
 	}
+	rate, _, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
+	if err != nil {
+		log.Error("Error getting exchange rate", zap.Error(err))
+		return fmt.Errorf("failed getting exchange rate: %w", err)
+	}
 	initCost, _ := s.instances.CalculateInstanceEstimatePrice(instance.Instance, true)
-	cost, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)
+	_, summary, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)
 	if err != nil {
 		log.Error("Failed to calculate instance cost", zap.Error(err))
 		return fmt.Errorf("failed to calculate instance cost: %w", err)
 	}
-	cost, err = s.currencies.Convert(ctx, currencyConf.Currency, accCurrency, cost)
-	if err != nil {
-		log.Error("Failed to convert cost", zap.Error(err))
-		return fmt.Errorf("failed to convert cost: %w", err)
-	}
+	initCost *= rate
 
 	bp := instance.GetBillingPlan()
 	product, hasProduct := bp.GetProducts()[instance.GetProduct()]
@@ -318,21 +319,32 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	startDescription = strings.TrimSpace(startDescription)
 
 	tax := acc.GetTaxRate()
-	invCost := cost + cost*tax
+	invCost := initCost + initCost*tax
 
+	promoItems := make([]*bpb.Item, 0)
+	for _, sum := range summary {
+		price := -sum.DiscountAmount * rate
+		promoItems = append(promoItems, &bpb.Item{
+			Description: fmt.Sprintf("Скидка %s (промокод %s)", startDescription, sum.Code),
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       price + price*tax,
+		})
+	}
+	items := []*bpb.Item{
+		{
+			Description: startDescription,
+			Amount:      1,
+			Unit:        "Pcs",
+			Price:       invCost,
+		},
+	}
+	items = append(items, promoItems...)
 	inv := &bpb.Invoice{
 		Status: bpb.BillingStatus_UNPAID,
-		Items: []*bpb.Item{
-			{
-				Description: startDescription,
-				Amount:      1,
-				Unit:        "Pcs",
-				Price:       invCost,
-			},
-		},
+		Items:  items,
 		Meta: map[string]*structpb.Value{
 			"creator":               structpb.NewStringValue("system"),
-			"no_discount_price":     structpb.NewStringValue(fmt.Sprintf("%.2f %s", initCost, currencyConf.Currency.GetTitle())),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
 		Total:     invCost,
