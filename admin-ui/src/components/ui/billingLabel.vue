@@ -97,10 +97,16 @@ const accountCurrency = computed(() => {
   return account.value?.currency;
 });
 
-const price = computed(() => {
-  const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b, 0);
+const priceForAddons = computed(() => {
+  return convertTo(Object.values(addonsPrice.value).reduce((a, b) => a + b, 0));
+});
 
-  return convertTo(tariffPrice.value + addonsSum, accountCurrency.value);
+const priceForTarrif = computed(() => {
+  return convertTo(tariffPrice.value, accountCurrency.value);
+});
+
+const price = computed(() => {
+  return priceForAddons.value + priceForTarrif.value;
 });
 
 const isRenewDisabled = computed(() => {
@@ -142,13 +148,16 @@ const addonsTemplate = Object.entries(addonsPrice.value).map(
 
 const isLoading = computed(() => store.getters["actions/isSendActionLoading"]);
 
-const renewTemplate = `
+const renewTemplate = computed(() =>
+  `
       <div style="font-size: 16px; white-space: initial">
         <div>Manual renewal:</div>
         <span style="font-weight: 700">Tariff price: </span>
-        ${tariffPrice.value} ${currency.value?.code}
+        ${formatPrice(priceForTarrif.value, accountCurrency.value)} ${
+    accountCurrency.value?.code
+  }
         ${
-          addonsPrice.value
+          priceForAddons.value
             ? `
           <div>
             <span style="font-weight: 700">Addons prices:</span>
@@ -162,10 +171,13 @@ const renewTemplate = `
 
         <div>
           <span style="font-weight: 700">Total: </span>
-          ${price.value} ${currency.value?.code}
+          ${formatPrice(price.value, accountCurrency.value)} ${
+    accountCurrency.value?.code
+  }
         </div>
       </div>
-    `.trim();
+    `.trim()
+);
 
 const updateInvoiceBased = (value) => {
   if (template.value.config.auto_renew && value) {
