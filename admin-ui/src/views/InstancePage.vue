@@ -165,6 +165,10 @@ export default {
           title: "Info",
           component: () => import("@/components/instance/info.vue"),
         },
+        {
+          title: "promocodes",
+          component: () => import("@/components/instance/promocodes.vue"),
+        },
         this.instance?.state &&
           this.instance.billingPlan.type !== "ovh dedicated" && {
             title: "Snapshots",
