@@ -19,8 +19,8 @@ import (
 func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logger, data InvoiceCreated) error {
 	log.Info("Got invoiceCreated event. Got data", zap.Any("data", data))
 	var err error
-	if _, err = g.getInvoiceByWhmcsId(data.InvoiceId); err == nil || data.Source == "api" {
-		log.Info("Invoice already exists in NoCloud", zap.Int("invoice_id", data.InvoiceId))
+	if _, err = g.getInvoiceByWhmcsId(int(data.InvoiceId)); err == nil || data.Source == "api" {
+		log.Info("Invoice already exists in NoCloud", zap.Int("invoice_id", int(data.InvoiceId)))
 		return nil
 	}
 	if !errors.Is(err, ErrNotFound) {
@@ -28,7 +28,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		return err
 	}
 
-	whmcsInv, err := g.GetInvoice(ctx, data.InvoiceId)
+	whmcsInv, err := g.GetInvoice(ctx, int(data.InvoiceId))
 	if err != nil {
 		log.Error("Error getting invoice", zap.Error(err))
 		return err
@@ -136,8 +136,8 @@ func (g *WhmcsGateway) HandleWhmcsEvent(log *zap.Logger, body []byte) error {
 		return ps.NoNackErr(err)
 	}
 
-	log.Info("Event received", zap.String("event", resp.Event), zap.String("body", string(body)))
-	log = log.With(zap.String("event", resp.Event))
+	log = log.With(zap.String("event", resp.Event), zap.String("body", string(body)))
+	log.Info("Event received")
 
 	ctx := context.WithValue(context.Background(), types.GatewayCallback, true)
 	md := metadata.New(map[string]string{
@@ -152,48 +152,42 @@ func (g *WhmcsGateway) HandleWhmcsEvent(log *zap.Logger, body []byte) error {
 			log.Error("Error decoding request", zap.Error(err))
 			return ps.NoNackErr(err)
 		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, int(data.InvoiceId))
 	case "InvoiceModified":
 		data, err := unmarshal[InvoiceModified](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return ps.NoNackErr(err)
 		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, int(data.InvoiceId))
 	case "InvoiceCancelled":
 		data, err := unmarshal[InvoiceCancelled](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return ps.NoNackErr(err)
 		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, int(data.InvoiceId))
 	case "InvoiceRefunded":
 		data, err := unmarshal[InvoiceRefunded](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return ps.NoNackErr(err)
 		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, int(data.InvoiceId))
 	case "InvoiceUnpaid":
 		data, err := unmarshal[InvoiceUnpaid](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return ps.NoNackErr(err)
 		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, int(data.InvoiceId))
 	case "UpdateInvoiceTotal":
 		data, err := unmarshal[UpdateInvoiceTotal](body)
 		if err != nil {
 			log.Error("Error decoding request", zap.Error(err))
 			return ps.NoNackErr(err)
 		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
-		innerErr = g.syncWhmcsInvoice(ctx, data.InvoiceId)
+		innerErr = g.syncWhmcsInvoice(ctx, int(data.InvoiceId))
 	case "InvoiceCreation", "InvoiceCreated":
 		g.m.Lock()
 		defer g.m.Unlock()
@@ -202,10 +196,9 @@ func (g *WhmcsGateway) HandleWhmcsEvent(log *zap.Logger, body []byte) error {
 			log.Error("Error decoding request", zap.Error(err))
 			return ps.NoNackErr(err)
 		}
-		log = log.With(zap.Int("invoice_id", data.InvoiceId))
 		innerErr = g.invoiceCreatedHandler(ctx, log, data)
 	default:
-		log.Warn("Unknown event", zap.String("event", resp.Event))
+		log.Warn("Unknown event")
 		return nil
 	}
 	if innerErr != nil {
