@@ -69,9 +69,8 @@ func hasInternalAccess(ctx context.Context) bool {
 type BillingServiceServer struct {
 	log *zap.Logger
 
-	rbmq                    rabbitmq.Connection
-	ConsumerStatus          *healthpb.RoutineStatus
-	InstancesConsumerStatus *healthpb.RoutineStatus
+	rbmq           rabbitmq.Connection
+	ConsumerStatus *healthpb.RoutineStatus
 
 	nss          graph.NamespacesController
 	plans        graph.BillingPlansController
@@ -176,13 +175,6 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		},
 		ConsumerStatus: &healthpb.RoutineStatus{
 			Routine: "Billing Records Consumer",
-			Status: &healthpb.ServingStatus{
-				Service: "Billing Machine",
-				Status:  healthpb.Status_STOPPED,
-			},
-		},
-		InstancesConsumerStatus: &healthpb.RoutineStatus{
-			Routine: "Invoices Issuer Consumer",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,
