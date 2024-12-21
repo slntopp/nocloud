@@ -80,7 +80,7 @@ func Subscribe(keys []string, upd chan bool) {
 init_stream:
 	stream, err := c.Sub(ctx, &pb.GetRequest{Keys: keys})
 	if err != nil {
-		log.Warn("Couldn't subscribe", zap.Strings("keys", keys), zap.Error(err))
+		log.Warn("settings.Subscribe: Couldn't subscribe", zap.Strings("keys", keys), zap.Error(err))
 		have_failed = true
 		time.Sleep(time.Second)
 		goto init_stream
@@ -94,7 +94,7 @@ init_stream:
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			log.Warn("Error receiving message", zap.Error(err))
+			log.Warn("settings.Subscribe: Error receiving message", zap.Error(err))
 			time.Sleep(time.Second)
 			goto init_stream
 		}
