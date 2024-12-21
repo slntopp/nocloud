@@ -11,7 +11,9 @@ import (
 	"time"
 )
 
-func ServeGRPC(log *zap.Logger, s *grpc.Server, port string) {
+func ServeGRPC(_log *zap.Logger, s *grpc.Server, port string) {
+	log := _log.Named("ServeGRPC")
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
