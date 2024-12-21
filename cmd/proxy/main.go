@@ -17,18 +17,17 @@ package main
 
 import (
 	"github.com/gorilla/mux"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
+	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/proxy"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"net"
-	"net/http"
-
-	healthpb "github.com/slntopp/nocloud-proto/health"
 )
 
 var (
@@ -76,15 +75,9 @@ func main() {
 	r.HandleFunc("/socket", proxy.Handler).Methods("GET")
 	r.Use(mux.CORSMethodMiddleware(r))
 
-	lis, err := net.Listen("tcp", ":8000")
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", ":8000"), zap.Error(err))
-	}
 	s := grpc.NewServer()
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
-	go s.Serve(lis)
-
-	/* #nosec */
-	log.Fatal("Failed to serve proxy", zap.Error(http.ListenAndServe(":8080", r)))
+	go grpc_server.ServeGRPC(log, s, "8000")
+	http_server.Serve(log, ":8080", r)
 }

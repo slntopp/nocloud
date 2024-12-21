@@ -29,6 +29,7 @@ import (
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
+	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
@@ -328,9 +329,5 @@ func main() {
 		AllowPrivateNetwork: true,
 	}).Handler(h2c.NewHandler(router, &http2.Server{}))
 
-	log.Info("Serving", zap.String("host", host))
-	err = http.ListenAndServe(host, handler)
-	if err != nil {
-		log.Fatal("Failed to start server", zap.Error(err))
-	}
+	http_server.Serve(log, host, handler)
 }
