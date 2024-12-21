@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func Serve(_log *zap.Logger, addr string, handler http.Handler) {
+func Serve(_log *zap.Logger, addr string, handler http.Handler, timeoutSecs ...int64) {
 	log := _log.Named("Serve")
 
 	server := &http.Server{
@@ -34,13 +34,16 @@ func Serve(_log *zap.Logger, addr string, handler http.Handler) {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	log.Info("Got signal. Trying to stop server gracefully", zap.String("signal", (<-sig).String()))
 
-	const stopTimeout = 10
+	var stopTimeout = time.Duration(60)
+	if len(timeoutSecs) > 0 {
+		stopTimeout = time.Duration(timeoutSecs[0])
+	}
 	shutdownCtx, shutdownRelease := context.WithTimeout(context.Background(), stopTimeout*time.Second)
 	defer shutdownRelease()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			log.Warn("HTTP server forcibly stopped due to timeout", zap.Int("timeout", stopTimeout))
+			log.Warn("HTTP server forcibly stopped due to timeout", zap.Int("timeout", int(stopTimeout)))
 		} else {
 			log.Fatal("Failed HTTP Shutdown", zap.Error(err))
 		}

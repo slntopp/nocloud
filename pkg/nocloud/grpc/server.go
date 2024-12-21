@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func ServeGRPC(_log *zap.Logger, s *grpc.Server, port string) {
+func ServeGRPC(_log *zap.Logger, s *grpc.Server, port string, timeoutSecs ...int64) {
 	log := _log.Named("ServeGRPC")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
@@ -39,11 +39,14 @@ func ServeGRPC(_log *zap.Logger, s *grpc.Server, port string) {
 		close(stopped)
 	}()
 
-	const stopTimeout = 10
+	var stopTimeout = time.Duration(60)
+	if len(timeoutSecs) > 0 {
+		stopTimeout = time.Duration(timeoutSecs[0])
+	}
 	t := time.NewTimer(stopTimeout * time.Second)
 	select {
 	case <-t.C:
-		log.Warn("Forcing server stop due to timeout", zap.Int("timeout", stopTimeout))
+		log.Warn("Forcing server stop due to timeout", zap.Int("timeout", int(stopTimeout)))
 		s.Stop()
 	case <-stopped:
 		t.Stop()
