@@ -16,13 +16,7 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
 	"github.com/go-redis/redis/v8"
-	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"net"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -31,6 +25,10 @@ import (
 	"github.com/slntopp/nocloud/pkg/edge"
 	"github.com/slntopp/nocloud/pkg/edge/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -79,11 +77,6 @@ func main() {
 		_ = log.Sync()
 	}()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	log.Info("DB connection established")
@@ -113,6 +106,5 @@ func main() {
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+	grpc_server.ServeGRPC(log, s, port)
 }

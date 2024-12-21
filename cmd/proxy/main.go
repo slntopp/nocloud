@@ -16,18 +16,17 @@ limitations under the License.
 package main
 
 import (
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"net"
-	"net/http"
-
 	"github.com/gorilla/mux"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/proxy"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"net"
+	"net/http"
 
 	healthpb "github.com/slntopp/nocloud-proto/health"
 )

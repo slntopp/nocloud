@@ -2,22 +2,19 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-redis/redis/v8"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"net"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	amqp "github.com/rabbitmq/amqp091-go"
-
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/events"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/eventbus"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -81,11 +78,6 @@ func main() {
 	defer conn.Close()
 	log.Info("RabbitMQ connection established")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
 		DB:   0,
@@ -110,6 +102,5 @@ func main() {
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%s", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+	grpc_server.ServeGRPC(log, s, port)
 }
