@@ -118,8 +118,9 @@ FOR a IN inst.addons
     RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
 `
 
-func (s *InstancesServer) MonitoringRoutine(ctx context.Context, wg *go_sync.WaitGroup) {
+func (s *InstancesServer) MonitoringRoutine(_ctx context.Context, wg *go_sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log := s.log.Named("MonitoringRoutine")
 
@@ -240,7 +241,7 @@ start:
 
 		s.monitoring.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case tick = <-ticker.C:

@@ -90,8 +90,9 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 	}
 }
 
-func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*pb.Record], wg *sync.WaitGroup) {
+func (s *RecordsServiceServer) Consume(_ctx context.Context, pubsub *ps.PubSub[*pb.Record], wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log := s.log.Named("RecordsConsumer")
 	opt := ps.ConsumeOptions{
@@ -113,7 +114,7 @@ func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*p
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case msg, ok := <-records:

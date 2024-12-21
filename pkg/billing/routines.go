@@ -93,8 +93,9 @@ func (s *BillingServiceServer) SuspendAccountsRoutineState() *hpb.RoutineStatus 
 	return s.sus
 }
 
-func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context, wg *sync.WaitGroup) {
+func (s *BillingServiceServer) SuspendAccountsRoutine(_ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log := s.log.Named("AccountSuspendRoutine")
 
@@ -169,7 +170,7 @@ start:
 		}
 
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case tick = <-ticker.C:
@@ -182,8 +183,9 @@ start:
 
 }
 
-func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context, wg *sync.WaitGroup) {
+func (s *BillingServiceServer) GenTransactionsRoutine(_ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log := s.log.Named("GenerateTransactionsRoutine")
 
@@ -207,7 +209,7 @@ start:
 
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case tick = <-ticker.C:

@@ -118,8 +118,9 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event) (
 	return event, nil
 }
 
-func (s *EventBusServer) ListenBusQueue(ctx context.Context, wg *sync.WaitGroup) {
+func (s *EventBusServer) ListenBusQueue(_ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log := s.log.Named("Bus queue listener")
 init:
@@ -147,7 +148,7 @@ init:
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case msg, ok := <-events:

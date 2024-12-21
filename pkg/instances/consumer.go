@@ -37,8 +37,9 @@ func (s *InstancesServer) ProcessInvokeCommands(_ *zap.Logger, ctx context.Conte
 	return nil
 }
 
-func (s *InstancesServer) ConsumeInvokeCommands(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
+func (s *InstancesServer) ConsumeInvokeCommands(log *zap.Logger, _ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log = log.Named("ConsumeInvokeCommands")
 	opt := ps.ConsumeOptions{
@@ -57,7 +58,7 @@ func (s *InstancesServer) ConsumeInvokeCommands(log *zap.Logger, ctx context.Con
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case msg, ok := <-msgs:

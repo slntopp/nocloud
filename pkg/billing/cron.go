@@ -72,8 +72,9 @@ func getValuesFromTime(t string) (hours int, minutes int, seconds int, err error
 	return hours, minutes, seconds, nil
 }
 
-func (s *BillingServiceServer) DailyCronJob(ctx context.Context, log *zap.Logger, rootToken string, cronTime string, wg *sync.WaitGroup) {
+func (s *BillingServiceServer) DailyCronJob(globalCtx context.Context, log *zap.Logger, rootToken string, cronTime string, wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(globalCtx)
 
 	log = s.log.Named("DailyCronJob")
 
@@ -146,7 +147,7 @@ start:
 
 	log.Info("Will be starting next cron job in "+fmt.Sprintf("%v", untilNext), zap.Duration("duration", untilNext))
 	select {
-	case <-ctx.Done():
+	case <-globalCtx.Done():
 		log.Info("Context is done. Quitting")
 		return
 	case <-t.C:

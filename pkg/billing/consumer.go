@@ -25,8 +25,9 @@ import (
 	"time"
 )
 
-func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway, wg *sync.WaitGroup) {
+func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, _ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway, wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log = log.Named("ConsumeWhmcsSync")
 	opt := ps.ConsumeOptions{
@@ -45,7 +46,7 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case msg, ok := <-msgs:
@@ -211,8 +212,9 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 	return nil
 }
 
-func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
+func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, _ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log = log.Named("ConsumeInvoiceStatusActions")
 	opt := ps.ConsumeOptions{
@@ -231,7 +233,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx 
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case msg, ok := <-msgs:
@@ -394,8 +396,9 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	return nil
 }
 
-func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
+func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, _ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
 	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
 
 	log = s.log.Named("ConsumeCreatedInstances")
 	opt := ps.ConsumeOptions{
@@ -414,7 +417,7 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx cont
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
 			return
 		case msg, ok := <-msgs:
