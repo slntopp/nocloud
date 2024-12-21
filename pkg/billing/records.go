@@ -21,6 +21,7 @@ import (
 	spb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	ps "github.com/slntopp/nocloud/pkg/pubsub"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -89,7 +90,9 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 	}
 }
 
-func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*pb.Record]) {
+func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*pb.Record], wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	log := s.log.Named("RecordsConsumer")
 	opt := ps.ConsumeOptions{
 		Durable:    true,
@@ -108,28 +111,39 @@ func (s *RecordsServiceServer) Consume(ctx context.Context, pubsub *ps.PubSub[*p
 	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
 	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 
-	for msg := range records {
-		log.Debug("Received a message")
-		var record pb.Record
-		err = proto.Unmarshal(msg.Body, &record)
-		log.Debug("Message unmarshalled", zap.Any("record", &record))
-		if err != nil {
-			log.Error("Failed to unmarshal record. Skip", zap.Error(err))
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case msg, ok := <-records:
+			if !ok {
+				log.Fatal("Messages channel is closed")
+			}
+
+			log.Debug("Received a message")
+			var record pb.Record
+			err = proto.Unmarshal(msg.Body, &record)
+			log.Debug("Message unmarshalled", zap.Any("record", &record))
+			if err != nil {
+				log.Error("Failed to unmarshal record. Skip", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+				}
+				continue
+			}
+			err := s.ProcessRecord(ctx, &record, currencyConf, time.Now().Unix())
+			if err != nil {
+				ps.HandleAckNack(log, msg, err)
+				continue
+			}
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 			}
 			continue
 		}
-		err := s.ProcessRecord(ctx, &record, currencyConf, time.Now().Unix())
-		if err != nil {
-			ps.HandleAckNack(log, msg, err)
-			continue
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Error("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-		}
-		continue
 	}
+
 }
 
 func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Record, currencyConf CurrencyConf, now int64) error {

@@ -21,10 +21,13 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
-func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway) {
+func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], gw *whmcs_gateway.WhmcsGateway, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	log = log.Named("ConsumeWhmcsSync")
 	opt := ps.ConsumeOptions{
 		Durable:    true,
@@ -40,48 +43,59 @@ func (s *BillingServiceServer) ConsumeInvoicesWhmcsSync(log *zap.Logger, ctx con
 		return
 	}
 
-	for msg := range msgs {
-		var event epb.Event
-		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
-			if err = msg.Ack(false); err != nil {
-				log.Error("Failed to acknowledge the delivery", zap.Error(err))
-			}
-			continue
-		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routing_key", msg.RoutingKey))
-		// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
-		if event.Type == "whmcs-event" {
-			body, ok := event.GetData()["body"]
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case msg, ok := <-msgs:
 			if !ok {
-				log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
+				log.Fatal("Messages channel is closed")
+			}
+
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
 				if err = msg.Ack(false); err != nil {
 					log.Error("Failed to acknowledge the delivery", zap.Error(err))
 				}
 				continue
 			}
-			if err = gw.HandleWhmcsEvent(log, []byte(body.GetStringValue())); err != nil {
-				ps.HandleAckNack(log, msg, err)
-				continue
-			}
-			if err = msg.Ack(false); err != nil {
-				log.Error("Failed to acknowledge the delivery", zap.Error(err))
-			}
-			// Handle nocloud create/update invoices events to sync whmcs invoices with them
-		} else if event.GetUuid() != "" {
-			if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
-				ps.HandleAckNack(log, msg, err)
-				continue
-			}
-			if err = msg.Ack(false); err != nil {
-				log.Error("Failed to acknowledge the delivery", zap.Error(err))
-			}
-		} else {
-			if err = msg.Ack(false); err != nil {
-				log.Error("Failed to acknowledge the delivery", zap.Error(err))
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routing_key", msg.RoutingKey))
+			// Handle invoice events coming from whmcs (published by whmcs-gateway) and sync invoices to nocloud
+			if event.Type == "whmcs-event" {
+				body, ok := event.GetData()["body"]
+				if !ok {
+					log.Error("Failed to unmarshal event. No body. Incorrect delivery. Skip")
+					if err = msg.Ack(false); err != nil {
+						log.Error("Failed to acknowledge the delivery", zap.Error(err))
+					}
+					continue
+				}
+				if err = gw.HandleWhmcsEvent(log, []byte(body.GetStringValue())); err != nil {
+					ps.HandleAckNack(log, msg, err)
+					continue
+				}
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				// Handle nocloud create/update invoices events to sync whmcs invoices with them
+			} else if event.GetUuid() != "" {
+				if err = s.ProcessInvoiceWhmcsSync(log, ctx, &event); err != nil {
+					ps.HandleAckNack(log, msg, err)
+					continue
+				}
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+			} else {
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
 			}
 		}
 	}
+
 }
 
 func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx context.Context, event *epb.Event) error {
@@ -197,7 +211,9 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 	return nil
 }
 
-func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
+func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	log = log.Named("ConsumeInvoiceStatusActions")
 	opt := ps.ConsumeOptions{
 		Durable:    true,
@@ -213,25 +229,36 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, ctx 
 		return
 	}
 
-	for msg := range msgs {
-		var event epb.Event
-		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case msg, ok := <-msgs:
+			if !ok {
+				log.Fatal("Messages channel is closed")
+			}
+
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				continue
+			}
+			log := log.With(zap.String("invoice", event.Uuid))
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
+			if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
+				ps.HandleAckNack(log, msg, err)
+				continue
+			}
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
-			continue
-		}
-		log := log.With(zap.String("invoice", event.Uuid))
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
-		if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
-			ps.HandleAckNack(log, msg, err)
-			continue
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Error("Failed to acknowledge the delivery", zap.Error(err))
 		}
 	}
+
 }
 
 func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx context.Context, event *epb.Event, currencyConf CurrencyConf, now int64) error {
@@ -367,7 +394,9 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	return nil
 }
 
-func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
+func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	log = s.log.Named("ConsumeCreatedInstances")
 	opt := ps.ConsumeOptions{
 		Durable:    true,
@@ -383,23 +412,34 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, ctx cont
 		return
 	}
 
-	for msg := range msgs {
-		var event epb.Event
-		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case msg, ok := <-msgs:
+			if !ok {
+				log.Fatal("Messages channel is closed")
+			}
+
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				continue
+			}
+			curConf := MakeCurrencyConf(log, &s.settingsClient)
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
+			if err = s.ProcessInstanceCreation(log, ctx, &event, curConf, time.Now().Unix()); err != nil {
+				ps.HandleAckNack(log, msg, err)
+				continue
+			}
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
-			continue
-		}
-		curConf := MakeCurrencyConf(log, &s.settingsClient)
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
-		if err = s.ProcessInstanceCreation(log, ctx, &event, curConf, time.Now().Unix()); err != nil {
-			ps.HandleAckNack(log, msg, err)
-			continue
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Error("Failed to acknowledge the delivery", zap.Error(err))
 		}
 	}
+
 }

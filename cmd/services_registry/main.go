@@ -112,6 +112,7 @@ func main() {
 	defer func() {
 		_ = log.Sync()
 	}()
+	workers := &go_sync.WaitGroup{}
 
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
@@ -245,9 +246,10 @@ func main() {
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
-	go iserver.MonitoringRoutine(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	go iserver.MonitoringRoutine(ctx, worker(workers))
 	_ps := pubsub.NewPubSub[*epb.Event](rabbitmq.NewRabbitMQConnection(rbmq), log)
-	go iserver.ConsumeInvokeCommands(log, ctx, _ps)
+	go iserver.ConsumeInvokeCommands(log, ctx, _ps, worker(workers))
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 
@@ -260,4 +262,13 @@ func main() {
 	}).Handler(h2c.NewHandler(router, &http2.Server{}))
 
 	http_server.Serve(log, host, handler)
+	log.Info("Stopping workers.")
+	cancel()
+	workers.Wait()
+	log.Info("All workers were stopped.")
+}
+
+func worker(wg *go_sync.WaitGroup) *go_sync.WaitGroup {
+	wg.Add(1)
+	return wg
 }

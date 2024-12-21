@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"sync"
 )
 
 var (
@@ -61,10 +62,10 @@ func init() {
 }
 
 func main() {
-
 	defer func() {
 		_ = log.Sync()
 	}()
+	workers := &sync.WaitGroup{}
 
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
@@ -95,12 +96,22 @@ func main() {
 	)
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+	ctx, cancel := context.WithCancel(ctx)
 
 	server := eventbus.NewServer(log, rabbitmq.NewRabbitMQConnection(conn), db)
-	go server.ListenBusQueue(ctx)
+	go server.ListenBusQueue(ctx, worker(workers))
 	pb.RegisterEventsServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	grpc_server.ServeGRPC(log, s, port)
+	log.Info("Stopping workers.")
+	cancel()
+	workers.Wait()
+	log.Info("All workers were stopped.")
+}
+
+func worker(wg *sync.WaitGroup) *sync.WaitGroup {
+	wg.Add(1)
+	return wg
 }

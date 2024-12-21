@@ -5,6 +5,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/spf13/viper"
 	"google.golang.org/protobuf/proto"
+	"sync"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -117,7 +118,9 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event) (
 	return event, nil
 }
 
-func (s *EventBusServer) ListenBusQueue(ctx context.Context) {
+func (s *EventBusServer) ListenBusQueue(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	log := s.log.Named("Bus queue listener")
 init:
 	ch, err := s.rbmq.Channel()
@@ -142,61 +145,72 @@ init:
 		goto init
 	}
 
-	for msg := range events {
-		var event pb.Event
-		err = proto.Unmarshal(msg.Body, &event)
-		if err != nil {
-			log.Error("Failed to unmarshal event", zap.Error(err))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case msg, ok := <-events:
+			if !ok {
+				log.Fatal("Messages channel is closed")
 			}
-			continue
-		}
-		log.Debug("Received a message", zap.String("routine_key", msg.RoutingKey), zap.Any("event", event))
 
-		handler, ok := handlers[event.Key]
-		if !ok {
-			log.Warn("Handler not fount", zap.String("handler", event.Key))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while getting handler", zap.Error(err))
-			}
-			continue
-		}
-
-		var updEvent = &event
-		if handler != nil {
-			updEvent, err = handler(ctx, log, &event, s.db)
+			var event pb.Event
+			err = proto.Unmarshal(msg.Body, &event)
 			if err != nil {
-				log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
+				log.Error("Failed to unmarshal event", zap.Error(err))
 				if err = msg.Ack(false); err != nil {
-					log.Warn("Failed to Acknowledge the delivery while executing handler", zap.Error(err))
+					log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 				}
 				continue
 			}
-		}
+			log.Debug("Received a message", zap.String("routine_key", msg.RoutingKey), zap.Any("event", event))
 
-		updEvent, err = s.HandleEventOverride(log, updEvent)
-		if err != nil {
-			log.Error("Fail event override", zap.Error(err))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while executing event override", zap.Error(err))
+			handler, ok := handlers[event.Key]
+			if !ok {
+				log.Warn("Handler not fount", zap.String("handler", event.Key))
+				if err = msg.Ack(false); err != nil {
+					log.Warn("Failed to Acknowledge the delivery while getting handler", zap.Error(err))
+				}
+				continue
 			}
-			continue
-		}
 
-		_, err = s.Publish(ctx, updEvent)
-		if err != nil {
-			log.Error("Failed to publish upd event", zap.String("err", err.Error()))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while publishing event", zap.Error(err))
+			var updEvent = &event
+			if handler != nil {
+				updEvent, err = handler(ctx, log, &event, s.db)
+				if err != nil {
+					log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
+					if err = msg.Ack(false); err != nil {
+						log.Warn("Failed to Acknowledge the delivery while executing handler", zap.Error(err))
+					}
+					continue
+				}
 			}
-			continue
-		}
 
-		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+			updEvent, err = s.HandleEventOverride(log, updEvent)
+			if err != nil {
+				log.Error("Fail event override", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Warn("Failed to Acknowledge the delivery while executing event override", zap.Error(err))
+				}
+				continue
+			}
+
+			_, err = s.Publish(ctx, updEvent)
+			if err != nil {
+				log.Error("Failed to publish upd event", zap.String("err", err.Error()))
+				if err = msg.Ack(false); err != nil {
+					log.Warn("Failed to Acknowledge the delivery while publishing event", zap.Error(err))
+				}
+				continue
+			}
+
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+			}
 		}
 	}
+
 }
 
 func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Response, error) {
