@@ -139,11 +139,12 @@ func main() {
 	})
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
-	rbmq, err := amqp.Dial(rbmq)
+	conn, err := amqp.Dial(rbmq)
 	if err != nil {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
-	defer rbmq.Close()
+	defer conn.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 
 	log.Info("Setting up Pub/Sub")
 	ps, err := states.SetupStatesStreaming()
@@ -152,8 +153,8 @@ func main() {
 	}
 	log.Info("Pub/Sub setted up")
 
-	server := services.NewServicesServer(log, db, ps, rabbitmq.NewRabbitMQConnection(rbmq))
-	iserver := instances.NewInstancesServiceServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq), rdb)
+	server := services.NewServicesServer(log, db, ps, rabbitmq.NewRabbitMQConnection(conn))
+	iserver := instances.NewInstancesServiceServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -248,7 +249,7 @@ func main() {
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	ctx, cancel := context.WithCancel(ctx)
 	go iserver.MonitoringRoutine(ctx, worker(workers))
-	_ps := pubsub.NewPubSub[*epb.Event](rabbitmq.NewRabbitMQConnection(rbmq), log)
+	_ps := pubsub.NewPubSub[*epb.Event](rabbitmq.NewRabbitMQConnection(conn), log)
 	go iserver.ConsumeInvokeCommands(log, ctx, _ps, worker(workers))
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)

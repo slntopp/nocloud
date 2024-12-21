@@ -77,6 +77,7 @@ func main() {
 		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer conn.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 	log.Info("RabbitMQ connection established")
 
 	rdb := redis.NewClient(&redis.Options{

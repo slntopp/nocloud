@@ -107,14 +107,15 @@ func main() {
 	)
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
-	rbmq, err := amqp.Dial(rbmq)
+	conn, err := amqp.Dial(rbmq)
 	if err != nil {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
-	defer rbmq.Close()
+	defer conn.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 	log.Info("RabbitMQ connection established")
 
-	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq), rdb)
+	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))

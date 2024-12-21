@@ -165,6 +165,7 @@ func main() {
 	}
 	_, _ = ch.QueueDelete(".", false, false, false)
 	ch.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 
 	// Initialize controllers
 	accountsCtrl := graph.NewAccountsController(log, db)

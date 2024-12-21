@@ -95,13 +95,14 @@ func main() {
 	)
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
-	rbmq, err := amqp.Dial(rbmq)
+	conn, err := amqp.Dial(rbmq)
 	if err != nil {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
-	defer rbmq.Close()
+	defer conn.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 
-	server := edge.NewEdgeServiceServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq))
+	server := edge.NewEdgeServiceServer(log, db, rabbitmq.NewRabbitMQConnection(conn))
 	pb.RegisterEdgeServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
