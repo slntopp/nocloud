@@ -12,8 +12,8 @@ import (
 	"reflect"
 )
 
-func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Context, log *zap.Logger) {
-	log = log.Named("WhmcsDeletedInvoicesSyncerCronJob")
+func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, log *zap.Logger) {
+	log = log.Named("WhmcsInvoicesSyncerCronJob")
 	log.Info("Starting WHMCS Invoices syncer cron job")
 
 	ncInvoices, err := s.invoices.List(ctx, "")
@@ -71,10 +71,15 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 	ctx = context.WithValue(ctx, types.GatewayCallback, true) // Prevent whmcs event cycling
 	createdCount := 0
 	for _, whmcsInvoice := range whmcsInvoices {
-		if _, ok := whmcsIdToInvoice[whmcsInvoice.InvoiceId]; ok {
+		if _, ok := whmcsIdToInvoice[int(whmcsInvoice.Id)]; ok {
 			continue
 		}
-		if err = s.whmcsGateway.CreateFromWhmcsInvoice(ctx, log, whmcsInvoice); err != nil {
+		inv, err := s.whmcsGateway.GetInvoice(ctx, int(whmcsInvoice.Id))
+		if err != nil {
+			log.Error("Failed to get body of whmcs invoice", zap.Error(err))
+			continue
+		}
+		if err = s.whmcsGateway.CreateFromWhmcsInvoice(ctx, log, inv); err != nil {
 			log.Error("Failed to create whmcs invoice", zap.Error(err))
 			continue
 		}

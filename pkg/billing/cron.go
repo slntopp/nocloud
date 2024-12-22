@@ -212,7 +212,7 @@ func (s *BillingServiceServer) dailyCronJobAction(ctx context.Context, log *zap.
 	}()
 	// Jobs
 	s.InvoiceExpiringInstancesCronJob(ctx, log)
-	s.WhmcsDeletedInvoicesSyncerCronJob(ctx, log)
+	s.WhmcsInvoicesSyncerCronJob(ctx, log)
 	s.DeleteExpiredBalanceInvoicesCronJob(ctx, log)
 	s.NotifyToUpdateOvhPricesCronJob(ctx, log)
 }
