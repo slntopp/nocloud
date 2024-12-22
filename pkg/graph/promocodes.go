@@ -746,7 +746,7 @@ var m = &sync.Mutex{}
 
 func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]struct{} {
 	now := time.Now().Unix()
-	if showcasesPlansLastUpdate+int64(showcasesPlansCacheTTL.Seconds()) < now {
+	if showcasesPlansLastUpdate+int64(showcasesPlansCacheTTL.Seconds()) > now {
 		return _showcasesPlans
 	}
 
