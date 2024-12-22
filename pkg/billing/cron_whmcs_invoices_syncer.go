@@ -3,7 +3,9 @@ package billing
 import (
 	"context"
 	"errors"
+	"github.com/DmitriyVTitov/size"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -18,8 +20,9 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 		log.Error("Error listing nocloud invoices", zap.Error(err))
 		return
 	}
+	log.Info("Size of NC invoices slice", zap.Int("bytes_count", size.Of(ncInvoices)), zap.Int("len", len(ncInvoices)))
 
-	count := 0
+	delCount := 0
 	for _, inv := range ncInvoices {
 		if inv.Meta == nil {
 			continue
@@ -43,7 +46,39 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 			log.Error("Error updating invoice", zap.Error(err))
 			continue
 		}
-		count++
+		delCount++
 	}
-	log.Info("Finished WHMCS Invoices syncer cron job", zap.Int("deleted", count))
+
+	whmcsIdToInvoice := make(map[int]struct{})
+	for _, inv := range ncInvoices {
+		if inv.Meta == nil {
+			continue
+		}
+		whmcsId, ok := inv.GetMeta()["whmcs_invoice_id"]
+		if ok {
+			whmcsIdToInvoice[int(whmcsId.GetNumberValue())] = struct{}{}
+		}
+	}
+
+	whmcsInvoices, err := s.whmcsGateway.GetInvoices(ctx)
+	if err != nil {
+		log.Error("Error listing whmcs invoices", zap.Error(err))
+		return
+	}
+	log.Info("Size of WHMCS invoices slice", zap.Int("bytes_count", size.Of(whmcsInvoices)), zap.Int("len", len(whmcsInvoices)))
+
+	ctx = context.WithValue(ctx, types.GatewayCallback, true) // Prevent whmcs event cycling
+	createdCount := 0
+	for _, whmcsInvoice := range whmcsInvoices {
+		if _, ok := whmcsIdToInvoice[whmcsInvoice.InvoiceId]; ok {
+			continue
+		}
+		if err = s.whmcsGateway.CreateFromWhmcsInvoice(ctx, log, whmcsInvoice); err != nil {
+			log.Error("Failed to create whmcs invoice", zap.Error(err))
+			continue
+		}
+		createdCount++
+	}
+
+	log.Info("Finished WHMCS Invoices syncer cron job", zap.Int("deleted", delCount), zap.Int("created", createdCount))
 }
