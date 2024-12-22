@@ -63,6 +63,7 @@ func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbit
 	currencies := NewCurrencyController(log, db)
 	plans := NewBillingPlansController(log, db)
 	addons := NewAddonsController(log, db)
+	showcases := NewShowcasesController(log, db)
 
 	return &promocodesController{
 		log: log, col: promos,
@@ -70,6 +71,7 @@ func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbit
 		currencies: currencies,
 		plans:      plans,
 		addons:     addons,
+		showcases:  showcases,
 	}
 }
 
