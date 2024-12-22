@@ -56,7 +56,7 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 			continue
 		}
 		whmcsId, ok := inv.GetMeta()["whmcs_invoice_id"]
-		if ok {
+		if ok && int(whmcsId.GetNumberValue()) != 0 {
 			whmcsIdToInvoice[int(whmcsId.GetNumberValue())] = struct{}{}
 		}
 	}
@@ -71,6 +71,10 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 	ctx = context.WithValue(ctx, types.GatewayCallback, true) // Prevent whmcs event cycling
 	createdCount := 0
 	for _, whmcsInvoice := range whmcsInvoices {
+		if whmcsInvoice.Id == 0 {
+			log.Warn("Whmcs invoice id is zero value")
+			continue
+		}
 		if _, ok := whmcsIdToInvoice[int(whmcsInvoice.Id)]; ok {
 			continue
 		}
