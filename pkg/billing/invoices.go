@@ -365,12 +365,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
-	if t.GetStatus() != pb.BillingStatus_DRAFT && t.GetStatus() != pb.BillingStatus_UNPAID {
-		return nil, status.Error(codes.InvalidArgument, "Status can be only DRAFT and UNPAID on creation")
-	}
-	if t.GetTotal() < 0 {
-		return nil, status.Error(codes.InvalidArgument, "Negative total")
-	}
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
@@ -406,10 +400,22 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	now := time.Now()
 
-	strNum, num, err := s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
-	if err != nil {
-		log.Error("Failed to get new number for invoice", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
+	var (
+		strNum string
+		num    int
+	)
+	if t.Status == pb.BillingStatus_PAID {
+		strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Now(), invConf.Template, invConf.ResetCounterMode)
+		if err != nil {
+			log.Error("Failed to get next paid number", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get next number")
+		}
+	} else {
+		strNum, num, err = s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
+		if err != nil {
+			log.Error("Failed to get new number for invoice", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
+		}
 	}
 
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
