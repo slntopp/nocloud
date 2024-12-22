@@ -405,7 +405,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		num    int
 	)
 	if t.Status == pb.BillingStatus_PAID {
-		strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Now(), invConf.Template, invConf.ResetCounterMode)
+		strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, now, invConf.Template, invConf.ResetCounterMode)
 		if err != nil {
 			log.Error("Failed to get next paid number", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get next number")
@@ -439,8 +439,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	t.Number = strNum
-	t.Created = now.Unix()
-	t.Payment = 0
+	if t.Created == 0 {
+		t.Created = now.Unix()
+	}
 	t.Processed = 0
 	t.Returned = 0
 	r, err := s.invoices.Create(ctx, &graph.Invoice{
