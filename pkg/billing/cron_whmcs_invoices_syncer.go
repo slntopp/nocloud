@@ -3,12 +3,13 @@ package billing
 import (
 	"context"
 	"errors"
-	"github.com/DmitriyVTitov/size"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
+	"reflect"
 )
 
 func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Context, log *zap.Logger) {
@@ -20,7 +21,7 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 		log.Error("Error listing nocloud invoices", zap.Error(err))
 		return
 	}
-	log.Info("Size of NC invoices slice", zap.Int("bytes_count", size.Of(ncInvoices)), zap.Int("len", len(ncInvoices)))
+	log.Info("Size of NC invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(graph.Invoice{}).Size()), zap.Int("len", len(ncInvoices)))
 
 	delCount := 0
 	for _, inv := range ncInvoices {
@@ -65,7 +66,7 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 		log.Error("Error listing whmcs invoices", zap.Error(err))
 		return
 	}
-	log.Info("Size of WHMCS invoices slice", zap.Int("bytes_count", size.Of(whmcsInvoices)), zap.Int("len", len(whmcsInvoices)))
+	log.Info("Size of WHMCS invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(whmcs_gateway.Invoice{}).Size()), zap.Int("len", len(whmcsInvoices)))
 
 	ctx = context.WithValue(ctx, types.GatewayCallback, true) // Prevent whmcs event cycling
 	createdCount := 0
