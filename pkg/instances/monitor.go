@@ -20,6 +20,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
 	"github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
+	go_sync "sync"
 	"time"
 
 	stpb "github.com/slntopp/nocloud-proto/statuses"
@@ -117,7 +118,10 @@ FOR a IN inst.addons
     RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
 `
 
-func (s *InstancesServer) MonitoringRoutine(ctx context.Context) {
+func (s *InstancesServer) MonitoringRoutine(_ctx context.Context, wg *go_sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+
 	log := s.log.Named("MonitoringRoutine")
 
 	log.Info("Fetching Monitoring Configuration")
@@ -237,6 +241,9 @@ start:
 
 		s.monitoring.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
+		case <-_ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
 		case tick = <-ticker.C:
 			continue
 		case <-upd:

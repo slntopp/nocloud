@@ -29,6 +29,7 @@ import (
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/graph/migrations"
+	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
@@ -41,6 +42,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"net/http"
+	"sync"
 
 	cc "github.com/slntopp/nocloud-proto/billing/billingconnect"
 	billing "github.com/slntopp/nocloud/pkg/billing"
@@ -137,6 +139,7 @@ func main() {
 	defer func() {
 		_ = log.Sync()
 	}()
+	workers := &sync.WaitGroup{}
 
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
@@ -162,6 +165,7 @@ func main() {
 	}
 	_, _ = ch.QueueDelete(".", false, false, false)
 	ch.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 
 	// Initialize controllers
 	accountsCtrl := graph.NewAccountsController(log, db)
@@ -240,12 +244,16 @@ func main() {
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
+	// Create root context with cancel
 	token, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	ctx = context.WithValue(ctx, nocloud.NoCloudToken, token)
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+	ctx, cancel := context.WithCancel(ctx)
+
 	billing.SetupSettingsContext(ctx)
 
 	ps := nps.NewPubSub[*epb.Event](rbmq, log)
@@ -260,9 +268,9 @@ func main() {
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 
 	log.Info("Registering new consumers")
-	go server.ConsumeInvoiceStatusActions(log, ctx, ps)
-	go server.ConsumeCreatedInstances(log, ctx, ps)
-	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw)
+	go server.ConsumeInvoiceStatusActions(log, ctx, ps, worker(workers))
+	go server.ConsumeCreatedInstances(log, ctx, ps, worker(workers))
+	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw, worker(workers))
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
@@ -271,10 +279,10 @@ func main() {
 	log.Info("Settings server connection established")
 
 	log.Info("Starting Transaction Generator-Processor")
-	go server.GenTransactionsRoutine(ctx)
+	go server.GenTransactionsRoutine(ctx, worker(workers))
 
 	log.Info("Starting Account Suspension Routine")
-	go server.SuspendAccountsRoutine(ctx)
+	go server.SuspendAccountsRoutine(ctx, worker(workers))
 
 	log.Info("Registering BillingService Server")
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
@@ -283,10 +291,10 @@ func main() {
 	records := billing.NewRecordsServiceServer(log, rbmq, db, settingsClient, recordsCtrl, plansCtrl, instCtrl, addonsCtrl, promoCtrl, caCtrl)
 	log.Info("Starting Records Consumer")
 	recPs := nps.NewPubSub[*pb.Record](rbmq, log)
-	go records.Consume(ctx, recPs)
+	go records.Consume(ctx, recPs, worker(workers))
 
 	log.Info("Starting Daily Cron Job")
-	go server.DailyCronJob(ctx, log, token, dailyCronTime)
+	go server.DailyCronJob(ctx, log, token, dailyCronTime, worker(workers))
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
@@ -328,9 +336,14 @@ func main() {
 		AllowPrivateNetwork: true,
 	}).Handler(h2c.NewHandler(router, &http2.Server{}))
 
-	log.Info("Serving", zap.String("host", host))
-	err = http.ListenAndServe(host, handler)
-	if err != nil {
-		log.Fatal("Failed to start server", zap.Error(err))
-	}
+	http_server.Serve(log, host, handler)
+	log.Info("Stopping workers.")
+	cancel()
+	workers.Wait()
+	log.Info("All workers were stopped.")
+}
+
+func worker(wg *sync.WaitGroup) *sync.WaitGroup {
+	wg.Add(1)
+	return wg
 }

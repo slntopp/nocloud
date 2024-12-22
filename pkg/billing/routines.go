@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -92,7 +93,10 @@ func (s *BillingServiceServer) SuspendAccountsRoutineState() *hpb.RoutineStatus 
 	return s.sus
 }
 
-func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
+func (s *BillingServiceServer) SuspendAccountsRoutine(_ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+
 	log := s.log.Named("AccountSuspendRoutine")
 
 start:
@@ -166,6 +170,9 @@ start:
 		}
 
 		select {
+		case <-_ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
 		case tick = <-ticker.C:
 			continue
 		case <-upd:
@@ -176,7 +183,10 @@ start:
 
 }
 
-func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
+func (s *BillingServiceServer) GenTransactionsRoutine(_ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+
 	log := s.log.Named("GenerateTransactionsRoutine")
 
 start:
@@ -192,12 +202,16 @@ start:
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
+
 	for {
 		log.Info("Entering new Iteration", zap.Time("ts", tick))
 		s.GenTransactions(ctx, log, tick, currencyConf, roundingConf)
 
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		select {
+		case <-_ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
 		case tick = <-ticker.C:
 			continue
 		case <-upd:
@@ -205,6 +219,7 @@ start:
 			goto start
 		}
 	}
+
 }
 
 const accToUnsuspend = `

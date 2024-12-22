@@ -2,25 +2,23 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-redis/redis/v8"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"net"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	amqp "github.com/rabbitmq/amqp091-go"
-
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/events"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/eventbus"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"sync"
 )
 
 var (
@@ -64,10 +62,10 @@ func init() {
 }
 
 func main() {
-
 	defer func() {
 		_ = log.Sync()
 	}()
+	workers := &sync.WaitGroup{}
 
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
@@ -79,12 +77,8 @@ func main() {
 		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer conn.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 	log.Info("RabbitMQ connection established")
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
@@ -103,13 +97,22 @@ func main() {
 	)
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+	ctx, cancel := context.WithCancel(ctx)
 
 	server := eventbus.NewServer(log, rabbitmq.NewRabbitMQConnection(conn), db)
-	go server.ListenBusQueue(ctx)
+	go server.ListenBusQueue(ctx, worker(workers))
 	pb.RegisterEventsServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%s", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+	grpc_server.ServeGRPC(log, s, port)
+	log.Info("Stopping workers.")
+	cancel()
+	workers.Wait()
+	log.Info("All workers were stopped.")
+}
+
+func worker(wg *sync.WaitGroup) *sync.WaitGroup {
+	wg.Add(1)
+	return wg
 }

@@ -48,7 +48,7 @@ func (s *HealthServer) Service(_ context.Context, _ *connect.Request[pb.ProbeReq
 }
 
 func (s *HealthServer) Routine(_ context.Context, _ *connect.Request[pb.ProbeRequest]) (*connect.Response[pb.RoutinesStatus], error) {
-	routines := append(s.srv.RoutinesState(), s.rec.ConsumerStatus, s.srv.SuspendAccountsRoutineState(), s.srv.InstancesConsumerStatus)
+	routines := append(s.srv.RoutinesState(), s.rec.ConsumerStatus, s.srv.SuspendAccountsRoutineState())
 	return connect.NewResponse(&pb.RoutinesStatus{
 		Routines: routines,
 	}), nil

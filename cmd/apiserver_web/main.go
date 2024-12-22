@@ -17,7 +17,7 @@ limitations under the License.
 import (
 	"context"
 	"crypto/tls"
-	"net/http"
+	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"strings"
 
 	"github.com/rs/cors"
@@ -308,17 +308,8 @@ func main() {
 
 	go func() {
 		log.Info("Serving Admin-UI on " + adminUiHost)
-		/* #nosec */
-		log.Fatal(
-			"Failed to Listen and Serve Admin-UI",
-			zap.Error(http.ListenAndServe(adminUiHost, ui_handler)),
-		)
+		http_server.Serve(log, adminUiHost, ui_handler)
 	}()
-
 	log.Info("Serving gRPC-Gateway on " + gatewayHost)
-	/* #nosec */
-	log.Fatal(
-		"Failed to Listen and Serve Gateway-Server",
-		zap.Error(http.ListenAndServe(gatewayHost, wsproxy.WebsocketProxy(handler))),
-	)
+	http_server.Serve(log, gatewayHost, wsproxy.WebsocketProxy(handler))
 }
