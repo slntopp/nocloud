@@ -63,6 +63,7 @@ func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbit
 	currencies := NewCurrencyController(log, db)
 	plans := NewBillingPlansController(log, db)
 	addons := NewAddonsController(log, db)
+	showcases := NewShowcasesController(log, db)
 
 	return &promocodesController{
 		log: log, col: promos,
@@ -70,6 +71,7 @@ func NewPromocodesController(logger *zap.Logger, db driver.Database, conn rabbit
 		currencies: currencies,
 		plans:      plans,
 		addons:     addons,
+		showcases:  showcases,
 	}
 }
 
@@ -318,7 +320,6 @@ func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesR
 	}
 
 	query += " RETURN merge(p, {uuid: p._key})) RETURN promo"
-	log.Debug("Query", zap.String("q", query))
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))
@@ -336,7 +337,6 @@ func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesR
 		p = applyCurrentState(p)
 	}
 
-	log.Debug("Got promocodes", zap.Any("promocodes", promo))
 	return promo, nil
 }
 
@@ -351,7 +351,6 @@ func (c *promocodesController) Count(ctx context.Context, req *pb.CountPromocode
 	query += buildFiltersQuery(req.GetFilters(), vars)
 
 	query += " RETURN merge(p, {uuid: p._key})) RETURN promo"
-	log.Debug("Query", zap.String("q", query))
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))
@@ -745,8 +744,11 @@ var showcasesPlansLastUpdate = int64(0)
 var m = &sync.Mutex{}
 
 func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]struct{} {
+	m.Lock()
+	defer m.Unlock()
+
 	now := time.Now().Unix()
-	if showcasesPlansLastUpdate+int64(showcasesPlansCacheTTL.Seconds()) < now {
+	if showcasesPlansLastUpdate+int64(showcasesPlansCacheTTL.Seconds()) > now {
 		return _showcasesPlans
 	}
 
@@ -756,7 +758,6 @@ func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]s
 		return _showcasesPlans
 	}
 
-	m.Lock()
 	_showcasesPlans = make(map[string]map[string]struct{})
 	for _, s := range scs {
 		_showcasesPlans[s.GetUuid()] = make(map[string]struct{})
@@ -764,7 +765,6 @@ func (c *promocodesController) getShowcasesPlansCached() map[string]map[string]s
 			_showcasesPlans[s.GetUuid()][p.GetPlan()] = struct{}{}
 		}
 	}
-	m.Unlock()
 
 	showcasesPlansLastUpdate = now
 	return _showcasesPlans

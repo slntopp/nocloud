@@ -16,10 +16,10 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -72,12 +72,11 @@ func getValuesFromTime(t string) (hours int, minutes int, seconds int, err error
 	return hours, minutes, seconds, nil
 }
 
-func (s *BillingServiceServer) DailyCronJob(ctx context.Context, log *zap.Logger, rootToken string, cronTime string) {
+func (s *BillingServiceServer) DailyCronJob(globalCtx context.Context, log *zap.Logger, rootToken string, cronTime string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(globalCtx)
+
 	log = s.log.Named("DailyCronJob")
-	// Append root account data
-	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
-	ctx = context.WithValue(ctx, nocloud.NoCloudToken, rootToken)
-	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+rootToken)
 
 retry:
 	if cronTime != "" {
@@ -148,6 +147,9 @@ start:
 
 	log.Info("Will be starting next cron job in "+fmt.Sprintf("%v", untilNext), zap.Duration("duration", untilNext))
 	select {
+	case <-globalCtx.Done():
+		log.Info("Context is done. Quitting")
+		return
 	case <-t.C:
 	case _ctx := <-cronNotify:
 		requester, _ = _ctx.Value(nocloud.NoCloudAccount).(string)
@@ -210,7 +212,7 @@ func (s *BillingServiceServer) dailyCronJobAction(ctx context.Context, log *zap.
 	}()
 	// Jobs
 	s.InvoiceExpiringInstancesCronJob(ctx, log)
-	s.WhmcsDeletedInvoicesSyncerCronJob(ctx, log)
+	s.WhmcsInvoicesSyncerCronJob(ctx, log)
 	s.DeleteExpiredBalanceInvoicesCronJob(ctx, log)
 	s.NotifyToUpdateOvhPricesCronJob(ctx, log)
 }
@@ -249,6 +251,10 @@ func (s *BillingServiceServer) cronPreflightChecks(ctx context.Context, log *zap
 		})
 	}
 	return errGroup.Wait()
+}
+
+func delaySeconds(c int) {
+	time.Sleep(time.Duration(c) * time.Second)
 }
 
 func (s *BillingServiceServer) RunDailyCronJob(ctx context.Context, _ *connect.Request[pb.RunDailyCronJobRequest]) (*connect.Response[pb.RunDailyCronJobResponse], error) {

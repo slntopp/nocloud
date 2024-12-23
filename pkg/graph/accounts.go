@@ -116,7 +116,7 @@ func (ctrl *accountsController) Get(ctx context.Context, id string) (Account, er
 		ctrl.log.Error("Error getting account", zap.Error(err))
 		return Account{}, err
 	}
-	ctrl.log.Debug("Got document", zap.Any("account", account))
+
 	return account, err
 }
 

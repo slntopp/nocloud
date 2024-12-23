@@ -11,6 +11,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
+	"sync"
 )
 
 func (s *InstancesServer) ProcessInvokeCommands(_ *zap.Logger, ctx context.Context, event *epb.Event) error {
@@ -36,7 +37,10 @@ func (s *InstancesServer) ProcessInvokeCommands(_ *zap.Logger, ctx context.Conte
 	return nil
 }
 
-func (s *InstancesServer) ConsumeInvokeCommands(log *zap.Logger, ctx context.Context, p *ps.PubSub[*epb.Event]) {
+func (s *InstancesServer) ConsumeInvokeCommands(log *zap.Logger, _ctx context.Context, p *ps.PubSub[*epb.Event], wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+
 	log = log.Named("ConsumeInvokeCommands")
 	opt := ps.ConsumeOptions{
 		Durable:    true,
@@ -52,22 +56,33 @@ func (s *InstancesServer) ConsumeInvokeCommands(log *zap.Logger, ctx context.Con
 		return
 	}
 
-	for msg := range msgs {
-		var event epb.Event
-		if err = proto.Unmarshal(msg.Body, &event); err != nil {
-			log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+	for {
+		select {
+		case <-_ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case msg, ok := <-msgs:
+			if !ok {
+				log.Fatal("Messages channel is closed")
+			}
+
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				continue
+			}
+			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
+			if err = s.ProcessInvokeCommands(log, ctx, &event); err != nil {
+				ps.HandleAckNack(log, msg, err)
+				continue
+			}
 			if err = msg.Ack(false); err != nil {
 				log.Error("Failed to acknowledge the delivery", zap.Error(err))
 			}
-			continue
-		}
-		log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type))
-		if err = s.ProcessInvokeCommands(log, ctx, &event); err != nil {
-			ps.HandleAckNack(log, msg, err)
-			continue
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Error("Failed to acknowledge the delivery", zap.Error(err))
 		}
 	}
+
 }

@@ -17,13 +17,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-redis/redis/v8"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"github.com/slntopp/nocloud/pkg/showcases"
-	"net"
-
 	amqp "github.com/rabbitmq/amqp091-go"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	healthpb "github.com/slntopp/nocloud-proto/health"
@@ -31,7 +25,11 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
+	"github.com/slntopp/nocloud/pkg/showcases"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -91,11 +89,6 @@ func main() {
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
 	log.Info("DB connection established")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
 		DB:   0,
@@ -114,14 +107,15 @@ func main() {
 	)
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
-	rbmq, err := amqp.Dial(rbmq)
+	conn, err := amqp.Dial(rbmq)
 	if err != nil {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
-	defer rbmq.Close()
+	defer conn.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 	log.Info("RabbitMQ connection established")
 
-	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq), rdb)
+	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
@@ -160,6 +154,5 @@ func main() {
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+	grpc_server.ServeGRPC(log, s, port)
 }

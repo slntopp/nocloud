@@ -17,12 +17,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-redis/redis/v8"
-	"net"
-
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -60,11 +58,6 @@ func main() {
 		_ = log.Sync()
 	}()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
 		DB:   0,
@@ -86,6 +79,6 @@ func main() {
 	)
 
 	pb.RegisterHealthServiceServer(s, server)
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+
+	grpc_server.ServeGRPC(log, s, port)
 }

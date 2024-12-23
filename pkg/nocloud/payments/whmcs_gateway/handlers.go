@@ -34,6 +34,10 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		return err
 	}
 
+	return g.CreateFromWhmcsInvoice(ctx, log, whmcsInv)
+}
+
+func (g *WhmcsGateway) CreateFromWhmcsInvoice(ctx context.Context, log *zap.Logger, whmcsInv Invoice) error {
 	acc, err := g.GetAccountByWhmcsId(whmcsInv.UserId)
 	if err != nil {
 		log.Error("Error getting account", zap.Error(err))
@@ -52,7 +56,7 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 		Instances:    make([]string, 0),
 		Meta: map[string]*structpb.Value{
 			"note":                  structpb.NewStringValue(""),
-			invoiceIdField:          structpb.NewNumberValue(float64(data.InvoiceId)),
+			invoiceIdField:          structpb.NewNumberValue(float64(whmcsInv.InvoiceId)),
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(float64(whmcsInv.TaxRate / 100)),
 			"creator":               structpb.NewStringValue("whmcs-gateway"),
 		},
@@ -92,7 +96,6 @@ func (g *WhmcsGateway) invoiceCreatedHandler(ctx context.Context, log *zap.Logge
 			return fmt.Errorf("error syncWhmcsInvoice: %w", err)
 		}
 		inv.Payment = t.Unix()
-		inv.Processed = inv.Payment
 	}
 	if !strings.Contains(whmcsInv.DueDate, "0000-00-00") {
 		t, err := time.Parse("2006-01-02", whmcsInv.DueDate)

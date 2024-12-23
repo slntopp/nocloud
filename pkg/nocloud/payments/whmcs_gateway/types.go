@@ -182,8 +182,12 @@ type GetInvoicesResponse struct {
 	Invoices     InvoicesHolder `json:"invoices"`
 }
 
+type InvoiceInList struct {
+	Id IntOrString `json:"id"`
+}
+
 type InvoicesHolder struct {
-	Invoice []Invoice `json:"invoice"`
+	Invoice []InvoiceInList `json:"invoice"`
 }
 
 type InvoiceResponse struct {

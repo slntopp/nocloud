@@ -16,9 +16,6 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
-	"net"
-
 	"github.com/go-redis/redis/v8"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -27,6 +24,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/dns"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
+	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -65,11 +63,6 @@ func main() {
 	})
 	log.Info("RedisDB connection established")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
 	auth.SetContext(log, rdb, SIGNING_KEY)
 	s := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 		grpc_zap.UnaryServerInterceptor(log),
@@ -80,6 +73,5 @@ func main() {
 	pb.RegisterDNSServer(s, server)
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+	grpc_server.ServeGRPC(log, s, port)
 }

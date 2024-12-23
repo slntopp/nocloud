@@ -113,8 +113,6 @@ func (c *descriptionsController) List(ctx context.Context, req *pb.ListDescripti
 
 	query += " RETURN merge(d, {uuid: d._key})) RETURN descs"
 
-	log.Debug("Query", zap.String("q", query))
-
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))

@@ -184,8 +184,6 @@ func (ctrl *recordsController) GetInstancesReports(ctx context.Context, req *pb.
 
 	query += " RETURN r"
 
-	ctrl.log.Debug("Final query", zap.String("query", query))
-
 	cursor, err := ctrl.db.Query(ctx, query, params)
 	if err != nil {
 		return nil, err
@@ -287,8 +285,6 @@ func (ctrl *recordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
    RETURN merge(record, {uuid: record._key, currency: currency})
 ) 
 RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}`
-
-	ctrl.log.Debug("Final query", zap.String("query", query))
 
 	cursor, err := ctrl.db.Query(ctx, query, params)
 	if err != nil {

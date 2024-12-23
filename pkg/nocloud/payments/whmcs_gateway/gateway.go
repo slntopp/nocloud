@@ -385,8 +385,8 @@ func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invo
 	return invResp, nil
 }
 
-func (g *WhmcsGateway) GetInvoices(_ context.Context) ([]Invoice, error) {
-	res := make([]Invoice, 0)
+func (g *WhmcsGateway) GetInvoices(_ context.Context) ([]InvoiceInList, error) {
+	res := make([]InvoiceInList, 0)
 
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {

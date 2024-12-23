@@ -95,7 +95,7 @@ func (g *WhmcsGateway) buildGetInvoiceQueryBase(whmcsInvoiceId int) (url.Values,
 
 func (g *WhmcsGateway) buildGetInvoicesQueryBase() GetInvoicesQuery {
 	return GetInvoicesQuery{
-		Action:       "GetInvoice",
+		Action:       "GetInvoices",
 		ResponseType: "json",
 		Username:     g.apiUsername,
 		Password:     g.apiPassword,

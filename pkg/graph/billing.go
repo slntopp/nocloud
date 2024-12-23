@@ -182,8 +182,6 @@ func (ctrl *billingPlansController) List(ctx context.Context, spUuid string, uui
 	}
 	query = fmt.Sprintf(query, filters)
 
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
-
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err

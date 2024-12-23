@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
+	"reflect"
 )
 
-func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Context, log *zap.Logger) {
-	log = log.Named("WhmcsDeletedInvoicesSyncerCronJob")
+func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, log *zap.Logger) {
+	log = log.Named("WhmcsInvoicesSyncerCronJob")
 	log.Info("Starting WHMCS Invoices syncer cron job")
 
 	ncInvoices, err := s.invoices.List(ctx, "")
@@ -18,8 +21,9 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 		log.Error("Error listing nocloud invoices", zap.Error(err))
 		return
 	}
+	log.Info("Size of NC invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(graph.Invoice{}).Size()), zap.Int("len", len(ncInvoices)))
 
-	count := 0
+	delCount := 0
 	for _, inv := range ncInvoices {
 		if inv.Meta == nil {
 			continue
@@ -43,7 +47,48 @@ func (s *BillingServiceServer) WhmcsDeletedInvoicesSyncerCronJob(ctx context.Con
 			log.Error("Error updating invoice", zap.Error(err))
 			continue
 		}
-		count++
+		delCount++
 	}
-	log.Info("Finished WHMCS Invoices syncer cron job", zap.Int("deleted", count))
+
+	whmcsIdToInvoice := make(map[int]struct{})
+	for _, inv := range ncInvoices {
+		if inv.Meta == nil {
+			continue
+		}
+		whmcsId, ok := inv.GetMeta()["whmcs_invoice_id"]
+		if ok && int(whmcsId.GetNumberValue()) != 0 {
+			whmcsIdToInvoice[int(whmcsId.GetNumberValue())] = struct{}{}
+		}
+	}
+
+	whmcsInvoices, err := s.whmcsGateway.GetInvoices(ctx)
+	if err != nil {
+		log.Error("Error listing whmcs invoices", zap.Error(err))
+		return
+	}
+	log.Info("Size of WHMCS invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(whmcs_gateway.Invoice{}).Size()), zap.Int("len", len(whmcsInvoices)))
+
+	ctx = context.WithValue(ctx, types.GatewayCallback, true) // Prevent whmcs event cycling
+	createdCount := 0
+	for _, whmcsInvoice := range whmcsInvoices {
+		if whmcsInvoice.Id == 0 {
+			log.Warn("Whmcs invoice id is zero value")
+			continue
+		}
+		if _, ok := whmcsIdToInvoice[int(whmcsInvoice.Id)]; ok {
+			continue
+		}
+		inv, err := s.whmcsGateway.GetInvoice(ctx, int(whmcsInvoice.Id))
+		if err != nil {
+			log.Error("Failed to get body of whmcs invoice", zap.Error(err))
+			continue
+		}
+		if err = s.whmcsGateway.CreateFromWhmcsInvoice(ctx, log, inv); err != nil {
+			log.Error("Failed to create whmcs invoice", zap.Error(err))
+			continue
+		}
+		createdCount++
+	}
+
+	log.Info("Finished WHMCS Invoices syncer cron job", zap.Int("deleted", delCount), zap.Int("created", createdCount))
 }

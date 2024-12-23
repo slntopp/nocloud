@@ -71,7 +71,6 @@ FOR s IN @@showcases
 `
 
 func (ctrl *showcasesController) List(ctx context.Context, requestor string, root bool, req *sppb.ListRequest) ([]*sppb.Showcase, error) {
-	ctrl.log.Debug("Getting Showcases")
 
 	vars := map[string]interface{}{
 		"@showcases": schema.SHOWCASES_COL,
@@ -126,7 +125,6 @@ func (ctrl *showcasesController) List(ctx context.Context, requestor string, roo
 			return nil, err
 		}
 
-		ctrl.log.Debug("Got document", zap.Any("service_provider", &s))
 		r = append(r, &s)
 	}
 
@@ -134,11 +132,8 @@ func (ctrl *showcasesController) List(ctx context.Context, requestor string, roo
 }
 
 func (ctrl *showcasesController) Get(ctx context.Context, uuid string) (*sppb.Showcase, error) {
-	ctrl.log.Debug("Getting Showcase", zap.Any("uuid", uuid))
-
 	var showcase sppb.Showcase
-	meta, err := ctrl.col.ReadDocument(ctx, uuid, &showcase)
-	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))
+	_, err := ctrl.col.ReadDocument(ctx, uuid, &showcase)
 	return &showcase, err
 }
 

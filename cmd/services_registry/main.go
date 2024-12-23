@@ -29,6 +29,7 @@ import (
 	ic "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	cc "github.com/slntopp/nocloud-proto/services/servicesconnect"
 	"github.com/slntopp/nocloud/pkg/graph"
+	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
@@ -111,6 +112,7 @@ func main() {
 	defer func() {
 		_ = log.Sync()
 	}()
+	workers := &go_sync.WaitGroup{}
 
 	log.Info("Setting up DB Connection")
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred, arangodbName)
@@ -137,11 +139,12 @@ func main() {
 	})
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
-	rbmq, err := amqp.Dial(rbmq)
+	conn, err := amqp.Dial(rbmq)
 	if err != nil {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
-	defer rbmq.Close()
+	defer conn.Close()
+	rabbitmq.FatalOnConnectionClose(log, conn)
 
 	log.Info("Setting up Pub/Sub")
 	ps, err := states.SetupStatesStreaming()
@@ -150,8 +153,8 @@ func main() {
 	}
 	log.Info("Pub/Sub setted up")
 
-	server := services.NewServicesServer(log, db, ps, rabbitmq.NewRabbitMQConnection(rbmq))
-	iserver := instances.NewInstancesServiceServer(log, db, rabbitmq.NewRabbitMQConnection(rbmq), rdb)
+	server := services.NewServicesServer(log, db, ps, rabbitmq.NewRabbitMQConnection(conn))
+	iserver := instances.NewInstancesServiceServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -244,9 +247,10 @@ func main() {
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
-	go iserver.MonitoringRoutine(ctx)
-	_ps := pubsub.NewPubSub[*epb.Event](rabbitmq.NewRabbitMQConnection(rbmq), log)
-	go iserver.ConsumeInvokeCommands(log, ctx, _ps)
+	ctx, cancel := context.WithCancel(ctx)
+	go iserver.MonitoringRoutine(ctx, worker(workers))
+	_ps := pubsub.NewPubSub[*epb.Event](rabbitmq.NewRabbitMQConnection(conn), log)
+	go iserver.ConsumeInvokeCommands(log, ctx, _ps, worker(workers))
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 
@@ -258,9 +262,14 @@ func main() {
 		AllowPrivateNetwork: true,
 	}).Handler(h2c.NewHandler(router, &http2.Server{}))
 
-	log.Info("Serving", zap.String("host", host))
-	err = http.ListenAndServe(host, handler)
-	if err != nil {
-		log.Fatal("Failed to start server", zap.Error(err))
-	}
+	http_server.Serve(log, host, handler)
+	log.Info("Stopping workers.")
+	cancel()
+	workers.Wait()
+	log.Info("All workers were stopped.")
+}
+
+func worker(wg *go_sync.WaitGroup) *go_sync.WaitGroup {
+	wg.Add(1)
+	return wg
 }
