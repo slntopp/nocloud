@@ -16,7 +16,15 @@
     :multiple="multiple"
     :clearable="clearable"
     :dense="dense"
-  />
+  >
+    <template v-if="advanced" v-slot:selection="{ item }">
+      {{ getAdvancedItem(item) }}
+    </template>
+
+    <template v-if="advanced" v-slot:item="{ item }">
+      {{ getAdvancedItem(item) }}
+    </template>
+  </v-autocomplete>
 </template>
 
 <script setup>
@@ -35,6 +43,7 @@ const props = defineProps({
   fetchValue: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
+  advanced: { type: Boolean, default: false },
 });
 const { value, fetchValue, multiple, loading, returnObject } = toRefs(props);
 
@@ -122,6 +131,11 @@ const fetchAccount = async () => {
     }
   }
 };
+
+const getAdvancedItem = (account) =>
+  `${account.title} ${
+    account.data?.email ? "- " + account.data?.email : ""
+  } (${account.uuid.slice(0, 6)})`;
 
 watch(loading, () => {
   if (!loading.value) {
