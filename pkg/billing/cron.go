@@ -253,6 +253,10 @@ func (s *BillingServiceServer) cronPreflightChecks(ctx context.Context, log *zap
 	return errGroup.Wait()
 }
 
+func delaySeconds(c int) {
+	time.Sleep(time.Duration(c) * time.Second)
+}
+
 func (s *BillingServiceServer) RunDailyCronJob(ctx context.Context, _ *connect.Request[pb.RunDailyCronJobRequest]) (*connect.Response[pb.RunDailyCronJobResponse], error) {
 	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
 	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
