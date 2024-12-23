@@ -11,6 +11,7 @@
         label="Account"
         return-object
         v-model="selectedAccount"
+        advanced
       />
 
       <v-switch
