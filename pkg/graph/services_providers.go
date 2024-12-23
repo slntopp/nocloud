@@ -125,28 +125,28 @@ func (ctrl *servicesProvidersController) DeleteEdges(ctx context.Context, id str
 }
 
 func (ctrl *servicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
-	ctrl.log.Debug("Getting ServicesProvider", zap.Any("sp", id))
 	var sp pb.ServicesProvider
 	query := `RETURN DOCUMENT(@sp)`
 	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
 		"sp": driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, id),
 	})
 	if err != nil {
-		ctrl.log.Debug("Error reading document(ServiceProvider)", zap.Error(err))
+		ctrl.log.Error("Error reading document(ServiceProvider) in query", zap.Error(err))
 		return nil, err
 	}
 	defer c.Close()
 
 	meta, err := c.ReadDocument(ctx, &sp)
-	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("sp", &sp))
+	if err != nil {
+		ctrl.log.Error("Error reading document(ServiceProvider)", zap.Error(err))
+		return nil, err
+	}
 	sp.Uuid = meta.ID.Key()
-	return &ServicesProvider{&sp, meta}, err
+	return &ServicesProvider{&sp, meta}, nil
 }
 
 // List Services Providers in DB
 func (ctrl *servicesProvidersController) List(ctx context.Context, requestor string, isRoot bool) ([]*ServicesProvider, error) {
-	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
-
 	var query string
 
 	if requestor != "" {
@@ -164,10 +164,10 @@ func (ctrl *servicesProvidersController) List(ctx context.Context, requestor str
 	bindVars := map[string]interface{}{
 		"@sps": schema.SERVICES_PROVIDERS_COL,
 	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.String("query", query))
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
+		ctrl.log.Error("Error reading documents(ServiceProvider) in query", zap.Error(err))
 		return nil, err
 	}
 	defer c.Close()
@@ -178,9 +178,9 @@ func (ctrl *servicesProvidersController) List(ctx context.Context, requestor str
 		if driver.IsNoMoreDocuments(err) {
 			break
 		} else if err != nil {
+			ctrl.log.Error("Error reading document(ServiceProvider) after query", zap.Error(err))
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("service_provider", &s))
 		r = append(r, &ServicesProvider{&s, meta})
 	}
 
@@ -201,14 +201,12 @@ func (ctrl *servicesProvidersController) BindPlan(ctx context.Context, uuid, pla
 		return nil
 	}
 
-	// Attempt get edge collection
 	edge, err := ctrl.col.Database().Collection(ctx, schema.SP2BP)
 	if err != nil {
 		ctrl.log.Error("Failed to get EdgeCollection", zap.Error(err))
 		return err
 	}
 
-	// Attempt create edge
 	spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, uuid)
 	planDocId := driver.NewDocumentID(schema.BILLING_PLANS_COL, planUuid)
 	_, err = edge.CreateDocument(ctx, Access{
@@ -270,12 +268,12 @@ func (ctrl *servicesProvidersController) GetGroups(ctx context.Context, sp *Serv
 		"up_status":      stpb.NoCloudStatus_UP,
 		"suspend_status": stpb.NoCloudStatus_SUS,
 	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
 	query := listDeployedGroupsQueryWithInstances
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
+		ctrl.log.Error("Failed to do query", zap.Error(err))
 		return nil, err
 	}
 	defer c.Close()
@@ -286,9 +284,9 @@ func (ctrl *servicesProvidersController) GetGroups(ctx context.Context, sp *Serv
 		if driver.IsNoMoreDocuments(err) {
 			break
 		} else if err != nil {
+			ctrl.log.Error("Failed to read document", zap.Error(err))
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("group", &ig))
 		r = append(r, &ig)
 	}
 
@@ -303,12 +301,12 @@ func (ctrl *servicesProvidersController) GetServices(ctx context.Context, sp *Se
 		"status_init": stpb.NoCloudStatus_INIT,
 		"status_del":  stpb.NoCloudStatus_DEL,
 	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
 	query := listDeployedServicesQuery
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
+		ctrl.log.Error("Failed to do query", zap.Error(err))
 		return nil, err
 	}
 	defer c.Close()
@@ -320,9 +318,9 @@ func (ctrl *servicesProvidersController) GetServices(ctx context.Context, sp *Se
 		if driver.IsNoMoreDocuments(err) {
 			break
 		} else if err != nil {
+			ctrl.log.Error("Failed to read document", zap.Error(err))
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("group", &s))
 		r = append(r, &s)
 	}
 
