@@ -29,7 +29,7 @@
         <v-col cols="2">
           <date-picker
             :min="formatSecondsToDateString(Date.now() / 1000)"
-            label="Limited due date"
+            label="Due date"
             v-model="newPromocode.dueDate"
           />
         </v-col>
@@ -95,19 +95,21 @@
           />
         </v-col>
 
-        <v-col cols="2">
-          <v-switch
-            v-model="activeTimeEnabled"
-            label="Limited activation time"
-          />
+        <v-col cols="1">
+          <v-switch v-model="isOneTime" label="One time" />
         </v-col>
 
-        <v-col cols="2" v-if="activeTimeEnabled">
-          <date-field
-            class="mt-3"
-            :period="newPromocode.activeTime"
-            @changeDate="newPromocode.activeTime = $event"
-          />
+        <v-col cols="2" v-if="!isOneTime">
+          <div class="d-flex align-center">
+            <span>Period:</span>
+            <date-field
+              class="mt-3 ml-2"
+              label="Period"
+              placeholder="Period"
+              :period="newPromocode.activeTime"
+              @changeDate="newPromocode.activeTime = $event"
+            />
+          </div>
         </v-col>
       </v-row>
 
@@ -316,7 +318,7 @@ const newPromocode = ref({
   plans: [],
   showcases: [],
 });
-const activeTimeEnabled = ref(false);
+const isOneTime = ref(true);
 const isSaveLoading = ref(false);
 
 const currentTab = ref("Showcases");
@@ -425,7 +427,7 @@ const savePromocode = async () => {
       promoItems: [],
     };
 
-    if (activeTimeEnabled.value) {
+    if (!isOneTime.value) {
       data.oneTime = false;
       data.activeTime = newPromocode.value.activeTime;
     } else {
@@ -509,10 +511,10 @@ const setPromocde = () => {
 
     if (promocode.value.oneTime) {
       newPromocode.value.activeTime = 0;
-      activeTimeEnabled.value = false;
+      isOneTime.value = true;
     } else {
       newPromocode.value.activeTime = +(promocode.value.activeTime || 0);
-      activeTimeEnabled.value = true;
+      isOneTime.value = false;
     }
 
     const showcases = [];
