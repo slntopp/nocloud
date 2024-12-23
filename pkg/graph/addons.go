@@ -200,8 +200,6 @@ LET searchAddons = UNIQUE(FLATTEN(
 
 	query += " RETURN merge(a, {uuid: a._key})) RETURN adds"
 
-	log.Debug("Query", zap.String("q", query))
-
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))
@@ -269,8 +267,6 @@ FILTER LENGTH(
 	}
 
 	query += " RETURN merge(a, {uuid: a._key})) RETURN adds"
-
-	log.Debug("Query", zap.String("q", query))
 
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {

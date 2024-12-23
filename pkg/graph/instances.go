@@ -279,7 +279,6 @@ func (ctrl *instancesController) GetWithAccess(ctx context.Context, from driver.
 		o.GetAccess().Level = access.Level_ROOT
 	}
 
-	ctrl.log.Debug("GetInstanceWithAccess", zap.Any("instance", o), zap.Any("meta", meta))
 	return o, nil
 }
 
@@ -637,7 +636,6 @@ func (ctrl *instancesController) Get(ctx context.Context, uuid string) (*Instanc
 	defer c.Close()
 
 	meta, err := c.ReadDocument(ctx, &inst)
-	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("isnt", &inst))
 
 	if inst == nil {
 		return nil, err

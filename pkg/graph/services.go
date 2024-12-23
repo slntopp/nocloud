@@ -453,9 +453,6 @@ func (ctrl *servicesController) List(ctx context.Context, requestor string, requ
 
 	query = fmt.Sprintf(getServiceList, query, instQuery)
 
-	ctrl.log.Debug("Query", zap.Any("q", query))
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
-
 	c, err := ctrl.db.Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err

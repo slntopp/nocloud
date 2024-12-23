@@ -578,9 +578,7 @@ func listAccounts[T Accessible](
 		}
 	}
 
-	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
 	q := fmt.Sprintf(listAccountsQuery, insert)
-	log.Debug("Query", zap.String("q", q))
 	c, err := db.Query(ctx, q, bindVars)
 	if err != nil {
 		return nil, err

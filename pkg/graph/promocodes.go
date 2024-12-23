@@ -320,7 +320,6 @@ func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesR
 	}
 
 	query += " RETURN merge(p, {uuid: p._key})) RETURN promo"
-	log.Debug("Query", zap.String("q", query))
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))
@@ -338,7 +337,6 @@ func (c *promocodesController) List(ctx context.Context, req *pb.ListPromocodesR
 		p = applyCurrentState(p)
 	}
 
-	log.Debug("Got promocodes", zap.Any("promocodes", promo))
 	return promo, nil
 }
 
@@ -353,7 +351,6 @@ func (c *promocodesController) Count(ctx context.Context, req *pb.CountPromocode
 	query += buildFiltersQuery(req.GetFilters(), vars)
 
 	query += " RETURN merge(p, {uuid: p._key})) RETURN promo"
-	log.Debug("Query", zap.String("q", query))
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))
