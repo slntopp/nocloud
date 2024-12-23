@@ -208,7 +208,7 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	req := r.Msg
-	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
+	log.Debug("Request received", zap.String("requester", requester))
 
 	acc := requester
 
@@ -311,8 +311,6 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 		}
 	}
 	query += ` RETURN merge(t, {uuid: t._key, currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(t.currency.id)))})`
-
-	log.Debug("Ready to retrieve invoices", zap.String("query", query), zap.Any("vars", vars))
 
 	cursor, err := s.db.Query(ctx, query, vars)
 	if err != nil {

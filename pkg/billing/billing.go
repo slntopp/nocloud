@@ -619,7 +619,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 	if !req.Anonymously {
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.String("requestor", requestor))
 	ok := s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	if req.GetUuid() != "" {
@@ -627,7 +627,6 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 	}
 
 	query, vars := buildPlansListQuery(req, ok)
-	log.Debug("Ready to retrieve plans", zap.String("query", query), zap.Any("vars", vars))
 	req.Limit = nil
 	req.Page = nil
 	countQuery, countVars := buildPlansListQuery(req, ok)
@@ -727,7 +726,6 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			graph.ConvertPlan(plan, rate, cur.Precision, cur.Rounding)
 		}
 
-		log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
 		resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
 		graph.ExplicitSetPrimaryCurrencyHeader(resp.Header(), cur.Code)
 		return resp, nil
@@ -738,7 +736,6 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 		conv.ConvertObjectPrices(plan)
 	}
 
-	log.Debug("Plans retrieved", zap.Any("plans", plans), zap.Int("count", len(plans)), zap.Int("total", count))
 	resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
 	conv.SetResponseHeader(resp.Header())
 	return graph.HandleConvertionError(resp, conv)
