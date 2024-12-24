@@ -44,8 +44,8 @@
           <plans-autocomplete
             :value="instance.billing_plan"
             :custom-params="{
-              filters: { type: ['keyweb'] },
-              anonymously: true,
+              filters: { type: ['keyweb'], 'meta.isIndividual': [false] },
+              anonymously: false,
             }"
             @input="setValue('billing_plan', $event)"
             return-object

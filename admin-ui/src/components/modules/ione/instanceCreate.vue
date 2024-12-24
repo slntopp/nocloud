@@ -23,8 +23,8 @@
           <plans-autocomplete
             :value="bilingPlan"
             :custom-params="{
-              filters: { type: ['ione'] },
-              anonymously: true,
+              filters: { type: ['ione'], 'meta.isIndividual': [false] },
+              anonymously: false,
             }"
             @input="changeBilling"
             return-object

@@ -33,8 +33,11 @@
           <plans-autocomplete
             :value="instance.billing_plan"
             :custom-params="{
-              filters: { type: [`ovh ${ovhType}`] },
-              anonymously: true,
+              filters: {
+                type: [`ovh ${ovhType}`],
+                'meta.isIndividual': [false],
+              },
+              anonymously: false,
             }"
             @input="setValue('billing_plan', $event)"
             return-object
