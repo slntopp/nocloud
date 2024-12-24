@@ -19,8 +19,8 @@
           <plans-autocomplete
             :value="billingPlanId"
             :custom-params="{
-              filters: { type: ['cpanel'] },
-              anonymously: true,
+              filters: { type: ['cpanel'], 'meta.isIndividual': [false] },
+              anonymously: false,
             }"
             @input="setValue('billing_plan', $event)"
             return-object

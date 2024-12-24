@@ -1,17 +1,17 @@
 <template>
   <div class="module">
     <v-card
-        v-if="Object.keys(instance).length > 1"
-        class="mb-4 pa-2"
-        elevation="0"
-        color="background"
+      v-if="Object.keys(instance).length > 1"
+      class="mb-4 pa-2"
+      elevation="0"
+      color="background"
     >
       <v-row>
         <v-col cols="6">
           <v-text-field
-              @change="(newVal) => setValue('title', newVal)"
-              label="Name"
-              :value="instance.title"
+            @change="(newVal) => setValue('title', newVal)"
+            label="Name"
+            :value="instance.title"
           >
           </v-text-field>
         </v-col>
@@ -19,32 +19,32 @@
       <v-row>
         <v-col cols="6">
           <plans-autocomplete
-              :value="bilingPlan"
-              :custom-params="{
-              filters: { type: ['empty'] },
-              anonymously: true,
+            :value="bilingPlan"
+            :custom-params="{
+              filters: { type: ['empty'], 'meta.isIndividual': [false] },
+              anonymously: false,
             }"
-              @input="setValue('billing_plan', $event)"
-              return-object
-              label="Price model"
-              :rules="planRules"
+            @input="setValue('billing_plan', $event)"
+            return-object
+            label="Price model"
+            :rules="planRules"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-              label="Product"
-              :rules="requiredRule"
-              :value="instance.product"
-              v-if="products.length > 0"
-              :items="products"
-              item-text="key"
-              item-value="key"
-              @change="changeProduct"
+            label="Product"
+            :rules="requiredRule"
+            :value="instance.product"
+            v-if="products.length > 0"
+            :items="products"
+            item-text="key"
+            item-value="key"
+            @change="changeProduct"
           >
             <template v-slot:item="{ item }">
               <div
-                  style="width: 100%"
-                  class="d-flex justify-space-between align-center"
+                style="width: 100%"
+                class="d-flex justify-space-between align-center"
               >
                 <span>{{ item.key }}</span>
                 <span class="ml-4">{{ item.title }}</span>
@@ -55,14 +55,14 @@
 
         <v-col cols="6" v-if="tarrifAddons.length > 0">
           <v-autocomplete
-              @change="(newVal) => setValue('addons', newVal)"
-              label="Addons"
-              :value="instance.addons"
-              :items="isAddonsLoading ? [] : getAvailableAddons()"
-              :loading="isAddonsLoading"
-              item-value="uuid"
-              item-text="title"
-              multiple
+            @change="(newVal) => setValue('addons', newVal)"
+            label="Addons"
+            :value="instance.addons"
+            :items="isAddonsLoading ? [] : getAvailableAddons()"
+            :loading="isAddonsLoading"
+            item-value="uuid"
+            item-text="title"
+            multiple
           />
         </v-col>
       </v-row>
@@ -81,7 +81,7 @@ const { instance, planRules } = toRefs(props);
 const emit = defineEmits(["set-instance", "set-value"]);
 
 const { tarrifAddons, setTariffAddons, getAvailableAddons, isAddonsLoading } =
-    useInstanceAddons(instance, (key, value) => setValue(key, value));
+  useInstanceAddons(instance, (key, value) => setValue(key, value));
 
 const getDefaultInstance = () => ({
   title: "instance",
