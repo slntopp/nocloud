@@ -354,6 +354,9 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 		return "", err
 	}
 
+	if i.Config == nil {
+		i.Config = make(map[string]*structpb.Value)
+	}
 	// Send for ansible hooks
 	c := pb.Context{
 		Instance: i.GetUuid(),
@@ -362,6 +365,16 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 	}
 	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
 		log.Error("Failed to publish ansible hook", zap.Error(err))
+	}
+	if i.GetConfig()["auto_start"].GetBoolValue() {
+		c := pb.Context{
+			Instance: i.GetUuid(),
+			Sp:       sp,
+			Event:    "START",
+		}
+		if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+			log.Error("Failed to publish ansible hook", zap.Error(err))
+		}
 	}
 	e := epb.Event{
 		Uuid: i.GetUuid(),
