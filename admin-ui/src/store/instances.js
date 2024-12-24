@@ -59,7 +59,13 @@ export default {
       try {
         const response = await getters["instancesClient"].get({ uuid });
         const data = response.toJson();
-        commit("setOne", { config: {}, ...data });
+        commit("setOne", {
+          ...data,
+          instance: {
+            ...data.instance,
+            config: !data.instance.config ? {} : data.instance.config,
+          },
+        });
 
         return data;
       } finally {
