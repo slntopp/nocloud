@@ -21,8 +21,8 @@
           <plans-autocomplete
             :value="instance.billing_plan"
             :custom-params="{
-              filters: { type: ['openai'] },
-              anonymously: true,
+              filters: { type: ['openai'], 'meta.isIndividual': [false] },
+              anonymously: false,
             }"
             @input="changeBilling"
             return-object

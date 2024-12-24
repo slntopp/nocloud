@@ -19,8 +19,8 @@
           <plans-autocomplete
             :value="instance.billing_plan"
             :custom-params="{
-              filters: { type: ['opensrs'] },
-              anonymously: true,
+              filters: { type: ['opensrs'], 'meta.isIndividual': [false] },
+              anonymously: false,
             }"
             @input="changeBilling"
             return-object
