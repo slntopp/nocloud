@@ -90,6 +90,15 @@
           <v-subheader>Public</v-subheader>
           <v-switch style="width: fit-content" v-model="plan.public" />
         </v-col>
+
+        <v-col cols="1" class="align-center d-flex">
+          <v-subheader>Individual</v-subheader>
+          <v-switch
+            style="width: fit-content"
+            v-model="plan.meta.isIndividual"
+          />
+        </v-col>
+
         <v-col cols="2" class="align-center d-flex">
           <v-subheader
             >Auto start
