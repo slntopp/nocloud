@@ -555,6 +555,7 @@ func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeReq
 		ServicesProvider: sp.ServicesProvider,
 		Method:           req.Method,
 		Params:           req.Params,
+		AdminAccess:      s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN),
 	})
 
 	var event = &elpb.Event{
