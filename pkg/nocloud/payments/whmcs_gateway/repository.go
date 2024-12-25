@@ -13,16 +13,14 @@ const invoiceIdField = "whmcs_invoice_id"
 const userIdField = "whmcs_id"
 
 func (g *WhmcsGateway) getInvoiceByWhmcsId(whmcsInvoiceId int) (*pb.Invoice, error) {
-	invoices, err := g.invMan.InvoicesController().List(context.Background(), "")
+	invoices, err := g.invMan.InvoicesController().List(context.Background(), "", map[string]interface{}{
+		fmt.Sprintf("meta.%s", invoiceIdField): whmcsInvoiceId,
+	})
 	if err != nil {
 		return nil, err
 	}
 	for _, inv := range invoices {
-		id, ok := inv.GetMeta()[invoiceIdField]
-		if !ok {
-			continue
-		}
-		if int(id.GetNumberValue()) == whmcsInvoiceId {
+		if inv != nil && int(inv.GetMeta()[invoiceIdField].GetNumberValue()) == whmcsInvoiceId {
 			return inv.Invoice, nil
 		}
 	}
