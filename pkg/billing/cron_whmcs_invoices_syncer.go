@@ -81,7 +81,7 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 		if _, ok := whmcsIdToInvoice[int(whmcsInvoice.Id)]; ok {
 			continue
 		}
-		// Do not create invoice if it is younger than 1 day (preventing accidental duplicate)
+		// Do not create invoice if it is younger than half a day (preventing accidental duplicate)
 		dateCreated, err := time.Parse(time.DateTime, whmcsInvoice.CreatedAt)
 		if err != nil {
 			logI.Error("Failed to parse invoice created time", zap.Error(err))
@@ -89,7 +89,7 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 		}
 		created := dateCreated.Unix()
 		const secondsInDay = 86400
-		if created > 0 && (now-created < secondsInDay) {
+		if created > 0 && (now-created < secondsInDay/2) {
 			logI.Info("Invoice is not presented in Nocloud, but it is too young. Skip")
 			continue
 		}
