@@ -81,22 +81,23 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 		if _, ok := whmcsIdToInvoice[int(whmcsInvoice.Id)]; ok {
 			continue
 		}
-		// Do not create invoice if it is younger than half a day (preventing accidental duplicate)
-		dateCreated, err := time.Parse(time.DateTime, whmcsInvoice.CreatedAt)
-		if err != nil {
-			logI.Error("Failed to parse invoice created time", zap.Error(err))
-			continue
-		}
-		created := dateCreated.Unix()
+		// Do not create invoice if it is younger than half a day (preventing accidental duplicate) and if too old
 		const secondsInDay = 86400
-		if created > 0 && (now-created < secondsInDay/2) {
-			logI.Info("Invoice is not presented in Nocloud, but it is too young. Skip")
+		const tooOldDate = 1577836800 // GMT: Wednesday, 1 January 2020 г., 0:00:00
+		dateCreated, parseCreatedErr := time.Parse(time.DateTime, whmcsInvoice.CreatedAt)
+		if parseCreatedErr == nil && dateCreated.Unix() > 0 && (now-dateCreated.Unix() < secondsInDay/2 || dateCreated.Unix() < tooOldDate) {
 			continue
 		}
 		inv, err := s.whmcsGateway.GetInvoice(ctx, int(whmcsInvoice.Id))
 		if err != nil {
 			logI.Error("Failed to get body of whmcs invoice", zap.Error(err))
 			continue
+		}
+		if parseCreatedErr != nil || dateCreated.Unix() <= 0 {
+			dateCreated, err = time.Parse(time.DateOnly, inv.Date)
+			if err != nil || dateCreated.Unix() <= 0 || (now-dateCreated.Unix() < secondsInDay/2 || dateCreated.Unix() < tooOldDate) {
+				continue
+			}
 		}
 		if err = s.whmcsGateway.CreateFromWhmcsInvoice(ctx, log, inv); err != nil {
 			logI.Error("Failed to create whmcs invoice", zap.Error(err))
