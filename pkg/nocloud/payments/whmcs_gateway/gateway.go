@@ -12,7 +12,6 @@ import (
 	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"slices"
@@ -47,6 +46,8 @@ type WhmcsGateway struct {
 var ErrNotFound = fmt.Errorf("not found")
 
 const invoiceNotFoundApiMsg = "Invoice ID Not Found"
+
+const getInvoicesBatchSize = 10000 // WHMCS throws memory limit exception nearly on 50000 batch size
 
 func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool) *WhmcsGateway {
 	return &WhmcsGateway{
@@ -392,24 +393,32 @@ func (g *WhmcsGateway) GetInvoices(_ context.Context) ([]InvoiceInList, error) {
 	if err != nil {
 		return res, err
 	}
-
 	body := g.buildGetInvoicesQueryBase()
-	body.LimitNum = ptr(math.MaxInt32)
-	q, err := query.Values(body)
-	if err != nil {
-		return res, err
+
+	// Do not use async here
+	body.LimitNum = ptr(getInvoicesBatchSize)
+	offset := 0
+	for {
+		body.LimitStart = ptr(offset)
+		q, err := query.Values(body)
+		if err != nil {
+			return res, err
+		}
+		invResp, err := sendRequestToWhmcs[GetInvoicesResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+		if err != nil {
+			return res, err
+		}
+		if invResp.Invoices.Invoice == nil {
+			return res, fmt.Errorf("error getting invoices. Got nil")
+		}
+		res = append(res, invResp.Invoices.Invoice...)
+		offset += getInvoicesBatchSize
+		if offset > invResp.TotalResults {
+			break
+		}
 	}
 
-	invResp, err := sendRequestToWhmcs[GetInvoicesResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
-	if err != nil {
-		return res, err
-	}
-
-	if invResp.Invoices.Invoice == nil {
-		return res, nil
-	}
-
-	return invResp.Invoices.Invoice, nil
+	return res, nil
 }
 
 func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {
