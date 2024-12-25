@@ -207,8 +207,8 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	id, ok := inv.GetMeta()[invoiceIdField]
-	if !ok {
-		return g.CreateInvoice(ctx, inv)
+	if !ok || int(id.GetNumberValue()) <= 0 {
+		return fmt.Errorf("no whmcs_invoice_id or zero value")
 	}
 
 	body := g.buildUpdateInvoiceQueryBase(int(id.GetNumberValue()))
