@@ -10,11 +10,13 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
+	"time"
 )
 
 func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, log *zap.Logger) {
 	log = log.Named("WhmcsInvoicesSyncerCronJob")
 	log.Info("Starting WHMCS Invoices syncer cron job")
+	now := time.Now().Unix()
 
 	ncInvoices, err := s.invoices.List(ctx, "")
 	if err != nil {
@@ -75,16 +77,29 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 			log.Warn("Whmcs invoice id is zero value")
 			continue
 		}
+		logI := log.With(zap.Int("whmcs_id", int(whmcsInvoice.Id)))
 		if _, ok := whmcsIdToInvoice[int(whmcsInvoice.Id)]; ok {
+			continue
+		}
+		// Do not create invoice if it is younger than 1 day (preventing accidental duplicate)
+		dateCreated, err := time.Parse(time.DateTime, whmcsInvoice.CreatedAt)
+		if err != nil {
+			logI.Error("Failed to parse invoice created time", zap.Error(err))
+			continue
+		}
+		created := dateCreated.Unix()
+		const secondsInDay = 86400
+		if created > 0 && (now-created < secondsInDay) {
+			logI.Info("Invoice is not presented in Nocloud, but it is too young. Skip")
 			continue
 		}
 		inv, err := s.whmcsGateway.GetInvoice(ctx, int(whmcsInvoice.Id))
 		if err != nil {
-			log.Error("Failed to get body of whmcs invoice", zap.Error(err))
+			logI.Error("Failed to get body of whmcs invoice", zap.Error(err))
 			continue
 		}
 		if err = s.whmcsGateway.CreateFromWhmcsInvoice(ctx, log, inv); err != nil {
-			log.Error("Failed to create whmcs invoice", zap.Error(err))
+			logI.Error("Failed to create whmcs invoice", zap.Error(err))
 			continue
 		}
 		createdCount++
