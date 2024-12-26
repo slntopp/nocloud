@@ -28,14 +28,14 @@
           <v-switch label="Is primary" v-model="showcase.primary" />
           <v-switch label="Enabled" v-model="showcase.public" />
         </v-col>
-        <v-col cols="6">
+        <v-col cols="3">
           <icons-autocomplete
             label="Preview icon"
             :value="showcase.icon"
             @input:value="showcase.icon = $event"
           />
         </v-col>
-        <v-col cols="6">
+        <v-col cols="3">
           <v-autocomplete
             clearable
             item-text="title"
@@ -44,6 +44,10 @@
             v-model="defaultLocation"
             :items="allLocations"
           />
+        </v-col>
+
+        <v-col cols="2">
+          <v-select v-model="showcase.meta.type" label="Type" :items="types" />
         </v-col>
       </v-row>
 
@@ -128,12 +132,22 @@ const props = defineProps({
   realShowcase: {},
   isEdit: { type: Boolean, default: false },
 });
-// const emits=defineEmits(['input'])
-
 const { realShowcase, isEdit } = toRefs(props);
 
 const store = useStore();
 const router = useRouter();
+
+const types = [
+  "cloud",
+  "custom",
+  "virtual",
+  "openai",
+  "vpn",
+  "vdc-vpn",
+  "domains",
+  "acronis",
+  "ssl",
+];
 
 const showcase = ref({
   primary: false,
@@ -150,6 +164,9 @@ const showcase = ref({
   promo: {},
   locations: [],
   public: true,
+  meta: {
+    type: "",
+  },
 });
 
 const currentLang = ref("en");
@@ -182,8 +199,8 @@ const locations = computed(() =>
 );
 
 const filteredLocations = computed(() => {
-  if(isPlansLoading.value || isLoading.value){
-    return {}
+  if (isPlansLoading.value || isLoading.value) {
+    return {};
   }
 
   const result = {};
@@ -219,6 +236,10 @@ watch(realShowcase, () => {
   defaultLocation.value = realShowcase.value.promo.main?.default ?? "";
   showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
+
+  if (!showcase.value.meta) {
+    showcase.value.meta = {};
+  }
 
   if (!Array.isArray(showcase.value.items)) {
     showcase.value.items = [];
