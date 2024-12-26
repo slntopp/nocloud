@@ -519,6 +519,9 @@ export default {
       if (matched && matched.length > 1) {
         if (matched[1] === "ovh") {
           this.types.push("ovh vps", "ovh dedicated", "ovh cloud");
+        }
+        if (matched[1] === "empty") {
+          this.types.push("empty", "vpn");
         } else {
           this.types.push(matched[1]);
         }
@@ -570,6 +573,7 @@ export default {
         case "ovh cloud":
         case "opensrs":
         case "empty":
+        case "vpn":
         case "cpanel": {
           allowed.push("STATIC");
           break;
@@ -583,8 +587,14 @@ export default {
     },
     typedSp() {
       return this.$store.getters["servicesProviders/all"].filter(
-        (sp) => sp.type == this.plan.type.split(" ")[0]
+        (sp) => sp.type == this.spType
       );
+    },
+    spType() {
+      if (this.plan.type == "vpn") {
+        return "empty";
+      }
+      return this.plan.type.split(" ")[0];
     },
     isDeleted() {
       return this.plan.status === "DEL";
