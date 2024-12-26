@@ -151,6 +151,7 @@ var methodsToSync = []string{
 	"manual_renew",
 	"free_renew",
 	"cancel_renew",
+	"vpn",
 }
 
 func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.InvokeRequest]) (*connect.Response[pb.InvokeResponse], error) {
