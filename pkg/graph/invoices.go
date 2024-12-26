@@ -24,7 +24,7 @@ type InvoicesController interface {
 	Update(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Replace(ctx context.Context, tx *Invoice) (*Invoice, error)
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
-	List(ctx context.Context, account string) ([]*Invoice, error)
+	List(ctx context.Context, account string, filter ...map[string]interface{}) ([]*Invoice, error)
 	Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error)
 }
 
@@ -322,7 +322,7 @@ const listInvoices = `
     RETURN MERGE(doc, {uuid: doc._key})
 `
 
-func (ctrl *invoicesController) List(ctx context.Context, account string) ([]*Invoice, error) {
+func (ctrl *invoicesController) List(ctx context.Context, account string, filter ...map[string]interface{}) ([]*Invoice, error) {
 	log := ctrl.log.Named("List")
 
 	list := make([]*Invoice, 0)
@@ -331,8 +331,17 @@ func (ctrl *invoicesController) List(ctx context.Context, account string) ([]*In
 	}
 	var filters = ""
 	if account != "" {
-		filters = ` FILTER doc.account == @account`
+		filters += ` FILTER doc.account == @account`
 		bindVars["account"] = account
+	}
+	if len(filter) > 0 {
+		i := 1
+		for key, val := range filter[0] {
+			keyVal := fmt.Sprintf("filterField%d", i)
+			filters += fmt.Sprintf(" FILTER doc.%s == @%s", key, keyVal)
+			bindVars[keyVal] = val
+			i++
+		}
 	}
 	cur, err := ctrl.col.Database().Query(ctx, fmt.Sprintf(listInvoices, filters), bindVars)
 	if err != nil {
