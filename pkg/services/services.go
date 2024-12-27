@@ -930,8 +930,6 @@ func (s *ServicesServer) Stream(ctx context.Context, _req *connect.Request[pb.St
 	log.Debug("Request received", zap.Any("req", req))
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	messages := make(chan interface{}, 10)
-
 	if service, err := s.ctrl.Get(ctx, requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < access.Level_READ {
 		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
 		return errors.New("failed access check")
@@ -947,9 +945,11 @@ func (s *ServicesServer) Stream(ctx context.Context, _req *connect.Request[pb.St
 	for i, id := range uuids {
 		topics[i] = "instance/" + id
 	}
-
 	s.log.Debug("topics", zap.Any("topics", topics))
 
+	reconnections := 0
+retry:
+	messages := make(chan interface{}, 10)
 	s.ps.AddSub(messages, topics...)
 	defer unsub(s.ps, messages)
 
@@ -960,8 +960,13 @@ func (s *ServicesServer) Stream(ctx context.Context, _req *connect.Request[pb.St
 			return nil
 		case msg, ok := <-messages:
 			if !ok {
-				log.Error("Messages pubsub channel is closed")
-				return fmt.Errorf("internal connection closed")
+				if reconnections > 5 {
+					log.Error("Too many reconnections. Closing stream")
+					return fmt.Errorf("internal channel closed")
+				}
+				log.Warn("Messages pubsub channel is closed. Trying to resubscribe...")
+				reconnections++
+				goto retry
 			}
 			state := msg.(*spb.ObjectState)
 			log.Debug("state", zap.Any("state", state))
