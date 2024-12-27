@@ -953,17 +953,25 @@ func (s *ServicesServer) Stream(ctx context.Context, _req *connect.Request[pb.St
 	s.ps.AddSub(messages, topics...)
 	defer unsub(s.ps, messages)
 
-	for msg := range messages {
-		state := msg.(*spb.ObjectState)
-		log.Debug("state", zap.Any("state", state))
-		err := srv.Send(state)
-		if err != nil {
-			log.Warn("Unable to send message", zap.Error(err))
-			break
+	for {
+		select {
+		case <-ctx.Done():
+			log.Debug("Context is cancelled. Connection was probably closed by the client")
+			return nil
+		case msg, ok := <-messages:
+			if !ok {
+				log.Error("Messages pubsub channel is closed")
+				return fmt.Errorf("internal connection closed")
+			}
+			state := msg.(*spb.ObjectState)
+			log.Debug("state", zap.Any("state", state))
+			err := srv.Send(state)
+			if err != nil {
+				log.Warn("Unable to send message", zap.Error(err))
+				return nil
+			}
 		}
 	}
-
-	return nil
 }
 
 func unsub[T chan any](ps *pubsub.PubSub, ch chan any) {
