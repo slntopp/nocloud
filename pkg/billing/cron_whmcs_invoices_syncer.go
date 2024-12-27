@@ -52,6 +52,9 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 		delCount++
 	}
 
+	log.Info("Finished WHMCS Invoices syncer cron job", zap.Int("deleted", delCount))
+	return
+
 	whmcsIdToInvoice := make(map[int]struct{})
 	for _, inv := range ncInvoices {
 		if inv.Meta == nil {
