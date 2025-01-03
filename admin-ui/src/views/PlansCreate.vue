@@ -520,6 +520,11 @@ export default {
         if (matched[1] === "ovh") {
           this.types.push("ovh vps", "ovh dedicated", "ovh cloud");
         }
+
+        if (matched[1] === "ione") {
+          this.types.push("ione", "ione-vpn",);
+        }
+
         if (matched[1] === "empty") {
           this.types.push("empty", "vpn");
         } else {
@@ -574,6 +579,7 @@ export default {
         case "opensrs":
         case "empty":
         case "vpn":
+        case "ione-vpn":
         case "cpanel": {
           allowed.push("STATIC");
           break;
@@ -593,6 +599,10 @@ export default {
     spType() {
       if (this.plan.type == "vpn") {
         return "empty";
+      }
+
+      if (this.plan.type == "ione-vpn") {
+        return "ione";
       }
       return this.plan.type.split(" ")[0];
     },
