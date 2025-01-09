@@ -25,6 +25,17 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 	}
 	log.Info("Size of NC invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(graph.Invoice{}).Size()), zap.Int("len", len(ncInvoices)))
 
+	whmcsInvoices, err := s.whmcsGateway.GetInvoices(ctx)
+	if err != nil {
+		log.Error("Error listing whmcs invoices", zap.Error(err))
+		return
+	}
+	log.Info("Size of WHMCS invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(whmcs_gateway.Invoice{}).Size()), zap.Int("len", len(whmcsInvoices)))
+	ids := make(map[int]struct{})
+	for _, val := range whmcsInvoices {
+		ids[int(val.Id)] = struct{}{}
+	}
+
 	delCount := 0
 	for _, inv := range ncInvoices {
 		if inv.Meta == nil {
@@ -34,7 +45,11 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 		if !ok {
 			continue
 		}
+		if _, ok = ids[int(whmcsId.GetNumberValue())]; ok {
+			continue
+		}
 		if _, err = s.whmcsGateway.GetInvoice(ctx, int(whmcsId.GetNumberValue())); err == nil {
+			log.Warn("Invoice found but wasn't presented in whmcs invoices list", zap.Int("id", int(whmcsId.GetNumberValue())))
 			continue
 		}
 		if !errors.Is(err, whmcs_gateway.ErrNotFound) {
@@ -65,13 +80,6 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 			whmcsIdToInvoice[int(whmcsId.GetNumberValue())] = struct{}{}
 		}
 	}
-
-	whmcsInvoices, err := s.whmcsGateway.GetInvoices(ctx)
-	if err != nil {
-		log.Error("Error listing whmcs invoices", zap.Error(err))
-		return
-	}
-	log.Info("Size of WHMCS invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(whmcs_gateway.Invoice{}).Size()), zap.Int("len", len(whmcsInvoices)))
 
 	ctx = context.WithValue(ctx, types.GatewayCallback, true) // Prevent whmcs event cycling
 	createdCount := 0
