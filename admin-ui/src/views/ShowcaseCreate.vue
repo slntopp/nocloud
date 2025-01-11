@@ -101,7 +101,8 @@
                 <locations-autocomplete
                   label="Locations"
                   v-model="item.locations"
-                  :locations="filteredLocations[i]"
+                  :loading="isPlansLoading"
+                  :locations="isPlansLoading ? [] : filteredLocations[i]"
                 />
               </v-col>
             </v-row>
@@ -185,7 +186,7 @@ const serviceProviders = computed(() => store.getters["servicesProviders/all"]);
 const locations = computed(() =>
   showcase.value.items.reduce((result, { servicesProvider }, i) => {
     const { uuid, locations = [] } =
-      serviceProviders.value.find((sp) => sp.uuid === servicesProvider) ?? {};
+      serviceProviders.value?.find((sp) => sp.uuid === servicesProvider) ?? {};
 
     return {
       ...result,
@@ -212,7 +213,7 @@ const filteredLocations = computed(() => {
     );
 
     if (!plan) return;
-    result[i] = value.filter(({ type }) => plan.type === type);
+    result[i] = value.filter(({ type }) => plan.type.split("-")[0] === type);
   });
 
   return result;
@@ -223,7 +224,7 @@ const allLocations = computed(() =>
     (result, [i, locations]) => [
       ...result,
       ...locations.filter(({ id }) =>
-        showcase.value.items[i].locations.find(
+        showcase.value.items[i].locations?.find(
           (location) => id === (location.id ?? location)
         )
       ),
@@ -274,7 +275,7 @@ const save = async () => {
       const item = data.items[i];
       const locs = value
         .filter(({ id }) =>
-          item.locations.find((location) => (location.id ?? location) === id)
+          item.locations?.find((location) => (location.id ?? location) === id)
         )
         .map((location) => ({
           ...location,
@@ -286,7 +287,7 @@ const save = async () => {
         }));
 
       locs.forEach((location) => {
-        if (!data.locations.find(({ id }) => id === location.id)) {
+        if (!data.locations?.find(({ id }) => id === location.id)) {
           data.locations.push(location);
         }
       });
@@ -347,7 +348,7 @@ const getPlan = (sp, uuid) => {
   const plans = plansBySpMap.value.get(sp) ?? [];
 
   if (Array.isArray(plans)) {
-    return plans.find((plan) => plan.uuid === uuid);
+    return plans?.find((plan) => plan.uuid === uuid);
   }
 };
 
@@ -360,7 +361,7 @@ const getPlans = (sp) => {
 
 const getProviderTitle = (uuid) => {
   return (
-    serviceProviders.value.find((provider) => provider.uuid === uuid)?.title ??
+    serviceProviders.value?.find((provider) => provider.uuid === uuid)?.title ??
     uuid
   );
 };
@@ -389,7 +390,9 @@ const fetchPlans = async () => {
       })
     );
   } finally {
-    isPlansLoading.value = false;
+    setTimeout(() => {
+      isPlansLoading.value = false;
+    }, 100);
   }
 };
 
