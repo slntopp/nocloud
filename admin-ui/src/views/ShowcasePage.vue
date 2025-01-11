@@ -96,7 +96,7 @@ onMounted(async () => {
     isFetchLoading.value = false;
   }
 
-  showcase.value = showcases.value.find((n) => n.uuid == showcaseId.value);
+  showcase.value = showcases.value?.find((n) => n.uuid == showcaseId.value);
   document.title = `${showcase.value.title} | NoCloud`;
 });
 </script>
