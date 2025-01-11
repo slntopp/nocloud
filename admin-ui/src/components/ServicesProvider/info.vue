@@ -91,13 +91,7 @@
               <plans-table
                 no-search
                 show-select
-                :custom-params="{
-                  showDeleted: false,
-                  excludeUuids: relatedPlans?.map((p) => p.uuid) || [],
-                  filters: {
-                    type: [provider.type],
-                  },
-                }"
+                :custom-params="plansParams"
                 table-name="plans-sp-table"
                 v-model="selectedNewPlans"
                 :plans="plans"
@@ -222,6 +216,22 @@ const fetchSelectedPlans = async () => {
     }
   }
 };
+
+const plansParams = computed(() => {
+  const type = [provider.value.type];
+
+  if (provider.value.type === "ione") {
+    type.push("ione-vpn");
+  }
+
+  return {
+    showDeleted: false,
+    excludeUuids: relatedPlans.value?.map((p) => p.uuid) || [],
+    filters: {
+      type,
+    },
+  };
+});
 
 const spTypes = computed(() => {
   switch (provider.value.type) {
