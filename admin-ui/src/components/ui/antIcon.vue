@@ -19,7 +19,7 @@ export default {
     } else if (displayName.endsWith("Filled")) {
       displayName = displayName.replace("Filled", "Fill");
     }
-    const [name, icon] = Object.entries(iconsRes).find(
+    const [name, icon] = Object.entries(iconsRes)?.find(
       ([name]) => name === displayName
     );
     this.icon = { name, ...icon };
