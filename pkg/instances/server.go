@@ -230,6 +230,50 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	return connect.NewResponse(invoke), nil
 }
 
+func (s *InstancesServer) Start(ctx context.Context, _req *connect.Request[pb.StartRequest]) (*connect.Response[pb.StartResponse], error) {
+	log := s.log.Named("Start")
+	req := _req.Msg
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	log.Debug("Requester", zap.String("id", requester))
+
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
+		log.Warn("No root access")
+		return nil, status.Error(codes.PermissionDenied, "No access rights")
+	}
+
+	var instance graph.Instance
+	instance, err := s.ctrl.GetWithAccess(ctx, requesterId, req.GetId())
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if instance.Instance == nil {
+		log.Error("Failed to get instance. No object")
+		return nil, status.Error(codes.Internal, "Failed to obtain instance")
+	}
+	if instance.Uuid == "" {
+		log.Error("Failed to get instance. No uuid")
+		return nil, status.Error(codes.Internal, "Failed to obtain instance")
+	}
+
+	if instance.Config == nil {
+		instance.Config = make(map[string]*structpb.Value)
+	}
+	old := proto.Clone(instance.Instance).(*pb.Instance)
+
+	instance.Config["auto_start"] = structpb.NewBoolValue(true)
+
+	if err = s.ctrl.Update(ctx, "", instance.Instance, old); err != nil {
+		log.Error("Failed to update instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update instance")
+	}
+
+	return connect.NewResponse(&pb.StartResponse{
+		Result: true,
+	}), nil
+}
+
 func (s *InstancesServer) Delete(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("delete")
 	req := _req.Msg
