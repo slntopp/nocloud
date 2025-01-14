@@ -329,6 +329,10 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		return fmt.Errorf("failed getting exchange rate: %w", err)
 	}
 	initCost, _ := s.instances.CalculateInstanceEstimatePrice(instance.Instance, true)
+	if initCost <= 0 {
+		log.Info("Skipping creation of 0 invoice for instance with 0 price")
+		return nil
+	}
 	_, summary, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)
 	if err != nil {
 		log.Error("Failed to calculate instance cost", zap.Error(err))

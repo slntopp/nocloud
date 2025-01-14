@@ -28,14 +28,14 @@
           <v-switch label="Is primary" v-model="showcase.primary" />
           <v-switch label="Enabled" v-model="showcase.public" />
         </v-col>
-        <v-col cols="6">
+        <v-col cols="3">
           <icons-autocomplete
             label="Preview icon"
             :value="showcase.icon"
             @input:value="showcase.icon = $event"
           />
         </v-col>
-        <v-col cols="6">
+        <v-col cols="3">
           <v-autocomplete
             clearable
             item-text="title"
@@ -44,6 +44,10 @@
             v-model="defaultLocation"
             :items="allLocations"
           />
+        </v-col>
+
+        <v-col cols="2">
+          <v-select v-model="showcase.meta.type" label="Type" :items="types" />
         </v-col>
       </v-row>
 
@@ -97,7 +101,8 @@
                 <locations-autocomplete
                   label="Locations"
                   v-model="item.locations"
-                  :locations="filteredLocations[i]"
+                  :loading="isPlansLoading"
+                  :locations="isPlansLoading ? [] : filteredLocations[i]"
                 />
               </v-col>
             </v-row>
@@ -128,12 +133,22 @@ const props = defineProps({
   realShowcase: {},
   isEdit: { type: Boolean, default: false },
 });
-// const emits=defineEmits(['input'])
-
 const { realShowcase, isEdit } = toRefs(props);
 
 const store = useStore();
 const router = useRouter();
+
+const types = [
+  "cloud",
+  "custom",
+  "virtual",
+  "openai",
+  "vpn",
+  "ione-vpn",
+  "domains",
+  "acronis",
+  "ssl",
+];
 
 const showcase = ref({
   primary: false,
@@ -150,6 +165,9 @@ const showcase = ref({
   promo: {},
   locations: [],
   public: true,
+  meta: {
+    type: "",
+  },
 });
 
 const currentLang = ref("en");
@@ -168,7 +186,7 @@ const serviceProviders = computed(() => store.getters["servicesProviders/all"]);
 const locations = computed(() =>
   showcase.value.items.reduce((result, { servicesProvider }, i) => {
     const { uuid, locations = [] } =
-      serviceProviders.value.find((sp) => sp.uuid === servicesProvider) ?? {};
+      serviceProviders.value?.find((sp) => sp.uuid === servicesProvider) ?? {};
 
     return {
       ...result,
@@ -182,8 +200,8 @@ const locations = computed(() =>
 );
 
 const filteredLocations = computed(() => {
-  if(isPlansLoading.value || isLoading.value){
-    return {}
+  if (isPlansLoading.value || isLoading.value) {
+    return {};
   }
 
   const result = {};
@@ -195,7 +213,7 @@ const filteredLocations = computed(() => {
     );
 
     if (!plan) return;
-    result[i] = value.filter(({ type }) => plan.type === type);
+    result[i] = value.filter(({ type }) => plan.type.split("-")[0] === type);
   });
 
   return result;
@@ -206,7 +224,7 @@ const allLocations = computed(() =>
     (result, [i, locations]) => [
       ...result,
       ...locations.filter(({ id }) =>
-        showcase.value.items[i].locations.find(
+        showcase.value.items[i].locations?.find(
           (location) => id === (location.id ?? location)
         )
       ),
@@ -219,6 +237,10 @@ watch(realShowcase, () => {
   defaultLocation.value = realShowcase.value.promo.main?.default ?? "";
   showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
+
+  if (!showcase.value.meta) {
+    showcase.value.meta = {};
+  }
 
   if (!Array.isArray(showcase.value.items)) {
     showcase.value.items = [];
@@ -253,7 +275,7 @@ const save = async () => {
       const item = data.items[i];
       const locs = value
         .filter(({ id }) =>
-          item.locations.find((location) => (location.id ?? location) === id)
+          item.locations?.find((location) => (location.id ?? location) === id)
         )
         .map((location) => ({
           ...location,
@@ -265,7 +287,7 @@ const save = async () => {
         }));
 
       locs.forEach((location) => {
-        if (!data.locations.find(({ id }) => id === location.id)) {
+        if (!data.locations?.find(({ id }) => id === location.id)) {
           data.locations.push(location);
         }
       });
@@ -326,7 +348,7 @@ const getPlan = (sp, uuid) => {
   const plans = plansBySpMap.value.get(sp) ?? [];
 
   if (Array.isArray(plans)) {
-    return plans.find((plan) => plan.uuid === uuid);
+    return plans?.find((plan) => plan.uuid === uuid);
   }
 };
 
@@ -339,7 +361,7 @@ const getPlans = (sp) => {
 
 const getProviderTitle = (uuid) => {
   return (
-    serviceProviders.value.find((provider) => provider.uuid === uuid)?.title ??
+    serviceProviders.value?.find((provider) => provider.uuid === uuid)?.title ??
     uuid
   );
 };
@@ -368,7 +390,9 @@ const fetchPlans = async () => {
       })
     );
   } finally {
-    isPlansLoading.value = false;
+    setTimeout(() => {
+      isPlansLoading.value = false;
+    }, 100);
   }
 };
 

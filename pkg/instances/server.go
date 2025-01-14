@@ -230,6 +230,50 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	return connect.NewResponse(invoke), nil
 }
 
+func (s *InstancesServer) Start(ctx context.Context, _req *connect.Request[pb.StartRequest]) (*connect.Response[pb.StartResponse], error) {
+	log := s.log.Named("Start")
+	req := _req.Msg
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	log.Debug("Requester", zap.String("id", requester))
+
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
+		log.Warn("No root access")
+		return nil, status.Error(codes.PermissionDenied, "No access rights")
+	}
+
+	var instance graph.Instance
+	instance, err := s.ctrl.GetWithAccess(ctx, requesterId, req.GetId())
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if instance.Instance == nil {
+		log.Error("Failed to get instance. No object")
+		return nil, status.Error(codes.Internal, "Failed to obtain instance")
+	}
+	if instance.Uuid == "" {
+		log.Error("Failed to get instance. No uuid")
+		return nil, status.Error(codes.Internal, "Failed to obtain instance")
+	}
+
+	if instance.Config == nil {
+		instance.Config = make(map[string]*structpb.Value)
+	}
+	old := proto.Clone(instance.Instance).(*pb.Instance)
+
+	instance.Config["auto_start"] = structpb.NewBoolValue(true)
+
+	if err = s.ctrl.Update(ctx, "", instance.Instance, old); err != nil {
+		log.Error("Failed to update instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update instance")
+	}
+
+	return connect.NewResponse(&pb.StartResponse{
+		Result: true,
+	}), nil
+}
+
 func (s *InstancesServer) Delete(ctx context.Context, _req *connect.Request[pb.DeleteRequest]) (*connect.Response[pb.DeleteResponse], error) {
 	log := s.log.Named("delete")
 	req := _req.Msg
@@ -286,13 +330,21 @@ func (s *InstancesServer) Delete(ctx context.Context, _req *connect.Request[pb.D
 func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.CreateRequest]) (*connect.Response[pb.CreateResponse], error) {
 	log := s.log.Named("Create")
 	req := _req.Msg
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	requestorId := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
-	log.Debug("Requestor", zap.String("id", requestor))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	requesterId := driver.NewDocumentID(schema.ACCOUNTS_COL, requester)
+	log.Debug("Requester", zap.String("id", requester))
+
+	if req.Promocode != nil && req.GetPromocode() != "" {
+		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
+	}
+
+	if req.AutoAssign {
+		return s.createWithAutoAssign(ctx, req, requester)
+	}
 
 	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
 	var ig graph.InstancesGroup
-	ig, err := s.ig_ctrl.GetWithAccess(ctx, requestorId, igId.Key())
+	ig, err := s.ig_ctrl.GetWithAccess(ctx, requesterId, igId.Key())
 	if err != nil {
 		log.Error("Failed to get instance group", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
@@ -315,14 +367,141 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		return nil, status.Error(codes.InvalidArgument, "can't create instance with imported IG")
 	}
 
-	if req.Promocode != nil && req.GetPromocode() != "" {
-		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
-	}
-
 	newId, err := s.ctrl.Create(ctx, igId, sp.GetUuid(), req.GetInstance())
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return connect.NewResponse(&pb.CreateResponse{
+		Id:     newId,
+		Result: true,
+	}), nil
+}
+
+func (s *InstancesServer) createWithAutoAssign(ctx context.Context, req *pb.CreateRequest, requester string) (*connect.Response[pb.CreateResponse], error) {
+	log := s.log.Named("createWithAutoAssign")
+	log.Debug("Requester", zap.String("id", requester))
+
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
+		log.Warn("No root access")
+		return nil, status.Error(codes.PermissionDenied, "No access rights")
+	}
+	account := req.Account
+
+	acc, err := s.acc_ctrl.Get(ctx, account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, fmt.Errorf("failed to get account: %w", err)
+	}
+
+	srvResp, err := s.srv_ctrl.List(ctx, requester, &servicespb.ListRequest{
+		Filters: map[string]*structpb.Value{
+			"account": structpb.NewStringValue(account),
+		},
+	})
+	if err != nil {
+		log.Error("Failed to retrieve services", zap.Error(err))
+		return nil, fmt.Errorf("failed to retrieve services: %w", err)
+	}
+	services := srvResp.Result
+
+	// Create service for user if it doesn't exist
+	var srv *servicespb.Service
+	srvCount := len(services)
+	if srvCount > 1 {
+		log.Info("Multiple services found for account. Transferring to first", zap.Int("count", srvCount))
+	}
+	if srvCount == 0 {
+		log.Info("Account has no services, creating new")
+		ns, err := s.acc_ctrl.GetNamespace(ctx, graph.Account{
+			Account: &rpb.Account{
+				Uuid: account,
+			},
+		})
+		if err != nil {
+			log.Error("Failed to get namespace", zap.Error(err))
+			return nil, fmt.Errorf("failed to get namespace: %w", err)
+		}
+		if !s.ca.HasAccess(ctx, account, ns.ID, accesspb.Level_ADMIN) {
+			log.Error("Destination account has no access to namespace")
+			return nil, fmt.Errorf("destination account has no access to namespace")
+		}
+		if srv, err = s.srv_ctrl.Create(ctx, &servicespb.Service{
+			Version: "1",
+			Title:   "SRV_" + acc.GetTitle(),
+		}); err != nil {
+			log.Error("Failed to create service", zap.Error(err))
+			return nil, fmt.Errorf("failed to create new service: %w", err)
+		}
+		if err = s.srv_ctrl.Join(ctx, srv, &ns, accesspb.Level_ADMIN, roles.OWNER); err != nil {
+			log.Error("Error while creating access to service", zap.Error(err))
+			return nil, fmt.Errorf("failed to create access to new service: %w", err)
+		}
+		if err = s.srv_ctrl.SetStatus(ctx, srv, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up service", zap.Error(err))
+			return nil, fmt.Errorf("failed to up new service: %w", err)
+		}
+	} else {
+		srv = services[0]
+	}
+
+	// Find instance group or create
+	sp, err := s.sp_ctrl.Get(ctx, req.GetSp())
+	if err != nil {
+		log.Error("Failed to get service provider", zap.Error(err))
+		return nil, fmt.Errorf("failed to obtain service provider: %w", err)
+	}
+	existingIGs := srv.GetInstancesGroups()
+	for _, ig := range existingIGs {
+		igSp, err := s.ig_ctrl.GetSP(ctx, ig.GetUuid())
+		if err != nil {
+			log.Error("Failed to get IG service provider", zap.Error(err))
+			return nil, fmt.Errorf("failed to obtain IG's service provider: %w", err)
+		}
+		ig.Sp = &igSp.Uuid
+	}
+
+	var destIG *pb.InstancesGroup
+	for _, ig := range existingIGs {
+		ig.Instances = nil
+		if ig.Data == nil {
+			ig.Data = make(map[string]*structpb.Value)
+		}
+		if ig.GetSp() == sp.GetUuid() && !ig.Data["imported"].GetBoolValue() {
+			destIG = ig
+			break
+		}
+	}
+
+	if destIG == nil {
+		log.Info("Destination instances group not found, creating new")
+		destIG = &pb.InstancesGroup{
+			Type:  sp.GetType(),
+			Title: acc.Title + " - " + sp.GetType(),
+		}
+		if err = s.ig_ctrl.Create(ctx, driver.NewDocumentID(schema.SERVICES_COL, srv.GetUuid()), destIG); err != nil {
+			log.Error("Failed to create instances group", zap.Error(err))
+			return nil, fmt.Errorf("failed to create new instances group: %w", err)
+		}
+		if err = s.ig_ctrl.Provide(ctx, destIG.GetUuid(), sp.GetUuid()); err != nil {
+			log.Error("Failed to provide instances group", zap.Error(err))
+			return nil, fmt.Errorf("failed to provide instances group for sp: %w", err)
+		}
+		if err := s.ig_ctrl.SetStatus(ctx, destIG, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up dest instance group", zap.Error(err))
+			return nil, fmt.Errorf("failed to up new instances group: %w", err)
+		}
+	}
+
+	newId, err := s.ctrl.Create(ctx, driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, destIG.GetUuid()), sp.GetUuid(), req.GetInstance())
+	if err != nil {
+		log.Error("Failed to create instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := s.ctrl.SetStatus(ctx, &pb.Instance{Uuid: newId}, spb.NoCloudStatus_UP); err != nil {
+		log.Error("Failed to up created instance", zap.Error(err))
+		return nil, fmt.Errorf("failed to up new instance: %w", err)
 	}
 
 	return connect.NewResponse(&pb.CreateResponse{

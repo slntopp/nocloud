@@ -2,6 +2,7 @@ package eventbus
 
 import (
 	"context"
+	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/spf13/viper"
 	"google.golang.org/protobuf/proto"
@@ -107,7 +108,11 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event) (
 	log.Debug("Custom events", zap.Any("events", customEvents))
 
 	for _, ce := range customEvents {
+
 		if ce.Override == event.Key {
+			if ce.Key == "-" {
+				return nil, fmt.Errorf("event cancelled by override")
+			}
 			log.Debug("Event override", zap.Any("old_key", event.Key), zap.Any("new_key", ce.Override))
 			event.Key = ce.Key
 			return event, nil

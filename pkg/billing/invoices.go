@@ -475,6 +475,15 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Requestor: requester,
 	})
 
+	if t.Total <= 0 {
+		if _, err = s.UpdateInvoiceStatus(ctx, connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
+			Uuid:   r.GetUuid(),
+			Status: pb.BillingStatus_PAID,
+		})); err != nil {
+			log.Error("Failed to auto-pay 0 or less total invoice", zap.Error(err))
+		}
+	}
+
 	resp := connect.NewResponse(r.Invoice)
 	return resp, nil
 }

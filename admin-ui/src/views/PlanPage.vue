@@ -119,7 +119,7 @@ export default {
           title: "Info",
           component: () => import("@/views/PlansCreate.vue"),
         },
-        this.plan?.type === "ione" && {
+        ["ione", "ione-vpn"].includes(this.plan?.type) && {
           title: "Configuration",
           component: () =>
             import("@/components/modules/ione/planConfiguration.vue"),
