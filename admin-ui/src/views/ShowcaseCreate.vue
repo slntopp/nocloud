@@ -35,6 +35,9 @@
             @input:value="showcase.icon = $event"
           />
         </v-col>
+        <v-col cols="2">
+          <color-picker label="Color" v-model="showcase.meta.iconColor" />
+        </v-col>
         <v-col cols="3">
           <v-autocomplete
             clearable
@@ -128,6 +131,7 @@ import { useStore } from "@/store";
 import api from "@/api";
 import { useRouter } from "vue-router/composables";
 import LocationsAutocomplete from "@/components/ui/locationsAutocomplete.vue";
+import ColorPicker from "@/components/ui/colorPicker.vue";
 
 const props = defineProps({
   realShowcase: {},
@@ -167,6 +171,7 @@ const showcase = ref({
   public: true,
   meta: {
     type: "",
+    iconColor: "",
   },
 });
 
@@ -371,7 +376,9 @@ const fetchPlans = async () => {
 
   try {
     await Promise.all(
-      showcase.value.items.map(async ({ servicesProvider: sp }) => {
+      showcase.value.items.map(async (item) => {
+        let sp = item.servicesProvider;
+
         try {
           if (sp && !plansBySpMap.value.has(sp)) {
             plansBySpMap.value.set(
@@ -396,7 +403,7 @@ const fetchPlans = async () => {
   }
 };
 
-watch(showcase.value.items, fetchPlans);
+watch(() => showcase.value.items, fetchPlans,{deep:true});
 </script>
 
 <style scoped lang="scss">

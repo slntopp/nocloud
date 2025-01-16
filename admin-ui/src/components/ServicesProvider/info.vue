@@ -224,6 +224,10 @@ const plansParams = computed(() => {
     type.push("ione-vpn");
   }
 
+  if (provider.value.type === "empty") {
+    type.push("vpn");
+  }
+
   return {
     showDeleted: false,
     excludeUuids: relatedPlans.value?.map((p) => p.uuid) || [],
