@@ -300,6 +300,13 @@ type GetClientsProductsQuery struct {
 	LimitNum     int    `url:"limitnum"`
 }
 
+type GetPaymentMethodsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+}
+
 type InvoicePaid struct {
 	InvoiceId IntOrString `json:"invoiceid"`
 }
@@ -345,6 +352,7 @@ type GetClientsResponse struct {
 }
 
 type ListClient struct {
+	ID int `json:"id"`
 }
 
 type ClientsHolder struct {
@@ -361,6 +369,17 @@ type GetClientsProductsResponse struct {
 }
 
 type ListProduct struct {
+	ID                 int           `json:"id"`
+	ClientID           int           `json:"clientid"`
+	OrderID            int           `json:"orderid"`
+	Name               string        `json:"name"`
+	RegDate            string        `json:"regdate"`
+	Domain             string        `json:"domain"`
+	DedicatedIP        string        `json:"dedicatedip"`
+	ServerIP           string        `json:"serverip"`
+	FirstPaymentAmount floatAsString `json:"firstpaymentamount"`
+	RecurringAmount    floatAsString `json:"recurringamount"`
+	Status             string        `json:"status"`
 }
 
 type ProductsHolder struct {
@@ -373,5 +392,41 @@ type GetClientsDetailsResponse struct {
 	Client  Client `json:"client"`
 }
 
+type CustomField struct {
+	ID    IntOrString `json:"id"`
+	Value string      `json:"value"`
+}
+
 type Client struct {
+	ID            int           `json:"id"`
+	FirstName     string        `json:"firstname"`
+	LastName      string        `json:"lastname"`
+	CompanyName   string        `json:"companyname"`
+	Email         string        `json:"email"`
+	Status        string        `json:"status"`
+	Address1      string        `json:"address1"`
+	Address2      string        `json:"address2"`
+	City          string        `json:"city"`
+	State         string        `json:"state"`
+	PostCode      string        `json:"postcode"`
+	Country       string        `json:"country"`
+	Phone         string        `json:"phonenumber"`
+	PaymentMethod string        `json:"defaultgateway"`
+	LastLogin     string        `json:"lastlogin"` // example: Date: 28/01/2022 11:13<br>IP Address: 82.209.222.112<br>Host: mm-112-222-209-82.static.mgts.by
+	CustomFields  []CustomField `json:"customfields"`
+}
+
+type GetPaymentMethodsResponse struct {
+	Result  string               `json:"result"`
+	Message string               `json:"message"`
+	Methods PaymentMethodsHolder `json:"paymentmethods"`
+}
+
+type PaymentMethodsHolder struct {
+	Method []PaymentMethod `json:"paymentmethod"`
+}
+
+type PaymentMethod struct {
+	Module string `json:"module"`
+	Name   string `json:"displayname"`
 }

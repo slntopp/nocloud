@@ -191,3 +191,17 @@ func (g *WhmcsGateway) buildGetClientsDetailsQueryBase(clientId int) (url.Values
 
 	return res, nil
 }
+
+func (g *WhmcsGateway) buildGetPaymentMethodsQueryBase() (url.Values, error) {
+	res, err := query.Values(GetPaymentMethodsQuery{
+		Action:       "GetPaymentMethods",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

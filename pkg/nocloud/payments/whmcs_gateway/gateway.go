@@ -470,6 +470,25 @@ func (g *WhmcsGateway) GetClientsDetails(_ context.Context, clientId int) (Clien
 	return resp.Client, nil
 }
 
+func (g *WhmcsGateway) GetPaymentMethods(_ context.Context) ([]PaymentMethod, error) {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	query, err := g.buildGetPaymentMethodsQueryBase()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := sendRequestToWhmcs[GetPaymentMethodsResponse](http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Methods.Method, nil
+}
+
 func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invoice, error) {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
