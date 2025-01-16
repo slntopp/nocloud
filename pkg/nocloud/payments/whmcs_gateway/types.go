@@ -416,6 +416,39 @@ type Client struct {
 	CustomFields  []CustomField `json:"customfields"`
 }
 
+func findCustomField(fields []CustomField, id int) string {
+	if fields == nil {
+		return ""
+	}
+	for _, field := range fields {
+		if int(field.ID) == id {
+			return field.Value
+		}
+	}
+	return ""
+}
+
+func (c Client) GetClientType() string {
+	return findCustomField(c.CustomFields, 3629) // Физ. лицо или предприниматель
+}
+func (c Client) GetPAN() string {
+	return findCustomField(c.CustomFields, 3212) // УНП
+}
+func (c Client) GetCompanyPAN() string {
+	return findCustomField(c.CustomFields, 3550) // УНП организации
+}
+func (c Client) GetCertOfRegistration() string {
+	return findCustomField(c.CustomFields, 3628) // Домен ю/л - Свидетельство о регистрации №
+}
+func (c Client) GetDateOfGovRegistration() string {
+	return findCustomField(c.CustomFields, 3552) // Домен ю/л - Дата государственной регистрации
+}
+
+// GetCurrentAccount - расчетный счет клиента
+func (c Client) GetCurrentAccount() string {
+	return findCustomField(c.CustomFields, 3409) // Расчетный счёт
+}
+
 type GetPaymentMethodsResponse struct {
 	Result  string               `json:"result"`
 	Message string               `json:"message"`
