@@ -357,6 +357,29 @@ func (g *WhmcsGateway) UpdateClient(_ context.Context, clientId int, notes strin
 	return nil
 }
 
+func (g *WhmcsGateway) AddNote(_ context.Context, clientId int, notes string, sticky bool) error {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return err
+	}
+
+	body, err := g.buildAddNoteQueryBase(clientId, notes, sticky)
+	if err != nil {
+		return err
+	}
+
+	q, err := query.Values(body)
+	if err != nil {
+		return err
+	}
+	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string, error) {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {

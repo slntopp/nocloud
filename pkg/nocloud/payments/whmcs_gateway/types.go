@@ -265,6 +265,16 @@ type UpdateClientQuery struct {
 	Notes        string `url:"notes"`
 }
 
+type AddNoteQuery struct {
+	Action       string `url:"action"`
+	UserID       int    `url:"userid"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	Notes        string `url:"notes"`
+	Sticky       bool   `url:"sticky"`
+}
+
 type InvoicePaid struct {
 	InvoiceId IntOrString `json:"invoiceid"`
 }

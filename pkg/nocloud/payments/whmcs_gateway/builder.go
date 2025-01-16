@@ -127,3 +127,20 @@ func (g *WhmcsGateway) buildUpdateClientQueryBase(clientId int, notes string) (u
 
 	return res, nil
 }
+
+func (g *WhmcsGateway) buildAddNoteQueryBase(clientId int, notes string, sticky bool) (url.Values, error) {
+	res, err := query.Values(AddNoteQuery{
+		Action:       "GetInvoice",
+		UserID:       clientId,
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		Notes:        notes,
+		Sticky:       sticky,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
