@@ -275,6 +275,31 @@ type AddNoteQuery struct {
 	Sticky       bool   `url:"sticky"`
 }
 
+type GetClientsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	LimitNum     int    `url:"limitnum"`
+}
+
+type GetClientsDetailsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	ClientID     int    `url:"clientid"`
+}
+
+type GetClientsProductsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	ClientID     int    `url:"clientid"`
+	LimitNum     int    `url:"limitnum"`
+}
+
 type InvoicePaid struct {
 	InvoiceId IntOrString `json:"invoiceid"`
 }
@@ -308,4 +333,45 @@ type InvoiceCreated struct {
 	Source    string      `json:"source"`
 	Status    string      `json:"status"`
 	User      interface{} `json:"user"`
+}
+
+type GetClientsResponse struct {
+	Result       string        `json:"result"`
+	Message      string        `json:"message"`
+	TotalResults int           `json:"totalresults"`
+	StartNumber  int           `json:"startnumber"`
+	NumReturned  int           `json:"numreturned"`
+	Clients      ClientsHolder `json:"clients"`
+}
+
+type ListClient struct {
+}
+
+type ClientsHolder struct {
+	Client []ListClient `json:"client"`
+}
+
+type GetClientsProductsResponse struct {
+	Result       string         `json:"result"`
+	Message      string         `json:"message"`
+	TotalResults int            `json:"totalresults"`
+	StartNumber  int            `json:"startnumber"`
+	NumReturned  int            `json:"numreturned"`
+	Products     ProductsHolder `json:"products"`
+}
+
+type ListProduct struct {
+}
+
+type ProductsHolder struct {
+	Product []ListProduct `json:"product"`
+}
+
+type GetClientsDetailsResponse struct {
+	Result  string `json:"result"`
+	Message string `json:"message"`
+	Client  Client `json:"client"`
+}
+
+type Client struct {
 }

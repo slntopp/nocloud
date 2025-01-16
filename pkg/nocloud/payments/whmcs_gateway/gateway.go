@@ -413,6 +413,63 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 	return g.buildPaymentURI(invId, resp), nil
 }
 
+func (g *WhmcsGateway) GetClients(_ context.Context) ([]ListClient, error) {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	query, err := g.buildGetClientsQueryBase()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := sendRequestToWhmcs[GetClientsResponse](http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Clients.Client, nil
+}
+
+func (g *WhmcsGateway) GetClientsProducts(_ context.Context, clientId int) ([]ListProduct, error) {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	query, err := g.buildGetClientsProductsQueryBase(clientId)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := sendRequestToWhmcs[GetClientsProductsResponse](http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Products.Product, nil
+}
+
+func (g *WhmcsGateway) GetClientsDetails(_ context.Context, clientId int) (Client, error) {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return Client{}, err
+	}
+
+	query, err := g.buildGetClientsDetailsQueryBase(clientId)
+	if err != nil {
+		return Client{}, err
+	}
+
+	resp, err := sendRequestToWhmcs[GetClientsDetailsResponse](http.MethodPost, reqUrl.String()+"?"+query.Encode(), nil)
+	if err != nil {
+		return Client{}, err
+	}
+
+	return resp.Client, nil
+}
+
 func (g *WhmcsGateway) GetInvoice(ctx context.Context, whmcsInvoiceId int) (Invoice, error) {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/go-querystring/query"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"math"
 	"net/url"
 	"time"
 )
@@ -137,6 +138,52 @@ func (g *WhmcsGateway) buildAddNoteQueryBase(clientId int, notes string, sticky 
 		Password:     g.apiPassword,
 		Notes:        notes,
 		Sticky:       sticky,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildGetClientsQueryBase() (url.Values, error) {
+	res, err := query.Values(GetClientsQuery{
+		Action:       "GetClients",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		LimitNum:     math.MaxInt32 - 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildGetClientsProductsQueryBase(clientId int) (url.Values, error) {
+	res, err := query.Values(GetClientsProductsQuery{
+		Action:       "GetClientsProducts",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		ClientID:     clientId,
+		LimitNum:     math.MaxInt32 - 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildGetClientsDetailsQueryBase(clientId int) (url.Values, error) {
+	res, err := query.Values(GetClientsDetailsQuery{
+		Action:       "GetClientsDetails",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		ClientID:     clientId,
 	})
 	if err != nil {
 		return nil, err
