@@ -376,7 +376,9 @@ const fetchPlans = async () => {
 
   try {
     await Promise.all(
-      showcase.value.items.map(async ({ servicesProvider: sp }) => {
+      showcase.value.items.map(async (item) => {
+        let sp = item.servicesProvider;
+
         try {
           if (sp && !plansBySpMap.value.has(sp)) {
             plansBySpMap.value.set(
@@ -401,7 +403,7 @@ const fetchPlans = async () => {
   }
 };
 
-watch(showcase.value.items, fetchPlans);
+watch(() => showcase.value.items, fetchPlans,{deep:true});
 </script>
 
 <style scoped lang="scss">
