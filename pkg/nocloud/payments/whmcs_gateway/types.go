@@ -256,6 +256,15 @@ type AddPaymentQuery struct {
 	NoEmail      *bool          `url:"noemail"`
 }
 
+type UpdateClientQuery struct {
+	Action       string `url:"action"`
+	ClientID     int    `url:"clientid"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	Notes        string `url:"notes"`
+}
+
 type InvoicePaid struct {
 	InvoiceId IntOrString `json:"invoiceid"`
 }

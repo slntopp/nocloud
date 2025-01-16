@@ -334,6 +334,29 @@ func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int) error
 	return nil
 }
 
+func (g *WhmcsGateway) UpdateClient(_ context.Context, clientId int, notes string) error {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return err
+	}
+
+	body, err := g.buildUpdateClientQueryBase(clientId, notes)
+	if err != nil {
+		return err
+	}
+
+	q, err := query.Values(body)
+	if err != nil {
+		return err
+	}
+	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string, error) {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {

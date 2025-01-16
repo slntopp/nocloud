@@ -111,3 +111,19 @@ func (g *WhmcsGateway) buildAddPaymentQueryBase(whmcsInvoiceId int) AddPaymentQu
 		InvoiceId:    whmcsInvoiceId,
 	}
 }
+
+func (g *WhmcsGateway) buildUpdateClientQueryBase(clientId int, notes string) (url.Values, error) {
+	res, err := query.Values(UpdateClientQuery{
+		Action:       "GetInvoice",
+		ClientID:     clientId,
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		Notes:        notes,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
