@@ -215,6 +215,7 @@ func (s *BillingServiceServer) dailyCronJobAction(ctx context.Context, log *zap.
 	s.NotifyToUpdateOvhPricesCronJob(ctx, log)
 	s.DeleteExpiredBalanceInvoicesCronJob(ctx, log)
 	s.WhmcsInvoicesSyncerCronJob(ctx, log)
+	s.CollectSystemReport(ctx, log)
 }
 
 func (s *BillingServiceServer) cronPreflightChecks(ctx context.Context, log *zap.Logger) error {
