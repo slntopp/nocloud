@@ -1,13 +1,20 @@
 <template>
-  <v-icon class="ml-2" v-if="isMdi">{{ `mdi-${iconName}` }}</v-icon>
-  <ant-icon v-else-if="isAnt" class="ml-2" :name="iconName" />
+  <v-icon :style="{ fill: color }" :color="color" class="ml-2" v-if="isMdi">{{
+    `mdi-${iconName}`
+  }}</v-icon>
+  <ant-icon
+    :style="{ fill: color }"
+    v-else-if="isAnt"
+    class="ml-2"
+    :name="iconName"
+  />
   <img
     v-else-if="iconName && !loadedError"
     width="22px"
     height="22px"
     :src="iconName"
   />
-  <ant-icon v-else class="ml-2" :name="icon" />
+  <ant-icon :style="{ fill: color }" v-else class="ml-2" :name="icon" />
 </template>
 
 <script setup>
@@ -18,6 +25,7 @@ const props = defineProps({
   type: { type: String, default: "mdi" },
   title: { type: String, default: "none" },
   icon: { type: String, default: "" },
+  color: { type: String, default: "" },
 });
 const { type, icon } = toRefs(props);
 

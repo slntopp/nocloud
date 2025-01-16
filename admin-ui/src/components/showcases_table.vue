@@ -12,6 +12,7 @@
       <icon-title-preview
         type="nocloud"
         :icon="item.icon"
+        :color="item.meta.iconColor"
         :title="item.title"
       />
     </template>

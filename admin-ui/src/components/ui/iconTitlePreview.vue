@@ -1,7 +1,7 @@
 <template>
   <div class="d-flex justify-space-between" style="width: 100%">
     <span>{{ title }}</span>
-    <nocloud-icon :type="type" :icon="icon" />
+    <nocloud-icon :color="color" :type="type" :icon="icon" />
   </div>
 </template>
 
@@ -15,6 +15,7 @@ export default {
     type: {},
     title: { type: String, default: "none" },
     icon: { type: String, default: "" },
+    color: { type: String, default: "" },
   },
 };
 </script>
