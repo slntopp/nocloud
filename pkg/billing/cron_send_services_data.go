@@ -108,7 +108,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 
 	page, limit := uint64(1), uint64(0)
 	req := connect.NewRequest(&instancespb.ListInstancesRequest{Page: &page, Limit: &limit})
-	req.Header().Set("Authorization", ctx.Value(nocloud.NoCloudToken).(string))
+	req.Header().Set("Authorization", "Bearer "+ctx.Value(nocloud.NoCloudToken).(string))
 	resp, err := s.instancesClient.List(ctx, req)
 	if err != nil {
 		log.Error("Failed to list instances", zap.Error(err))
