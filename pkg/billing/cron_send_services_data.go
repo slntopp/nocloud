@@ -205,6 +205,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			m.Unlock()
 		}()
 	}
+	wg.Wait()
 
 	reportsBills := make([]PaymentReport, 0)
 	reportsServices := make([]ServiceReport, 0)
@@ -357,7 +358,11 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 func writeToFile(log *zap.Logger, prefix string, content string) error {
 	log.Debug("File output with prefix "+prefix, zap.String("output", content))
 	now := strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1)
+
 	filename := prefix + "_" + now + ".csv"
+	if err := os.MkdirAll(reportsLocation, 0777); err != nil {
+		return err
+	}
 	filepath := path.Join(reportsLocation, filename)
 	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
