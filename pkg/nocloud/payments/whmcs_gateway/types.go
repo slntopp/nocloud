@@ -419,6 +419,7 @@ type Client struct {
 	Phone         string        `json:"phonenumber"`
 	PaymentMethod string        `json:"defaultgateway"`
 	LastLogin     string        `json:"lastlogin"` // example: Date: 28/01/2022 11:13<br>IP Address: 82.209.222.112<br>Host: mm-112-222-209-82.static.mgts.by
+	GroupID       IntOrString   `json:"groupid"`
 	CustomFields  []CustomField `json:"customfields"`
 }
 
