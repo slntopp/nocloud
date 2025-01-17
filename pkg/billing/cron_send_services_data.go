@@ -172,6 +172,9 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	clients := make([]whmcs_gateway.Client, 0)
 	products := make(map[int][]whmcs_gateway.ListProduct)
 	for _, c := range whmcsClients {
+		if c.GroupID == forbiddenUserGroup {
+			continue
+		}
 		wg.Add(2)
 		client := c
 		go func() {

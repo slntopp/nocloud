@@ -358,7 +358,8 @@ type GetClientsResponse struct {
 }
 
 type ListClient struct {
-	ID int `json:"id"`
+	ID      int `json:"id"`
+	GroupID int `json:"groupid"`
 }
 
 type ClientsHolder struct {
