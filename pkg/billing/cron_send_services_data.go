@@ -192,7 +192,9 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			defer wg.Done()
 			prods, err := s.whmcsGateway.GetClientsProducts(ctx, client.ID)
 			if err != nil {
-				log.Error("Failed to get client products", zap.Error(err))
+				if !strings.Contains(err.Error(), "json: cannot unmarshal string into Go struct") {
+					log.Error("Failed to get client products", zap.Error(err))
+				}
 				return
 			}
 			if len(prods) == 0 {
