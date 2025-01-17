@@ -183,8 +183,14 @@ type GetInvoicesResponse struct {
 }
 
 type InvoiceInList struct {
-	Id        IntOrString `json:"id"`
-	CreatedAt string      `json:"created_at"`
+	Id            IntOrString   `json:"id"`
+	CreatedAt     string        `json:"created_at"`
+	UserID        IntOrString   `json:"userid"`
+	DatePaid      string        `json:"datepaid"`
+	Total         floatAsString `json:"total"`
+	Currency      string        `json:"currencycode"`
+	PaymentMethod string        `json:"paymentmethod"`
+	Status        string        `json:"status"`
 }
 
 type InvoicesHolder struct {
