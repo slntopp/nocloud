@@ -255,7 +255,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				ClientID:    clID,
 				OrderID:     srv.OrderID,
 				ProductName: srv.Name,
-				IP:          strings.Trim(strings.Join([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}, " "), " "),
+				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}), " "), " "),
 				DateCreate:  srv.RegDate,
 				Status:      srv.Status,
 				Price:       strings.Trim(strings.Join([]string{fp, rp}, " "), " "),
@@ -278,13 +278,12 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 					}
 				}
 			}
-			var ips string
+			ips := make([]string, 0)
 			if srv.GetState() != nil && srv.GetState().GetInterfaces() != nil {
 				for _, inter := range srv.GetState().GetInterfaces() {
-					ips += inter.GetData()["host"] + " "
+					ips = append(ips, inter.GetData()["host"])
 				}
 			}
-			ips = strings.Trim(ips, " ")
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     -1,
 				ClientID:    clID,
@@ -293,7 +292,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				DateCreate:  time.Unix(srv.Created, 0).Format(time.DateOnly),
 				Status:      srv.Status.String(),
 				Price:       price,
-				IP:          ips,
+				IP:          strings.Trim(strings.Join(removeDuplicates(ips), " "), " "),
 			})
 		}
 	}
@@ -375,4 +374,16 @@ func writeToFile(log *zap.Logger, prefix string, content string) error {
 		return err
 	}
 	return nil
+}
+
+func removeDuplicates(strings []string) []string {
+	unique := make(map[string]bool)
+	result := make([]string, 0)
+	for _, str := range strings {
+		if _, exists := unique[str]; !exists {
+			unique[str] = true
+			result = append(result, str)
+		}
+	}
+	return result
 }
