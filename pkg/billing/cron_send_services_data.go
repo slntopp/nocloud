@@ -294,10 +294,10 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			var ips string
 			if srv.GetState() != nil && srv.GetState().GetInterfaces() != nil {
 				for _, inter := range srv.GetState().GetInterfaces() {
-					ips += inter.GetData()["host"] + ","
+					ips += inter.GetData()["host"] + " "
 				}
 			}
-			ips = strings.Trim(ips, ",")
+			ips = strings.Trim(ips, " ")
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     -1,
 				ClientID:    clID,
