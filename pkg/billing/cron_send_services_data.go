@@ -20,7 +20,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -167,48 +166,36 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		methodsNames[method.Module] = method.Name
 	}
 
-	wg := &sync.WaitGroup{}
-	m := &sync.Mutex{}
 	clients := make([]whmcs_gateway.Client, 0)
 	products := make(map[int][]whmcs_gateway.ListProduct)
 	for _, c := range whmcsClients {
 		if c.GroupID == forbiddenUserGroup {
 			continue
 		}
-		wg.Add(2)
 		client := c
-		go func() {
-			defer wg.Done()
-			details, err := s.whmcsGateway.GetClientsDetails(ctx, client.ID)
-			if err != nil {
-				log.Error("Failed to get client details", zap.Error(err))
-				return
+
+		details, err := s.whmcsGateway.GetClientsDetails(ctx, client.ID)
+		if err != nil {
+			log.Error("Failed to get client details", zap.Error(err))
+			continue
+		}
+		if int(details.GroupID) == forbiddenUserGroup {
+			continue
+		}
+		clients = append(clients, details)
+
+		prods, err := s.whmcsGateway.GetClientsProducts(ctx, client.ID)
+		if err != nil {
+			if !strings.Contains(err.Error(), "json: cannot unmarshal string into Go struct") {
+				log.Error("Failed to get client products", zap.Error(err))
 			}
-			if int(details.GroupID) == forbiddenUserGroup {
-				return
-			}
-			m.Lock()
-			clients = append(clients, details)
-			m.Unlock()
-		}()
-		go func() {
-			defer wg.Done()
-			prods, err := s.whmcsGateway.GetClientsProducts(ctx, client.ID)
-			if err != nil {
-				if !strings.Contains(err.Error(), "json: cannot unmarshal string into Go struct") {
-					log.Error("Failed to get client products", zap.Error(err))
-				}
-				return
-			}
-			if len(prods) == 0 {
-				return
-			}
-			m.Lock()
-			products[client.ID] = prods
-			m.Unlock()
-		}()
+			continue
+		}
+		if len(prods) == 0 {
+			continue
+		}
+		products[client.ID] = prods
 	}
-	wg.Wait()
 
 	reportsBills := make([]PaymentReport, 0)
 	reportsServices := make([]ServiceReport, 0)
