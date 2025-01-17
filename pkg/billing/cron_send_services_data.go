@@ -268,16 +268,16 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				ClientID:    clID,
 				OrderID:     srv.OrderID,
 				ProductName: srv.Name,
-				IP:          strings.Trim(strings.Join([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}, ","), ","),
+				IP:          strings.Trim(strings.Join([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}, " "), " "),
 				DateCreate:  srv.RegDate,
 				Status:      srv.Status,
-				Price:       strings.Trim(strings.Join([]string{fp, rp}, "+"), "+"),
+				Price:       strings.Trim(strings.Join([]string{fp, rp}, " "), " "),
 			})
 		}
 	}
 	for clID, services := range instances {
 		for _, srv := range services {
-			var product = "no product"
+			var product = "no_product"
 			var price = "-1"
 			if srv.Product != nil && *srv.Product != "" {
 				product = *srv.Product
