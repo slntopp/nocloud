@@ -291,6 +291,13 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 					}
 				}
 			}
+			var ips string
+			if srv.GetState() != nil && srv.GetState().GetInterfaces() != nil {
+				for _, inter := range srv.GetState().GetInterfaces() {
+					ips += inter.GetData()["host"] + ","
+				}
+			}
+			ips = strings.Trim(ips, ",")
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     -1,
 				ClientID:    clID,
@@ -299,6 +306,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				DateCreate:  time.Unix(srv.Created, 0).Format(time.DateOnly),
 				Status:      srv.Status.String(),
 				Price:       price,
+				IP:          ips,
 			})
 		}
 	}
