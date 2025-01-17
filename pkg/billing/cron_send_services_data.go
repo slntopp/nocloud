@@ -314,7 +314,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	writer.Flush()
 	output = buf.String()
 	strings.Replace(output, "|", "%|%", -1)
-	if err = writeToFile(clientsFilePrefix, output); err != nil {
+	if err = writeToFile(log, clientsFilePrefix, output); err != nil {
 		log.Error("Failed to write to file", zap.Error(err))
 		return
 	}
@@ -330,7 +330,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	writer.Flush()
 	output = buf.String()
 	strings.Replace(output, "|", "%|%", -1)
-	if err = writeToFile(servicesFilePrefix, output); err != nil {
+	if err = writeToFile(log, servicesFilePrefix, output); err != nil {
 		log.Error("Failed to write to file", zap.Error(err))
 		return
 	}
@@ -346,13 +346,14 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	writer.Flush()
 	output = buf.String()
 	strings.Replace(output, "|", "%|%", -1)
-	if err = writeToFile(billsFilePrefix, output); err != nil {
+	if err = writeToFile(log, billsFilePrefix, output); err != nil {
 		log.Error("Failed to write to file", zap.Error(err))
 		return
 	}
 }
 
-func writeToFile(prefix string, content string) error {
+func writeToFile(log *zap.Logger, prefix string, content string) error {
+	log.Debug("File output with prefix "+prefix, zap.String("output", content))
 	now := strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1)
 	filename := prefix + "_" + now + ".csv"
 	filepath := path.Join(reportsLocation, filename)
