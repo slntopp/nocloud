@@ -370,7 +370,7 @@ func writeToFile(log *zap.Logger, prefix string, content string) error {
 		return err
 	}
 	filepath := path.Join(reportsLocation, filename)
-	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0777)
+	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0777)
 	if err != nil {
 		return err
 	}
