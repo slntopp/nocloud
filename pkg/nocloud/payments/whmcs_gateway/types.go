@@ -183,8 +183,14 @@ type GetInvoicesResponse struct {
 }
 
 type InvoiceInList struct {
-	Id        IntOrString `json:"id"`
-	CreatedAt string      `json:"created_at"`
+	Id            IntOrString   `json:"id"`
+	CreatedAt     string        `json:"created_at"`
+	UserID        IntOrString   `json:"userid"`
+	DatePaid      string        `json:"datepaid"`
+	Total         floatAsString `json:"total"`
+	Currency      string        `json:"currencycode"`
+	PaymentMethod string        `json:"paymentmethod"`
+	Status        string        `json:"status"`
 }
 
 type InvoicesHolder struct {
@@ -256,6 +262,57 @@ type AddPaymentQuery struct {
 	NoEmail      *bool          `url:"noemail"`
 }
 
+type UpdateClientQuery struct {
+	Action       string `url:"action"`
+	ClientID     int    `url:"clientid"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	Notes        string `url:"notes"`
+}
+
+type AddNoteQuery struct {
+	Action       string `url:"action"`
+	UserID       int    `url:"userid"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	Notes        string `url:"notes"`
+	Sticky       bool   `url:"sticky"`
+}
+
+type GetClientsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	LimitNum     int    `url:"limitnum"`
+}
+
+type GetClientsDetailsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	ClientID     int    `url:"clientid"`
+}
+
+type GetClientsProductsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+	ClientID     int    `url:"clientid"`
+	LimitNum     int    `url:"limitnum"`
+}
+
+type GetPaymentMethodsQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+}
+
 type InvoicePaid struct {
 	InvoiceId IntOrString `json:"invoiceid"`
 }
@@ -289,4 +346,128 @@ type InvoiceCreated struct {
 	Source    string      `json:"source"`
 	Status    string      `json:"status"`
 	User      interface{} `json:"user"`
+}
+
+type GetClientsResponse struct {
+	Result       string        `json:"result"`
+	Message      string        `json:"message"`
+	TotalResults int           `json:"totalresults"`
+	StartNumber  int           `json:"startnumber"`
+	NumReturned  int           `json:"numreturned"`
+	Clients      ClientsHolder `json:"clients"`
+}
+
+type ListClient struct {
+	ID      int `json:"id"`
+	GroupID int `json:"groupid"`
+}
+
+type ClientsHolder struct {
+	Client []ListClient `json:"client"`
+}
+
+type GetClientsProductsResponse struct {
+	Result       string         `json:"result"`
+	Message      string         `json:"message"`
+	TotalResults int            `json:"totalresults"`
+	StartNumber  int            `json:"startnumber"`
+	NumReturned  int            `json:"numreturned"`
+	Products     ProductsHolder `json:"products"`
+}
+
+type ListProduct struct {
+	ID                 int           `json:"id"`
+	ClientID           int           `json:"clientid"`
+	OrderID            int           `json:"orderid"`
+	Name               string        `json:"name"`
+	RegDate            string        `json:"regdate"`
+	Domain             string        `json:"domain"`
+	DedicatedIP        string        `json:"dedicatedip"`
+	ServerIP           string        `json:"serverip"`
+	FirstPaymentAmount floatAsString `json:"firstpaymentamount"`
+	RecurringAmount    floatAsString `json:"recurringamount"`
+	Status             string        `json:"status"`
+}
+
+type ProductsHolder struct {
+	Product []ListProduct `json:"product"`
+}
+
+type GetClientsDetailsResponse struct {
+	Result  string `json:"result"`
+	Message string `json:"message"`
+	Client  Client `json:"client"`
+}
+
+type CustomField struct {
+	ID    IntOrString `json:"id"`
+	Value string      `json:"value"`
+}
+
+type Client struct {
+	ID            int           `json:"id"`
+	FirstName     string        `json:"firstname"`
+	LastName      string        `json:"lastname"`
+	CompanyName   string        `json:"companyname"`
+	Email         string        `json:"email"`
+	Status        string        `json:"status"`
+	Address1      string        `json:"address1"`
+	Address2      string        `json:"address2"`
+	City          string        `json:"city"`
+	State         string        `json:"state"`
+	PostCode      string        `json:"postcode"`
+	Country       string        `json:"country"`
+	Phone         string        `json:"phonenumber"`
+	PaymentMethod string        `json:"defaultgateway"`
+	LastLogin     string        `json:"lastlogin"` // example: Date: 28/01/2022 11:13<br>IP Address: 82.209.222.112<br>Host: mm-112-222-209-82.static.mgts.by
+	GroupID       IntOrString   `json:"groupid"`
+	CustomFields  []CustomField `json:"customfields"`
+}
+
+func findCustomField(fields []CustomField, id int) string {
+	if fields == nil {
+		return ""
+	}
+	for _, field := range fields {
+		if int(field.ID) == id {
+			return field.Value
+		}
+	}
+	return ""
+}
+
+func (c Client) GetClientType() string {
+	return findCustomField(c.CustomFields, 3629) // Физ. лицо или предприниматель
+}
+func (c Client) GetPAN() string {
+	return findCustomField(c.CustomFields, 3212) // УНП
+}
+func (c Client) GetCompanyPAN() string {
+	return findCustomField(c.CustomFields, 3550) // УНП организации
+}
+func (c Client) GetCertOfRegistration() string {
+	return findCustomField(c.CustomFields, 3628) // Домен ю/л - Свидетельство о регистрации №
+}
+func (c Client) GetDateOfGovRegistration() string {
+	return findCustomField(c.CustomFields, 3552) // Домен ю/л - Дата государственной регистрации
+}
+
+// GetCurrentAccount - расчетный счет клиента
+func (c Client) GetCurrentAccount() string {
+	return findCustomField(c.CustomFields, 3409) // Расчетный счёт
+}
+
+type GetPaymentMethodsResponse struct {
+	Result  string               `json:"result"`
+	Message string               `json:"message"`
+	Methods PaymentMethodsHolder `json:"paymentmethods"`
+}
+
+type PaymentMethodsHolder struct {
+	Method []PaymentMethod `json:"paymentmethod"`
+}
+
+type PaymentMethod struct {
+	Module string `json:"module"`
+	Name   string `json:"displayname"`
 }

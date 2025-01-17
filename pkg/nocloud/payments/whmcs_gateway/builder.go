@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/google/go-querystring/query"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"math"
 	"net/url"
 	"time"
 )
@@ -110,4 +111,97 @@ func (g *WhmcsGateway) buildAddPaymentQueryBase(whmcsInvoiceId int) AddPaymentQu
 		ResponseType: "json",
 		InvoiceId:    whmcsInvoiceId,
 	}
+}
+
+func (g *WhmcsGateway) buildUpdateClientQueryBase(clientId int, notes string) (url.Values, error) {
+	res, err := query.Values(UpdateClientQuery{
+		Action:       "GetInvoice",
+		ClientID:     clientId,
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		Notes:        notes,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildAddNoteQueryBase(clientId int, notes string, sticky bool) (url.Values, error) {
+	res, err := query.Values(AddNoteQuery{
+		Action:       "GetInvoice",
+		UserID:       clientId,
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		Notes:        notes,
+		Sticky:       sticky,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildGetClientsQueryBase() (url.Values, error) {
+	res, err := query.Values(GetClientsQuery{
+		Action:       "GetClients",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		LimitNum:     math.MaxInt32 - 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildGetClientsProductsQueryBase(clientId int) (url.Values, error) {
+	res, err := query.Values(GetClientsProductsQuery{
+		Action:       "GetClientsProducts",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		ClientID:     clientId,
+		LimitNum:     math.MaxInt32 - 1,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildGetClientsDetailsQueryBase(clientId int) (url.Values, error) {
+	res, err := query.Values(GetClientsDetailsQuery{
+		Action:       "GetClientsDetails",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		ClientID:     clientId,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (g *WhmcsGateway) buildGetPaymentMethodsQueryBase() (url.Values, error) {
+	res, err := query.Values(GetPaymentMethodsQuery{
+		Action:       "GetPaymentMethods",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
