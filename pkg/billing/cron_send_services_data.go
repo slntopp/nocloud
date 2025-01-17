@@ -348,7 +348,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	}
 	writer.Flush()
 	output = buf.String()
-	strings.Replace(output, "|", "%|%", -1)
+	output = strings.Replace(output, "|", "%|%", -1)
 	if err = writeToFile(log, billsFilePrefix, output); err != nil {
 		log.Error("Failed to write to file", zap.Error(err))
 		return
