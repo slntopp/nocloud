@@ -184,6 +184,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		details, err := s.whmcsGateway.GetClientsDetails(ctx, client.ID)
 		if err != nil {
 			log.Error("Failed to get client details", zap.Error(err))
+			delete(instances, client.ID)
 			continue
 		}
 		if int(details.GroupID) == forbiddenUserGroup {
