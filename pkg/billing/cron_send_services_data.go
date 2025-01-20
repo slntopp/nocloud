@@ -176,6 +176,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	products := make(map[int][]whmcs_gateway.ListProduct)
 	for _, c := range whmcsClients {
 		if c.GroupID == forbiddenUserGroup {
+			delete(instances, c.ID)
 			continue
 		}
 		client := c
@@ -186,13 +187,16 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			continue
 		}
 		if int(details.GroupID) == forbiddenUserGroup {
+			delete(instances, details.ID)
 			continue
 		}
 		if details.PaymentMethod != "" {
 			if slices.Contains(forbiddenGateways, details.PaymentMethod) {
+				delete(instances, details.ID)
 				continue
 			}
 			if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, details.PaymentMethod) {
+				delete(instances, details.ID)
 				continue
 			}
 		}
