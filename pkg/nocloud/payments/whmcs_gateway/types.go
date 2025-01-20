@@ -185,6 +185,7 @@ type GetInvoicesResponse struct {
 type InvoiceInList struct {
 	Id            IntOrString   `json:"id"`
 	CreatedAt     string        `json:"created_at"`
+	Number        string        `json:"invoicenum"`
 	UserID        IntOrString   `json:"userid"`
 	DatePaid      string        `json:"datepaid"`
 	Date          string        `json:"date"`

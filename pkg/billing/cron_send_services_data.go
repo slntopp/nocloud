@@ -72,8 +72,9 @@ type ClientsReport struct {
 
 type ServiceReport struct {
 	WhmcsID     int    `csv:"WHMCS ID"`
-	ClientID    int    `csv:"WHMCS CLIENT ID"`
 	OrderID     int    `csv:"WHMCS ORDER ID"`
+	ClientID    int    `csv:"WHMCS CLIENT ID"`
+	ClientName  string `csv:"Имя клиента"`
 	ProductName string `csv:"Название продукта"`
 	IP          string `csv:"IP адрес"`
 	DateCreate  string `csv:"Дата создания"`
@@ -84,6 +85,8 @@ type ServiceReport struct {
 type PaymentReport struct {
 	WhmcsID       int    `csv:"WHMCS ID"`
 	ClientID      int    `csv:"WHMCS CLIENT ID"`
+	ClientName    string `csv:"Имя клиента"`
+	Number        string `csv:"Номер счёта"`
 	DatePaid      string `csv:"Дата платежа"`
 	Amount        string `csv:"Сумма платежа"`
 	Currency      string `csv:"Валюта"`
@@ -207,6 +210,10 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		}
 		products[client.ID] = prods
 	}
+	clientsMap := make(map[int]whmcs_gateway.Client)
+	for _, c := range clients {
+		clientsMap[c.ID] = c
+	}
 
 	reportsBills := make([]PaymentReport, 0)
 	reportsServices := make([]ServiceReport, 0)
@@ -254,9 +261,15 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, i.PaymentMethod) {
 			continue
 		}
+		var number = strconv.Itoa(int(i.Id))
+		if i.Number != "" {
+			number = i.Number
+		}
 		reportsBills = append(reportsBills, PaymentReport{
 			WhmcsID:       int(i.Id),
 			ClientID:      int(i.UserID),
+			ClientName:    clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName,
+			Number:        number,
 			DatePaid:      i.DatePaid,
 			Amount:        strconv.FormatFloat(float64(i.Total), 'f', 2, 64),
 			Currency:      i.Currency,
@@ -272,6 +285,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     srv.ID,
 				ClientID:    clID,
+				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
 				OrderID:     srv.OrderID,
 				ProductName: srv.Name,
 				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}), " "), " "),
@@ -306,6 +320,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     -1,
 				ClientID:    clID,
+				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
 				OrderID:     -1,
 				ProductName: product,
 				DateCreate:  time.Unix(srv.Created, 0).Format(time.DateOnly),
