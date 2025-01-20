@@ -31,16 +31,19 @@ var (
 	reportsLocation    string
 	forbiddenGateways  []string
 	forbiddenUserGroup int
+	allowedGateways    []string // If empty, then ALL allowed
 )
 
 func init() {
 	viper.SetDefault("REPORTS_LOCATION", "/reports")
 	viper.SetDefault("FORBIDDEN_REPORTS_PAYMENT_GATEWAYS", "")
 	viper.SetDefault("FORBIDDEN_REPORTS_USER_GROUP", "")
+	viper.SetDefault("ALLOWED_REPORTS_PAYMENT_GATEWAYS", "")
 
 	reportsLocation = viper.GetString("REPORTS_LOCATION")
 	forbiddenGateways = viper.GetStringSlice("FORBIDDEN_REPORTS_PAYMENT_GATEWAYS")
 	forbiddenUserGroup = viper.GetInt("FORBIDDEN_REPORTS_USER_GROUP")
+	allowedGateways = viper.GetStringSlice("ALLOWED_REPORTS_PAYMENT_GATEWAYS")
 }
 
 type ClientsReport struct {
@@ -182,6 +185,14 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		if int(details.GroupID) == forbiddenUserGroup {
 			continue
 		}
+		if details.PaymentMethod != "" {
+			if slices.Contains(forbiddenGateways, details.PaymentMethod) {
+				continue
+			}
+			if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, details.PaymentMethod) {
+				continue
+			}
+		}
 		clients = append(clients, details)
 
 		prods, err := s.whmcsGateway.GetClientsProducts(ctx, client.ID)
@@ -228,11 +239,19 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		})
 	}
 	// Create bills reports
+	const dateBorder = 1546300800 // 1 Jan 2019
 	for _, i := range whmcsInvoices {
 		if i.Status != "Paid" {
 			continue
 		}
+		date, err := time.Parse(time.DateOnly, i.Date)
+		if err != nil || date.Unix() < dateBorder {
+			continue
+		}
 		if slices.Contains(forbiddenGateways, i.PaymentMethod) {
+			continue
+		}
+		if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, i.PaymentMethod) {
 			continue
 		}
 		reportsBills = append(reportsBills, PaymentReport{

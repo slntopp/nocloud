@@ -187,6 +187,7 @@ type InvoiceInList struct {
 	CreatedAt     string        `json:"created_at"`
 	UserID        IntOrString   `json:"userid"`
 	DatePaid      string        `json:"datepaid"`
+	Date          string        `json:"date"`
 	Total         floatAsString `json:"total"`
 	Currency      string        `json:"currencycode"`
 	PaymentMethod string        `json:"paymentmethod"`
