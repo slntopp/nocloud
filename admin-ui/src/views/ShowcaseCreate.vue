@@ -97,7 +97,11 @@
                   item-value="uuid"
                   v-model="item.plan"
                   :loading="isPlansLoading"
-                  :items="isPlansLoading ? [] : getPlans(item.servicesProvider)"
+                  :items="
+                    isPlansLoading
+                      ? []
+                      : plansBySpMap.get(item.servicesProvider)
+                  "
                 />
               </v-col>
               <v-col cols="6">
@@ -259,7 +263,6 @@ onMounted(async () => {
     await Promise.all([
       store.dispatch("servicesProviders/fetch", { anonymously: true }),
     ]);
-    await fetchPlans();
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch info",
@@ -357,13 +360,6 @@ const getPlan = (sp, uuid) => {
   }
 };
 
-const getPlans = (sp) => {
-  if (!Array.isArray(plansBySpMap.value.get(sp))) {
-    return [];
-  }
-  return plansBySpMap.value.get(sp);
-};
-
 const getProviderTitle = (uuid) => {
   return (
     serviceProviders.value?.find((provider) => provider.uuid === uuid)?.title ??
@@ -399,11 +395,11 @@ const fetchPlans = async () => {
   } finally {
     setTimeout(() => {
       isPlansLoading.value = false;
-    }, 100);
+    }, 1);
   }
 };
 
-watch(() => showcase.value.items, fetchPlans,{deep:true});
+watch(() => showcase.value.items, fetchPlans, { deep: true });
 </script>
 
 <style scoped lang="scss">
