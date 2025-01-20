@@ -31,16 +31,19 @@ var (
 	reportsLocation    string
 	forbiddenGateways  []string
 	forbiddenUserGroup int
+	allowedGateways    []string // If empty, then ALL allowed
 )
 
 func init() {
 	viper.SetDefault("REPORTS_LOCATION", "/reports")
 	viper.SetDefault("FORBIDDEN_REPORTS_PAYMENT_GATEWAYS", "")
 	viper.SetDefault("FORBIDDEN_REPORTS_USER_GROUP", "")
+	viper.SetDefault("ALLOWED_REPORTS_PAYMENT_GATEWAYS", "")
 
 	reportsLocation = viper.GetString("REPORTS_LOCATION")
 	forbiddenGateways = viper.GetStringSlice("FORBIDDEN_REPORTS_PAYMENT_GATEWAYS")
 	forbiddenUserGroup = viper.GetInt("FORBIDDEN_REPORTS_USER_GROUP")
+	allowedGateways = viper.GetStringSlice("ALLOWED_REPORTS_PAYMENT_GATEWAYS")
 }
 
 type ClientsReport struct {
@@ -69,18 +72,21 @@ type ClientsReport struct {
 
 type ServiceReport struct {
 	WhmcsID     int    `csv:"WHMCS ID"`
-	ClientID    int    `csv:"WHMCS CLIENT ID"`
 	OrderID     int    `csv:"WHMCS ORDER ID"`
+	ClientID    int    `csv:"WHMCS CLIENT ID"`
+	ClientName  string `csv:"Имя клиента"`
 	ProductName string `csv:"Название продукта"`
 	IP          string `csv:"IP адрес"`
 	DateCreate  string `csv:"Дата создания"`
 	Status      string `csv:"Статус"`
-	Price       string `csv:"Цена"`
+	Price       string `csv:"Цена (Раз. и пер.)"`
 }
 
 type PaymentReport struct {
 	WhmcsID       int    `csv:"WHMCS ID"`
 	ClientID      int    `csv:"WHMCS CLIENT ID"`
+	ClientName    string `csv:"Имя клиента"`
+	Number        string `csv:"Номер счёта"`
 	DatePaid      string `csv:"Дата платежа"`
 	Amount        string `csv:"Сумма платежа"`
 	Currency      string `csv:"Валюта"`
@@ -170,6 +176,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	products := make(map[int][]whmcs_gateway.ListProduct)
 	for _, c := range whmcsClients {
 		if c.GroupID == forbiddenUserGroup {
+			delete(instances, c.ID)
 			continue
 		}
 		client := c
@@ -177,10 +184,22 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		details, err := s.whmcsGateway.GetClientsDetails(ctx, client.ID)
 		if err != nil {
 			log.Error("Failed to get client details", zap.Error(err))
+			delete(instances, client.ID)
 			continue
 		}
 		if int(details.GroupID) == forbiddenUserGroup {
+			delete(instances, details.ID)
 			continue
+		}
+		if details.PaymentMethod != "" {
+			if slices.Contains(forbiddenGateways, details.PaymentMethod) {
+				delete(instances, details.ID)
+				continue
+			}
+			if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, details.PaymentMethod) {
+				delete(instances, details.ID)
+				continue
+			}
 		}
 		clients = append(clients, details)
 
@@ -195,6 +214,10 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			continue
 		}
 		products[client.ID] = prods
+	}
+	clientsMap := make(map[int]whmcs_gateway.Client)
+	for _, c := range clients {
+		clientsMap[c.ID] = c
 	}
 
 	reportsBills := make([]PaymentReport, 0)
@@ -228,18 +251,32 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		})
 	}
 	// Create bills reports
+	const dateBorder = 1546300800 // 1 Jan 2019
 	for _, i := range whmcsInvoices {
 		if i.Status != "Paid" {
+			continue
+		}
+		date, err := time.Parse(time.DateOnly, i.Date)
+		if err != nil || date.Unix() < dateBorder {
 			continue
 		}
 		if slices.Contains(forbiddenGateways, i.PaymentMethod) {
 			continue
 		}
+		if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, i.PaymentMethod) {
+			continue
+		}
+		var number = strconv.Itoa(int(i.Id))
+		if i.Number != "" {
+			number = i.Number
+		}
 		reportsBills = append(reportsBills, PaymentReport{
 			WhmcsID:       int(i.Id),
 			ClientID:      int(i.UserID),
+			ClientName:    clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName,
+			Number:        number,
 			DatePaid:      i.DatePaid,
-			Amount:        strconv.FormatFloat(float64(i.Total), 'g', 2, 64),
+			Amount:        strconv.FormatFloat(float64(i.Total), 'f', 2, 64),
 			Currency:      i.Currency,
 			PaymentMethod: methodsNames[i.PaymentMethod],
 			Status:        i.Status,
@@ -248,11 +285,12 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	// Create services report
 	for clID, services := range products {
 		for _, srv := range services {
-			rp := strconv.FormatFloat(float64(srv.RecurringAmount), 'g', 2, 64)
-			fp := strconv.FormatFloat(float64(srv.FirstPaymentAmount), 'g', 2, 64)
+			rp := strconv.FormatFloat(float64(srv.RecurringAmount), 'f', 2, 64)
+			fp := strconv.FormatFloat(float64(srv.FirstPaymentAmount), 'f', 2, 64)
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     srv.ID,
 				ClientID:    clID,
+				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
 				OrderID:     srv.OrderID,
 				ProductName: srv.Name,
 				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}), " "), " "),
@@ -266,18 +304,9 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		for _, srv := range services {
 			var product = "no_product"
 			var price = "-1"
-			if srv.Product != nil && *srv.Product != "" {
-				product = *srv.Product
-				if srv.BillingPlan != nil {
-					plan, ok := plans[srv.BillingPlan.GetUuid()]
-					if ok {
-						prod, ok := plan.GetProducts()[product]
-						if ok {
-							price = strconv.FormatFloat(prod.Price, 'g', 2, 64)
-						}
-					}
-				}
-			}
+			numPriceFirst, _ := s.instances.CalculateInstanceEstimatePrice(srv, true)
+			numPrice, _ := s.instances.CalculateInstanceEstimatePrice(srv, false)
+			price = strconv.FormatFloat(numPriceFirst, 'f', 2, 64) + " " + strconv.FormatFloat(numPrice, 'f', 2, 64)
 			ips := make([]string, 0)
 			if srv.GetState() != nil && srv.GetState().GetInterfaces() != nil {
 				for _, inter := range srv.GetState().GetInterfaces() {
@@ -287,6 +316,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     -1,
 				ClientID:    clID,
+				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
 				OrderID:     -1,
 				ProductName: product,
 				DateCreate:  time.Unix(srv.Created, 0).Format(time.DateOnly),
@@ -357,8 +387,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 
 func writeToFile(log *zap.Logger, prefix string, content string) error {
 	log.Debug("File output with prefix "+prefix, zap.String("output", content))
-	now := strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1)
-
+	now := reverseDate(strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1))
 	filename := prefix + "_" + now + ".csv"
 	if err := os.MkdirAll(reportsLocation, 0777); err != nil {
 		return err
@@ -386,4 +415,11 @@ func removeDuplicates(strings []string) []string {
 		}
 	}
 	return result
+}
+
+func reverseDate(date string) string {
+	if len(date) != 8 {
+		return date
+	}
+	return string(date[6]) + string(date[7]) + string(date[4]) + string(date[5]) + date[:4]
 }

@@ -270,6 +270,13 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				query += fmt.Sprintf(` FILTER TO_NUMBER(t.currency.id) in @%s`, "currencyIds")
 				vars["currencyIds"] = values
 				log.Debug("Added currency filter", zap.Any("values", values), zap.String("query", query))
+			} else if key == "instances" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER INTERSECTION(@%s, t.instances)`, "instancesUuids")
+				vars["instancesUuids"] = values
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
