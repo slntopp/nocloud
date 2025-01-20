@@ -239,7 +239,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			WhmcsID:       int(i.Id),
 			ClientID:      int(i.UserID),
 			DatePaid:      i.DatePaid,
-			Amount:        strconv.FormatFloat(float64(i.Total), 'g', 2, 64),
+			Amount:        strconv.FormatFloat(float64(i.Total), 'f', 2, 64),
 			Currency:      i.Currency,
 			PaymentMethod: methodsNames[i.PaymentMethod],
 			Status:        i.Status,
@@ -248,8 +248,8 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	// Create services report
 	for clID, services := range products {
 		for _, srv := range services {
-			rp := strconv.FormatFloat(float64(srv.RecurringAmount), 'g', 2, 64)
-			fp := strconv.FormatFloat(float64(srv.FirstPaymentAmount), 'g', 2, 64)
+			rp := strconv.FormatFloat(float64(srv.RecurringAmount), 'f', 2, 64)
+			fp := strconv.FormatFloat(float64(srv.FirstPaymentAmount), 'f', 2, 64)
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     srv.ID,
 				ClientID:    clID,
@@ -273,7 +273,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 					if ok {
 						prod, ok := plan.GetProducts()[product]
 						if ok {
-							price = strconv.FormatFloat(prod.Price, 'g', 2, 64)
+							price = strconv.FormatFloat(prod.Price, 'f', 2, 64)
 						}
 					}
 				}
@@ -357,8 +357,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 
 func writeToFile(log *zap.Logger, prefix string, content string) error {
 	log.Debug("File output with prefix "+prefix, zap.String("output", content))
-	now := strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1)
-
+	now := reverseDate(strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1))
 	filename := prefix + "_" + now + ".csv"
 	if err := os.MkdirAll(reportsLocation, 0777); err != nil {
 		return err
@@ -386,4 +385,11 @@ func removeDuplicates(strings []string) []string {
 		}
 	}
 	return result
+}
+
+func reverseDate(date string) string {
+	if len(date) != 8 {
+		return date
+	}
+	return string(date[6]) + string(date[7]) + string(date[4]) + string(date[5]) + date[:4]
 }
