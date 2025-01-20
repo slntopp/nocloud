@@ -79,7 +79,7 @@ type ServiceReport struct {
 	IP          string `csv:"IP адрес"`
 	DateCreate  string `csv:"Дата создания"`
 	Status      string `csv:"Статус"`
-	Price       string `csv:"Цена"`
+	Price       string `csv:"Цена (Раз. и пер.)"`
 }
 
 type PaymentReport struct {
@@ -303,18 +303,9 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		for _, srv := range services {
 			var product = "no_product"
 			var price = "-1"
-			if srv.Product != nil && *srv.Product != "" {
-				product = *srv.Product
-				if srv.BillingPlan != nil {
-					plan, ok := plans[srv.BillingPlan.GetUuid()]
-					if ok {
-						prod, ok := plan.GetProducts()[product]
-						if ok {
-							price = strconv.FormatFloat(prod.Price, 'f', 2, 64)
-						}
-					}
-				}
-			}
+			numPriceFirst, _ := s.instances.CalculateInstanceEstimatePrice(srv, true)
+			numPrice, _ := s.instances.CalculateInstanceEstimatePrice(srv, false)
+			price = strconv.FormatFloat(numPriceFirst, 'f', 2, 64) + " " + strconv.FormatFloat(numPrice, 'f', 2, 64)
 			ips := make([]string, 0)
 			if srv.GetState() != nil && srv.GetState().GetInterfaces() != nil {
 				for _, inter := range srv.GetState().GetInterfaces() {
