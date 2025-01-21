@@ -40,13 +40,6 @@
         </v-card-subtitle>
       </div>
 
-      <div class="d-flex justify-space-between align-center mb-2">
-        <v-card-subtitle class="ma-0 my-2 pa-0">Total created</v-card-subtitle>
-        <v-card-subtitle class="ma-0 pa-0">
-          {{ chats.length }}
-        </v-card-subtitle>
-      </div>
-
       <v-divider></v-divider>
       <v-card
         v-for="chat in lastActivityChats"
@@ -111,17 +104,8 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import {
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
 import api from "@/api";
 import { formatSecondsToDate, getShortName } from "@/functions";
-import { Status as ChatStatus } from "core-chatting/plugin/src/connect/cc/cc_pb";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
@@ -137,19 +121,13 @@ const isAccountsLoading = ref(false);
 
 onMounted(() => fetchAccounts());
 
-const chats = computed(() => store.getters["chats/all"]);
+const dayChats = computed(() => store.getters["chats/dayChats"]);
+const weekChats = computed(() => store.getters["chats/weekChats"]);
+const monthChats = computed(() => store.getters["chats/monthChats"]);
 const isLoading = computed(() => store.getters["chats/loading"]);
 
 const lastActivityChats = computed(() => {
-  const sorted = [...chats.value]
-    .filter((chat) => [ChatStatus.NEW, ChatStatus.OPEN].includes(chat.status))
-    .sort(
-      (a, b) =>
-        (Number(b.meta?.lastMessage?.sent || b.created) || 0) -
-        (Number(a.meta?.lastMessage?.sent || a.created) || 0)
-    );
-
-  return sorted.slice(0, 3);
+  return dayChats.value.slice(0, 3);
 });
 
 const countForPeriod = computed(() => {
@@ -157,36 +135,25 @@ const countForPeriod = computed(() => {
     return 0;
   }
 
-  const dates = { from: null, to: null };
+  let chats;
 
   switch (data.value.period) {
     case "day": {
-      dates.from = startOfDay(new Date());
-      dates.to = endOfDay(new Date());
+      chats = dayChats.value;
       break;
     }
     case "month": {
-      dates.from = startOfMonth(new Date());
-      dates.to = endOfMonth(new Date());
+      chats = monthChats.value;
       break;
     }
     case "week": {
-      dates.from = startOfWeek(new Date());
-      dates.to = endOfWeek(new Date());
+      chats = weekChats.value;
       break;
     }
   }
 
-  dates.from = dates.from.getTime() / 1000;
-  dates.to = dates.to.getTime() / 1000;
-
-  return chats.value.filter((chat) => {
-    const createDate = (Number(chat.created) || 0) / 1000;
-    return (
-      dates.from <= createDate &&
-      dates.to >= createDate &&
-      !(data.value.status === "closed" && chat.status !== 3)
-    );
+  return chats.filter((chat) => {
+    return !(data.value.status === "closed" && chat.status !== 3);
   }).length;
 });
 
