@@ -51,14 +51,6 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import {
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
 import api from "@/api";
 import apexchart from "vue-apexcharts";
 
@@ -76,64 +68,53 @@ const isAccountsLoading = ref(false);
 
 onMounted(() => fetchAccounts());
 
-const chats = computed(() => store.getters["chats/all"]);
+const dayChats = computed(() => store.getters["chats/dayChats"]);
+const monthChats = computed(() => store.getters["chats/monthChats"]);
+const weekChats = computed(() => store.getters["chats/weekChats"]);
 const isLoading = computed(() => store.getters["chats/loading"]);
 
 const chatsResponsibleStatistic = computed(() => {
   if (!data.value.period) {
     return new Map();
   }
-
-  const dates = { from: null, to: null };
+  let chats;
 
   switch (data.value.period) {
     case "day": {
-      dates.from = startOfDay(new Date());
-      dates.to = endOfDay(new Date());
+      chats = dayChats.value;
       break;
     }
     case "month": {
-      dates.from = startOfMonth(new Date());
-      dates.to = endOfMonth(new Date());
+      chats = monthChats.value;
       break;
     }
     case "week": {
-      dates.from = startOfWeek(new Date());
-      dates.to = endOfWeek(new Date());
+      chats = weekChats.value;
       break;
     }
   }
 
-  dates.from = dates.from.getTime() / 1000;
-  dates.to = dates.to.getTime() / 1000;
-
   const chatResponsibles = new Map();
 
-  chats.value
-    .filter((chat) => {
-      const createDate = (Number(chat.created) || 0) / 1000;
-      return dates.from <= createDate && dates.to >= createDate;
-    })
-    .forEach((chat) => {
-      const { responsible } = chat;
+  chats.forEach((chat) => {
+    const { responsible } = chat;
 
-      if (!responsible) {
-        return;
-      }
+    if (!responsible) {
+      return;
+    }
 
-      let count = chatResponsibles.get(responsible) || 0;
-      if (data.value.status === "all" || !data.value.status) {
-        count++;
-      } else if (data.value.status === "close" && chat.status === 3) {
-        count++;
-      } else if (data.value.status === "open" && chat.status !== 3) {
-        count++;
-      }
+    let count = chatResponsibles.get(responsible) || 0;
+    if (data.value.status === "all" || !data.value.status) {
+      count++;
+    } else if (data.value.status === "close" && chat.status === 3) {
+      count++;
+    } else if (data.value.status === "open" && chat.status !== 3) {
+      count++;
+    }
 
-      chatResponsibles.set(responsible, count);
-    });
+    chatResponsibles.set(responsible, count);
+  });
 
-  console.log(chatResponsibles);
   return chatResponsibles;
 });
 
