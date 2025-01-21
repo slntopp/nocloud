@@ -317,7 +317,7 @@ func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int) error
 	body := g.buildAddPaymentQueryBase(whmcsInvoiceId)
 	body.TransId = uuid.New().String()
 	body.Date = time.Now().Format("2006-01-02 15:04:05")
-	body.Gateway = "system"
+	body.Gateway = "balancepay"
 	if inv.Balance <= 0 {
 		body.Amount = ptr(inv.Total)
 	}

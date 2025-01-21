@@ -4,35 +4,57 @@ import {
   StreamService,
 } from "core-chatting/plugin/src/connect/cc/cc_connect";
 import {
-  Empty,
+  ListChatsRequest,
   StreamRequest,
 } from "core-chatting/plugin/src/connect/cc/cc_pb";
+import {
+  endOfMonth,
+  endOfWeek,
+  startOfMonth,
+  startOfWeek,
+  startOfDay,
+  endOfDay,
+} from "date-fns";
 
 export default {
   namespaced: true,
   state: {
-    chats: [],
-    loding: false,
+    dayChats: [],
+    weekChats: [],
+    monthChats: [],
+    loading: false,
   },
   mutations: {
-    setChats(state, value) {
-      state.chats = value;
+    setDayChats(state, value) {
+      state.dayChats = value;
+    },
+    setWeekChats(state, value) {
+      state.weekChats = value;
+    },
+    setMonthChats(state, value) {
+      state.monthChats = value;
     },
     setLoading(state, value) {
       state.loading = value;
     },
     replaceChat(state, value) {
-      state.chats = state.chats.map((chat) =>
+      state.dayChats = state.dayChats.map((chat) =>
         chat.uuid === value.uuid ? value : chat
       );
     },
     pushChat(state, value) {
-      state.chats = [...state.chats, value];
+      state.dayChats = [...state.dayChats, value];
     },
   },
   getters: {
-    all(state) {
-      return state.chats;
+    dayChats(state) {
+      return state.dayChats;
+    },
+    weekChats(state) {
+      return state.weekChats;
+    },
+    monthChats(state) {
+      return state.monthChats;
     },
     chatsClient(state, getters, rootState, rootGetters) {
       return createPromiseClient(ChatsAPI, rootGetters["app/transport"]);
@@ -41,7 +63,7 @@ export default {
       return createPromiseClient(StreamService, rootGetters["app/transport"]);
     },
     unreadChatsCount(state) {
-      return state.chats.filter(
+      return state.dayChats.filter(
         (chat) => chat.meta.unread > 0 && [0, 1, 5, 6, 8].includes(chat.status)
       ).length;
     },
@@ -50,8 +72,51 @@ export default {
     async fetch({ getters, commit, state }) {
       commit("setLoading", true);
       try {
-        const data = await getters["chatsClient"].list(Empty.fromJson({}));
-        commit("setChats", data.chats);
+        const baseReqParams = {
+          limit: 1000,
+          page: 1,
+          field: "updated",
+          sort: "desc",
+        };
+        const [day, week, month] = await Promise.all([
+          getters["chatsClient"].list(
+            ListChatsRequest.fromJson({
+              ...baseReqParams,
+              filters: {
+                created: {
+                  from: startOfDay(new Date()).getTime(),
+                  to: endOfDay(new Date()).getTime(),
+                },
+              },
+            })
+          ),
+          getters["chatsClient"].list(
+            ListChatsRequest.fromJson({
+              ...baseReqParams,
+              filters: {
+                created: {
+                  from: startOfWeek(new Date()).getTime(),
+                  to: endOfWeek(new Date()).getTime(),
+                },
+              },
+            })
+          ),
+          getters["chatsClient"].list(
+            ListChatsRequest.fromJson({
+              ...baseReqParams,
+              filters: {
+                created: {
+                  from: startOfMonth(new Date()).getTime(),
+                  to: endOfMonth(new Date()).getTime(),
+                },
+              },
+            })
+          ),
+        ]);
+
+        commit("setDayChats", day.toJson()?.pool);
+        commit("setWeekChats", week.toJson()?.pool);
+        commit("setMonthChats", month.toJson()?.pool);
 
         for await (const { type, item } of getters["chatsStreamClient"].stream(
           new StreamRequest()
