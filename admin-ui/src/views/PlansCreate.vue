@@ -140,7 +140,7 @@
           :is="template"
           :rules="rules"
           :type="plan.type"
-          :resources="plan.resources"
+          :resources="resources"
           :addons="plan.addons"
           :products="filteredProducts"
           @change:resource="(data) => changeConfig(data, 'resource')"
@@ -408,10 +408,15 @@ export default {
           this.plan[type][id].descriptionId = descriptionId;
         });
 
-        const request =
-          action === "edit"
-            ? api.plans.update(id, this.plan)
-            : api.plans.create(this.plan);
+        let request;
+        if (action == "edit") {
+          request = api.plans.update(id, this.plan);
+        } else {
+          request = api.plans.create({
+            ...this.plan,
+            title: `${this.plan.title} COPY`,
+          });
+        }
 
         const data = await request;
         if (bindPlan) {
@@ -522,7 +527,7 @@ export default {
         }
 
         if (matched[1] === "ione") {
-          this.types.push("ione", "ione-vpn",);
+          this.types.push("ione", "ione-vpn");
         }
 
         if (matched[1] === "empty") {
@@ -557,7 +562,15 @@ export default {
       return hidden.some((h) => this.plan.type?.includes(h));
     },
     filteredProducts() {
-      return this.plan.products;
+      const products = JSON.parse(JSON.stringify(this.plan.products || {}));
+
+      Object.keys(products).forEach((key) => {
+        if (!products[key].price) {
+          products[key].price = 0;
+        }
+      });
+
+      return products;
     },
     downloadedFileName() {
       return this.plan.title
@@ -610,7 +623,10 @@ export default {
       return this.plan.status === "DEL";
     },
     resources() {
-      return this.plan.resources || [];
+      return (this.plan.resources || []).map((r) => ({
+        ...r,
+        price: r.price || 0,
+      }));
     },
   },
   watch: {
