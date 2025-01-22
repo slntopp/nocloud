@@ -5,7 +5,8 @@
         <v-select
           label="Preferred disk type"
           :items="['HDD', 'SSD']"
-          v-model="meta.preferedDiskType"
+          :value="meta.preferedDiskType"
+          @change="meta.preferedDiskType = $event || undefined"
           clearable
         />
       </v-col>
