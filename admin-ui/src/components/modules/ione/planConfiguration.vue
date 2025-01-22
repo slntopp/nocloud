@@ -2,6 +2,14 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-row>
       <v-col>
+        <v-select
+          label="Preferred disk type"
+          :items="['HDD', 'SSD']"
+          v-model="meta.preferedDiskType"
+          clearable
+        />
+      </v-col>
+      <v-col>
         <v-text-field
           label="Minimum HDD size"
           type="number"
@@ -140,10 +148,10 @@ export default {
   mounted() {
     this.meta = this.template.meta || {};
     if (!this.meta.minDiskSize) {
-      this.meta.minDiskSize = {}
+      this.meta.minDiskSize = {};
     }
     if (!this.meta.maxDiskSize) {
-      this.meta.maxDiskSize = {}
+      this.meta.maxDiskSize = {};
     }
     this.hidedOs = this.template.meta?.hidedOs || [];
   },
@@ -151,10 +159,10 @@ export default {
     "template.meta"(newVal) {
       this.meta = newVal;
       if (!this.meta.minDiskSize) {
-        this.meta.minDiskSize = {}
+        this.meta.minDiskSize = {};
       }
       if (!this.meta.maxDiskSize) {
-        this.meta.maxDiskSize = {}
+        this.meta.maxDiskSize = {};
       }
     },
   },
