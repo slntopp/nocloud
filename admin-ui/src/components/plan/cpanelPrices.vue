@@ -75,6 +75,7 @@
             <template v-slot:[`item.period`]="{ item }">
               <date-field
                 :period="item.period"
+                :periodKind="item.periodKind"
                 @changeDate="item.period = $event"
                 @changePeriodKind="item.periodKind = $event"
               />
@@ -200,6 +201,7 @@ export default {
         price.sorter = product?.sorter || 0;
         price.addons = product?.addons || [];
         price.enabled = !!product;
+        price.periodKind = product?.periodKind || "CALENDAR_MONTH";
         return price;
       });
       this.isPricesLoading = false;
@@ -231,6 +233,7 @@ export default {
             period: item.period,
             sorter: item.sorter,
             addons: item.addons,
+            periodKind: item.periodKind,
             resources: {
               model: item.key,
               bandwidth: item.BWLIMIT || undefined,
