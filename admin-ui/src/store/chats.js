@@ -114,9 +114,9 @@ export default {
           ),
         ]);
 
-        commit("setDayChats", day.toJson()?.pool);
-        commit("setWeekChats", week.toJson()?.pool);
-        commit("setMonthChats", month.toJson()?.pool);
+        commit("setDayChats", day.toJson()?.pool || []);
+        commit("setWeekChats", week.toJson()?.pool || []);
+        commit("setMonthChats", month.toJson()?.pool || []);
 
         for await (const { type, item } of getters["chatsStreamClient"].stream(
           new StreamRequest()
