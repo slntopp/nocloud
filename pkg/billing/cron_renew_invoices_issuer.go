@@ -423,7 +423,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		log.Error("Error creating invoice", zap.Error(err))
 		return fmt.Errorf("error creating invoice: %w", err)
 	}
-	delaySeconds(5)
+	delaySeconds(61)
 
 	log.Info("Created invoice", zap.String("uuid", resp.Msg.GetUuid()), zap.Int("item_count", len(inv.Items)))
 	return nil
