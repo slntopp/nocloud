@@ -49,6 +49,10 @@ const invoiceNotFoundApiMsg = "Invoice ID Not Found"
 
 const getInvoicesBatchSize = 10000 // WHMCS throws memory limit exception nearly on 50000 batch size
 
+const BalancePayMethod = "balancepay"
+
+var balancePayMethod = BalancePayMethod
+
 func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool) *WhmcsGateway {
 	return &WhmcsGateway{
 		m:           &sync.Mutex{},
@@ -235,7 +239,8 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 	body.Status = nil
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
 		if inv.Status == pb.BillingStatus_PAID && whmcsInv.Status != statusToWhmcs(pb.BillingStatus_PAID) {
-			if err = g.PayInvoice(ctx, int(id.GetNumberValue())); err != nil {
+			paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
+			if err = g.PayInvoice(ctx, int(id.GetNumberValue()), paidWithBalance); err != nil {
 				return fmt.Errorf("failed to pay invoice: %w", err)
 			}
 		}
@@ -300,7 +305,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 	return nil
 }
 
-func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int) error {
+func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int, payWithBalance ...bool) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -314,10 +319,29 @@ func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int) error
 		return nil
 	}
 
+	isPayWithBalance := len(payWithBalance) > 0 && payWithBalance[0]
+
+	if isPayWithBalance {
+		// Update invoice payment method first, then pay it
+		updBody := g.buildUpdateInvoiceQueryBase(whmcsInvoiceId)
+		updBody.PaymentMethod = &balancePayMethod
+		q, err := query.Values(updBody)
+		if err != nil {
+			return err
+		}
+		_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+		if err != nil {
+			return err
+		}
+	}
+
 	body := g.buildAddPaymentQueryBase(whmcsInvoiceId)
 	body.TransId = uuid.New().String()
 	body.Date = time.Now().Format("2006-01-02 15:04:05")
-	body.Gateway = "balancepay"
+	body.Gateway = "system"
+	if isPayWithBalance {
+		body.Gateway = balancePayMethod
+	}
 	if inv.Balance <= 0 {
 		body.Amount = ptr(inv.Total)
 	}

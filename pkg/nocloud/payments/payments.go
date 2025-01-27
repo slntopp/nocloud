@@ -18,6 +18,10 @@ type PaymentGateway interface {
 	//AddClient(types.CreateUserParams) (int, error)
 }
 
+type ContextKey string
+
+var paidWithBalanceKey = ContextKey("paid-with-balance")
+
 func GetGatewayCallbackValue(ctx context.Context, h ...http.Header) bool {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
