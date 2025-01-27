@@ -386,7 +386,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 }
 
 func writeToFile(log *zap.Logger, prefix string, content string) error {
-	log.Debug("File output with prefix "+prefix, zap.String("output", content))
+	//log.Debug("File output with prefix "+prefix, zap.String("output", content))
 	now := reverseDate(strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1))
 	filename := prefix + "_" + now + ".csv"
 	if err := os.MkdirAll(reportsLocation, 0777); err != nil {
