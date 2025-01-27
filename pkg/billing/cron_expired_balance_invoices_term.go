@@ -43,7 +43,7 @@ func (s *BillingServiceServer) DeleteExpiredBalanceInvoicesCronJob(ctx context.C
 			log.Error("Failed to terminate expired balance invoice", zap.Error(err))
 			continue
 		}
-		delaySeconds(20)
+		delaySeconds(61)
 		count++
 	}
 
