@@ -124,6 +124,9 @@ func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx cont
 		return nil
 	}
 
+	if event.GetData()["paid-with-balance"].GetBoolValue() {
+		ctx = context.WithValue(ctx, "paid-with-balance", true)
+	}
 	if err = gw.UpdateInvoice(ctx, inv.Invoice); err != nil {
 		return fmt.Errorf("failed to update invoice on whmcs: %w", err)
 	}

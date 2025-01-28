@@ -185,7 +185,8 @@ export default {
     },
     sp() {
       return this.$store.getters["servicesProviders/all"].find(
-        ({ type }) => type === "ovh"
+        (sp) =>
+          sp.type === "ovh" && sp.meta?.plans?.includes(this.template.uuid)
       );
     },
   },

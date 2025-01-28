@@ -575,11 +575,13 @@ quit:
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
+	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
 	if err = s.invoicesPublisher(&epb.Event{
 		Uuid: old.GetUuid(),
 		Key:  billing.InvoiceStatusToKey(newStatus),
 		Data: map[string]*structpb.Value{
-			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
+			"paid-with-balance": structpb.NewBoolValue(paidWithBalance),
+			"gw-callback":       structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
 		},
 	}); err != nil {
 		log.Error("Failed to publish invoice status update", zap.Error(err))
@@ -655,6 +657,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
+	ctx = context.WithValue(ctx, "paid-with-balance", true)
 	resp, err := s.UpdateInvoiceStatus(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 		Uuid:   inv.GetUuid(),
 		Status: pb.BillingStatus_PAID,
@@ -744,7 +747,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
-	if err = s.whmcsGateway.PayInvoice(ctx, int(invId)); err != nil {
+	if err = s.whmcsGateway.PayInvoice(ctx, int(invId), true); err != nil {
 		log.Error("Failed to pay invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
 	}
