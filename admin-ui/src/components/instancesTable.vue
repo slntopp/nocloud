@@ -88,7 +88,7 @@
           {{ getShortName(item.title, 45) }}
         </router-link>
         <login-in-account-icon
-          :uuid="getAccount(item)?.uuid"
+          :uuid="item.account"
           :instanceId="item.uuid"
           :type="item.type"
         />
