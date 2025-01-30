@@ -203,7 +203,7 @@ export default {
           type: "select",
           custom: true,
           component: AccountsAutocomplete,
-          label: "Accounts",
+          label: "Account",
           multiple: true,
           clearable: true,
           fetchValue: true,
