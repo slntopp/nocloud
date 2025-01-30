@@ -51,7 +51,7 @@ export default {
         key: "account",
         custom: true,
         component: AccountsAutocomplete,
-        label: "Accounts",
+        label: "Account",
         clearable: true,
         fetchValue: true,
       },

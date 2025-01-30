@@ -200,6 +200,7 @@ const searchFields = computed(() => [
     multiple: true,
     fetchValue: true,
     title: "Account",
+    label: "Account",
     component: AccountsAutocomplete,
   },
   {
