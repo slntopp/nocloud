@@ -255,20 +255,26 @@ const driveTypes = computed(() => {
 
 const driveSizeConfig = computed(() => {
   let minDisk, maxDisk;
-  if (instance.value.billing_plan?.meta?.minDisk) {
-    minDisk = instance.value.billing_plan.meta.minDisk;
+  if (instance.value.billing_plan?.meta?.minDiskSize) {
+    minDisk =
+      instance.value.billing_plan.meta.minDiskSize[
+        instance.value?.resources?.drive_type
+      ];
   }
-  if (instance.value.billing_plan?.meta?.maxDisk) {
-    maxDisk = instance.value.billing_plan.meta.maxDisk;
+  if (instance.value.billing_plan?.meta?.maxDiskSize) {
+    maxDisk =
+      instance.value.billing_plan.meta.maxDiskSize[
+        instance.value?.resources?.drive_type
+      ];
   }
 
   if (selectedTemplate.value?.min_size) {
-    minDisk = selectedTemplate.value?.min_size;
+    minDisk = Math.max(selectedTemplate.value?.min_size / 1024, minDisk);
   }
 
   return {
-    minDisk: (minDisk || 0) / 1024,
-    maxDisk: (maxDisk || 1024000000) / 1024,
+    minDisk: minDisk || 0,
+    maxDisk: maxDisk || 100000,
   };
 });
 
