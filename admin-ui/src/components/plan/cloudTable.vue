@@ -203,6 +203,8 @@ onMounted(async () => {
       },
     });
     regions.value = meta.datacenters;
+
+    selectedRegion.value = regions.value.find((region) => region.includes("1"));
   } catch {
     store.commit("snackbar/showSnackbarError", {
       message: "Erorr during fetch regions",

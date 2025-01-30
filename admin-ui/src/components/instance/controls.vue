@@ -118,11 +118,7 @@
               >
                 Close
               </v-btn>
-              <v-btn
-                class="mr-2"
-                :loading="isSaveLoading"
-                @click="save(true)"
-              >
+              <v-btn class="mr-2" :loading="isSaveLoading" @click="save(true)">
                 Create
               </v-btn>
               <v-btn :loading="isSaveLoading" @click="save(false)">
@@ -279,7 +275,7 @@ export default {
         const data = await api.plans.create(billingPlan);
         await api.servicesProviders.bindPlan(this.sp.uuid, [data.uuid]);
         return data;
-      } else {        
+      } else {
         const title = this.getPlanTitle(this.template);
         const ogPlan = this.$store.getters["plans/one"];
         const updatedPlan = {
@@ -357,8 +353,8 @@ export default {
         this.showSnackbarSuccess({
           message: "Instance saved successfully",
         });
-        console.log('refresh');
-        
+        console.log("refresh");
+
         this.$emit("refresh");
       } catch (err) {
         this.showSnackbarError({ message: err.message });
@@ -742,31 +738,31 @@ export default {
       }
       return {
         poweroff:
-          this.template.state.meta.state === 5 ||
-          (this.template.state.meta.state !== 3 &&
-            [0, 18, 20].includes(this.template.state.meta.lcm_state)),
+          this.template.state.meta?.state === 5 ||
+          (this.template.state.meta?.state !== 3 &&
+            [0, 18, 20].includes(this.template.state.meta?.lcm_state)),
         reboot:
-          this.template.state.meta.lcm_state === 6 ||
-          this.template.state.meta.lcm_state === 21 ||
-          this.template.state.meta.state === 5 ||
-          (this.template.state.meta.state !== 3 &&
-            (this.template.state.meta.lcm_state === 18 ||
-              this.template.state.meta.lcm_state === 20)) ||
-          (this.template.state.meta.lcm_state === 0 &&
-            this.template.state.meta.state === 8),
+          this.template.state.meta?.lcm_state === 6 ||
+          this.template.state.meta?.lcm_state === 21 ||
+          this.template.state.meta?.state === 5 ||
+          (this.template.state.meta?.state !== 3 &&
+            (this.template.state.meta?.lcm_state === 18 ||
+              this.template.state.meta?.lcm_state === 20)) ||
+          (this.template.state.meta?.lcm_state === 0 &&
+            this.template.state.meta?.state === 8),
         resume:
-          this.template.state.meta.lcm_state === 21 ||
-          this.template.state.meta.lcm_state === 6 ||
-          (this.template.state.meta.state === 3 &&
-            ![18, 20].includes(this.template.state.meta.lcm_state)),
+          this.template.state.meta?.lcm_state === 21 ||
+          this.template.state.meta?.lcm_state === 6 ||
+          (this.template.state.meta?.state === 3 &&
+            ![18, 20].includes(this.template.state.meta?.lcm_state)),
         suspend:
-          this.template.state.meta.state === 5 ||
-          this.template.state.meta.lcm_state === 21 ||
-          this.template.state.meta.lcm_state === 6,
+          this.template.state.meta?.state === 5 ||
+          this.template.state.meta?.lcm_state === 21 ||
+          this.template.state.meta?.lcm_state === 6,
         vnc:
-          this.template.state.meta.state === 5 ||
-          this.template.state.meta.lcm_state === 21 ||
-          this.template.state.meta.lcm_state === 6,
+          this.template.state.meta?.state === 5 ||
+          this.template.state.meta?.lcm_state === 21 ||
+          this.template.state.meta?.lcm_state === 6,
         start: true,
       };
     },

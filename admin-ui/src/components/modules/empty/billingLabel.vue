@@ -20,7 +20,7 @@ const emit = defineEmits(["update"]);
 const { template, addons } = toRefs(props);
 
 const dueDate = computed(() => {
-  return formatSecondsToDate(+props.template?.data?.next_payment_date);
+  return formatSecondsToDate(+props.template?.data?.next_payment_date) || "-";
 });
 
 const instancePrice = ref(0);

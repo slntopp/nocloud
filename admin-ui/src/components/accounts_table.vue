@@ -136,7 +136,7 @@ const headers = ref([
   { text: "Created date", value: "data.date_create" },
   { text: "Country", value: "data.country" },
   { text: "Address", value: "address" },
-  { text: "Client currency", value: "currency.title" },
+  { text: "Client currency", value: "currency.code" },
   { text: "Access level", value: "access.level" },
   { text: "WHMCS ID", value: "data.whmcs_id" },
   { text: "Tax rate", value: "data.tax_rate" },

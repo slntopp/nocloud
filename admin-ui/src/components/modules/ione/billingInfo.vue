@@ -318,6 +318,24 @@ const getBillingItems = () => {
     });
   }
 
+  const ipsKey = "ips_public";
+  const ipsIndex = billingPlan.value.resources.findIndex(
+    (r) => r.key === ipsKey
+  );
+  if (ipsIndex != -1) {
+    const ips = billingPlan.value.resources[ipsIndex];
+    items.push({
+      name: ips.title,
+      price: ips.price,
+      accountPrice: toAccountPrice(ips.price),
+      path: `billingPlan.resources.${ipsIndex}.price`,
+      kind: ips.kind,
+      quantity: template.value.resources[ipsKey],
+      unit: "pcs",
+      period: ips.period,
+    });
+  }
+
   addons.value.forEach((addon, index) => {
     const { title, periods } = addon;
     const { period, kind } = billingPlan.value.products[template.value.product];
