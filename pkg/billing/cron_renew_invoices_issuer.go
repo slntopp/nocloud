@@ -29,6 +29,7 @@ type accountPool struct {
 }
 
 const InstanceConfigAutoRenewKey = "auto_renew"
+const InstanceConfigInvoiceBasedKey = "invoice_based"
 
 func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Context, log *zap.Logger) {
 	log = log.Named("InvoicesIssuer")
