@@ -249,9 +249,9 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			ClientType:     c.GetClientType(),
 			CurrentAccount: c.GetCurrentAccount(),
 			CompanyPAN:     c.GetCompanyPAN(),
-			GovRegDate:     c.GetDateOfGovRegistration(),
+			GovRegDate:     formatDate(c.GetDateOfGovRegistration(), true, false, true),
 			GovRegCert:     c.GetCertOfRegistration(),
-			LastLoginDate:  date,
+			LastLoginDate:  formatDate(date, true, true, true),
 			LastLoginIP:    ip,
 			LastLoginHost:  host,
 		})
@@ -280,7 +280,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			ClientID:      int(i.UserID),
 			ClientName:    formatQuotes(clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName),
 			Number:        number,
-			DatePaid:      i.DatePaid,
+			DatePaid:      formatDate(i.DatePaid, true, false, true),
 			Amount:        strconv.FormatFloat(float64(i.Total), 'f', 2, 64),
 			Currency:      i.Currency,
 			PaymentMethod: methodsNames[i.PaymentMethod],
@@ -299,7 +299,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				ProductName: srv.Name,
 				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.ServerIP}), " "), " "),
 				Domain:      srv.Domain,
-				DateCreate:  srv.RegDate,
+				DateCreate:  formatDate(srv.RegDate, true, false, true),
 				Status:      srv.Status,
 				Price:       strings.Trim(strings.Join([]string{rp}, " "), " "),
 			})
@@ -323,7 +323,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				ClientName:  formatQuotes(clientsMap[clID].LastName + " " + clientsMap[clID].FirstName),
 				OrderID:     -1,
 				ProductName: product,
-				DateCreate:  time.Unix(srv.Created, 0).Format(time.DateOnly),
+				DateCreate:  formatDate(time.Unix(srv.Created, 0).Format(time.DateOnly), true, false, true),
 				Status:      srv.Status.String(),
 				Price:       price,
 				IP:          strings.Trim(strings.Join(removeDuplicates(ips), " "), " "),
@@ -444,4 +444,21 @@ func formatWhmcsLastLogin(data string) (date string, ip string, host string) {
 		}
 	}
 	return
+}
+
+func formatDate(date string, slashes bool, yearFirst bool, trimTime bool) string {
+	date = strings.TrimSpace(date)
+	if len(date) < 10 {
+		return date
+	}
+	if trimTime {
+		date = date[:10]
+	}
+	if slashes {
+		date = strings.Replace(date, "-", "/", -1)
+	}
+	if yearFirst {
+		date = date[6:] + string(date[5]) + string(date[3]) + string(date[4]) + string(date[2]) + string(date[0]) + string(date[1])
+	}
+	return date
 }
