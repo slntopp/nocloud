@@ -83,10 +83,9 @@ type ServiceReport struct {
 }
 
 type PaymentReport struct {
-	WhmcsID       int    `csv:"WHMCS ID"`
+	Number        string `csv:"Номер счёта"`
 	ClientID      int    `csv:"WHMCS CLIENT ID"`
 	ClientName    string `csv:"Имя клиента"`
-	Number        string `csv:"Номер счёта"`
 	DatePaid      string `csv:"Дата платежа"`
 	Amount        string `csv:"Сумма платежа"`
 	Currency      string `csv:"Валюта"`
@@ -271,7 +270,6 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			number = i.Number
 		}
 		reportsBills = append(reportsBills, PaymentReport{
-			WhmcsID:       int(i.Id),
 			ClientID:      int(i.UserID),
 			ClientName:    clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName,
 			Number:        number,
