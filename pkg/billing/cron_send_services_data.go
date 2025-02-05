@@ -80,7 +80,7 @@ type ServiceReport struct {
 	Domain      string `csv:"Домен"`
 	DateCreate  string `csv:"Дата создания"`
 	Status      string `csv:"Статус"`
-	Price       string `csv:"Цена (Раз. и пер.)"`
+	Price       string `csv:"Цена"`
 }
 
 type PaymentReport struct {
@@ -285,7 +285,6 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	for clID, services := range products {
 		for _, srv := range services {
 			rp := strconv.FormatFloat(float64(srv.RecurringAmount), 'f', 2, 64)
-			fp := strconv.FormatFloat(float64(srv.FirstPaymentAmount), 'f', 2, 64)
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     srv.ID,
 				ClientID:    clID,
@@ -296,7 +295,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				Domain:      srv.Domain,
 				DateCreate:  srv.RegDate,
 				Status:      srv.Status,
-				Price:       strings.Trim(strings.Join([]string{fp, rp}, " "), " "),
+				Price:       strings.Trim(strings.Join([]string{rp}, " "), " "),
 			})
 		}
 	}
@@ -304,9 +303,8 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		for _, srv := range services {
 			var product = "no_product"
 			var price = "-1"
-			numPriceFirst, _ := s.instances.CalculateInstanceEstimatePrice(srv, true)
 			numPrice, _ := s.instances.CalculateInstanceEstimatePrice(srv, false)
-			price = strconv.FormatFloat(numPriceFirst, 'f', 2, 64) + " " + strconv.FormatFloat(numPrice, 'f', 2, 64)
+			price = strconv.FormatFloat(numPrice, 'f', 2, 64)
 			ips := make([]string, 0)
 			if srv.GetState() != nil && srv.GetState().GetInterfaces() != nil {
 				for _, inter := range srv.GetState().GetInterfaces() {
