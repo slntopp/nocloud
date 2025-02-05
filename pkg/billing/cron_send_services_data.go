@@ -228,15 +228,15 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	for _, c := range clients {
 		reportsClients = append(reportsClients, ClientsReport{
 			WhmcsID:        c.ID,
-			FirstName:      c.FirstName,
-			LastName:       c.LastName,
-			CompanyName:    c.CompanyName,
+			FirstName:      formatQuotes(c.FirstName),
+			LastName:       formatQuotes(c.LastName),
+			CompanyName:    formatQuotes(c.CompanyName),
 			Email:          c.Email,
 			Status:         c.Status,
-			Address1:       c.Address1,
-			Address2:       c.Address2,
+			Address1:       formatQuotes(c.Address1),
+			Address2:       formatQuotes(c.Address2),
 			City:           c.City,
-			State:          c.State,
+			State:          formatQuotes(c.State),
 			PostCode:       c.PostCode,
 			Country:        c.Country,
 			Phone:          c.Phone,
@@ -272,7 +272,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		}
 		reportsBills = append(reportsBills, PaymentReport{
 			ClientID:      int(i.UserID),
-			ClientName:    clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName,
+			ClientName:    formatQuotes(clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName),
 			Number:        number,
 			DatePaid:      i.DatePaid,
 			Amount:        strconv.FormatFloat(float64(i.Total), 'f', 2, 64),
@@ -288,7 +288,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     srv.ID,
 				ClientID:    clID,
-				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
+				ClientName:  formatQuotes(clientsMap[clID].LastName + " " + clientsMap[clID].FirstName),
 				OrderID:     srv.OrderID,
 				ProductName: srv.Name,
 				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.ServerIP}), " "), " "),
@@ -314,7 +314,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     -1,
 				ClientID:    clID,
-				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
+				ClientName:  formatQuotes(clientsMap[clID].LastName + " " + clientsMap[clID].FirstName),
 				OrderID:     -1,
 				ProductName: product,
 				DateCreate:  time.Unix(srv.Created, 0).Format(time.DateOnly),
@@ -420,4 +420,8 @@ func reverseDate(date string) string {
 		return date
 	}
 	return string(date[6]) + string(date[7]) + string(date[4]) + string(date[5]) + date[:4]
+}
+
+func formatQuotes(str string) string {
+	return strings.Replace(str, "&quot;", `"`, -1)
 }
