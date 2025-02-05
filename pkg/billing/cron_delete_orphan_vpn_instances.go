@@ -34,10 +34,16 @@ func (s *BillingServiceServer) DeleteOrphanVPNInstances(ctx context.Context, log
 		return
 	}
 	for _, p := range _plans {
+		if p == nil {
+			continue
+		}
 		plans[p.Key] = p
 	}
 
 	for _, obj := range resp.Msg.Pool {
+		if obj == nil || obj.Instance == nil {
+			continue
+		}
 		inst := obj.Instance
 		log := log.With(zap.String("instance", inst.GetUuid()))
 		if inst.BillingPlan == nil || inst.Config == nil {
@@ -52,7 +58,7 @@ func (s *BillingServiceServer) DeleteOrphanVPNInstances(ctx context.Context, log
 			continue
 		}
 		linkedInstance, err := s.instances.Get(ctx, linked)
-		if err != nil {
+		if err != nil || linkedInstance == nil {
 			log.Error("Failed to get linked vpn instance", zap.Error(err))
 			continue
 		}
