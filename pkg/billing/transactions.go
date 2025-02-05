@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -74,13 +75,16 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	}
 
 	if req.Account != nil {
-		acc = *req.Account
-		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
-			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		accString := *req.Account
+		accs := strings.Split(accString, ",")
+		for _, a := range accs {
+			node := driver.NewDocumentID(schema.ACCOUNTS_COL, a)
+			if !s.ca.HasAccess(ctx, requestor, node, access.Level_ADMIN) {
+				return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+			}
 		}
-		query += ` FILTER t.account == @acc`
-		vars["acc"] = acc
+		query += ` FILTER t.account in @acc`
+		vars["acc"] = accs
 	} else {
 		if acc != schema.ROOT_ACCOUNT_KEY {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")

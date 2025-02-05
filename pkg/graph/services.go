@@ -425,6 +425,13 @@ func (ctrl *servicesController) List(ctx context.Context, requestor string, requ
 			value := val.GetStringValue()
 			query += ` FILTER path.vertices[-3]._key == @search_account`
 			bindVars["search_account"] = value
+		} else if key == "accounts" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += ` FILTER path.vertices[-3]._key in @search_accounts`
+			bindVars["search_accounts"] = values
 		} else if key == "namespace" {
 			value := val.GetStringValue()
 			query += ` FILTER path.vertices[-2]._key == @search_namespace`
