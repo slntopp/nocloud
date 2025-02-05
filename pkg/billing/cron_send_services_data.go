@@ -61,13 +61,15 @@ type ClientsReport struct {
 	Country        string `csv:"Страна"`
 	Phone          string `csv:"Телефон"`
 	PaymentMethod  string `csv:"Способ оплаты"`
-	LastLogin      string `csv:"Последняя активность"`
 	PAN            string `csv:"УНП"`
 	ClientType     string `csv:"Тип клиента"`
 	CurrentAccount string `csv:"Расчетный счет"`
 	CompanyPAN     string `csv:"УНП организации"`
 	GovRegDate     string `csv:"Дата государственной регистрации"`
 	GovRegCert     string `csv:"Свидетельство о регистрации"`
+	LastLoginDate  string `csv:"Дата последней активности"`
+	LastLoginIP    string `csv:"IP последней активности"`
+	LastLoginHost  string `csv:"Хост последней активности"`
 }
 
 type ServiceReport struct {
@@ -77,16 +79,16 @@ type ServiceReport struct {
 	ClientName  string `csv:"Имя клиента"`
 	ProductName string `csv:"Название продукта"`
 	IP          string `csv:"IP адрес"`
+	Domain      string `csv:"Домен"`
 	DateCreate  string `csv:"Дата создания"`
 	Status      string `csv:"Статус"`
-	Price       string `csv:"Цена (Раз. и пер.)"`
+	Price       string `csv:"Цена"`
 }
 
 type PaymentReport struct {
-	WhmcsID       int    `csv:"WHMCS ID"`
+	Number        string `csv:"Номер счёта"`
 	ClientID      int    `csv:"WHMCS CLIENT ID"`
 	ClientName    string `csv:"Имя клиента"`
-	Number        string `csv:"Номер счёта"`
 	DatePaid      string `csv:"Дата платежа"`
 	Amount        string `csv:"Сумма платежа"`
 	Currency      string `csv:"Валюта"`
@@ -226,28 +228,32 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 
 	// Create clients reports
 	for _, c := range clients {
+		date, ip, host := formatWhmcsLastLogin(c.LastLogin)
+
 		reportsClients = append(reportsClients, ClientsReport{
 			WhmcsID:        c.ID,
-			FirstName:      c.FirstName,
-			LastName:       c.LastName,
-			CompanyName:    c.CompanyName,
+			FirstName:      formatQuotes(c.FirstName),
+			LastName:       formatQuotes(c.LastName),
+			CompanyName:    formatQuotes(c.CompanyName),
 			Email:          c.Email,
 			Status:         c.Status,
-			Address1:       c.Address1,
-			Address2:       c.Address2,
+			Address1:       formatQuotes(c.Address1),
+			Address2:       formatQuotes(c.Address2),
 			City:           c.City,
-			State:          c.State,
+			State:          formatQuotes(c.State),
 			PostCode:       c.PostCode,
 			Country:        c.Country,
 			Phone:          c.Phone,
 			PaymentMethod:  methodsNames[c.PaymentMethod],
-			LastLogin:      c.LastLogin,
 			PAN:            c.GetPAN(),
 			ClientType:     c.GetClientType(),
 			CurrentAccount: c.GetCurrentAccount(),
 			CompanyPAN:     c.GetCompanyPAN(),
-			GovRegDate:     c.GetDateOfGovRegistration(),
+			GovRegDate:     formatDate(c.GetDateOfGovRegistration(), true, false, true),
 			GovRegCert:     c.GetCertOfRegistration(),
+			LastLoginDate:  formatDate(date, true, true, true),
+			LastLoginIP:    ip,
+			LastLoginHost:  host,
 		})
 	}
 	// Create bills reports
@@ -271,11 +277,10 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			number = i.Number
 		}
 		reportsBills = append(reportsBills, PaymentReport{
-			WhmcsID:       int(i.Id),
 			ClientID:      int(i.UserID),
-			ClientName:    clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName,
+			ClientName:    formatQuotes(clientsMap[int(i.UserID)].LastName + " " + clientsMap[int(i.UserID)].FirstName),
 			Number:        number,
-			DatePaid:      i.DatePaid,
+			DatePaid:      formatDate(i.DatePaid, true, false, true),
 			Amount:        strconv.FormatFloat(float64(i.Total), 'f', 2, 64),
 			Currency:      i.Currency,
 			PaymentMethod: methodsNames[i.PaymentMethod],
@@ -286,17 +291,17 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	for clID, services := range products {
 		for _, srv := range services {
 			rp := strconv.FormatFloat(float64(srv.RecurringAmount), 'f', 2, 64)
-			fp := strconv.FormatFloat(float64(srv.FirstPaymentAmount), 'f', 2, 64)
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     srv.ID,
 				ClientID:    clID,
-				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
+				ClientName:  formatQuotes(clientsMap[clID].LastName + " " + clientsMap[clID].FirstName),
 				OrderID:     srv.OrderID,
 				ProductName: srv.Name,
-				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}), " "), " "),
-				DateCreate:  srv.RegDate,
+				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.ServerIP}), " "), " "),
+				Domain:      srv.Domain,
+				DateCreate:  formatDate(srv.RegDate, true, false, true),
 				Status:      srv.Status,
-				Price:       strings.Trim(strings.Join([]string{fp, rp}, " "), " "),
+				Price:       strings.Trim(strings.Join([]string{rp}, " "), " "),
 			})
 		}
 	}
@@ -304,9 +309,8 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		for _, srv := range services {
 			var product = "no_product"
 			var price = "-1"
-			numPriceFirst, _ := s.instances.CalculateInstanceEstimatePrice(srv, true)
 			numPrice, _ := s.instances.CalculateInstanceEstimatePrice(srv, false)
-			price = strconv.FormatFloat(numPriceFirst, 'f', 2, 64) + " " + strconv.FormatFloat(numPrice, 'f', 2, 64)
+			price = strconv.FormatFloat(numPrice, 'f', 2, 64)
 			ips := make([]string, 0)
 			if srv.GetState() != nil && srv.GetState().GetInterfaces() != nil {
 				for _, inter := range srv.GetState().GetInterfaces() {
@@ -316,10 +320,10 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			reportsServices = append(reportsServices, ServiceReport{
 				WhmcsID:     -1,
 				ClientID:    clID,
-				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
+				ClientName:  formatQuotes(clientsMap[clID].LastName + " " + clientsMap[clID].FirstName),
 				OrderID:     -1,
 				ProductName: product,
-				DateCreate:  time.Unix(srv.Created, 0).Format(time.DateOnly),
+				DateCreate:  formatDate(time.Unix(srv.Created, 0).Format(time.DateOnly), true, false, true),
 				Status:      srv.Status.String(),
 				Price:       price,
 				IP:          strings.Trim(strings.Join(removeDuplicates(ips), " "), " "),
@@ -409,7 +413,7 @@ func removeDuplicates(strings []string) []string {
 	unique := make(map[string]bool)
 	result := make([]string, 0)
 	for _, str := range strings {
-		if _, exists := unique[str]; !exists {
+		if _, exists := unique[str]; !exists && str != "" {
 			unique[str] = true
 			result = append(result, str)
 		}
@@ -422,4 +426,39 @@ func reverseDate(date string) string {
 		return date
 	}
 	return string(date[6]) + string(date[7]) + string(date[4]) + string(date[5]) + date[:4]
+}
+
+func formatQuotes(str string) string {
+	return strings.Replace(str, "&quot;", `"`, -1)
+}
+
+func formatWhmcsLastLogin(data string) (date string, ip string, host string) {
+	parts := strings.Split(data, "<br>")
+	for _, part := range parts {
+		if strings.HasPrefix(strings.TrimSpace(part), "Date:") {
+			date = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "Date:"))
+		} else if strings.HasPrefix(strings.TrimSpace(part), "IP Address:") {
+			ip = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "IP Address:"))
+		} else if strings.HasPrefix(strings.TrimSpace(part), "Host:") {
+			ip = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "Host:"))
+		}
+	}
+	return
+}
+
+func formatDate(date string, slashes bool, yearFirst bool, trimTime bool) string {
+	date = strings.TrimSpace(date)
+	if len(date) < 10 {
+		return date
+	}
+	if trimTime {
+		date = date[:10]
+	}
+	if slashes {
+		date = strings.Replace(date, "-", "/", -1)
+	}
+	if yearFirst {
+		date = date[6:] + string(date[5]) + string(date[3]) + string(date[4]) + string(date[2]) + string(date[0]) + string(date[1])
+	}
+	return date
 }
