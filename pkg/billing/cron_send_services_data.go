@@ -77,6 +77,7 @@ type ServiceReport struct {
 	ClientName  string `csv:"Имя клиента"`
 	ProductName string `csv:"Название продукта"`
 	IP          string `csv:"IP адрес"`
+	Domain      string `csv:"Домен"`
 	DateCreate  string `csv:"Дата создания"`
 	Status      string `csv:"Статус"`
 	Price       string `csv:"Цена (Раз. и пер.)"`
@@ -291,7 +292,8 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				ClientName:  clientsMap[clID].LastName + " " + clientsMap[clID].FirstName,
 				OrderID:     srv.OrderID,
 				ProductName: srv.Name,
-				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.Domain, srv.ServerIP}), " "), " "),
+				IP:          strings.Trim(strings.Join(removeDuplicates([]string{srv.DedicatedIP, srv.ServerIP}), " "), " "),
+				Domain:      srv.Domain,
 				DateCreate:  srv.RegDate,
 				Status:      srv.Status,
 				Price:       strings.Trim(strings.Join([]string{fp, rp}, " "), " "),
