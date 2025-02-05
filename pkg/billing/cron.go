@@ -211,12 +211,12 @@ func (s *BillingServiceServer) dailyCronJobAction(ctx context.Context, log *zap.
 		}
 	}()
 	// Jobs
-	s.DeleteOrphanVPNInstances(ctx, log)
 	s.InvoiceExpiringInstancesCronJob(ctx, log)
 	s.NotifyToUpdateOvhPricesCronJob(ctx, log)
 	s.DeleteExpiredBalanceInvoicesCronJob(ctx, log)
 	s.WhmcsInvoicesSyncerCronJob(ctx, log)
 	s.CollectSystemReport(ctx, log)
+	s.DeleteOrphanVPNInstances(ctx, log)
 }
 
 func (s *BillingServiceServer) cronPreflightChecks(ctx context.Context, log *zap.Logger) error {
