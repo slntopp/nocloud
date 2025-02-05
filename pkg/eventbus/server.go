@@ -81,12 +81,12 @@ const getInstanceBillingPlanCustomEvents = `
     RETURN events
 `
 
-func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event) (*pb.Event, error) {
+func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event, instanceUuid string) (*pb.Event, error) {
 	log = log.Named("HandleEventOverride")
-	log = log.With(zap.String("instance", event.GetUuid())).With(zap.String("key", event.GetKey()))
+	log = log.With(zap.String("instance", instanceUuid)).With(zap.String("key", event.GetKey()))
 
 	cursor, err := s.db.Query(context.Background(), getInstanceBillingPlanCustomEvents, map[string]interface{}{
-		"instance":   event.GetUuid(),
+		"instance":   instanceUuid,
 		"@instances": schema.INSTANCES_COL,
 		"@plans":     schema.BILLING_PLANS_COL,
 	})
@@ -113,7 +113,7 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event) (
 			if ce.Key == "-" {
 				return nil, fmt.Errorf("event cancelled by override")
 			}
-			log.Debug("Event override", zap.Any("old_key", event.Key), zap.Any("new_key", ce.Override))
+			log.Debug("Event override", zap.Any("old_key", event.Key), zap.Any("new_key", ce.Key))
 			event.Key = ce.Key
 			return event, nil
 		}
@@ -171,6 +171,7 @@ init:
 				continue
 			}
 			log.Debug("Received a message", zap.String("routine_key", msg.RoutingKey), zap.Any("event", event))
+			instanceUuid := event.GetUuid()
 
 			handler, ok := handlers[event.Key]
 			if !ok {
@@ -193,7 +194,7 @@ init:
 				}
 			}
 
-			updEvent, err = s.HandleEventOverride(log, updEvent)
+			updEvent, err = s.HandleEventOverride(log, updEvent, instanceUuid)
 			if err != nil {
 				log.Error("Fail event override", zap.Error(err))
 				if err = msg.Ack(false); err != nil {
