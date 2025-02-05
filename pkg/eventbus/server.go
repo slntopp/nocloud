@@ -113,7 +113,7 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event, i
 			if ce.Key == "-" {
 				return nil, fmt.Errorf("event cancelled by override")
 			}
-			log.Debug("Event override", zap.Any("old_key", event.Key), zap.Any("new_key", ce.Override))
+			log.Debug("Event override", zap.Any("old_key", event.Key), zap.Any("new_key", ce.Key))
 			event.Key = ce.Key
 			return event, nil
 		}
