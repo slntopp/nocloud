@@ -61,13 +61,15 @@ type ClientsReport struct {
 	Country        string `csv:"Страна"`
 	Phone          string `csv:"Телефон"`
 	PaymentMethod  string `csv:"Способ оплаты"`
-	LastLogin      string `csv:"Последняя активность"`
 	PAN            string `csv:"УНП"`
 	ClientType     string `csv:"Тип клиента"`
 	CurrentAccount string `csv:"Расчетный счет"`
 	CompanyPAN     string `csv:"УНП организации"`
 	GovRegDate     string `csv:"Дата государственной регистрации"`
 	GovRegCert     string `csv:"Свидетельство о регистрации"`
+	LastLoginDate  string `csv:"Дата последней активности"`
+	LastLoginIP    string `csv:"IP последней активности"`
+	LastLoginHost  string `csv:"Хост последней активности"`
 }
 
 type ServiceReport struct {
@@ -226,6 +228,8 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 
 	// Create clients reports
 	for _, c := range clients {
+		date, ip, host := formatWhmcsLastLogin(c.LastLogin)
+
 		reportsClients = append(reportsClients, ClientsReport{
 			WhmcsID:        c.ID,
 			FirstName:      formatQuotes(c.FirstName),
@@ -241,13 +245,15 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 			Country:        c.Country,
 			Phone:          c.Phone,
 			PaymentMethod:  methodsNames[c.PaymentMethod],
-			LastLogin:      c.LastLogin,
 			PAN:            c.GetPAN(),
 			ClientType:     c.GetClientType(),
 			CurrentAccount: c.GetCurrentAccount(),
 			CompanyPAN:     c.GetCompanyPAN(),
 			GovRegDate:     c.GetDateOfGovRegistration(),
 			GovRegCert:     c.GetCertOfRegistration(),
+			LastLoginDate:  date,
+			LastLoginIP:    ip,
+			LastLoginHost:  host,
 		})
 	}
 	// Create bills reports
@@ -424,4 +430,18 @@ func reverseDate(date string) string {
 
 func formatQuotes(str string) string {
 	return strings.Replace(str, "&quot;", `"`, -1)
+}
+
+func formatWhmcsLastLogin(data string) (date string, ip string, host string) {
+	parts := strings.Split(data, "<br>")
+	for _, part := range parts {
+		if strings.HasPrefix(strings.TrimSpace(part), "Date:") {
+			date = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "Date:"))
+		} else if strings.HasPrefix(strings.TrimSpace(part), "IP Address:") {
+			ip = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "IP Address:"))
+		} else if strings.HasPrefix(strings.TrimSpace(part), "Host:") {
+			ip = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "Host:"))
+		}
+	}
+	return
 }
