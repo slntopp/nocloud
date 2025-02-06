@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -207,7 +208,7 @@ func (s *BillingServiceServer) dailyCronJobAction(ctx context.Context, log *zap.
 	log = log.Named("Action")
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error("Recovered from panic", zap.Any("err", err))
+			log.Error("Recovered from panic", zap.Any("err", err), zap.String("stacktrace", string(debug.Stack())))
 		}
 	}()
 	// Jobs
