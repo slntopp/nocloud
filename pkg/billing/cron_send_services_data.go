@@ -440,7 +440,7 @@ func formatWhmcsLastLogin(data string) (date string, ip string, host string) {
 		} else if strings.HasPrefix(strings.TrimSpace(part), "IP Address:") {
 			ip = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "IP Address:"))
 		} else if strings.HasPrefix(strings.TrimSpace(part), "Host:") {
-			ip = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "Host:"))
+			host = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(part), "Host:"))
 		}
 	}
 	return

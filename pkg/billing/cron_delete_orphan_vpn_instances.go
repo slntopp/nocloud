@@ -46,10 +46,16 @@ func (s *BillingServiceServer) DeleteOrphanVPNInstances(ctx context.Context, log
 		}
 		inst := obj.Instance
 		log := log.With(zap.String("instance", inst.GetUuid()))
+		if inst.GetStatus() == statuspb.NoCloudStatus_DEL {
+			continue
+		}
 		if inst.BillingPlan == nil || inst.Config == nil {
 			continue
 		}
 		plan := plans[inst.GetBillingPlan().GetUuid()]
+		if plan == nil {
+			continue
+		}
 		if strings.ToLower(plan.Type) != "vpn" {
 			continue
 		}
