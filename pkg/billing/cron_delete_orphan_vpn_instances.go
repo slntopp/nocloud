@@ -50,6 +50,9 @@ func (s *BillingServiceServer) DeleteOrphanVPNInstances(ctx context.Context, log
 			continue
 		}
 		plan := plans[inst.GetBillingPlan().GetUuid()]
+		if plan == nil {
+			continue
+		}
 		if strings.ToLower(plan.Type) != "vpn" {
 			continue
 		}
