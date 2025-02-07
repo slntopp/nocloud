@@ -7,11 +7,10 @@ import (
 	"time"
 )
 
-func SuspendAllowed(rules *sppb.SuspendRules) bool {
+func SuspendAllowed(rules *sppb.SuspendRules, now time.Time) bool {
 	if rules == nil || !rules.Enabled || rules.Schedules == nil || len(rules.Schedules) == 0 {
 		return true
 	}
-	now := time.Now().In(time.UTC)
 	dayOfWeek := int(now.Weekday())
 	if dayOfWeek == 0 {
 		dayOfWeek = 6
