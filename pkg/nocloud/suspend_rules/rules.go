@@ -4,6 +4,7 @@ import (
 	"fmt"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -63,7 +64,7 @@ func parseHour(t string) (int, error) {
 	if len(t) != 5 {
 		return 0, fmt.Errorf("invalid time format. Must be HH:MM")
 	}
-	hour, err := strconv.Atoi(t[0:2])
+	hour, err := strconv.Atoi(trimZero(t[0:2]))
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse integer")
 	}
@@ -80,7 +81,7 @@ func parseMinute(t string) (int, error) {
 	if len(t) != 5 {
 		return 0, fmt.Errorf("invalid time format. Must be HH:MM")
 	}
-	minute, err := strconv.Atoi(t[2:5])
+	minute, err := strconv.Atoi(trimZero(t[3:5]))
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse integer")
 	}
@@ -95,4 +96,12 @@ func parseMinute(t string) (int, error) {
 
 func timeToNumber(hour, minute int) int {
 	return (hour * 60) + minute
+}
+
+func trimZero(s string) string {
+	s = strings.TrimPrefix(s, "0")
+	if s == "" {
+		return "0"
+	}
+	return s
 }
