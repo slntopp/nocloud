@@ -226,6 +226,19 @@ func main() {
 	manager := invoices_manager.NewInvoicesManager(bClient, graph.NewInvoicesController(log, db), authInterceptor)
 	payments.RegisterGateways(whmcsData, graph.NewAccountsController(log, db), graph.NewCurrencyController(log, db), manager, whmcsTaxExcluded)
 
+	// Migrate
+	migrateToV2 := viper.GetBool("MIGRATE_TO_V2")
+	if migrateToV2 {
+		iCtrl := graph.NewInstancesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(rbmq))
+		sCtrl := graph.NewServicesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(rbmq))
+		bpCtrl := graph.NewBillingPlansController(log.Named("Main"), db)
+		addCtrl := graph.NewAddonsController(log.Named("Main"), db)
+		descCtrl := graph.NewDescriptionsController(log.Named("Main"), db)
+		graph.MigrateInstancesToNewAddons(log, iCtrl, sCtrl, bpCtrl, addCtrl, descCtrl)
+	} else {
+		log.Debug("Need MIGRATE_TO_V2 set to 'true' to start instances migration to V2")
+	}
+
 	log.Debug("Opening every sp syncer")
 	ctrl := graph.NewServicesProvidersController(log.Named("Main"), db)
 	sps, err := ctrl.List(context.Background(), schema.ROOT_NAMESPACE_KEY, true)

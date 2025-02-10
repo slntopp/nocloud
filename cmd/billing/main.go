@@ -326,6 +326,9 @@ func main() {
 
 	migrations.MigrateOldInvoicesInstancesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL))
 
+	migrations.MigrateOldInvoicesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL),
+		graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile, instancesFile)
+
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 
 	handler = cors.New(cors.Options{
