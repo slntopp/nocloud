@@ -93,6 +93,7 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	file, err := os.Open(whmcsInvoicesFile)
 	if err != nil {
 		log.Error("Error migrating old invoices to new", zap.Error(err))
+		return
 	}
 	defer file.Close()
 	csvReader := csv.NewReader(file)
@@ -116,6 +117,7 @@ func MigrateOldInvoicesToNew(log *zap.Logger, invoices driver.Collection, transa
 	file, err = os.Open(whmcsInstancesFile)
 	if err != nil {
 		log.Error("Error migrating old invoices to new", zap.Error(err))
+		return
 	}
 	defer file.Close()
 	csvReader = csv.NewReader(file)
