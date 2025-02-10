@@ -229,8 +229,8 @@ func main() {
 	// Migrate
 	migrateToV2 := viper.GetBool("MIGRATE_TO_V2")
 	if migrateToV2 {
-		iCtrl := graph.NewInstancesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(rbmq))
-		sCtrl := graph.NewServicesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(rbmq))
+		iCtrl := graph.NewInstancesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(conn))
+		sCtrl := graph.NewServicesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(conn))
 		bpCtrl := graph.NewBillingPlansController(log.Named("Main"), db)
 		addCtrl := graph.NewAddonsController(log.Named("Main"), db)
 		descCtrl := graph.NewDescriptionsController(log.Named("Main"), db)
