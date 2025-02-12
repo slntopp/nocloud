@@ -55,21 +55,28 @@
           <v-card-title v-else>New event override</v-card-title>
 
           <v-text-field
-            :rules="[requiredRule, uniqueKeyRule]"
+            :rules="[requiredRule]"
             v-model="newOverride.key"
             label="Key"
           />
           <v-text-field
-            :rules="[requiredRule, uniqueOverrideRule]"
+            :rules="[requiredRule]"
             v-model="newOverride.override"
             label="Override"
           />
+
+          <div class="d-flex justify-center">
+            <v-card-title style="color: red" v-if="isNotUniqueOverride">{{
+              "Already overrided!"
+            }}</v-card-title>
+          </div>
 
           <div class="d-flex justify-end">
             <v-btn @click="isAddOverrideOpen = false">Close</v-btn>
             <v-btn
               @click="addNewEvent"
               :loading="isAddOverrideLoading"
+              :disabled="isNotUniqueOverride"
               class="ml-3"
               >{{ isEditOverride ? "Edit" : "Add" }}</v-btn
             >
@@ -81,7 +88,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import api from "@/api";
 
 const props = defineProps(["template"]);
@@ -103,14 +110,15 @@ const editedOverride = ref(false);
 onMounted(() => setEventOverrides());
 
 const requiredRule = (val) => !!val || "Field required";
-const uniqueKeyRule = (val) =>
-  isEditOverride.value ||
-  !eventOverrides.value.find((override) => override.key === val) ||
-  "Already overrided!";
-const uniqueOverrideRule = (val) =>
-  isEditOverride.value ||
-  !eventOverrides.value.find((override) => override.override === val) ||
-  "Already overrided!";
+const isNotUniqueOverride = computed(
+  () =>
+    !isEditOverride.value &&
+    eventOverrides.value.find(
+      (override) =>
+        override.override === newOverride.value.override &&
+        override.key === newOverride.value.key
+    )
+);
 
 const setEventOverrides = () => {
   eventOverrides.value = [...template.value.customEvents];

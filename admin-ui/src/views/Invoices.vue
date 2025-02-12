@@ -128,6 +128,12 @@ const defaultLayouts = computed(() => ({
     fields: ["status"],
     id: "id-unpaid",
   },
+  paid: {
+    title: "Paid",
+    filter: { status: [1] },
+    fields: ["status"],
+    id: "id-paid",
+  },
   overdue: {
     id: "id-overdue",
     title: "Overdue",

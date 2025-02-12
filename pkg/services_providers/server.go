@@ -319,6 +319,9 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if newPublicData := req.GetPublicData(); newPublicData != nil {
 		sp.PublicData = newPublicData
 	}
+	if suspendRules := req.GetSuspendRules(); suspendRules != nil {
+		sp.SuspendRules = suspendRules
+	}
 	sp.Meta = req.GetMeta()
 	sp.Public = req.GetPublic()
 

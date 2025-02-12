@@ -272,6 +272,10 @@ export function getSecondsByDays(days) {
 
 export function getState(item) {
   if (!item.state) return item?.data?.is_monitored ? "ERROR" : "LCM_INIT";
+  if (!item.state.state)
+    return item?.state?.meta?.lcm_state_str
+      ? item?.state.meta.lcm_state_str.toUpperCase()
+      : "ERROR";
 
   return item.state.state;
 }

@@ -66,8 +66,8 @@
             </v-btn>
           </confirm-dialog>
         </hint-btn>
-        <hint-btn hint="Create transaction/invoice">
-          <v-chip @click="openTransaction" class="ma-1" color="primary" outlined
+        <hint-btn hint="Create invoice">
+          <v-chip @click="openInvoice" class="ma-1" color="primary" outlined
             >Balance: {{ account.balance?.toFixed(2) || 0 }}
             {{ account.currency?.code }}</v-chip
           >
@@ -438,9 +438,9 @@ export default {
         this.isChangeRegularPaymentLoading = false;
       }
     },
-    openTransaction() {
+    openInvoice() {
       this.$router.push({
-        name: "Transactions create",
+        name: "Invoice create",
         query: { account: this.account.uuid },
       });
     },
