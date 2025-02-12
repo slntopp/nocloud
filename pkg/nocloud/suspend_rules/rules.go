@@ -23,6 +23,9 @@ func SuspendAllowed(rules *sppb.SuspendRules, now time.Time) bool {
 		if int(rule.Day) != dayOfWeek {
 			continue
 		}
+		if !rule.Enabled {
+			continue
+		}
 		if len(rule.AllowedSuspendTime) == 0 {
 			return true
 		}
