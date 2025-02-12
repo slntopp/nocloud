@@ -323,7 +323,7 @@ import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import datePicker from "@/components/ui/datePicker.vue";
 import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
-import { useRouter } from "vue-router/composables";
+import { useRoute, useRouter } from "vue-router/composables";
 import {
   BillingStatus,
   CreateInvoiceRequest,
@@ -345,6 +345,7 @@ const emit = defineEmits(["refresh"]);
 
 const store = useStore();
 const router = useRouter();
+const route = useRoute();
 const { getInvoiceStatusColor, getTotalColor } = useInvoices();
 
 const newInvoice = ref({
@@ -431,6 +432,10 @@ onMounted(async () => {
   setInvoice();
 
   isInstancesLoading.value = false;
+
+  if (route.query.account) {
+    newInvoice.value.account = route.query.account;
+  }
 });
 
 const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
