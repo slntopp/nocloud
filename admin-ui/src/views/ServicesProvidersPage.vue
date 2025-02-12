@@ -85,6 +85,11 @@ export default {
           component: () => import("@/components/ServicesProvider/hooks.vue"),
         },
         {
+          title: "Suspend rules",
+          component: () =>
+            import("@/components/ServicesProvider/suspend-rules.vue"),
+        },
+        {
           title: "Map",
           component:
             this.item?.type === "ovh"
@@ -105,10 +110,11 @@ export default {
         },
       ].filter((el) => el?.title);
 
-      if (this.item?.type === "ione") tabs.splice(3, 0, {
-        title: "Nebula",
-        component: () => import("@/components/ServicesProvider/nebula.vue"),
-      });
+      if (this.item?.type === "ione")
+        tabs.splice(3, 0, {
+          title: "Nebula",
+          component: () => import("@/components/ServicesProvider/nebula.vue"),
+        });
 
       return tabs;
     },
