@@ -9,13 +9,20 @@
       <div v-for="day in dayOfWeeks" :key="day">
         <v-card-title
           >{{ day }}
-          <v-btn @click="addNewIn(day)" class="mr-2" icon>
+
+          <v-switch
+            class="ml-3"
+            @change="changeEnableAll(day)"
+            :input-value="suspendRules[day]?.length === 0"
+            label="Enable all day"
+          />
+          <v-btn @click="addNewIn(day)" class="ml-2" icon>
             <v-icon>mdi-plus</v-icon>
           </v-btn></v-card-title
         >
 
         <v-row
-          v-for="(rule, index) in suspendRules[day]"
+          v-for="(rule, index) in suspendRules[day] || []"
           :key="index"
           class="rule-row"
         >
@@ -80,7 +87,7 @@ const suspendRulesForm = ref();
 const timeRule = [(v) => !!isTime(v) || "Not valid time"];
 
 onMounted(() => {
-  dayOfWeeks.forEach((day) => (suspendRules.value[day] = []));
+  dayOfWeeks.forEach((day) => (suspendRules.value[day] = null));
 
   setTemplateRules();
   isRulesEnabled.value = !!template.value?.suspendRules?.enabled;
@@ -103,11 +110,10 @@ function isTime(value) {
 const setTemplateRules = () => {
   template.value.suspendRules.schedules.map((shedule) => {
     suspendRules.value[shedule.day] = shedule.allowedSuspendTime.map(
-      (range) =>
-        ({
-          startTime: range.startTime,
-          endTime: range.endTime,
-        } || [])
+      (range) => ({
+        startTime: range.startTime,
+        endTime: range.endTime,
+      })
     );
   });
 
@@ -115,6 +121,9 @@ const setTemplateRules = () => {
 };
 
 const addNewIn = (day) => {
+  if (!suspendRules.value[day]) {
+    suspendRules.value[day] = [];
+  }
   suspendRules.value[day].push({
     endTime: "00:00",
     startTime: "00:00",
@@ -127,6 +136,14 @@ const deleteRangeFromDay = (day, index) => {
     (_, i) => i !== index
   );
   suspendRules.value = { ...suspendRules.value };
+};
+
+const changeEnableAll = (day) => {
+  if (suspendRules.value[day]?.length === 0) {
+    suspendRules.value[day] = null;
+  } else {
+    suspendRules.value[day] = [];
+  }
 };
 
 const save = async () => {
@@ -142,6 +159,7 @@ const save = async () => {
     const newSuspendRules = {};
     newSuspendRules.enabled = isRulesEnabled.value;
     newSuspendRules.schedules = [];
+
     Object.keys(suspendRules.value).map((day) => {
       newSuspendRules.schedules.push({
         day,
@@ -157,7 +175,7 @@ const save = async () => {
     store.commit("snackbar/showSnackbarSuccess", {
       message: "Done",
     });
-  } catch  {
+  } catch {
     store.commit("snackbar/showSnackbarError", {
       message: "Error while try update suspend rules",
     });
