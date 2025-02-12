@@ -243,8 +243,8 @@
 
               <v-list-item
                 v-bind="listItemBind"
-                :to="{ name: 'Chats' }"
-                @click="chatClick"
+                @click.ctrl.prevent="openChatsInNewWindow"
+                @click.exact="chatClick"
               >
                 <v-list-item-icon>
                   <v-icon
@@ -457,6 +457,7 @@ import instancesTableModal from "@/components/instances_table_modal.vue";
 import Themes from "@/components/header/themes.vue";
 import userMenu from "@/components/header/userMenu.vue";
 import notifications from "@/components/header/notifications.vue";
+import { Buffer } from "buffer";
 
 export default {
   name: "App",
@@ -544,6 +545,25 @@ export default {
     },
     chatClick() {
       this.$store.commit("app/setChatClicks", 1);
+      this.$router.push({ name: "Chats" });
+    },
+    openChatsInNewWindow() {
+      const { title } = this.$store.getters["auth/userdata"];
+      const { token } = this.$store.state.auth;
+      const fullParams = JSON.stringify({
+        title,
+        token,
+        api: location.host,
+        theme: this.theme,
+        fullscreen: this.$route.query["fullscreen"] === "true",
+      });
+
+      return window.open(
+        `/cc.ui/?a=${Buffer.from(
+          unescape(encodeURIComponent(fullParams))
+        ).toString("base64")}`,
+        "_blanc"
+      );
     },
     toggleFullscreen() {
       this.$router.push({
