@@ -109,12 +109,16 @@ function isTime(value) {
 
 const setTemplateRules = () => {
   template.value.suspendRules.schedules.map((shedule) => {
-    suspendRules.value[shedule.day] = shedule.allowedSuspendTime.map(
-      (range) => ({
-        startTime: range.startTime,
-        endTime: range.endTime,
-      })
-    );
+    if (shedule.enabled) {
+      suspendRules.value[shedule.day] = null;
+    } else {
+      suspendRules.value[shedule.day] = shedule.allowedSuspendTime.map(
+        (range) => ({
+          startTime: range.startTime,
+          endTime: range.endTime,
+        })
+      );
+    }
   });
 
   suspendRules.value = { ...suspendRules.value };
@@ -164,6 +168,7 @@ const save = async () => {
       newSuspendRules.schedules.push({
         day,
         allowedSuspendTime: suspendRules.value[day],
+        enabled: suspendRules.value[day] !== null,
       });
     });
 
