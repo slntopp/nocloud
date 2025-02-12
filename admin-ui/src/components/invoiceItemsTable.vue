@@ -57,7 +57,12 @@
     </template>
 
     <template v-if="showDelete" v-slot:[`item.total`]="{ item }">
-      <span>{{ (item.price * item.amount || 0).toFixed(2) }}</span>
+      <span>{{
+        [
+          (item.price * item.amount || 0).toFixed(2),
+          account?.currency?.code,
+        ].join(" ")
+      }}</span>
     </template>
 
     <template v-if="items.length" v-slot:body.append>
@@ -68,12 +73,15 @@
         <td></td>
         <td>
           {{
-            items
-              .reduce(
-                (acc, item) => acc + (item.amount || 0) * (item.price || 0),
-                0
-              )
-              .toFixed(2)
+            [
+              items
+                .reduce(
+                  (acc, item) => acc + (item.amount || 0) * (item.price || 0),
+                  0
+                )
+                .toFixed(2),
+              account?.currency?.code,
+            ].join(" ")
           }}
         </td>
         <td></td>

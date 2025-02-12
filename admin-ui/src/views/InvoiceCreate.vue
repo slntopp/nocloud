@@ -32,8 +32,9 @@
           </v-select>
         </div>
 
-        <div class="item d-flex">
+        <div class="item d-flex" style="width: 450px">
           <accounts-autocomplete
+            advanced
             :loading="isInstancesLoading"
             @input="onChangeAccount"
             :disabled="isEdit"
@@ -221,7 +222,7 @@
             color="background-light"
             @click="downloadInvoice"
           >
-            download
+            download <v-icon small>mdi-download</v-icon>
           </v-btn>
 
           <confirm-dialog
@@ -413,7 +414,7 @@ const changeStatusBtns = [
   {
     title: "Unpaid",
     status: "UNPAID",
-    disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
+    disabled: ["TERMINATED", "RETURNED", "DRAFT"],
   },
   {
     title: "cancel",
