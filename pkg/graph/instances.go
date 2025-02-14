@@ -597,6 +597,24 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 		if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
 			log.Error("Failed to publish ansible hook", zap.Error(err))
 		}
+		for _, a := range i.GetAddons() {
+			addon, err := ctrl.addons.Get(ctx, a)
+			if err != nil {
+				log.Error("Failed to get instance addon", zap.Error(err), zap.String("addon", a))
+				continue
+			}
+			if addon.Action != nil && addon.Action.GetPlaybook() != "" {
+				c := pb.Context{
+					Instance: i.GetUuid(),
+					Sp:       sp,
+					Event:    "START",
+					Addon:    &a,
+				}
+				if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+					log.Error("Failed to publish ansible hook addon event", zap.Error(err))
+				}
+			}
+		}
 	}
 	e := epb.Event{
 		Uuid: i.GetUuid(),
@@ -784,6 +802,24 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 		}
 		if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
 			log.Error("Failed to publish ansible hook", zap.Error(err))
+		}
+		for _, a := range inst.GetAddons() {
+			addon, err := ctrl.addons.Get(ctx, a)
+			if err != nil {
+				log.Error("Failed to get instance addon", zap.Error(err), zap.String("addon", a))
+				continue
+			}
+			if addon.Action != nil && addon.Action.GetPlaybook() != "" {
+				c := pb.Context{
+					Instance: inst.GetUuid(),
+					Sp:       sp,
+					Event:    "START",
+					Addon:    &a,
+				}
+				if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+					log.Error("Failed to publish ansible hook addon event", zap.Error(err))
+				}
+			}
 		}
 	}
 	c := pb.Context{
