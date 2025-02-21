@@ -455,7 +455,7 @@ func formatDate(date string, slashes bool, yearFirst bool, trimTime bool) string
 		date = date[:10]
 	}
 	if slashes {
-		date = strings.Replace(date, "-", "/", -1)
+		date = strings.Replace(date, "-", "-", -1)
 	}
 	if yearFirst {
 		date = date[6:] + string(date[5]) + string(date[3]) + string(date[4]) + string(date[2]) + string(date[0]) + string(date[1])
