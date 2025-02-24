@@ -26,6 +26,7 @@ import invoices from "./invoices";
 import descriptions from "./descriptions";
 import instances from "./instances";
 import promocodes from "./promocodes";
+import playbooks from "./playbooks";
 
 Vue.use(Vuex);
 
@@ -58,6 +59,7 @@ const store = new Vuex.Store({
     descriptions,
     instances,
     promocodes,
+    playbooks,
   },
 });
 
