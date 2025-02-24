@@ -32,18 +32,30 @@
 
     <template v-slot:[`item.number`]="{ item }">
       <router-link :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
-        {{ item.number }}
+        <v-tooltip bottom>
+          <template v-slot:activator="{ on, attrs }">
+            <span v-bind="attrs" v-on="on">
+              {{ item.number }}
+            </span>
+          </template>
+          <invoice-preview :invoice="item" />
+        </v-tooltip>
       </router-link>
     </template>
 
     <template v-slot:[`item.total`]="{ item }">
-      <v-chip :color="getTotalColor(item)" abs>
-        {{
-          `${formatPrice(item.total, item.currency)} ${
-            item.currency?.code || defaultCurrency.code
-          }`
-        }}
-      </v-chip>
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on, attrs }">
+          <v-chip v-bind="attrs" v-on="on" :color="getTotalColor(item)" abs>
+            {{
+              `${formatPrice(item.total, item.currency)} ${
+                item.currency?.code || defaultCurrency.code
+              }`
+            }}
+          </v-chip>
+        </template>
+        <invoice-preview :invoice="item" />
+      </v-tooltip>
     </template>
 
     <template v-slot:[`item.processed`]="{ item }">
@@ -96,6 +108,7 @@ import { useStore } from "@/store";
 import api from "@/api";
 import useInvoices from "../hooks/useInvoices";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import invoicePreview from "@/components/ui/invoicePreview.vue";
 import {
   ActionType,
   BillingStatus,
