@@ -68,7 +68,7 @@ onMounted(async () => {
     );
     store.commit("addons/setOne", { ...addon.value, description: desc.text });
   } catch (e) {
-    store.commit("snackbar/showSnackbarError", { message: e.message });
+    addon.value.descriptionId = null;
   }
 });
 
