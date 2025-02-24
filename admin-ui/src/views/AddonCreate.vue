@@ -164,10 +164,17 @@ const saveAddon = async () => {
       await store.getters["addons/addonsClient"].create(dto);
       router.push({ name: "Addons" });
     } else {
-      store.dispatch("descriptions/update", {
-        uuid: newAddon.value.descriptionId,
-        text: newAddon.value.description,
-      });
+      if (newAddon.value.descriptionId) {
+        store.dispatch("descriptions/update", {
+          uuid: newAddon.value.descriptionId,
+          text: newAddon.value.description,
+        });
+      } else {
+        const description = await store.dispatch("descriptions/create", {
+          text: newAddon.value.description,
+        });
+        dto.descriptionId = description.uuid;
+      }
 
       dto.uuid = props.addon.uuid;
       await store.getters["addons/addonsClient"].update(dto);

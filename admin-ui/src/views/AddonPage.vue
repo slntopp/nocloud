@@ -40,6 +40,7 @@ import config from "@/config.js";
 import AddonCreate from "@/views/AddonCreate.vue";
 import AddonProducts from "@/components/addons/products.vue";
 import AddonTemplate from "@/components/addons/template.vue";
+import AddonPlaybook from "@/components/addons/playbook.vue";
 
 const store = useStore();
 const route = useRoute();
@@ -67,7 +68,7 @@ onMounted(async () => {
     );
     store.commit("addons/setOne", { ...addon.value, description: desc.text });
   } catch (e) {
-    store.commit("snackbar/showSnackbarError", { message: e.message });
+    addon.value.descriptionId = null;
   }
 });
 
@@ -83,6 +84,10 @@ const tabItems = computed(() => [
   {
     component: AddonProducts,
     title: "products",
+  },
+  {
+    component: AddonPlaybook,
+    title: "playbook",
   },
   {
     component: AddonTemplate,
