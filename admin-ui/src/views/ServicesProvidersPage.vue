@@ -25,12 +25,12 @@
     >
       <v-tab-item v-for="tab in tabs" :key="tab.title">
         <v-progress-linear v-if="loading" indeterminate class="pt-2" />
-        <component v-if="!loading && item" :is="tab.component" :template="item">
+        <component v-if="!loading && sp" :is="tab.component" :template="sp">
           <v-row>
             <v-col :cols="12" :md="6">
               <json-editor
-                :json="item[tab.title?.toLowerCase()]"
-                @changeValue="(data) => (item[tab.title?.toLowerCase()] = data)"
+                :json="sp[tab.title?.toLowerCase()]"
+                @changeValue="(data) => (sp[tab.title?.toLowerCase()] = data)"
               />
             </v-col>
           </v-row>
@@ -51,7 +51,6 @@ export default {
     found: false,
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
-    item: null,
   }),
   methods: {
     navTitle(title) {
@@ -92,7 +91,7 @@ export default {
         {
           title: "Map",
           component:
-            this.item?.type === "ovh"
+            this.sp?.type === "ovh"
               ? () => import("@/components/ServicesProvider/ovhMap.vue")
               : () => import("@/components/ServicesProvider/map.vue"),
         },
@@ -110,7 +109,7 @@ export default {
         },
       ].filter((el) => el?.title);
 
-      if (this.item?.type === "ione")
+      if (this.sp?.type === "ione")
         tabs.splice(3, 0, {
           title: "Nebula",
           component: () => import("@/components/ServicesProvider/nebula.vue"),
@@ -119,16 +118,18 @@ export default {
       return tabs;
     },
     title() {
-      return this?.item?.title ?? "not found";
+      return this?.sp?.title ?? "not found";
     },
     loading() {
       return this.$store.getters["servicesProviders/isLoading"];
     },
+    sp() {
+      const items = this.$store.getters["servicesProviders/all"];
+      return items.find((el) => el.uuid == this.uuid);
+    },
   },
   created() {
     this.$store.dispatch("servicesProviders/fetchById", this.uuid).then(() => {
-      const items = this.$store.getters["servicesProviders/all"];
-      this.item = items.find((el) => el.uuid == this.uuid);
       this.found = !!this.service;
       document.title = `${this.title} | NoCloud`;
     });
