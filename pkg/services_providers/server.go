@@ -322,6 +322,10 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if suspendRules := req.GetSuspendRules(); suspendRules != nil {
 		sp.SuspendRules = suspendRules
 	}
+	if hooks := req.GetHooks(); hooks != nil {
+		sp.Hooks = hooks
+	}
+
 	sp.Meta = req.GetMeta()
 	sp.Public = req.GetPublic()
 
