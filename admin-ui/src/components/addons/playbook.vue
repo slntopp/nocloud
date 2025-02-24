@@ -1,5 +1,22 @@
 <template>
   <div class="pa-5">
+    <div
+      class="d-flex justify-center align-center"
+      style="flex-direction: column"
+    >
+      <v-icon size="30">mdi-information-outline</v-icon>
+      <pre
+        style="
+          max-width: 800px;
+          font-size: 1rem;
+          color: var(--v-primary-base);
+          text-align: center;
+        "
+      >
+        {{ playbookTip }}
+      </pre>
+    </div>
+
     <playbook-item
       :playbooks="playbooks"
       :vars="addonAction.vars"
@@ -25,6 +42,10 @@ const addonAction = ref({ playbook: "", vars: {} });
 const isSaveLoading = ref(false);
 
 const store = useStore();
+
+const playbookTip = ` Access to internal fields of the instance or service provider is carried
+      out through the template syntax: {{ .Instance }} and {{ .SP }} Example of
+      obtaining an instance identifier: {{ .Instance.Uuid }}`;
 
 onMounted(() => {
   store.dispatch("playbooks/fetch");
