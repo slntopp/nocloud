@@ -216,26 +216,26 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				m.Lock()
 				delete(instances, client.ID)
 				m.Unlock()
-				return err
+				return nil
 			}
 			if int(details.GroupID) == forbiddenUserGroup {
 				m.Lock()
 				delete(instances, details.ID)
 				m.Unlock()
-				return err
+				return nil
 			}
 			if details.PaymentMethod != "" {
 				if slices.Contains(forbiddenGateways, details.PaymentMethod) {
 					m.Lock()
 					delete(instances, details.ID)
 					m.Unlock()
-					return err
+					return nil
 				}
 				if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, details.PaymentMethod) {
 					m.Lock()
 					delete(instances, details.ID)
 					m.Unlock()
-					return err
+					return nil
 				}
 			}
 			m.Lock()
@@ -247,10 +247,10 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 				if !strings.Contains(err.Error(), "json: cannot unmarshal string into Go struct") {
 					log.Error("Failed to get client products", zap.Error(err))
 				}
-				return err
+				return nil
 			}
 			if len(prods) == 0 {
-				return err
+				return nil
 			}
 			m.Lock()
 			products[client.ID] = prods
