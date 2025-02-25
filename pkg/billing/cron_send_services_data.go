@@ -266,6 +266,7 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	} else if errorLog != "" {
 		log.Warn("Got errors during workers process which were fixed after retries", zap.String("errors", errorLog))
 	}
+	log.Debug("Got whmcs data", zap.Int("client_count", len(clients)), zap.Int("clients_with_products_count", len(products)))
 
 	clientsMap := make(map[int]whmcs_gateway.Client)
 	for _, c := range clients {
