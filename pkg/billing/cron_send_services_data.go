@@ -473,9 +473,10 @@ func sendFile(log *zap.Logger, filepath string) error {
 	}
 	defer localFile.Close()
 
-	remoteFile, err := client.OpenFile("/upload/"+path.Base(filepath), os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC)
+	remoteName := "/upload/" + path.Base(filepath)
+	remoteFile, err := client.OpenFile(remoteName, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC)
 	if err != nil {
-		return fmt.Errorf("failed to open remote file: %w", err)
+		return fmt.Errorf("failed to open remote file with name %s: %w", remoteName, err)
 	}
 	defer remoteFile.Close()
 
