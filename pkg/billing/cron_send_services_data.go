@@ -5,7 +5,9 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"encoding/csv"
+	"fmt"
 	"github.com/arangodb/go-driver"
+	"github.com/pkg/sftp"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -15,6 +17,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tiendc/go-csvlib"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/ssh"
+	"io"
 	"os"
 	"path"
 	"slices"
@@ -32,6 +36,11 @@ var (
 	forbiddenGateways  []string
 	forbiddenUserGroup int
 	allowedGateways    []string // If empty, then ALL allowed
+
+	sftpHost           string
+	sftpPort           string
+	sftpUsername       string
+	sftpPrivateKeyPath string
 )
 
 func init() {
@@ -44,6 +53,11 @@ func init() {
 	forbiddenGateways = viper.GetStringSlice("FORBIDDEN_REPORTS_PAYMENT_GATEWAYS")
 	forbiddenUserGroup = viper.GetInt("FORBIDDEN_REPORTS_USER_GROUP")
 	allowedGateways = viper.GetStringSlice("ALLOWED_REPORTS_PAYMENT_GATEWAYS")
+
+	sftpHost = viper.GetString("SFTP_HOST")
+	sftpPort = viper.GetString("SFTP_PORT")
+	sftpUsername = viper.GetString("SFTP_USERNAME")
+	sftpPrivateKeyPath = viper.GetString("SFTP_PRIVATE_KEY_PATH")
 }
 
 type ClientsReport struct {
@@ -348,9 +362,14 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	writer.Flush()
 	output = buf.String()
 	output = strings.Replace(output, "|", "%|%", -1)
-	_ = writeToFile(log, clientsFilePrefix+"_example", strings.Replace(output, "%|%", ",", -1))
-	if err = writeToFile(log, clientsFilePrefix, output); err != nil {
+	_, _ = writeToFile(log, clientsFilePrefix+"_example", strings.Replace(output, "%|%", ",", -1))
+	fpath, err := writeToFile(log, clientsFilePrefix, output)
+	if err != nil {
 		log.Error("Failed to write to file", zap.Error(err))
+		return
+	}
+	if err = sendFile(log, fpath); err != nil {
+		log.Error("Failed to send file via sftp", zap.Error(err), zap.String("path", fpath))
 		return
 	}
 	// Write services report
@@ -365,9 +384,14 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	writer.Flush()
 	output = buf.String()
 	output = strings.Replace(output, "|", "%|%", -1)
-	_ = writeToFile(log, servicesFilePrefix+"_example", strings.Replace(output, "%|%", ",", -1))
-	if err = writeToFile(log, servicesFilePrefix, output); err != nil {
+	_, _ = writeToFile(log, servicesFilePrefix+"_example", strings.Replace(output, "%|%", ",", -1))
+	fpath, err = writeToFile(log, servicesFilePrefix, output)
+	if err != nil {
 		log.Error("Failed to write to file", zap.Error(err))
+		return
+	}
+	if err = sendFile(log, fpath); err != nil {
+		log.Error("Failed to send file via sftp", zap.Error(err), zap.String("path", fpath))
 		return
 	}
 	// Write bills report
@@ -382,30 +406,85 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 	writer.Flush()
 	output = buf.String()
 	output = strings.Replace(output, "|", "%|%", -1)
-	_ = writeToFile(log, billsFilePrefix+"_example", strings.Replace(output, "%|%", ",", -1))
-	if err = writeToFile(log, billsFilePrefix, output); err != nil {
+	_, _ = writeToFile(log, billsFilePrefix+"_example", strings.Replace(output, "%|%", ",", -1))
+	fpath, err = writeToFile(log, billsFilePrefix, output)
+	if err != nil {
 		log.Error("Failed to write to file", zap.Error(err))
+		return
+	}
+	if err = sendFile(log, fpath); err != nil {
+		log.Error("Failed to send file via sftp", zap.Error(err), zap.String("path", fpath))
 		return
 	}
 }
 
-func writeToFile(log *zap.Logger, prefix string, content string) error {
-	//log.Debug("File output with prefix "+prefix, zap.String("output", content))
+func writeToFile(log *zap.Logger, prefix string, content string) (string, error) {
 	now := reverseDate(strings.Replace(time.Now().Format(time.DateOnly), "-", "", -1))
 	filename := prefix + "_" + now + ".csv"
 	if err := os.MkdirAll(reportsLocation, 0777); err != nil {
-		return err
+		return "", err
 	}
 	filepath := path.Join(reportsLocation, filename)
 	file, err := os.OpenFile(filepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC, 0777)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer file.Close()
 	_, err = file.Write([]byte(content))
 	if err != nil {
+		return "", err
+	}
+	return filepath, nil
+}
+
+func sendFile(log *zap.Logger, filepath string) error {
+	key, err := os.ReadFile(sftpPrivateKeyPath)
+	if err != nil {
 		return err
 	}
+	signer, err := ssh.ParsePrivateKey(key)
+	if err != nil {
+		return err
+	}
+	config := &ssh.ClientConfig{
+		User: sftpUsername,
+		Auth: []ssh.AuthMethod{
+			ssh.PublicKeys(signer),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	addr := fmt.Sprintf("%s:%s", sftpHost, sftpPort)
+	sshConn, err := ssh.Dial("tcp", addr, config)
+	if err != nil {
+		return err
+	}
+	defer sshConn.Close()
+
+	client, err := sftp.NewClient(sshConn)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	localFile, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer localFile.Close()
+
+	remoteFile, err := client.OpenFile("/upload/"+path.Base(filepath), os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC)
+	if err != nil {
+		return err
+	}
+	defer remoteFile.Close()
+
+	_, err = io.Copy(remoteFile, localFile)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("Successfully uploaded " + filepath)
 	return nil
 }
 
