@@ -473,10 +473,14 @@ func sendFile(log *zap.Logger, filepath string) error {
 	}
 	defer localFile.Close()
 
-	remoteName := "/upload/" + path.Base(filepath)
-	remoteFile, err := client.Create(remoteName)
+	remoteBasePath := "/upload"
+	remotePath := remoteBasePath + "/" + path.Base(filepath)
+	if err = client.MkdirAll(remoteBasePath); err != nil {
+		return fmt.Errorf("failed to create base directories on remote: %w", err)
+	}
+	remoteFile, err := client.Create(remotePath)
 	if err != nil {
-		return fmt.Errorf("failed to open remote file with name %s: %w", remoteName, err)
+		return fmt.Errorf("failed to open remote file with name %s: %w", remotePath, err)
 	}
 	defer remoteFile.Close()
 
