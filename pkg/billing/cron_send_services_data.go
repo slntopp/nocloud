@@ -440,11 +440,11 @@ func writeToFile(log *zap.Logger, prefix string, content string) (string, error)
 func sendFile(log *zap.Logger, filepath string) error {
 	key, err := os.ReadFile(sftpPrivateKeyPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read private key: %w", err)
 	}
 	signer, err := ssh.ParsePrivateKey(key)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse private key: %w", err)
 	}
 	config := &ssh.ClientConfig{
 		User: sftpUsername,
@@ -457,31 +457,31 @@ func sendFile(log *zap.Logger, filepath string) error {
 	addr := fmt.Sprintf("%s:%s", sftpHost, sftpPort)
 	sshConn, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to dial sftp host: %w", err)
 	}
 	defer sshConn.Close()
 
 	client, err := sftp.NewClient(sshConn)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create sftp client: %w", err)
 	}
 	defer client.Close()
 
 	localFile, err := os.Open(filepath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open local file: %w", err)
 	}
 	defer localFile.Close()
 
 	remoteFile, err := client.OpenFile("/upload/"+path.Base(filepath), os.O_CREATE|os.O_WRONLY|os.O_APPEND|os.O_TRUNC)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open remote file: %w", err)
 	}
 	defer remoteFile.Close()
 
 	_, err = io.Copy(remoteFile, localFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to copy file contents to the remote: %w", err)
 	}
 
 	log.Debug("Successfully uploaded " + filepath)
