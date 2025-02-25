@@ -14,6 +14,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/slntopp/nocloud/pkg/nocloud/worker"
 	"github.com/spf13/viper"
 	"github.com/tiendc/go-csvlib"
 	"go.uber.org/zap"
@@ -24,6 +25,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -41,6 +43,9 @@ var (
 	sftpPort           string
 	sftpUsername       string
 	sftpPrivateKeyPath string
+
+	maxWhmcsSimultaneousRequests int
+	maxRetriesAfterFailedRequest int
 )
 
 func init() {
@@ -48,6 +53,8 @@ func init() {
 	viper.SetDefault("FORBIDDEN_REPORTS_PAYMENT_GATEWAYS", "")
 	viper.SetDefault("FORBIDDEN_REPORTS_USER_GROUP", "")
 	viper.SetDefault("ALLOWED_REPORTS_PAYMENT_GATEWAYS", "")
+	viper.SetDefault("MAX_SIMULTANEOUS_WHMCS_REQUESTS", "15")
+	viper.SetDefault("MAX_RETRIES_AFTER_FAILED_WHMCS_REQUESTS", "5")
 
 	reportsLocation = viper.GetString("REPORTS_LOCATION")
 	forbiddenGateways = viper.GetStringSlice("FORBIDDEN_REPORTS_PAYMENT_GATEWAYS")
@@ -58,6 +65,9 @@ func init() {
 	sftpPort = viper.GetString("SFTP_PORT")
 	sftpUsername = viper.GetString("SFTP_USERNAME")
 	sftpPrivateKeyPath = viper.GetString("SFTP_PRIVATE_KEY_PATH")
+
+	maxWhmcsSimultaneousRequests = viper.GetInt("MAX_SIMULTANEOUS_WHMCS_REQUESTS")
+	maxRetriesAfterFailedRequest = viper.GetInt("MAX_RETRIES_AFTER_FAILED_WHMCS_REQUESTS")
 }
 
 type ClientsReport struct {
@@ -190,6 +200,8 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 
 	clients := make([]whmcs_gateway.Client, 0)
 	products := make(map[int][]whmcs_gateway.ListProduct)
+	w := worker.NewWorker(maxWhmcsSimultaneousRequests, maxRetriesAfterFailedRequest)
+	m := &sync.Mutex{}
 	for _, c := range whmcsClients {
 		if c.GroupID == forbiddenUserGroup {
 			delete(instances, c.ID)
@@ -197,40 +209,65 @@ func (s *BillingServiceServer) CollectSystemReport(ctx context.Context, log *zap
 		}
 		client := c
 
-		details, err := s.whmcsGateway.GetClientsDetails(ctx, client.ID)
-		if err != nil {
-			log.Error("Failed to get client details", zap.Error(err))
-			delete(instances, client.ID)
-			continue
-		}
-		if int(details.GroupID) == forbiddenUserGroup {
-			delete(instances, details.ID)
-			continue
-		}
-		if details.PaymentMethod != "" {
-			if slices.Contains(forbiddenGateways, details.PaymentMethod) {
-				delete(instances, details.ID)
-				continue
+		w.Add(func() error {
+			details, err := s.whmcsGateway.GetClientsDetails(ctx, client.ID)
+			if err != nil {
+				log.Error("Failed to get client details", zap.Error(err))
+				m.Lock()
+				delete(instances, client.ID)
+				m.Unlock()
+				return nil
 			}
-			if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, details.PaymentMethod) {
+			if int(details.GroupID) == forbiddenUserGroup {
+				m.Lock()
 				delete(instances, details.ID)
-				continue
+				m.Unlock()
+				return nil
 			}
-		}
-		clients = append(clients, details)
+			if details.PaymentMethod != "" {
+				if slices.Contains(forbiddenGateways, details.PaymentMethod) {
+					m.Lock()
+					delete(instances, details.ID)
+					m.Unlock()
+					return nil
+				}
+				if len(allowedGateways) > 0 && !slices.Contains(allowedGateways, details.PaymentMethod) {
+					m.Lock()
+					delete(instances, details.ID)
+					m.Unlock()
+					return nil
+				}
+			}
+			m.Lock()
+			clients = append(clients, details)
+			m.Unlock()
 
-		prods, err := s.whmcsGateway.GetClientsProducts(ctx, client.ID)
-		if err != nil {
-			if !strings.Contains(err.Error(), "json: cannot unmarshal string into Go struct") {
-				log.Error("Failed to get client products", zap.Error(err))
+			prods, err := s.whmcsGateway.GetClientsProducts(ctx, client.ID)
+			if err != nil {
+				if !strings.Contains(err.Error(), "json: cannot unmarshal string into Go struct") {
+					log.Error("Failed to get client products", zap.Error(err))
+				}
+				return nil
 			}
-			continue
-		}
-		if len(prods) == 0 {
-			continue
-		}
-		products[client.ID] = prods
+			if len(prods) == 0 {
+				return nil
+			}
+			m.Lock()
+			products[client.ID] = prods
+			m.Unlock()
+
+			return nil
+		})
 	}
+	ok, errorLog := w.Start()
+	if !ok {
+		log.Error("Failed to perform some operations", zap.String("errors", errorLog))
+		return
+	} else if errorLog != "" {
+		log.Warn("Got errors during workers process which were fixed after retries", zap.String("errors", errorLog))
+	}
+	log.Debug("Got whmcs data", zap.Int("client_count", len(clients)), zap.Int("clients_with_products_count", len(products)))
+
 	clientsMap := make(map[int]whmcs_gateway.Client)
 	for _, c := range clients {
 		clientsMap[c.ID] = c
