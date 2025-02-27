@@ -93,6 +93,10 @@ func (s *ShowcasesServer) List(ctx context.Context, req *sppb.ListRequest) (*spp
 	isRoot := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
 
 	showcases, err := s.ctrl.List(ctx, requestor, isRoot, req)
+	// Do not send promo in list
+	for _, sc := range showcases {
+		sc.Promo = nil
+	}
 
 	result := &sppb.Showcases{Showcases: showcases}
 
