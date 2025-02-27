@@ -73,8 +73,17 @@ func (s *ShowcasesServer) Update(ctx context.Context, req *sppb.Showcase) (*sppb
 func (s *ShowcasesServer) Get(ctx context.Context, req *sppb.GetRequest) (*sppb.Showcase, error) {
 	log := s.log.Named("Get")
 	log.Debug("Create request received", zap.Any("request", req))
+	requester, _ := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	showcase, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		return showcase, err
+	}
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	if !showcase.GetPublic() && !s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Get")
+	}
 
 	return showcase, err
 }
