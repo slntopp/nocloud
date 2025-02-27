@@ -99,7 +99,8 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		if req.Spec().Procedure != "/nocloud.registry.AccountsService/Token" &&
 			req.Spec().Procedure != "/nocloud.billing.CurrencyService/GetCurrencies" &&
 			req.Spec().Procedure != "/nocloud.billing.AddonsService/List" &&
-			req.Spec().Procedure != "/nocloud.billing.PromocodesService/GetByCode" {
+			req.Spec().Procedure != "/nocloud.billing.PromocodesService/GetByCode" &&
+			req.Spec().Procedure != "/nocloud.services_providers.ShowcasesService/Get" {
 			if err != nil {
 				return nil, err
 			}

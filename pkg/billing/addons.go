@@ -166,9 +166,12 @@ func (s *AddonsServer) Get(ctx context.Context, r *connect.Request[pb.Addon]) (*
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
-	resp := connect.NewResponse(addon)
+	conv := graph.NewConverter(r.Header(), s.curr)
+	conv.ConvertObjectPrices(addon)
 
-	return resp, nil
+	resp := connect.NewResponse(addon)
+	conv.SetResponseHeader(resp.Header())
+	return graph.HandleConvertionError(resp, conv)
 }
 
 func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddonsRequest]) (*connect.Response[pb.ListAddonsResponse], error) {
