@@ -189,7 +189,7 @@ const handleCopyInvoice = async () => {
   isCopyLoading.value = true;
 
   try {
-    await store.dispatch["invoices/copy"](selectedInvoices.value[0]);
+    await store.dispatch("invoices/copy", selectedInvoices.value[0]);
 
     refetchInvoices();
     selectedInvoices.value = [];

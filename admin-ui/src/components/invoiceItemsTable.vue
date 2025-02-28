@@ -48,7 +48,7 @@
       />
     </template>
 
-    <template v-if="showDelete" v-slot:[`item.actions`]="{ index }">
+    <template v-slot:[`item.actions`]="{ index }">
       <div class="d-flex justify-center">
         <v-btn icon @click="emit('click:delete', index)"
           ><v-icon>mdi-delete</v-icon></v-btn
@@ -56,7 +56,7 @@
       </div>
     </template>
 
-    <template v-if="showDelete" v-slot:[`item.total`]="{ item }">
+    <template v-slot:[`item.total`]="{ item }">
       <span>{{
         [
           (item.price * item.amount || 0).toFixed(2),
@@ -120,7 +120,7 @@ const headers = computed(() =>
     { text: "Unit", value: "unit", width: 100 },
     { text: "Amount", value: "amount", width: 100 },
     { text: "Price", value: "price", width: 100 },
-    { text: "Total", value: "total", width: 75 },
+    showDelete.value ? { text: "Total", value: "total", width: 75 } : null,
     showDelete.value ? { text: "Actions", value: "actions", width: 25 } : null,
   ].filter((c) => !!c)
 );
