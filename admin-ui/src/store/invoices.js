@@ -57,7 +57,7 @@ export default {
         total: invoice.total,
         account: invoice.account,
         type: invoice.type,
-        deadline: invoice.deadline,
+        deadline: Math.round(Date.now() / 1000 + 86400 * 30),
         meta: invoice.meta,
         status: "DRAFT",
       };
