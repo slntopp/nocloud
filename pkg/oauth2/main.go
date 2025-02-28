@@ -80,7 +80,7 @@ func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization", "*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
 		AllowCredentials: true,
 	}).Handler(s.router)
