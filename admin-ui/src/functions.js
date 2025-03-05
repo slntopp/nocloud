@@ -2,6 +2,14 @@ import yaml from "yaml";
 import XlsxService from "@/services/XlsxService";
 import store from "@/store";
 import { Rounding } from "nocloud-proto/proto/es/billing/billing_pb";
+import {
+  endOfDay,
+  endOfMonth,
+  endOfWeek,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 
 export function isObject(item) {
   return item && typeof item === "object" && !Array.isArray(item);
@@ -713,6 +721,22 @@ export function downloadPlanXlsx(plans) {
       };
     })
   );
+}
+
+export function getDatesPeriod(period = "day") {
+  const date=new Date();
+
+  switch (period) {
+    case "day": {
+      return [startOfDay(date), endOfDay(date)];
+    }
+    case "month": {
+      return [startOfMonth(date), endOfMonth(date)];
+    }
+    case "week": {
+      return [startOfWeek(date), endOfWeek(date)];
+    }
+  }
 }
 
 export function isInstancePayg(inst) {

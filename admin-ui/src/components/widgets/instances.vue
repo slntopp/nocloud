@@ -1,5 +1,10 @@
 <template>
-  <widget title="Instances" :loading="isLoading" class="pa-0 ma-0">
+  <widget
+    title="Instances"
+    :loading="isLoading"
+    :more="{ name: 'Statistics', query: { tab: 'instances' } }"
+    class="pa-0 ma-0"
+  >
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle
@@ -21,15 +26,15 @@
         <v-card-subtitle class="ma-0 my-2 pa-0"
           >Created in last {{ data.period }}</v-card-subtitle
         >
-        <v-card-subtitle class="ma-0 pa-0">
+        <v-card-subtitle v-if="countForPeriod" class="ma-0 pa-0">
           {{ countForPeriod }}
         </v-card-subtitle>
       </div>
 
       <div class="d-flex justify-space-between align-center mb-2">
-        <v-card-subtitle class="ma-0 my-2 pa-0">Total created</v-card-subtitle>
+        <v-card-subtitle class="ma-0 my-2 pa-0">Total</v-card-subtitle>
         <v-card-subtitle class="ma-0 pa-0">
-          {{ instances.length }}
+          {{ instancesCount }}
         </v-card-subtitle>
       </div>
 
@@ -47,7 +52,7 @@
                 :to="{
                   name: 'Instance',
                   params: { instanceId: instance.uuid },
-                  query: { fullscreen: (viewport > 768) ? false : true }
+                  query: { fullscreen: viewport > 768 ? false : true },
                 }"
               >
                 {{ getShortName(instance.title) }}
@@ -63,17 +68,9 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { computed, onMounted, onUnmounted, ref, toRefs } from "vue";
+import { computed, onMounted, onUnmounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import { getShortName } from "@/functions";
-import {
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
+import { getShortName, getDatesPeriod } from "@/functions";
 import InstanceState from "@/components/ui/instanceState.vue";
 
 const props = defineProps(["data"]);
@@ -86,75 +83,37 @@ const store = useStore();
 const isLoading = ref(false);
 const periods = ref(["day", "week", "month"]);
 const viewport = ref(window.innerWidth);
+const statisticForPeriod = ref();
+const countForPeriod = ref();
+const lastInstances = ref([]);
+const instancesCount = ref();
+const statisticParams = ref({});
 
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await store.dispatch("services/fetch", { showDeleted: true });
-  } catch (e) {
-    console.log(e);
+    lastInstances.value = await store.dispatch("instances/fetch", {
+      field: "created",
+      limit: "5",
+      page: "1",
+      sort: "DESC",
+    });
   } finally {
     isLoading.value = false;
   }
 
-  window.addEventListener("resize", onResize)
+  window.addEventListener("resize", onResize);
 });
 
 onUnmounted(() => {
-  window.removeEventListener("resize", onResize)
-})
+  window.removeEventListener("resize", onResize);
+});
+
+const isStatisticLoading = computed(() => store.getters["statistic/loading"]);
 
 function onResize() {
-  viewport.value = window.innerWidth
+  viewport.value = window.innerWidth;
 }
-
-const instances = computed(() =>
-  store.getters["services/getInstances"].map((i) => ({
-    ...i,
-    created: new Date(+i.created || 0).getTime(),
-  }))
-);
-
-const lastInstances = computed(() => {
-  const sorted = [...instances.value].sort((a, b) => b.created - a.created);
-
-  return sorted.slice(0, 5);
-});
-
-const countForPeriod = computed(() => {
-  if (!data.value.period) {
-    return 0;
-  }
-
-  const dates = { from: null, to: null };
-
-  switch (data.value.period) {
-    case "day": {
-      dates.from = startOfDay(new Date());
-      dates.to = endOfDay(new Date());
-      break;
-    }
-    case "month": {
-      dates.from = startOfMonth(new Date());
-      dates.to = endOfMonth(new Date());
-      break;
-    }
-    case "week": {
-      dates.from = startOfWeek(new Date());
-      dates.to = endOfWeek(new Date());
-      break;
-    }
-  }
-
-  dates.from = dates.from.getTime() / 1000;
-  dates.to = dates.to.getTime() / 1000;
-
-  return instances.value.filter((ac) => {
-    const createDate = +ac.created || 0;
-
-    return dates.from <= createDate && dates.to >= createDate;
-  }).length;
-});
 
 const setDefaultData = () => {
   if (Object.keys(data.value || {}).length === 0) {
@@ -163,6 +122,50 @@ const setDefaultData = () => {
 };
 
 setDefaultData();
+
+watch(statisticForPeriod, (summary) => {
+  countForPeriod.value = (summary?.created || 0).toString();
+  instancesCount.value = (summary?.total || 0).toString();
+});
+
+watch(
+  () => data.value.period,
+  (period) => {
+    const [from, to] = getDatesPeriod(period);
+    const dates = { from, to };
+
+    dates.from = dates.from.toISOString().split("T")[0];
+    dates.to = dates.to.toISOString().split("T")[0];
+
+    statisticParams.value = {
+      entity: "services",
+      params: {
+        start_date: dates.from,
+        end_date: dates.to,
+      },
+    };
+
+    store.dispatch("statistic/fetch", statisticParams.value);
+  },
+  { deep: true }
+);
+
+watch([isStatisticLoading, () => data.value.period], () => {
+  const response = store.getters["statistic/cached"](statisticParams.value);
+
+  if (response instanceof Promise || !response) {
+    return (statisticForPeriod.value = null);
+  }
+
+  statisticForPeriod.value = Object.keys(response.summary).reduce(
+    (acc, key) => {
+      acc.created += response.summary[key].created || 0;
+      acc.total += response.summary[key].total || 0;
+      return acc;
+    },
+    { created: 0, total: 0 }
+  );
+});
 </script>
 
 <script>

@@ -18,6 +18,14 @@ const routes = [
     },
   },
   {
+    path: "/statistics",
+    name: "Statistics",
+    component: () => import("../views/Statistics.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/namespaces",
     name: "Namespaces",
     component: () => import("../views/Namespaces.vue"),

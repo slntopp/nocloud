@@ -1,12 +1,26 @@
 <template>
   <widget
-    title="Chats resposibles"
+    title="Chats departments"
     :loading="isLoading || isStatisticLoading"
     class="pa-0 ma-0"
-    :more="{ name: 'Statistics', query: { tab: 'chats-responsibles' } }"
+    :more="{ name: 'Statistics', query: { tab: 'chats' } }"
   >
     <v-card color="background-light" flat>
-      <div class="d-flex justify-end">
+      <div class="d-flex justify-space-between">
+        <v-btn-toggle
+          class="mt-2"
+          dense
+          :value="data.status"
+          @change="
+            emit('update:key', { value: $event || data.status, key: 'status' })
+          "
+          borderless
+        >
+          <v-btn x-small :value="item" :key="item" v-for="item in statuses">
+            {{ item }}
+          </v-btn>
+        </v-btn-toggle>
+
         <v-btn-toggle
           class="mt-2"
           dense
@@ -40,7 +54,6 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import api from "@/api";
 import apexchart from "vue-apexcharts";
 import { getDatesPeriod } from "@/functions";
 
@@ -52,8 +65,7 @@ const emit = defineEmits(["update", "update:key"]);
 const store = useStore();
 
 const periods = ref(["day", "week", "month"]);
-const accounts = ref({});
-const isAccountsLoading = ref(false);
+const statuses = ref(["total", "closed", "created"]);
 const statisticParams = ref({});
 const statisticForPeriod = ref({});
 const chatsResponsibleStatistic = ref(new Map());
@@ -62,53 +74,30 @@ const isLoading = computed(() => store.getters["chats/loading"]);
 
 const isStatisticLoading = computed(() => store.getters["statistic/loading"]);
 
-const options = computed(
-  () =>
-    !isAccountsLoading.value && {
-      labels: [...chatsResponsibleStatistic.value.keys()]
-        .filter((key) => !!chatsResponsibleStatistic.value.get(key))
-        .map((key) => `${accounts.value[key]?.title}`),
-      theme: {
-        palette: "palette8",
+const options = computed(() => ({
+  labels: [...chatsResponsibleStatistic.value.keys()]
+    .filter((key) => !!chatsResponsibleStatistic.value.get(key))
+    .map((key) => key),
+  theme: {
+    palette: "palette8",
+  },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: "0%",
       },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: "0%",
-          },
-        },
-      },
-    }
-);
+    },
+  },
+}));
 const series = computed(() =>
   [...chatsResponsibleStatistic.value.values()].filter((key) => !!key)
 );
 
 const setDefaultData = () => {
   if (Object.keys(data.value || {}).length === 0) {
-    emit("update", { period: "week" });
+    emit("update", { period: "week", status: "total" });
   }
 };
-
-const fetchAccounts = () => {
-  [...chatsResponsibleStatistic.value.keys()].forEach(async (uuid) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value || []).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
-};
-
-watch(chatsResponsibleStatistic, fetchAccounts, { deep: true });
 
 setDefaultData();
 
@@ -122,7 +111,7 @@ watch(
     dates.to = dates.to.toISOString().split("T")[0];
 
     statisticParams.value = {
-      entity: "ticket-responses",
+      entity: "tickets",
       params: {
         start_date: dates.from,
         end_date: dates.to,
@@ -134,27 +123,39 @@ watch(
   { deep: true }
 );
 
-watch([isStatisticLoading, () => data.value.period], () => {
-  const response = store.getters["statistic/cached"](statisticParams.value);
+watch(
+  [isStatisticLoading, () => data.value.period, () => data.value.status],
+  () => {
+    const response = store.getters["statistic/cached"](statisticParams.value);
 
-  if (response instanceof Promise || !response) {
-    return (statisticForPeriod.value = null);
-  }
+    if (response instanceof Promise || !response) {
+      return (statisticForPeriod.value = null);
+    }
 
-  statisticForPeriod.value = Object.keys(response.summary || {});
+    statisticForPeriod.value = Object.keys(response.summary || {});
 
-  chatsResponsibleStatistic.value = Object.keys(response.summary || {}).reduce(
-    (acc, uuid) => {
-      acc.set(uuid, response.summary[uuid].responses);
+    chatsResponsibleStatistic.value = Object.keys(
+      response.summary || {}
+    ).reduce((acc, uuid) => {
+      let count = 0;
+
+      if (data.value.status === "closed") {
+        count = response.summary[uuid].closed || 0;
+      } else if (data.value.status === "created") {
+        count = response.summary[uuid].created || 0;
+      } else {
+        count = response.summary[uuid].total || 0;
+      }
+
+      acc.set(uuid, count);
       return acc;
-    },
-    new Map()
-  );
-});
+    }, new Map());
+  }
+);
 </script>
 
 <script>
 export default {
-  name: "chats-responsibles-widget",
+  name: "chats-departments-widget",
 };
 </script>

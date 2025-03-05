@@ -1,5 +1,10 @@
 <template>
-  <widget title="Accounts" :loading="isLoading" class="pa-0 ma-0">
+  <widget
+    title="Accounts"
+    :loading="isLoading"
+    class="pa-0 ma-0"
+    :more="{ name: 'Statistics', query: { tab: 'accounts' } }"
+  >
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle
@@ -21,15 +26,17 @@
         <v-card-subtitle class="ma-0 my-2 pa-0"
           >Created this {{ data.period }}</v-card-subtitle
         >
-        <v-card-subtitle v-if="!isCountForPeriodLoading" class="ma-0 pa-0">
-          {{ countsForPeriod[data.period] }}
+        <v-card-subtitle v-if="statisticForPeriod" class="ma-0 pa-0">
+          {{ countForPeriod }}
         </v-card-subtitle>
       </div>
 
       <div class="d-flex justify-space-between align-center mb-2">
-        <v-card-subtitle class="ma-0 my-2 pa-0">Total active</v-card-subtitle>
-        <v-card-subtitle v-if="activeAccountsCount" class="ma-0 pa-0">
-          {{ activeAccountsCount }}
+        <v-card-subtitle class="ma-0 my-2 pa-0"
+          >Total active/Total</v-card-subtitle
+        >
+        <v-card-subtitle class="ma-0 pa-0">
+          {{ activeAccountsCount }} / {{ accountsCount }}
         </v-card-subtitle>
       </div>
 
@@ -47,7 +54,7 @@
                 :to="{
                   name: 'Account',
                   params: { accountId: account?.uuid },
-                  query: { fullscreen: (viewport > 768) ? false : true }
+                  query: { fullscreen: viewport > 768 ? false : true },
                 }"
               >
                 {{ getShortName(account.title) }}
@@ -67,96 +74,55 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { onMounted, onUnmounted, ref, toRefs, watch } from "vue";
-import {
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
+import { computed, onMounted, onUnmounted, ref, toRefs, watch } from "vue";
 import BalanceDisplay from "@/components/balance.vue";
 import api from "@/api";
-import { getShortName } from "@/functions";
+import { getShortName, getDatesPeriod } from "@/functions";
+import { useStore } from "@/store";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
 
 const emit = defineEmits(["update", "update:key"]);
 
+const store = useStore();
+
 const isLoading = ref(false);
-const isCountForPeriodLoading = ref(false);
 const periods = ref(["day", "week", "month"]);
 const viewport = ref(window.innerWidth);
+const statisticForPeriod = ref();
+const countForPeriod = ref({});
+const lastFiveAccounts = ref([]);
+const activeAccountsCount = ref();
+const accountsCount = ref();
+const statisticParams = ref({});
 
 onMounted(async () => {
   isLoading.value = true;
   try {
-    const { pool, active } = await api.post("accounts", {
+    const { pool } = await api.post("accounts", {
       page: 1,
       limit: 5,
       field: "data.date_create",
       sort: "DESC",
     });
     lastFiveAccounts.value = pool;
-    activeAccountsCount.value = active;
   } finally {
     isLoading.value = false;
   }
 
-  window.addEventListener("resize", onResize)
+  window.addEventListener("resize", onResize);
 });
 
 onUnmounted(() => {
-  window.removeEventListener("resize", onResize)
-})
+  window.removeEventListener("resize", onResize);
+});
 
 function onResize() {
-  viewport.value = window.innerWidth
+  viewport.value = window.innerWidth;
 }
 
-const countsForPeriod = ref({});
-const lastFiveAccounts = ref([]);
-const activeAccountsCount = ref();
-
-const getCountForPeriod = async (period) => {
-  const dates = { from: null, to: null };
-  switch (period) {
-    case "day": {
-      dates.from = startOfDay(new Date());
-      dates.to = endOfDay(new Date());
-      break;
-    }
-    case "month": {
-      dates.from = startOfMonth(new Date());
-      dates.to = endOfMonth(new Date());
-      break;
-    }
-    case "week": {
-      dates.from = startOfWeek(new Date());
-      dates.to = endOfWeek(new Date());
-      break;
-    }
-  }
-
-  dates.from = Math.floor(dates.from.getTime() / 1000);
-  dates.to = Math.floor(dates.to.getTime() / 1000);
-
-  try {
-    isCountForPeriodLoading.value = true;
-    const { count } = await api.post("accounts", {
-      limit: 0,
-      page: 1,
-      filters: {
-        "data.date_create": dates,
-      },
-    });
-    countsForPeriod.value[period] = count;
-  } finally {
-    isCountForPeriodLoading.value = false;
-  }
-};
+const isStatisticLoading = computed(() => store.getters["statistic/loading"]);
 
 const setDefaultData = () => {
   if (Object.keys(data.value || {}).length === 0) {
@@ -166,14 +132,43 @@ const setDefaultData = () => {
 
 setDefaultData();
 
+watch(statisticForPeriod, (summary) => {
+  countForPeriod.value = (summary?.created || 0).toString();
+  activeAccountsCount.value = (summary?.active || 0).toString();
+  accountsCount.value = (summary?.total || 0).toString();
+});
+
 watch(
   () => data.value.period,
-  () => {
-    if (!countsForPeriod.value[data.value.period]) {
-      getCountForPeriod(data.value.period);
-    }
-  }
+  (period) => {
+    const [from, to] = getDatesPeriod(period);
+    const dates = { from, to };
+
+    dates.from = dates.from.toISOString().split("T")[0];
+    dates.to = dates.to.toISOString().split("T")[0];
+
+    statisticParams.value = {
+      entity: "accounts",
+      params: {
+        start_date: dates.from,
+        end_date: dates.to,
+      },
+    };
+
+    store.dispatch("statistic/fetch", statisticParams.value);
+  },
+  { deep: true }
 );
+
+watch([isStatisticLoading, () => data.value.period], () => {
+  const response = store.getters["statistic/cached"](statisticParams.value);
+
+  if (response instanceof Promise || !response) {
+    return (statisticForPeriod.value = null);
+  }
+
+  statisticForPeriod.value = response.summary;
+});
 </script>
 
 <script>
