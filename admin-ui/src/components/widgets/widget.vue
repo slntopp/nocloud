@@ -17,7 +17,11 @@
         absolute
       ></v-progress-linear>
     </template>
-    <v-card-title>{{ title }}</v-card-title>
+
+    <div class="d-flex justify-space-between align-center px-3">
+      <v-card-title>{{ title }}</v-card-title>
+      <v-btn v-if="more" @click="$router.push(more)" small text> More </v-btn>
+    </div>
 
     <v-divider class="mx-4"></v-divider>
 
@@ -32,6 +36,7 @@ export default {
   name: "widget-origin",
   props: {
     title: String,
+    more: { type: Object },
     loading: {
       type: Boolean,
       default: false,

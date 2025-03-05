@@ -7,32 +7,17 @@ import {
   ListChatsRequest,
   StreamRequest,
 } from "core-chatting/plugin/src/connect/cc/cc_pb";
-import {
-  endOfMonth,
-  endOfWeek,
-  startOfMonth,
-  startOfWeek,
-  startOfDay,
-  endOfDay,
-} from "date-fns";
+import { startOfDay, endOfDay } from "date-fns";
 
 export default {
   namespaced: true,
   state: {
     dayChats: [],
-    weekChats: [],
-    monthChats: [],
     loading: false,
   },
   mutations: {
     setDayChats(state, value) {
       state.dayChats = value;
-    },
-    setWeekChats(state, value) {
-      state.weekChats = value;
-    },
-    setMonthChats(state, value) {
-      state.monthChats = value;
     },
     setLoading(state, value) {
       state.loading = value;
@@ -49,12 +34,6 @@ export default {
   getters: {
     dayChats(state) {
       return state.dayChats;
-    },
-    weekChats(state) {
-      return state.weekChats;
-    },
-    monthChats(state) {
-      return state.monthChats;
     },
     chatsClient(state, getters, rootState, rootGetters) {
       return createPromiseClient(ChatsAPI, rootGetters["app/transport"]);
@@ -78,45 +57,19 @@ export default {
           field: "updated",
           sort: "desc",
         };
-        const [day, week, month] = await Promise.all([
-          getters["chatsClient"].list(
-            ListChatsRequest.fromJson({
-              ...baseReqParams,
-              filters: {
-                created: {
-                  from: startOfDay(new Date()).getTime(),
-                  to: endOfDay(new Date()).getTime(),
-                },
+        const day = await getters["chatsClient"].list(
+          ListChatsRequest.fromJson({
+            ...baseReqParams,
+            filters: {
+              created: {
+                from: startOfDay(new Date()).getTime(),
+                to: endOfDay(new Date()).getTime(),
               },
-            })
-          ),
-          getters["chatsClient"].list(
-            ListChatsRequest.fromJson({
-              ...baseReqParams,
-              filters: {
-                created: {
-                  from: startOfWeek(new Date()).getTime(),
-                  to: endOfWeek(new Date()).getTime(),
-                },
-              },
-            })
-          ),
-          getters["chatsClient"].list(
-            ListChatsRequest.fromJson({
-              ...baseReqParams,
-              filters: {
-                created: {
-                  from: startOfMonth(new Date()).getTime(),
-                  to: endOfMonth(new Date()).getTime(),
-                },
-              },
-            })
-          ),
-        ]);
+            },
+          })
+        );
 
         commit("setDayChats", day.toJson()?.pool || []);
-        commit("setWeekChats", week.toJson()?.pool || []);
-        commit("setMonthChats", month.toJson()?.pool || []);
 
         for await (const { type, item } of getters["chatsStreamClient"].stream(
           new StreamRequest()

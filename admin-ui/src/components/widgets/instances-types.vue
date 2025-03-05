@@ -1,5 +1,10 @@
 <template>
-  <widget title="New orders count" :loading="isLoading" class="pa-0 ma-0">
+  <widget
+    title="New orders count"
+    :loading="isStatisticLoading"
+    :more="{ name: 'Statistics', query: { tab: 'instances' } }"
+    class="pa-0 ma-0"
+  >
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle
@@ -35,14 +40,7 @@ import { computed, ref, toRefs, watch } from "vue";
 import widget from "@/components/widgets/widget.vue";
 import apexchart from "vue-apexcharts";
 import { useStore } from "@/store";
-import {
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
+import { getDatesPeriod } from "@/functions";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
@@ -53,6 +51,9 @@ const store = useStore();
 
 const periods = ref(["day", "week", "month"]);
 const typesMap = ref(new Map());
+
+const statisticForPeriod = ref();
+const statisticParams = ref({});
 
 const options = computed(() => ({
   labels: [...typesMap.value.keys()].map(
@@ -71,49 +72,7 @@ const options = computed(() => ({
 }));
 const series = computed(() => [...typesMap.value.values()]);
 
-const isLoading = computed(() => store.getters["services/isLoading"]);
-
-const instances = computed(() =>
-  store.getters["services/getInstances"].map((inst) => ({
-    ...inst,
-    created: new Date(+inst.created || 0).getTime(),
-  }))
-);
-
-const instancesForPeriod = computed(() => {
-  if (!data.value.period) {
-    return [];
-  }
-
-  const dates = { from: null, to: null };
-
-  switch (data.value.period) {
-    case "day": {
-      dates.from = startOfDay(new Date());
-      dates.to = endOfDay(new Date());
-      break;
-    }
-    case "month": {
-      dates.from = startOfMonth(new Date());
-      dates.to = endOfMonth(new Date());
-      break;
-    }
-    case "week": {
-      dates.from = startOfWeek(new Date());
-      dates.to = endOfWeek(new Date());
-      break;
-    }
-  }
-
-  dates.from = dates.from.getTime() / 1000;
-  dates.to = dates.to.getTime() / 1000;
-
-  return instances.value.filter((ac) => {
-    const createDate = +ac.created || 0;
-
-    return dates.from <= createDate && dates.to >= createDate;
-  });
-});
+const isStatisticLoading = computed(() => store.getters["statistic/loading"]);
 
 const setDefaultData = () => {
   if (Object.keys(data.value || {}).length === 0) {
@@ -123,23 +82,44 @@ const setDefaultData = () => {
 
 setDefaultData();
 
-watch(
-  instancesForPeriod,
-  () => {
-    const map = new Map();
-    instancesForPeriod.value.forEach((inst) => {
-      const key = inst.type;
-      if (map.has(key)) {
-        map.set(key, map.get(key) + 1);
-      } else {
-        map.set(key, 1);
-      }
-    });
+watch(statisticForPeriod, (summary) => {
+  typesMap.value = Object.keys(summary || {}).reduce((acc, key) => {
+    acc.set(key, summary[key].created || 0);
+    return acc;
+  }, new Map());
+});
 
-    typesMap.value = map;
+watch(
+  () => data.value.period,
+  (period) => {
+    const [from, to] = getDatesPeriod(period);
+    const dates = { from, to };
+
+    dates.from = dates.from.toISOString().split("T")[0];
+    dates.to = dates.to.toISOString().split("T")[0];
+
+    statisticParams.value = {
+      entity: "services",
+      params: {
+        start_date: dates.from,
+        end_date: dates.to,
+      },
+    };
+
+    store.dispatch("statistic/fetch", statisticParams.value);
   },
   { deep: true }
 );
+
+watch([isStatisticLoading, () => data.value.period], () => {
+  const response = store.getters["statistic/cached"](statisticParams.value);
+
+  if (response instanceof Promise || !response) {
+    return (statisticForPeriod.value = null);
+  }
+
+  statisticForPeriod.value = response.summary;
+});
 </script>
 
 <style>
