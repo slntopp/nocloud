@@ -1,5 +1,10 @@
 <template>
-  <widget title="Transactions" :loading="isLoading" class="pa-0 ma-0">
+  <widget
+    title="Transactions"
+    :loading="isLoading"
+    class="pa-0 ma-0"
+    :more="{ name: 'Statistics', query: { tab: 'transactions' } }"
+  >
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle
@@ -22,7 +27,7 @@
           >Created in last {{ data.period }}</v-card-subtitle
         >
         <v-card-subtitle class="ma-0 pa-0">
-          {{ dates[data.period] }}
+          {{ periodCount }}
         </v-card-subtitle>
       </div>
 
@@ -67,98 +72,52 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import api from "@/api";
 import {
-  endOfDay,
-  endOfMonth,
-  endOfWeek,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
-import { formatSecondsToDate, getShortName } from "../../functions";
+  formatSecondsToDate,
+  getShortName,
+  getDatesPeriod,
+} from "../../functions";
 import BalanceDisplay from "@/components/balance.vue";
+import { useStore } from "@/store";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
 
 const emit = defineEmits(["update", "update:key"]);
 
+const store = useStore();
+
 const isLoading = ref(false);
 const isAccountsLoading = ref(false);
 const periods = ref(["day", "week", "month"]);
 
 const fiveLast = ref([]);
-const totalCount = ref(0);
-const dates = ref({});
+const totalCount = ref();
+const periodCount = ref();
 const accounts = ref({});
+const statisticForPeriod = ref();
+const statisticParams = ref({});
 
 onMounted(async () => {
   isLoading.value = true;
   try {
-    const [{ total }, { records }] = await Promise.all([
-      api.reports.count({}),
-      api.reports.list({
-        page: 1,
-        limit: 5,
-        sort: "DESC",
-        field: "exec",
-        filters: {},
-      }),
-    ]);
-
-    const data = await Promise.all(
-      periods.value.map(async (period) => {
-        return { period, data: await getCountForPeriod(period) };
-      })
-    );
-
-    data.forEach(({ period, data: { total } }) => {
-      dates.value[period] = total;
+    const { records } = await api.reports.list({
+      page: 1,
+      limit: 5,
+      sort: "DESC",
+      field: "exec",
+      filters: {},
     });
 
-    totalCount.value = total;
     fiveLast.value = records;
-  } catch (e) {
-    console.log(e);
   } finally {
     isLoading.value = false;
   }
 });
 
-const getCountForPeriod = (period) => {
-  const dates = { from: null, to: null };
-
-  switch (period) {
-    case "day": {
-      dates.from = startOfDay(new Date());
-      dates.to = endOfDay(new Date());
-      break;
-    }
-    case "month": {
-      dates.from = startOfMonth(new Date());
-      dates.to = endOfMonth(new Date());
-      break;
-    }
-    case "week": {
-      dates.from = startOfWeek(new Date());
-      dates.to = endOfWeek(new Date());
-      break;
-    }
-  }
-
-  dates.from = Math.round(dates.from.getTime() / 1000);
-  dates.to = Math.round(dates.to.getTime() / 1000);
-
-  return api.reports.count({
-    limit: 5,
-    page: 1,
-    field: "exec",
-    sort: "DESC",
-    filters: { exec: { ...dates } },
-  });
-};
+const isStatisticLoading = computed(() => store.getters["statistic/loading"]);
 
 const getAccount = (uuid) => {
   return accounts.value[uuid];
@@ -188,6 +147,43 @@ watch(fiveLast, () => {
       );
     }
   });
+});
+
+watch(statisticForPeriod, (summary) => {
+  totalCount.value = (summary?.total || 0).toString();
+  periodCount.value = (summary?.created || 0).toString();
+});
+
+watch(
+  () => data.value.period,
+  (period) => {
+    const [from, to] = getDatesPeriod(period);
+    const dates = { from, to };
+
+    dates.from = dates.from.toISOString().split("T")[0];
+    dates.to = dates.to.toISOString().split("T")[0];
+
+    statisticParams.value = {
+      entity: "transactions",
+      params: {
+        start_date: dates.from,
+        end_date: dates.to,
+      },
+    };
+
+    store.dispatch("statistic/fetch", statisticParams.value);
+  },
+  { deep: true }
+);
+
+watch([isStatisticLoading, () => data.value.period], () => {
+  const response = store.getters["statistic/cached"](statisticParams.value);
+
+  if (response instanceof Promise || !response) {
+    return (statisticForPeriod.value = null);
+  }
+
+  statisticForPeriod.value = response.summary;
 });
 </script>
 

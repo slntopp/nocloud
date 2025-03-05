@@ -36,6 +36,9 @@ export default {
       commit("setShowcases", []);
       commit("setLoading", true);
 
+      params = params ?? {};
+      params.omitPromos = true;
+
       try {
         const response = await api.showcases.list(params);
         commit("setShowcases", response.showcases);

@@ -1,5 +1,10 @@
 <template>
-  <widget title="Chats" :loading="isLoading" class="pa-0 ma-0">
+  <widget
+    title="Chats"
+    :loading="isLoading || isStatisticLoading"
+    :more="{ name: 'Statistics', query: { tab: 'chats' } }"
+    class="pa-0 ma-0"
+  >
     <v-card color="background-light" flat>
       <div class="d-flex justify-space-between">
         <v-btn-toggle
@@ -105,7 +110,7 @@ import widget from "@/components/widgets/widget.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
-import { formatSecondsToDate, getShortName } from "@/functions";
+import { formatSecondsToDate, getShortName, getDatesPeriod } from "@/functions";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
@@ -115,51 +120,42 @@ const emit = defineEmits(["update", "update:key"]);
 const store = useStore();
 
 const periods = ref(["day", "week", "month"]);
-const statuses = ref(["all", "closed"]);
+const statuses = ref(["total", "closed", "created"]);
 const accounts = ref({});
 const isAccountsLoading = ref(false);
+const statisticForPeriod = ref();
+const statisticParams = ref({});
 
 onMounted(() => fetchAccounts());
 
 const dayChats = computed(() => store.getters["chats/dayChats"]);
-const weekChats = computed(() => store.getters["chats/weekChats"]);
-const monthChats = computed(() => store.getters["chats/monthChats"]);
 const isLoading = computed(() => store.getters["chats/loading"]);
+
+const isStatisticLoading = computed(() => store.getters["statistic/loading"]);
 
 const lastActivityChats = computed(() => {
   return dayChats.value.slice(0, 3);
 });
 
 const countForPeriod = computed(() => {
-  if (!data.value.period) {
+  if (!statisticForPeriod.value) {
     return 0;
   }
 
-  let chats;
-
-  switch (data.value.period) {
-    case "day": {
-      chats = dayChats.value;
-      break;
-    }
-    case "month": {
-      chats = monthChats.value;
-      break;
-    }
-    case "week": {
-      chats = weekChats.value;
-      break;
-    }
+  if (data.value.status == "closed") {
+    return statisticForPeriod.value.closed;
   }
 
-  return chats.filter((chat) => {
-    return !(data.value.status === "closed" && chat.status !== 3);
-  }).length;
+  if (data.value.status == "open") {
+    return statisticForPeriod.value.created;
+  }
+
+  return statisticForPeriod.value.total;
 });
 
 const setDefaultData = () => {
   if (Object.keys(data.value || {}).length === 0) {
-    emit("update", { period: "week", starus: "all" });
+    emit("update", { period: "week", status: "total" });
   }
 };
 
@@ -184,6 +180,46 @@ const fetchAccounts = () => {
 watch(lastActivityChats, fetchAccounts);
 
 setDefaultData();
+
+watch(
+  () => data.value.period,
+  (period) => {
+    const [from, to] = getDatesPeriod(period);
+    const dates = { from, to };
+
+    dates.from = dates.from.toISOString().split("T")[0];
+    dates.to = dates.to.toISOString().split("T")[0];
+
+    statisticParams.value = {
+      entity: "tickets",
+      params: {
+        start_date: dates.from,
+        end_date: dates.to,
+      },
+    };
+
+    store.dispatch("statistic/fetch", statisticParams.value);
+  },
+  { deep: true }
+);
+
+watch([isStatisticLoading, () => data.value.period], () => {
+  const response = store.getters["statistic/cached"](statisticParams.value);
+
+  if (response instanceof Promise || !response) {
+    return (statisticForPeriod.value = null);
+  }
+
+  statisticForPeriod.value = Object.keys(response.summary).reduce(
+    (acc, key) => {
+      acc.created += response.summary[key].created || 0;
+      acc.total += response.summary[key].total || 0;
+      acc.closed += response.summary[key].closed || 0;
+      return acc;
+    },
+    { created: 0, total: 0, closed: 0 }
+  );
+});
 </script>
 
 <script>

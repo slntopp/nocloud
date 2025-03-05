@@ -282,6 +282,18 @@
                 </v-list-item-content>
               </v-list-item>
 
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Statistics' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-chart-box-outline</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Statistics")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
               <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
                 <v-list-item-icon>
                   <v-icon>mdi-dns</v-icon>

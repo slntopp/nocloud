@@ -1,6 +1,8 @@
 <template>
   <div class="pa-4">
-    <h1 v-if="!isEdit && isDraft" class="page__title">Create invoice</h1>
+    <h1 v-if="!isEdit && isDraft && !invoice?.uuid" class="page__title">
+      Create invoice
+    </h1>
 
     <div
       v-if="isEdit"
@@ -161,6 +163,7 @@
           <v-btn @click="addInvoiceItem">Add</v-btn>
         </div>
         <invoice-items-table
+          v-if="!isBalanceInvoice || !isDraft"
           :show-delete="!isBalanceInvoice"
           :account="newInvoice.account"
           :items="newInvoice.items"
@@ -597,6 +600,7 @@ const copyInvoice = async () => {
 
   try {
     await store.dispatch("invoices/copy", invoice.value);
+    store.commit("snackbar/showSnackbarSuccess", { message: "Done" });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
