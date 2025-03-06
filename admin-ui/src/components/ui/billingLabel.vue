@@ -98,7 +98,10 @@ const accountCurrency = computed(() => {
 });
 
 const priceForAddons = computed(() => {
-  return convertTo(Object.values(addonsPrice.value).reduce((a, b) => a + b, 0));
+  return convertTo(
+    Object.values(addonsPrice.value).reduce((a, b) => a + b, 0),
+    accountCurrency.value
+  );
 });
 
 const priceForTarrif = computed(() => {
@@ -106,7 +109,7 @@ const priceForTarrif = computed(() => {
 });
 
 const price = computed(() => {
-  return priceForAddons.value + priceForTarrif.value;
+  return +priceForAddons.value + +priceForTarrif.value;
 });
 
 const isRenewDisabled = computed(() => {
