@@ -57,7 +57,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center" v-if="!isServiceHide">
+          <v-row align="center">
             <v-col cols="3">
               <v-subheader>Service</v-subheader>
             </v-col>
@@ -103,8 +103,7 @@
                 label="Amount"
                 :suffix="accountCurrency?.code"
                 v-model.number="transaction.total"
-                :rules="isInvoice ? [] : amountRule"
-                :disabled="isInvoice"
+                :rules="amountRule"
               />
             </v-col>
           </v-row>
@@ -169,27 +168,13 @@
             ></v-textarea>
           </v-row>
 
-          <v-row class="mx-5" v-if="!isInvoice">
+          <v-row class="mx-5">
             <v-textarea
               no-resize
               label="Items descriptions"
               v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
-          <template v-else>
-            <div class="mt-2">
-              <div class="d-flex justify-space-between">
-                <v-subheader>Invoice items</v-subheader>
-                <v-btn @click="addInvoiceItem">Add</v-btn>
-              </div>
-              <invoice-items-table
-                show-delete
-                :account="transaction.account"
-                :items="transaction.meta.items"
-                @click:delete="deleteInvoiceItem($event)"
-              />
-            </div>
-          </template>
           <v-expansion-panels v-if="history.length" class="mt-4">
             <v-expansion-panel>
               <v-expansion-panel-header color="background-light">
@@ -237,15 +222,6 @@
         >
           Publish
         </v-btn>
-        <v-btn
-          v-if="isPublishWithEmailAvailble"
-          class="mx-4"
-          color="background-light"
-          :loading="isLoading"
-          @click="tryToSend(true)"
-        >
-          Publish + email
-        </v-btn>
       </v-row>
     </v-form>
   </div>
@@ -272,6 +248,7 @@ export default {
       exec: 0,
       meta: { instances: [], description: "", transactionType: "", items: [] },
     },
+    isFetchLoading: false,
     namespace: {},
     date: {
       title: "Date",
@@ -288,18 +265,6 @@ export default {
     isLoading: false,
 
     types: [
-      {
-        id: 1,
-        value: "invoice",
-        title: "Invoice",
-        amount: { title: "Payment invoice (no balance change)", value: true },
-      },
-      {
-        id: 2,
-        value: "invoice",
-        title: "Invoice",
-        amount: { title: "Top-up invoice (with balance change)", value: false },
-      },
       {
         id: 3,
         value: "transaction",
@@ -378,26 +343,13 @@ export default {
         this.isLoading = false;
       }
     },
-    async editTransaction(withEmail) {
-      await fetch(
-        /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-          `modules/addons/nocloud/api/index.php?run=update_invoice&account=${
-            this.transaction.account.uuid
-          }&type=${
-            this.transaction.meta.transactionType.split(" ")[1]
-          }&items=${JSON.stringify(
-            this.transaction.meta.items
-          )}&send_email=${withEmail}&transaction=${this.transaction.uuid}`
-      );
-
+    async editTransaction() {
       this.showSnackbarSuccess({
         message: "Transaction edited successfully",
       });
     },
-    async createTransaction(withEmail) {
-      let total = this.isInvoice
-        ? this.transaction.meta.items.reduce((acc, i) => acc + i.amount, 0)
-        : this.transaction.total;
+    async createTransaction() {
+      let total = this.transaction.total;
       const amountType = this.fullType.amount.value;
       if (amountType === null) {
         const balance = this.transaction.account.balance || 0;
@@ -408,25 +360,12 @@ export default {
         total = amountType ? total : -total;
       }
 
-      const transaction = await api.transactions.create({
+      await api.transactions.create({
         ...this.transaction,
         account: this.transaction.account.uuid,
         total,
         currency: this.accountCurrency,
       });
-
-      if (this.transaction.meta.transactionType.startsWith("invoice")) {
-        await fetch(
-          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-            `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
-              this.transaction.account.uuid
-            }&type=${
-              this.transaction.meta.transactionType.split(" ")[1]
-            }&items=${JSON.stringify(
-              this.transaction.meta.items
-            )}&send_email=${withEmail}&transaction=${transaction.uuid}`
-        );
-      }
 
       this.showSnackbarSuccess({
         message: "Transaction created successfully",
@@ -453,17 +392,6 @@ export default {
         month.toString().length < 2 ? "0" + month : month
       }-${day.toString().length < 2 ? "0" + day : day}`;
       this.time.value = `${time}`;
-    },
-    addInvoiceItem() {
-      this.transaction.meta.items.push({ description: "", amount: 0 });
-    },
-    deleteInvoiceItem(index) {
-      if (!this.transaction.meta.items.length) {
-        return;
-      }
-      this.transaction.meta.items = this.transaction.meta.items.filter(
-        (_, i) => i !== index
-      );
     },
     openAccountWindow() {
       return window.open(
@@ -536,9 +464,6 @@ export default {
     isTransaction() {
       return this.fullType.value === "transaction";
     },
-    isInvoice() {
-      return this.fullType.value === "invoice";
-    },
     amountRule() {
       return [
         (v) =>
@@ -549,14 +474,8 @@ export default {
     fullType() {
       return this.types.find((t) => t.id === this.typeId);
     },
-    isServiceHide() {
-      return this.isInvoice;
-    },
     isAdminNoteHide() {
       return this.isTransaction;
-    },
-    isPublishWithEmailAvailble() {
-      return this.isInvoice;
     },
     historyItems() {
       const items = [];
@@ -579,14 +498,7 @@ export default {
     },
     typeId() {
       this.setTransactionType();
-      if (this.isInvoice) {
-        this.transaction.service = undefined;
-        this.transaction.meta.description = undefined;
-        if (!this.isEdit) {
-          this.transaction.meta.items = [{ description: "", amount: 0 }];
-        }
-        this.resetDate();
-      } else if (this.isTransaction) {
+      if (this.isTransaction) {
         this.transaction.meta.items = undefined;
         this.transaction.meta.note = undefined;
         this.initDate();
