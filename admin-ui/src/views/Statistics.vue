@@ -52,7 +52,7 @@ const widgets = [
   {
     component: ChatsResponsesStatistic,
     title: "Chats responses",
-    key: "chats-responsibles",
+    key: "chats-responses",
   },
   { component: AccountsStatistic, title: "Accounts", key: "accounts" },
   {
