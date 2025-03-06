@@ -23,7 +23,7 @@ const useRate = (currency = ref()) => {
       (rate) =>
         rate.from.code == fetchedCurrency.code &&
         rate.to.code == defaultCurrency.value.code
-    ).rate;
+    )?.rate;
     return rate.value;
   };
 

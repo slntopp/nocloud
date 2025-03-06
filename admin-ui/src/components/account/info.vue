@@ -2,6 +2,21 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <div class="actions">
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
+        <hint-btn hint="Create transaction">
+          <v-btn
+            :class="viewport < 600 ? 'ma-0' : 'ma-1'"
+            :small="viewport < 600"
+            :to="{
+              name: 'Transactions create',
+              query: {
+                account: account.uuid,
+              },
+            }"
+          >
+            <v-icon>mdi-abacus</v-icon>
+          </v-btn>
+        </hint-btn>
+
         <hint-btn hint="Create instance">
           <v-btn
             :class="viewport < 600 ? 'ma-0' : 'ma-1'"
@@ -18,6 +33,7 @@
             <v-icon>mdi-server</v-icon>
           </v-btn>
         </hint-btn>
+
         <hint-btn hint="Invoice based">
           <v-dialog v-model="isChangeRegularPaymentOpen" max-width="500">
             <template v-slot:activator="{ on, attrs }">
@@ -99,7 +115,7 @@
       </v-col>
 
       <v-col lg="2" md="4" sm="6" cols="12">
-        <v-text-field v-model="taxRate" label="tax rate" suffix="%"/>
+        <v-text-field v-model="taxRate" label="tax rate" suffix="%" />
       </v-col>
     </v-row>
 
