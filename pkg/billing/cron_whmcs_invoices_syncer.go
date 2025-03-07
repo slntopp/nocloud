@@ -31,9 +31,34 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 		return
 	}
 	log.Info("Size of WHMCS invoices slice", zap.Any("bytes_count_for_invoice", reflect.TypeOf(whmcs_gateway.Invoice{}).Size()), zap.Int("len", len(whmcsInvoices)))
-	ids := make(map[int]struct{})
+	ids := make(map[int]whmcs_gateway.InvoiceInList)
 	for _, val := range whmcsInvoices {
-		ids[int(val.Id)] = struct{}{}
+		ids[int(val.Id)] = val
+	}
+
+	for _, inv := range ncInvoices {
+		if inv.Meta == nil {
+			continue
+		}
+		whmcsId, ok := inv.GetMeta()["whmcs_invoice_id"]
+		if !ok {
+			continue
+		}
+		whmcsInvoice, ok := ids[int(whmcsId.GetNumberValue())]
+		if !ok {
+			continue
+		}
+		if whmcsInvoice.PaymentMethod == "" {
+			continue
+		}
+		if whmcsInvoice.PaymentMethod != "balancepay" && whmcsInvoice.PaymentMethod != "system" {
+			continue
+		}
+		inv.Meta["paid_with_balance"] = structpb.NewBoolValue(true)
+		if _, err = s.invoices.Update(ctx, inv); err != nil {
+			log.Error("Error updating invoice", zap.Error(err))
+			continue
+		}
 	}
 
 	delCount := 0
