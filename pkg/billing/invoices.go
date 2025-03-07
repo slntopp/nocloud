@@ -565,7 +565,13 @@ payment:
 	newInv.NumberTemplate = invConf.Template
 
 quit:
+	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
+
 	_newInv := proto.Clone(newInv.Invoice).(*pb.Invoice)
+	if newInv.Meta == nil {
+		newInv.Meta = map[string]*structpb.Value{}
+	}
+	newInv.Meta["paid_with_balance"] = structpb.NewBoolValue(paidWithBalance)
 	newInv.Transactions = nil
 	newInv.Instances = nil
 	newInv.Items = nil
@@ -575,7 +581,6 @@ quit:
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
-	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
 	if err = s.invoicesPublisher(&epb.Event{
 		Uuid: old.GetUuid(),
 		Key:  billing.InvoiceStatusToKey(newStatus),
