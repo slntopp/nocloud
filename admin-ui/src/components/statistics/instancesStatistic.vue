@@ -7,6 +7,10 @@
     @input:type="type = $event"
     :loading="isDataLoading"
     :type="type"
+    :all-fields="allFields"
+    :fields="fields"
+    @input:fields="fields = $event"
+    :fields-multiple="seriesType === 'amount'"
     description="Instances statistics for period"
   >
     <template v-slot:content>
@@ -25,16 +29,6 @@
         item-value="value"
         :items="seriesTypes"
         v-model="seriesType"
-      />
-
-      <v-select
-        v-if="seriesType === 'type'"
-        style="width: 100px"
-        class="mr-2 ml-2"
-        item-text="label"
-        item-value="value"
-        :items="seriesTypesSubKeys"
-        v-model="seriesTypeSubKey"
       />
     </template>
   </statistic-item>
@@ -58,17 +52,16 @@ const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
 const seriesType = ref("amount");
-const seriesTypeSubKey = ref("total");
-
 const seriesTypes = [
   { label: "By types", value: "type" },
   { label: "Amount", value: "amount" },
 ];
-
-const seriesTypesSubKeys = [
+const fields = ref(["created"]);
+const allFields = ref([
   { label: "Created", value: "created" },
+  { label: "Active", value: "active" },
   { label: "Total", value: "total" },
-];
+]);
 
 const isDataLoading = ref(false);
 
@@ -101,23 +94,32 @@ watch(period, () => {
   fetchDataDebounced();
 });
 
-watch([data, seriesType, seriesTypeSubKey], () => {
+watch(seriesType, (val) => {
+  if (val === "type") {
+    fields.value = fields.value[0] || "active";
+  } else {
+    fields.value = [fields.value || "active"];
+  }
+});
+
+watch([data, seriesType, fields], () => {
+  if (!fields.value || !fields.value.length) {
+    return;
+  }
+
   const newSeries = [];
   const newCategories = [];
 
   const tempData = JSON.parse(JSON.stringify(data.value));
 
   if (seriesType.value === "amount") {
-    newSeries.push(
-      {
-        name: "Created",
+    fields.value.forEach((key) => {
+      newSeries.push({
+        name: allFields.value.find((field) => field.value === key).label,
         data: [],
-      },
-      {
-        name: "Total",
-        data: [],
-      }
-    );
+        id: key,
+      });
+    });
 
     data.value.timeseries?.forEach((timeseries) => {
       const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
@@ -126,30 +128,26 @@ watch([data, seriesType, seriesTypeSubKey], () => {
       }
 
       newCategories.push(timeseries.ts);
-      newSeries[0].data.push(
-        current.reduce((acc, c) => acc + (c.created || 0), 0) || 0
-      );
-      newSeries[1].data.push(
-        current.reduce((acc, c) => acc + (c.total || 0), 0) || 0
-      );
+
+      newSeries.forEach((series) => {
+        series.data.push(
+          current.reduce((acc, c) => acc + (c[series.id] || 0), 0) || 0
+        );
+      });
 
       tempData.timeseries = tempData.timeseries.filter(
         (t) => t.ts !== timeseries.ts
       );
     });
 
-    summary.value = {
-      Created:
+    summary.value = {};
+    newSeries.forEach((serie) => {
+      summary.value[serie.name] =
         Object.keys(data.value.summary || {}).reduce(
-          (acc, key) => acc + data.value.summary[key].created,
+          (acc, key) => acc + (data.value.summary[key][serie.id] || 0),
           0
-        ) || 0,
-      Total:
-        Object.keys(data.value.summary || {}).reduce(
-          (acc, key) => acc + data.value.summary[key].total,
-          0
-        ) || 0,
-    };
+        ) || 0;
+    });
   } else {
     newSeries.push(
       ...Object.keys(data.value.summary || {}).map((key) => ({
@@ -168,7 +166,7 @@ watch([data, seriesType, seriesTypeSubKey], () => {
 
       current.map((ts) => {
         const index = newSeries.findIndex((series) => series.name === ts.type);
-        newSeries[index].data.push(ts[seriesTypeSubKey.value] || 0);
+        newSeries[index].data.push(ts[fields.value] || 0);
       });
 
       tempData.timeseries = tempData.timeseries.filter(
@@ -177,7 +175,7 @@ watch([data, seriesType, seriesTypeSubKey], () => {
     });
 
     summary.value = Object.keys(data.value.summary || {}).reduce((acc, key) => {
-      acc[key] = data.value.summary[key][seriesTypeSubKey.value] || 0;
+      acc[key] = data.value.summary[key][fields.value] || 0;
       return acc;
     }, {});
   }

@@ -20,6 +20,25 @@
       <div class="d-flex alingn-center">
         <slot name="options" />
         <v-select
+          v-if="allFields"
+          class="ml-2"
+          style="max-width: 200px"
+          label="Fields"
+          :multiple="fieldsMultiple"
+          :value="fields"
+          @input="emit('input:fields', $event)"
+          :items="allFields"
+          item-text="label"
+          item-value="value"
+        >
+          <template v-slot:selection="{ item, index }">
+            <span v-if="index === 0">{{ item.label }}</span>
+            <span v-if="index === 1" class="grey--text text-caption">
+              (+{{ fields.length - 1 }} others)
+            </span>
+          </template>
+        </v-select>
+        <v-select
           class="ml-2"
           style="width: 150px"
           :value="periodType"
@@ -62,10 +81,19 @@ const props = defineProps([
   "periodType",
   "description",
   "type",
+  "allFields",
+  "fields",
+  "fieldsMultiple",
 ]);
-const { period, periodType, loading } = toRefs(props);
+const { period, periodType, loading, allFields, fields, fieldsMultiple } =
+  toRefs(props);
 
-const emit = defineEmits(["input:period", "input:period-type", "input:type"]);
+const emit = defineEmits([
+  "input:period",
+  "input:period-type",
+  "input:type",
+  "input:fields",
+]);
 
 const durationOptions = [
   { label: "Week", value: "week" },

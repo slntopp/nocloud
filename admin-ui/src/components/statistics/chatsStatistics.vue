@@ -7,6 +7,10 @@
     @input:type="type = $event"
     :loading="isDataLoading"
     :type="type"
+    :all-fields="allFields"
+    :fields="fields"
+    @input:fields="fields = $event"
+    :fields-multiple="seriesType === 'amount'"
     description="Chats statistics for period"
   >
     <template v-slot:content>
@@ -26,22 +30,13 @@
         :items="seriesTypes"
         v-model="seriesType"
       />
-
-      <v-select
-        style="width: 100px"
-        class="mr-2 ml-2"
-        item-text="label"
-        item-value="value"
-        :items="seriesTypesSubKeys"
-        v-model="seriesTypeSubKey"
-      />
     </template>
   </statistic-item>
 </template>
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { computed, ref, watch } from "vue";
+import { ref, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
@@ -57,25 +52,18 @@ const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
 const seriesType = ref("amount");
-const seriesTypeSubKey = ref("all");
+const allFields = ref([
+  { label: "Created", value: "created" },
+  { label: "Closed", value: "closed" },
+  { label: "Active", value: "active" },
+  { label: "Total", value: "total" },
+]);
+const fields = ref(["created", "closed"]);
 
 const seriesTypes = [
   { label: "By departments", value: "departments" },
   { label: "Amount", value: "amount" },
 ];
-
-const seriesTypesSubKeys = computed(() =>
-  [
-    seriesType.value === "amount" && { label: "All", value: "all" },
-    { label: "Created", value: "created" },
-    { label: "Closed", value: "closed" },
-    { label: "Total", value: "total" },
-  ].filter((v) => !!v)
-);
-
-function capitalizeFirstLetter(val) {
-  return String(val).charAt(0).toUpperCase() + String(val).slice(1);
-}
 
 const isDataLoading = ref(false);
 
@@ -109,40 +97,32 @@ watch(period, () => {
   fetchDataDebounced();
 });
 
-watch(seriesType, () => {
-  if (seriesType.value === "departments") {
-    seriesTypeSubKey.value = "total";
+watch(seriesType, (val) => {
+  if (val === "departments") {
+    fields.value = fields.value[0] || "created";
+  } else {
+    fields.value = [fields.value || ["created", "closed"]];
   }
 });
 
-watch([data, seriesType, seriesTypeSubKey], () => {
+watch([data, seriesType, fields], () => {
+  if (Array.isArray(fields.value) && fields.value.length === 0) {
+    return;
+  }
+
   const newSeries = [];
   const newCategories = [];
 
   const tempData = JSON.parse(JSON.stringify(data.value));
 
   if (seriesType.value === "amount") {
-    if (seriesTypeSubKey.value === "all") {
-      newSeries.push(
-        {
-          name: "Created",
-          data: [],
-        },
-        {
-          name: "Closed",
-          data: [],
-        },
-        {
-          name: "Total",
-          data: [],
-        }
-      );
-    } else {
+    fields.value.forEach((key) => {
       newSeries.push({
-        name: capitalizeFirstLetter(seriesTypeSubKey.value),
+        name: allFields.value.find((field) => field.value === key).label,
         data: [],
+        id: key,
       });
-    }
+    });
 
     data.value.timeseries?.forEach((timeseries) => {
       const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
@@ -152,10 +132,7 @@ watch([data, seriesType, seriesTypeSubKey], () => {
 
       for (const series of newSeries) {
         series.data.push(
-          current.reduce(
-            (acc, c) => acc + (c[series.name.toLowerCase()] || 0),
-            0
-          ) || 0
+          current.reduce((acc, c) => acc + (c[series.id] || 0), 0) || 0
         );
       }
 
@@ -164,45 +141,35 @@ watch([data, seriesType, seriesTypeSubKey], () => {
       );
     });
 
-    summary.value = {
-      Created:
+    summary.value = {};
+    newSeries.forEach((serie) => {
+      summary.value[serie.name] =
         Object.keys(data.value.summary || {}).reduce(
-          (acc, key) => acc + data.value.summary[key].created,
+          (acc, key) => acc + (data.value.summary[key][serie.id] || 0),
           0
-        ) || 0,
-      Total:
-        Object.keys(data.value.summary || {}).reduce(
-          (acc, key) => acc + data.value.summary[key].total,
-          0
-        ) || 0,
-    };
+        ) || 0;
+    });
   } else {
     data.value.timeseries?.forEach((timeseries) => {
       const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
       if (current.length <= 0) {
         return;
       }
-
       newCategories.push(timeseries.ts);
-
       current.map((ts) => {
         let index = newSeries.findIndex((series) => series.name === ts.dep);
-
         if (index == -1) {
           newSeries.push({ name: ts.dep, data: [] });
           index = newSeries.length - 1;
         }
-
-        newSeries[index].data.push(ts[seriesTypeSubKey.value] || 0);
+        newSeries[index].data.push(ts[fields.value] || 0);
       });
-
       tempData.timeseries = tempData.timeseries.filter(
         (t) => t.ts !== timeseries.ts
       );
     });
-
     summary.value = Object.keys(data.value.summary || {}).reduce((acc, key) => {
-      acc[key] = data.value.summary[key][seriesTypeSubKey.value] || 0;
+      acc[key] = data.value.summary[key][fields.value] || 0;
       return acc;
     }, {});
   }

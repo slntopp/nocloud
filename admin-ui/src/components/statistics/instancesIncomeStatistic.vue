@@ -7,6 +7,10 @@
     @input:type="type = $event"
     :loading="isDataLoading"
     :type="type"
+    :all-fields="allFields"
+    :fields="fields"
+    @input:fields="fields = $event"
+    :fields-multiple="seriesType === 'amount'"
     description="Instances income statistics for period"
   >
     <template v-slot:content>
@@ -26,15 +30,6 @@
         :items="seriesTypes"
         v-model="seriesType"
       />
-
-      <v-select
-        style="width: 100px"
-        class="mr-2 ml-2"
-        item-text="label"
-        item-value="value"
-        :items="seriesTypesSubKeys"
-        v-model="seriesTypeSubKey"
-      />
     </template>
   </statistic-item>
 </template>
@@ -51,23 +46,22 @@ const store = useStore();
 const period = ref([]);
 const type = ref("bar");
 const periodType = ref("month");
+const fields = ref(["revenue", "revenue_new"]);
+const allFields = ref([
+  { label: "Periodical payments", value: "revenue" },
+  { label: "First payment", value: "revenue_new" },
+  { label: "Total", value: "total" },
+]);
 
 const data = ref({});
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
 const seriesType = ref("amount");
-const seriesTypeSubKey = ref("total");
 
 const seriesTypes = [
   { label: "By types", value: "type" },
   { label: "Amount", value: "amount" },
-];
-
-const seriesTypesSubKeys = [
-  { label: "Periodical payments", value: "revenue" },
-  { label: "First payment", value: "revenue_new" },
-  { label: "Total", value: "total" },
 ];
 
 const isDataLoading = ref(false);
@@ -99,11 +93,11 @@ async function fetchData() {
 
 const fetchDataDebounced = debounce(fetchData, 300);
 
-function getPrice(c) {
-  if (seriesTypeSubKey.value === "total") {
+function getPrice(c, id) {
+  if (id === "total") {
     return (c.revenue || 0) + (c.revenue_new || 0);
   } else {
-    return c[seriesTypeSubKey.value] || 0;
+    return c[id] || 0;
   }
 }
 
@@ -115,33 +109,32 @@ watch(period, () => {
   fetchDataDebounced();
 });
 
-watch([data, seriesType, seriesTypeSubKey], () => {
+watch(seriesType, (val) => {
+  if (val === "type") {
+    fields.value = fields.value[0] || "total";
+  } else {
+    fields.value = [fields.value || ["revenue", "revenue_new"]];
+  }
+});
+
+watch([data, seriesType, fields], () => {
+  if (!fields.value || !fields.value.length) {
+    return;
+  }
+
   const newSeries = [];
   const newCategories = [];
 
   const tempData = JSON.parse(JSON.stringify(data.value));
 
   if (seriesType.value === "amount") {
-    if (seriesTypeSubKey.value === "total") {
+    fields.value.forEach((key) => {
       newSeries.push({
-        name: "Total",
+        name: allFields.value.find((field) => field.value === key).label,
         data: [],
+        id: key,
       });
-    }
-
-    if (seriesTypeSubKey.value === "revenue_new") {
-      newSeries.push({
-        name: "First payment",
-        data: [],
-      });
-    }
-
-    if (seriesTypeSubKey.value === "revenue") {
-      newSeries.push({
-        name: "Periodical payments",
-        data: [],
-      });
-    }
+    });
 
     data.value.timeseries?.forEach((timeseries) => {
       const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
@@ -150,23 +143,29 @@ watch([data, seriesType, seriesTypeSubKey], () => {
       }
 
       newCategories.push(timeseries.ts);
-      newSeries[0].data.push(
-        getFormattedPrice(current.reduce((acc, c) => acc + getPrice(c), 0) || 0)
-      );
+
+      newSeries.forEach((series) => {
+        series.data.push(
+          getFormattedPrice(
+            current.reduce((acc, c) => acc + getPrice(c, series.id), 0) || 0
+          )
+        );
+      });
 
       tempData.timeseries = tempData.timeseries.filter(
         (t) => t.ts !== timeseries.ts
       );
     });
 
-    summary.value = {
-      [newSeries[0].name]: getFormattedPrice(
+    summary.value = {};
+    newSeries.forEach((serie) => {
+      summary.value[serie.name] = getFormattedPrice(
         Object.keys(data.value.summary || {}).reduce(
-          (acc, key) => acc + getPrice(data.value.summary[key]),
+          (acc, key) => acc + getPrice(data.value.summary[key], serie.id),
           0
         ) || 0
-      ),
-    };
+      );
+    });
   } else {
     data.value.timeseries?.forEach((timeseries) => {
       const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
@@ -184,7 +183,9 @@ watch([data, seriesType, seriesTypeSubKey], () => {
           index = newSeries.length - 1;
         }
 
-        newSeries[index].data.push(getFormattedPrice(getPrice(ts) || 0));
+        newSeries[index].data.push(
+          getFormattedPrice(getPrice(ts, fields.value) || 0)
+        );
       });
 
       tempData.timeseries = tempData.timeseries.filter(
@@ -193,7 +194,9 @@ watch([data, seriesType, seriesTypeSubKey], () => {
     });
 
     summary.value = Object.keys(data.value.summary || {}).reduce((acc, key) => {
-      acc[key] = getFormattedPrice(getPrice(data.value.summary[key]) || 0);
+      acc[key] = getFormattedPrice(
+        getPrice(data.value.summary[key], fields.value) || 0
+      );
       return acc;
     }, {});
   }
