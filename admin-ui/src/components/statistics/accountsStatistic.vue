@@ -7,7 +7,6 @@
     :loading="isDataLoading"
     :type="type"
     @input:type="type = $event"
-    description="Accounts statistics for period"
     :all-fields="allFields"
     :fields="fields"
     :fields-multiple="!comparable"
@@ -19,6 +18,7 @@
   >
     <template v-slot:content>
       <default-chart
+        description="Accounts statistics"
         :stacked="type === 'bar' && !comparable"
         :type="type"
         :series="series"
@@ -131,6 +131,10 @@ watch([chartData, fields], () => {
   const newSeries = [];
   const newCategories = [];
 
+  summary.value = {};
+
+  const tempData = JSON.parse(JSON.stringify(chartData.value));
+
   if (!comparable.value) {
     fields.value.forEach((key) => {
       newSeries.push({
@@ -140,17 +144,15 @@ watch([chartData, fields], () => {
       });
     });
 
-    chartData.value.timeseries?.forEach((timeseries) => {
+    tempData.timeseries?.forEach((timeseries) => {
       newCategories.push(timeseries.ts);
       newSeries.forEach((serie) => {
         serie.data.push(timeseries[serie.id] || 0);
       });
     });
 
-    summary.value = {};
-
     newSeries.forEach((serie) => {
-      summary.value[serie.name] = chartData.value.summary?.[serie.id] || 0;
+      summary.value[serie.name] = tempData.summary?.[serie.id] || 0;
     });
   } else {
     Object.keys(periods.value).forEach((key) => {
@@ -166,21 +168,26 @@ watch([chartData, fields], () => {
       let index = 0;
       index <
       Math.max(
-        chartData.value[0]?.timeseries?.length || 0,
-        chartData.value[1]?.timeseries?.length || 0
+        tempData[0]?.timeseries?.length || 0,
+        tempData[1]?.timeseries?.length || 0
       );
       index++
     ) {
-      const first = chartData.value[0]?.timeseries?.[index];
-      const second = chartData.value[1]?.timeseries?.[index];
+      const first = tempData[0]?.timeseries?.[index];
+      const second = tempData[1]?.timeseries?.[index];
 
-      if (!newCategories.includes(index)) {
-        newCategories.push(index);
+      if (!newCategories.includes(index + 1)) {
+        newCategories.push(index + 1);
       }
 
       newSeries[0].data.push(first?.[fields.value] || 0);
       newSeries[1].data.push(second?.[fields.value] || 0);
     }
+
+    newSeries.forEach((serie) => {
+      summary.value[serie.name] =
+        serie.data.reduce((acc, a) => acc + a, 0) || 0;
+    });
   }
 
   series.value = newSeries;

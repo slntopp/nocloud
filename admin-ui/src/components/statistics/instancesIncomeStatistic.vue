@@ -10,11 +10,16 @@
     :all-fields="allFields"
     :fields="fields"
     @input:fields="fields = $event"
-    :fields-multiple="seriesType === 'amount'"
-    description="Instances income statistics for period"
+    :fields-multiple="seriesType === 'amount' && !comparable"
+    :comparable="comparable"
+    :not-comparable="seriesType !== 'amount'"
+    @input:comparable="comparable = $event"
+    :periods="periods"
+    @input:periods="periods = $event"
   >
     <template v-slot:content>
       <default-chart
+        description="Instances income statistics"
         :type="type"
         :series="series"
         :categories="categories"
@@ -64,34 +69,23 @@ const seriesTypes = [
   { label: "Amount", value: "amount" },
 ];
 
+const comparable = ref(false);
+const periods = ref({ first: [], second: [] });
 const isDataLoading = ref(false);
 
-const defaultCurrency = computed(() => store.getters["currencies/default"]);
-
-async function fetchData() {
-  isDataLoading.value = true;
-
-  try {
-    const start_date = period.value[0].toISOString().split("T")[0];
-    const end_date = period.value[1].toISOString().split("T")[0];
-
-    const params = {
-      entity: "services_revenue",
-      params: {
-        start_date,
-        end_date,
-        with_timeseries: true,
-      },
-    };
-
-    const response = await store.dispatch("statistic/get", params);
-    data.value = response;
-  } finally {
-    isDataLoading.value = false;
+function switchFields(type, comparable) {
+  if (type === "type") {
+    fields.value = "total";
+  } else if (comparable) {
+    fields.value = "revenue";
+  } else {
+    fields.value = ["revenue", "revenue_new"];
   }
 }
 
-const fetchDataDebounced = debounce(fetchData, 300);
+function formatDate(date) {
+  return date.toISOString().split("T")[0];
+}
 
 function getPrice(c, id) {
   if (id === "total") {
@@ -105,16 +99,69 @@ function getFormattedPrice(price) {
   return [price.toFixed(0), defaultCurrency.value.code].join("");
 }
 
-watch(period, () => {
-  fetchDataDebounced();
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
+
+async function fetchData() {
+  isDataLoading.value = true;
+
+  try {
+    const params = {
+      entity: "services_revenue",
+      params: {
+        with_timeseries: true,
+      },
+    };
+
+    if (!comparable.value) {
+      params.params.start_date = formatDate(period.value[0]);
+      params.params.end_date = formatDate(period.value[1]);
+
+      data.value = [await store.dispatch("statistic/get", params)];
+    } else {
+      const params1 = {
+        ...params,
+        params: {
+          ...params.params,
+          start_date: formatDate(periods.value.first[0]),
+          end_date: formatDate(periods.value.first[1]),
+        },
+      };
+      const params2 = {
+        ...params,
+        params: {
+          ...params.params,
+          start_date: formatDate(periods.value.second[0]),
+          end_date: formatDate(periods.value.second[1]),
+        },
+      };
+
+      data.value = await Promise.all([
+        store.dispatch("statistic/get", params1),
+        store.dispatch("statistic/get", params2),
+      ]);
+    }
+  } finally {
+    isDataLoading.value = false;
+  }
+}
+
+const fetchDataDebounced = debounce(fetchData, 1000);
+
+watch([period, periods, comparable], () => {
+  if (!data.value) {
+    fetchData();
+  } else {
+    fetchDataDebounced();
+  }
 });
 
 watch(seriesType, (val) => {
-  if (val === "type") {
-    fields.value = fields.value[0] || "total";
-  } else {
-    fields.value = [fields.value || ["revenue", "revenue_new"]];
-  }
+  comparable.value = false;
+  switchFields(val, false);
+});
+
+watch(comparable, (val) => {
+  switchFields(seriesType.value, val);
 });
 
 watch([data, seriesType, fields], () => {
@@ -127,49 +174,12 @@ watch([data, seriesType, fields], () => {
 
   const tempData = JSON.parse(JSON.stringify(data.value));
 
-  if (seriesType.value === "amount") {
-    fields.value.forEach((key) => {
-      newSeries.push({
-        name: allFields.value.find((field) => field.value === key).label,
-        data: [],
-        id: key,
-      });
-    });
-
-    data.value.timeseries?.forEach((timeseries) => {
-      const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
-      if (current.length <= 0) {
-        return;
-      }
-
-      newCategories.push(timeseries.ts);
-
-      newSeries.forEach((series) => {
-        series.data.push(
-          getFormattedPrice(
-            current.reduce((acc, c) => acc + getPrice(c, series.id), 0) || 0
-          )
-        );
-      });
-
-      tempData.timeseries = tempData.timeseries.filter(
-        (t) => t.ts !== timeseries.ts
+  if (seriesType.value === "type") {
+    tempData[0].timeseries?.forEach((timeseries) => {
+      const current = tempData[0].timeseries.filter(
+        (t) => t.ts === timeseries.ts
       );
-    });
-
-    summary.value = {};
-    newSeries.forEach((serie) => {
-      summary.value[serie.name] = getFormattedPrice(
-        Object.keys(data.value.summary || {}).reduce(
-          (acc, key) => acc + getPrice(data.value.summary[key], serie.id),
-          0
-        ) || 0
-      );
-    });
-  } else {
-    data.value.timeseries?.forEach((timeseries) => {
-      const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
-      if (current.length <= 0) {
+      if (current.length <= 0 || newCategories.includes(timeseries.ts)) {
         return;
       }
 
@@ -187,21 +197,112 @@ watch([data, seriesType, fields], () => {
           getFormattedPrice(getPrice(ts, fields.value) || 0)
         );
       });
-
-      tempData.timeseries = tempData.timeseries.filter(
-        (t) => t.ts !== timeseries.ts
-      );
     });
 
-    summary.value = Object.keys(data.value.summary || {}).reduce((acc, key) => {
-      acc[key] = getFormattedPrice(
-        getPrice(data.value.summary[key], fields.value) || 0
+    summary.value = Object.keys(tempData[0].summary || {}).reduce(
+      (acc, key) => {
+        acc[key] = getFormattedPrice(
+          getPrice(tempData[0].summary[key], fields.value) || 0
+        );
+        return acc;
+      },
+      {}
+    );
+  } else if (!comparable.value) {
+    fields.value.forEach((key) => {
+      newSeries.push({
+        name: allFields.value.find((field) => field.value === key).label,
+        data: [],
+        id: key,
+      });
+    });
+
+    tempData[0].timeseries?.forEach((timeseries) => {
+      const current = tempData[0].timeseries.filter(
+        (t) => t.ts === timeseries.ts
       );
-      return acc;
-    }, {});
+      if (current.length <= 0 || newCategories.includes(timeseries.ts)) {
+        return;
+      }
+
+      newCategories.push(timeseries.ts);
+
+      newSeries.forEach((series) => {
+        series.data.push(
+          getFormattedPrice(
+            current.reduce((acc, c) => acc + getPrice(c, series.id), 0) || 0
+          )
+        );
+      });
+    });
+
+    summary.value = {};
+    newSeries.forEach((serie) => {
+      summary.value[serie.name] = getFormattedPrice(
+        Object.keys(tempData[0].summary || {}).reduce(
+          (acc, key) => acc + getPrice(tempData[0].summary[key], serie.id),
+          0
+        ) || 0
+      );
+    });
+  } else {
+    const datas = [];
+    tempData.forEach((_, index) => {
+      const timeseries = [];
+
+      tempData[index].timeseries.forEach((ts) => {
+        const index = timeseries.findIndex((el) => ts.ts == el.ts);
+
+        if (index !== -1) {
+          timeseries[index][fields.value] =
+            (timeseries[index][fields.value] || 0) +
+            (getPrice(ts, fields.value) || 0);
+        } else {
+          timeseries.push(ts);
+        }
+      });
+
+      datas.push({ timeseries: timeseries });
+    });
+
+    Object.keys(periods.value).forEach((key) => {
+      newSeries.push({
+        name: `${formatDate(periods.value[key][0])}/${formatDate(
+          periods.value[key][1]
+        )}`,
+        data: [],
+      });
+    });
+
+    for (
+      let index = 0;
+      index <
+      Math.max(
+        datas[0]?.timeseries?.length || 0,
+        datas[1]?.timeseries?.length || 0
+      );
+      index++
+    ) {
+      const first = datas[0]?.timeseries?.[index];
+      const second = datas[1]?.timeseries?.[index];
+
+      if (!newCategories.includes(index + 1)) {
+        newCategories.push(index + 1);
+      }
+
+      newSeries[0].data.push(first?.[fields.value] || 0);
+      newSeries[1].data.push(second?.[fields.value] || 0);
+    }
+
+    newSeries.forEach((serie) => {
+      summary.value[serie.name] = getFormattedPrice(
+        serie.data.reduce((acc, a) => acc + (a || 0), 0) || 0
+      );
+      serie.data = serie.data.map((v) => getFormattedPrice(v));
+    });
   }
 
   series.value = newSeries;
-  categories.value = newCategories.map((c) => c.split("T")[0]);
+  categories.value = newCategories.map((c) => c.toString().split("T")[0]);
 });
 </script>

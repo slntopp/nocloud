@@ -55,7 +55,7 @@
 
       <div class="d-flex alingn-center">
         <v-switch
-          v-if="periods"
+          v-if="periods && !notComparable"
           class="ml-2 mr-2"
           label="Comparison"
           :value="comparable"
@@ -65,7 +65,7 @@
         <v-select
           v-if="allFields.length"
           class="ml-2"
-          style="max-width: 200px"
+          style="max-width: 240px"
           label="Fields"
           :multiple="fieldsMultiple"
           :value="fields"
@@ -134,6 +134,7 @@ import { ref } from "vue";
 const props = defineProps({
   loading: { type: Boolean, default: false },
   comparable: { type: Boolean, default: false },
+  notComparable: { type: Boolean, default: false },
   fieldsMultiple: { type: Boolean, default: false },
   period: { type: Array, default: () => [] },
   periodType: { type: String, default: "month" },
