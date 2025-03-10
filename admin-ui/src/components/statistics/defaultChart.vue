@@ -18,21 +18,32 @@ const props = defineProps([
   "summary",
   "customLegendFormater",
   "type",
+  "stacked",
+  "description",
+  "options",
 ]);
-const { categories, series, summary, type } = toRefs(props);
+const { categories, series, summary, type, stacked, description, options } =
+  toRefs(props);
 
 const store = useStore();
 
 const chartOptions = computed(() => ({
+  ...(options.value || {}),
   dataLabels: {
     enabled: series.value?.[0]?.data?.length < 35,
   },
+  title: description.value
+    ? {
+        text: description.value,
+        align: "left",
+      }
+    : null,
   theme: {
     palette: "palette8",
     mode: store.getters["app/theme"],
   },
   chart: {
-    stacked: type.value === "bar",
+    stacked: !!stacked.value,
   },
   xaxis: {
     categories: categories.value,

@@ -18,7 +18,7 @@
   >
     <template v-slot:content>
       <default-chart
-        description="Transactions statistics"
+        description="Revenue statistics"
         :type="type"
         :series="series"
         :categories="categories"
@@ -30,7 +30,7 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
@@ -41,12 +41,12 @@ const period = ref([]);
 const periodType = ref("month");
 const type = ref("bar");
 const allFields = ref([
-  { label: "Created", value: "created" },
-  { label: "Total", value: "total" },
+  { label: "Other invoices", value: "revenue" },
+  { label: "Instance start", value: "revenue_start" },
+  { label: "Instance renew", value: "revenue_renew" },
+  { label: "Top-up balance", value: "revenue_balance" },
 ]);
-const fields = ref(["created"]);
-const comparable = ref(false);
-const periods = ref({ first: [], second: [] });
+const fields = ref(["revenue"]);
 
 const series = ref([]);
 const categories = ref([]);
@@ -54,6 +54,9 @@ const summary = ref({});
 
 const isDataLoading = ref(false);
 const chartData = ref();
+const comparable = ref(false);
+const periods = ref({ first: [], second: [] });
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 function formatDate(date) {
   return date.toISOString().split("T")[0];
@@ -64,7 +67,7 @@ async function fetchData() {
 
   try {
     const params = {
-      entity: "transactions",
+      entity: "revenue",
       params: {
         with_timeseries: true,
       },
@@ -74,7 +77,7 @@ async function fetchData() {
       params.params.start_date = formatDate(period.value[0]);
       params.params.end_date = formatDate(period.value[1]);
 
-      chartData.value = await store.dispatch("statistic/get", params);
+      chartData.value = [await store.dispatch("statistic/get", params)];
     } else {
       const params1 = {
         ...params,
@@ -113,13 +116,17 @@ watch([period, periods, comparable], () => {
   }
 });
 
-watch(comparable, () => {
-  if (comparable.value) {
-    fields.value = "created";
+watch(comparable, (val) => {
+  if (val) {
+    fields.value = "revenue";
   } else {
-    fields.value = ["created"];
+    fields.value = ["revenue"];
   }
 });
+
+function getFormattedPrice(price) {
+  return [price.toFixed(0), defaultCurrency.value.code].join("");
+}
 
 watch([chartData, fields], () => {
   if (!chartData.value || !fields.value.length) {
@@ -141,15 +148,17 @@ watch([chartData, fields], () => {
       });
     });
 
-    tempData.timeseries?.forEach((timeseries) => {
-      newCategories.push(timeseries.ts);
+    tempData[0].timeseries?.forEach((timeseries) => {
+      newCategories.push(timeseries.ts.split("T")[0]);
       newSeries.forEach((serie) => {
-        serie.data.push(timeseries[serie.id] || 0);
+        serie.data.push(getFormattedPrice(timeseries[serie.id] || 0));
       });
     });
 
     newSeries.forEach((serie) => {
-      summary.value[serie.name] = tempData.summary?.[serie.id] || 0;
+      summary.value[serie.name] = getFormattedPrice(
+        tempData[0].summary?.[serie.id] || 0
+      );
     });
   } else {
     Object.keys(periods.value).forEach((key) => {
@@ -182,8 +191,11 @@ watch([chartData, fields], () => {
     }
 
     newSeries.forEach((serie) => {
-      summary.value[serie.name] =
-        serie.data.reduce((acc, a) => acc + a, 0) || 0;
+      summary.value[serie.name] = getFormattedPrice(
+        serie.data.reduce((acc, a) => acc + a, 0) || 0
+      );
+
+      serie.data = serie.data.map((el) => getFormattedPrice(el));
     });
   }
 

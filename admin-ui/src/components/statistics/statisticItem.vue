@@ -2,23 +2,85 @@
   <div class="chart_container">
     <div class="chart_options">
       <div class="d-flex align-center">
-        <v-card-title> {{ description }} </v-card-title>
+        <template v-if="!comparable">
+          <v-card-title>Period:</v-card-title>
 
-        <div class="current_duration">
-          <v-btn small @click="periodOffset--">
-            <v-icon>mdi-minus</v-icon>
-          </v-btn>
-          <span class="current_duration_info"
-            >{{ formatDate(period[0]) }} - {{ formatDate(period[1]) }}</span
-          >
-          <v-btn small @click="periodOffset++">
-            <v-icon>mdi-plus</v-icon>
-          </v-btn>
+          <div class="current_duration">
+            <v-btn small @click="periodOffset--">
+              <v-icon>mdi-minus</v-icon>
+            </v-btn>
+            <span class="current_duration_info"
+              >{{ formatDate(period[0]) }} - {{ formatDate(period[1]) }}</span
+            >
+            <v-btn small @click="periodOffset++">
+              <v-icon>mdi-plus</v-icon>
+            </v-btn>
+          </div>
+        </template>
+
+        <div class="current_periods" v-else>
+          <div class="d-flex">
+            <span class="period_title mr-2"> First period: </span>
+            <div class="current_duration">
+              <v-btn small @click="periodsFirstOffset--">
+                <v-icon>mdi-minus</v-icon>
+              </v-btn>
+              <span class="current_duration_info"
+                >{{ formatDate(periods.first[0]) }} -
+                {{ formatDate(periods.first[1]) }}</span
+              >
+              <v-btn small @click="periodsFirstOffset++">
+                <v-icon>mdi-plus</v-icon>
+              </v-btn>
+            </div>
+          </div>
+          <div class="d-flex my-2">
+            <span class="period_title mr-2"> Second period:</span>
+
+            <div class="current_duration">
+              <v-btn small @click="periodsSecondOffset--">
+                <v-icon>mdi-minus</v-icon>
+              </v-btn>
+              <span class="current_duration_info"
+                >{{ formatDate(periods.second[0]) }} -
+                {{ formatDate(periods.second[1]) }}</span
+              >
+              <v-btn small @click="periodsSecondOffset++">
+                <v-icon>mdi-plus</v-icon>
+              </v-btn>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="d-flex alingn-center">
+        <v-switch
+          v-if="periods && !notComparable"
+          class="ml-2 mr-2"
+          label="Comparison"
+          :value="comparable"
+          @change="emit('input:comparable', $event)"
+        />
         <slot name="options" />
+        <v-select
+          v-if="allFields.length"
+          class="ml-2"
+          style="max-width: 240px"
+          label="Fields"
+          :multiple="fieldsMultiple"
+          :value="fields"
+          @input="emit('input:fields', $event)"
+          :items="allFields"
+          item-text="label"
+          item-value="value"
+        >
+          <template v-slot:selection="{ item, index }">
+            <span v-if="index === 0">{{ item.label }}</span>
+            <span v-if="index === 1" class="grey--text text-caption">
+              (+{{ fields?.length - 1 }} others)
+            </span>
+          </template>
+        </v-select>
         <v-select
           class="ml-2"
           style="width: 150px"
@@ -56,16 +118,53 @@
 import { toRefs, watch } from "vue";
 import { ref } from "vue";
 
-const props = defineProps([
-  "loading",
-  "period",
-  "periodType",
-  "description",
-  "type",
-]);
-const { period, periodType, loading } = toRefs(props);
+// const props = defineProps([
+//   "loading",
+//   "period",
+//   "periodType",
+//   "description",
+//   "type",
+//   "allFields",
+//   "fields",
+//   "periods",
+//   "comparable",
+//   "fieldsMultiple",
+// ]);
 
-const emit = defineEmits(["input:period", "input:period-type", "input:type"]);
+const props = defineProps({
+  loading: { type: Boolean, default: false },
+  comparable: { type: Boolean, default: false },
+  notComparable: { type: Boolean, default: false },
+  fieldsMultiple: { type: Boolean, default: false },
+  period: { type: Array, default: () => [] },
+  periodType: { type: String, default: "month" },
+  description: { type: String, default: "" },
+  type: { type: String, default: "chart" },
+  allFields: { type: Array, default: () => [] },
+  fields: {},
+  periods: { type: Object, default: () => ({ second: [], first: [] }) },
+});
+
+const {
+  period,
+  periodType,
+  loading,
+  allFields,
+  fields,
+  fieldsMultiple,
+  comparable,
+  periods,
+  type,
+} = toRefs(props);
+
+const emit = defineEmits([
+  "input:period",
+  "input:period-type",
+  "input:periods",
+  "input:type",
+  "input:comparable",
+  "input:fields",
+]);
 
 const durationOptions = [
   { label: "Week", value: "week" },
@@ -80,6 +179,8 @@ const typeOptions = [
 ];
 
 const periodOffset = ref(0);
+const periodsFirstOffset = ref(0);
+const periodsSecondOffset = ref(0);
 
 function getDurationTuple(type = "week", offset = 1) {
   let startDate, endDate;
@@ -145,20 +246,32 @@ function formatDate(date) {
 }
 
 function setDefaultData() {
-  if (!period?.value) {
-    emit("input:period", []);
+  if (!period?.value?.length) {
+    const [startDate, endDate] = getDurationTuple(
+      periodType.value,
+      periodOffset.value
+    );
+
+    emit("input:period", [startDate, endDate]);
   }
 
   if (!periodType?.value) {
     emit("input:period-type", "month");
   }
 
-  const [startDate, endDate] = getDurationTuple(
-    periodType.value,
-    periodOffset.value
-  );
+  if (
+    !periods?.value ||
+    !periods.value.first?.length ||
+    !periods.value.second?.length
+  ) {
+    const first = getDurationTuple(periodType.value, periodsFirstOffset.value);
+    const second = getDurationTuple(
+      periodType.value,
+      periodsSecondOffset.value
+    );
 
-  emit("input:period", [startDate, endDate]);
+    emit("input:periods", { first: first, second: second });
+  }
 }
 
 setDefaultData();
@@ -167,13 +280,28 @@ watch(periodType, () => {
   periodOffset.value = 0;
 });
 
-watch([periodType, periodOffset], () => {
+watch([periodType, periodOffset, comparable], () => {
+  if (comparable?.value) {
+    return;
+  }
+
   const [startDate, endDate] = getDurationTuple(
     periodType.value,
     periodOffset.value
   );
 
   emit("input:period", [startDate, endDate]);
+});
+
+watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
+  if (!comparable?.value) {
+    return;
+  }
+
+  const first = getDurationTuple(periodType.value, periodsFirstOffset.value);
+  const second = getDurationTuple(periodType.value, periodsSecondOffset.value);
+
+  emit("input:periods", { first: first, second: second });
 });
 </script>
 
@@ -202,6 +330,17 @@ watch([periodType, periodOffset], () => {
     max-width: 1400px;
     display: flex;
     justify-content: space-between;
+
+    .current_periods {
+      display: flex;
+      flex-direction: column;
+
+      .period_title {
+        width: 130px;
+        font-size: 1.1rem;
+      }
+    }
+
     .current_duration {
       display: flex;
       align-items: center;
