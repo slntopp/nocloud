@@ -103,7 +103,7 @@ watch([chartData, fields], () => {
   const newCategories = [];
 
   chartData.value.timeseries?.forEach((timeseries) => {
-    newCategories.push(timeseries.ts);
+    newCategories.push(timeseries.ts.split("T")[0]);
     newSeries.forEach((serie) => {
       serie.data.push(getFormattedPrice(timeseries[serie.id] || 0));
     });
