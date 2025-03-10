@@ -18,8 +18,9 @@ const props = defineProps([
   "summary",
   "customLegendFormater",
   "type",
+  "stacked",
 ]);
-const { categories, series, summary, type } = toRefs(props);
+const { categories, series, summary, type, stacked } = toRefs(props);
 
 const store = useStore();
 
@@ -32,7 +33,7 @@ const chartOptions = computed(() => ({
     mode: store.getters["app/theme"],
   },
   chart: {
-    stacked: type.value === "bar",
+    stacked: !!stacked.value,
   },
   xaxis: {
     categories: categories.value,
