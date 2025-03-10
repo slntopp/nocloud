@@ -18,6 +18,16 @@
         :custom-legend-formater="legendFomatter"
       />
     </template>
+
+    <template v-slot:options>
+      <v-select
+        style="width: 150px"
+        item-text="label"
+        item-value="value"
+        :items="seriesTypes"
+        v-model="seriesType"
+      />
+    </template>
   </statistic-item>
 </template>
 
@@ -39,6 +49,12 @@ const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
 const accounts = ref({});
+const chartData = ref();
+const seriesType = ref("amount");
+const seriesTypes = [
+  { label: "By users", value: "users" },
+  { label: "Amount", value: "amount" },
+];
 
 const isDataLoading = ref(false);
 
@@ -68,13 +84,31 @@ async function fetchData() {
       },
     };
 
-    const response = await store.dispatch("statistic/get", params);
-    const newSeries = [];
-    const newCategories = [];
+    chartData.value = await store.dispatch("statistic/get", params);
+  } finally {
+    isDataLoading.value = false;
+  }
+}
 
-    const tempData = JSON.parse(JSON.stringify(response));
+const fetchDataDebounced = debounce(fetchData, 300);
 
-    response.timeseries?.forEach((timeseries) => {
+watch(period, () => {
+  fetchDataDebounced();
+});
+
+watch([chartData, seriesType], async () => {
+  if (!chartData.value) {
+    return;
+  }
+
+  const newSeries = [];
+  const newCategories = [];
+  summary.value = {};
+
+  const tempData = JSON.parse(JSON.stringify(chartData.value));
+
+  if (seriesType.value == "users") {
+    chartData.value.timeseries?.forEach((timeseries) => {
       const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
       if (current.length <= 0) {
         return;
@@ -113,16 +147,35 @@ async function fetchData() {
       acc[series.name] = series.data.reduce((acc, v) => acc + v, 0);
       return acc;
     }, {});
-    series.value = newSeries;
-    categories.value = newCategories;
-  } finally {
-    isDataLoading.value = false;
+  } else {
+    newSeries.push({
+      name: "Responses",
+      data: [],
+    });
+
+    chartData.value.timeseries?.forEach((timeseries) => {
+      const current = tempData.timeseries.filter((t) => t.ts === timeseries.ts);
+      if (current.length <= 0) {
+        return;
+      }
+      newCategories.push(timeseries.ts);
+
+      newSeries[0].data.push(
+        current.reduce((acc, ts) => acc + (ts.responses || 0), 0)
+      );
+
+      tempData.timeseries = tempData.timeseries.filter(
+        (t) => t.ts !== timeseries.ts
+      );
+    });
+
+    summary.value = newSeries.reduce((acc, series) => {
+      acc[series.name] = series.data.reduce((acc, v) => acc + v, 0);
+      return acc;
+    }, {});
   }
-}
 
-const fetchDataDebounced = debounce(fetchData, 300);
-
-watch(period, () => {
-  fetchDataDebounced();
+  series.value = newSeries;
+  categories.value = newCategories;
 });
 </script>
