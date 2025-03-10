@@ -56,14 +56,14 @@
       <div class="d-flex alingn-center">
         <v-switch
           v-if="periods"
-          class="ml-2"
+          class="ml-2 mr-2"
           label="Comparison"
           :value="comparable"
           @change="emit('input:comparable', $event)"
         />
         <slot name="options" />
         <v-select
-          v-if="allFields"
+          v-if="allFields.length"
           class="ml-2"
           style="max-width: 200px"
           label="Fields"
