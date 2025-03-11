@@ -45,6 +45,7 @@ import { computed, ref, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
+import { formatToYYMMDD } from "@/functions";
 
 const store = useStore();
 
@@ -83,10 +84,6 @@ function switchFields(type, comparable) {
   }
 }
 
-function formatDate(date) {
-  return date.toISOString().split("T")[0];
-}
-
 function getPrice(c, id) {
   if (id === "total") {
     return (c.revenue || 0) + (c.revenue_new || 0);
@@ -105,41 +102,13 @@ async function fetchData() {
   isDataLoading.value = true;
 
   try {
-    const params = {
+    data.value = await store.dispatch("statistic/getForChart", {
       entity: "services_revenue",
-      params: {
-        with_timeseries: true,
-      },
-    };
-
-    if (!comparable.value) {
-      params.params.start_date = formatDate(period.value[0]);
-      params.params.end_date = formatDate(period.value[1]);
-
-      data.value = [await store.dispatch("statistic/get", params)];
-    } else {
-      const params1 = {
-        ...params,
-        params: {
-          ...params.params,
-          start_date: formatDate(periods.value.first[0]),
-          end_date: formatDate(periods.value.first[1]),
-        },
-      };
-      const params2 = {
-        ...params,
-        params: {
-          ...params.params,
-          start_date: formatDate(periods.value.second[0]),
-          end_date: formatDate(periods.value.second[1]),
-        },
-      };
-
-      data.value = await Promise.all([
-        store.dispatch("statistic/get", params1),
-        store.dispatch("statistic/get", params2),
-      ]);
-    }
+      periodType: periodType.value,
+      periods: !comparable.value
+        ? [period.value]
+        : [periods.value.first, periods.value.second],
+    });
   } finally {
     isDataLoading.value = false;
   }
@@ -267,7 +236,7 @@ watch([data, seriesType, fields], () => {
 
     Object.keys(periods.value).forEach((key) => {
       newSeries.push({
-        name: `${formatDate(periods.value[key][0])}/${formatDate(
+        name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
           periods.value[key][1]
         )}`,
         data: [],

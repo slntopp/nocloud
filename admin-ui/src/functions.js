@@ -604,6 +604,10 @@ export function compareSearchValue(data, searchValue, field) {
   }
 }
 
+export function formatToYYMMDD(date) {
+  return date.toISOString().split("T")[0];
+}
+
 export function getDeepObjectValue(data, key) {
   let value = { ...data };
   key.split(".").forEach((subKey, index) => {
@@ -724,7 +728,7 @@ export function downloadPlanXlsx(plans) {
 }
 
 export function getDatesPeriod(period = "day") {
-  const date=new Date();
+  const date = new Date();
 
   switch (period) {
     case "day": {
