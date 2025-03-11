@@ -169,7 +169,9 @@ const emit = defineEmits([
 const durationOptions = [
   { label: "Week", value: "week" },
   { label: "Month", value: "month" },
-  { label: "Year", value: "year" },
+  { label: "Month by week", value: "month-7_days" },
+  { label: "Year", value: "year-7_days" },
+  { label: "Year by month", value: "year-1_month" },
 ];
 
 const typeOptions = [
@@ -197,7 +199,8 @@ function getDurationTuple(type = "week", offset = 1) {
 
       break;
     }
-    case "month": {
+    case "month":
+    case "month-7_days": {
       const todayDate = new Date(Date.now());
       todayDate.setMonth(todayDate.getMonth() + offset);
 
@@ -215,6 +218,8 @@ function getDurationTuple(type = "week", offset = 1) {
       break;
     }
     case "year":
+    case "year-1_month":
+    case "year-7_days":
     default: {
       const todayDate = new Date(Date.now());
       const year = todayDate.getFullYear() + offset;

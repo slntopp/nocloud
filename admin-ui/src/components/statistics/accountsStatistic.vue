@@ -35,6 +35,7 @@ import { ref, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
+import { formatToYYMMDD } from "@/functions";
 
 const store = useStore();
 
@@ -57,49 +58,17 @@ const chartData = ref();
 
 const isDataLoading = ref(false);
 
-function formatDate(date) {
-  return date.toISOString().split("T")[0];
-}
-
 async function fetchData() {
   isDataLoading.value = true;
 
   try {
-    const params = {
+    chartData.value = await store.dispatch("statistic/getForChart", {
       entity: "accounts",
-      params: {
-        with_timeseries: true,
-      },
-    };
-
-    if (!comparable.value) {
-      params.params.start_date = formatDate(period.value[0]);
-      params.params.end_date = formatDate(period.value[1]);
-
-      chartData.value = await store.dispatch("statistic/get", params);
-    } else {
-      const params1 = {
-        ...params,
-        params: {
-          ...params.params,
-          start_date: formatDate(periods.value.first[0]),
-          end_date: formatDate(periods.value.first[1]),
-        },
-      };
-      const params2 = {
-        ...params,
-        params: {
-          ...params.params,
-          start_date: formatDate(periods.value.second[0]),
-          end_date: formatDate(periods.value.second[1]),
-        },
-      };
-
-      chartData.value = await Promise.all([
-        store.dispatch("statistic/get", params1),
-        store.dispatch("statistic/get", params2),
-      ]);
-    }
+      periodType: periodType.value,
+      periods: !comparable.value
+        ? [period.value]
+        : [periods.value.first, periods.value.second],
+    });
   } finally {
     isDataLoading.value = false;
   }
@@ -144,7 +113,7 @@ watch([chartData, fields], () => {
       });
     });
 
-    tempData.timeseries?.forEach((timeseries) => {
+    tempData[0].timeseries?.forEach((timeseries) => {
       newCategories.push(timeseries.ts);
       newSeries.forEach((serie) => {
         serie.data.push(timeseries[serie.id] || 0);
@@ -152,12 +121,12 @@ watch([chartData, fields], () => {
     });
 
     newSeries.forEach((serie) => {
-      summary.value[serie.name] = tempData.summary?.[serie.id] || 0;
+      summary.value[serie.name] = tempData[0].summary?.[serie.id] || 0;
     });
   } else {
     Object.keys(periods.value).forEach((key) => {
       newSeries.push({
-        name: `${formatDate(periods.value[key][0])}/${formatDate(
+        name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
           periods.value[key][1]
         )}`,
         data: [],
@@ -191,6 +160,6 @@ watch([chartData, fields], () => {
   }
 
   series.value = newSeries;
-  categories.value = newCategories;
+  categories.value = newCategories.map((c) => c.toString().split("T")[0]);
 });
 </script>
