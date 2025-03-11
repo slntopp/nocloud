@@ -12,8 +12,15 @@
 
           <v-switch
             class="ml-3"
+            @change="suspendRules[day].enabled = $event"
+            :input-value="suspendRules[day]?.enabled"
+            label="Rules enabled"
+          />
+
+          <v-switch
+            class="ml-3"
             @change="changeEnableAll(day)"
-            :input-value="suspendRules[day]?.length === 0"
+            :input-value="suspendRules[day]?.rules?.length === 0"
             label="Enable all day"
           />
           <v-btn @click="addNewIn(day)" class="ml-2" icon>
@@ -22,7 +29,7 @@
         >
 
         <v-row
-          v-for="(rule, index) in suspendRules[day] || []"
+          v-for="(rule, index) in suspendRules[day]?.rules || []"
           :key="index"
           class="rule-row"
         >
@@ -87,7 +94,9 @@ const suspendRulesForm = ref();
 const timeRule = [(v) => !!isTime(v) || "Not valid time"];
 
 onMounted(() => {
-  dayOfWeeks.forEach((day) => (suspendRules.value[day] = null));
+  dayOfWeeks.forEach(
+    (day) => (suspendRules.value[day] = { rules: [], enabled: true })
+  );
 
   setTemplateRules();
   isRulesEnabled.value = !!template.value?.suspendRules?.enabled;
@@ -109,26 +118,23 @@ function isTime(value) {
 
 const setTemplateRules = () => {
   template.value.suspendRules.schedules.map((shedule) => {
-    if (shedule.enabled) {
-      suspendRules.value[shedule.day] = null;
-    } else {
-      suspendRules.value[shedule.day] = shedule.allowedSuspendTime.map(
-        (range) => ({
-          startTime: range.startTime,
-          endTime: range.endTime,
-        })
-      );
-    }
+    suspendRules.value[shedule.day] = {
+      enabled: shedule.enabled,
+      rules: shedule.allowedSuspendTime.map((range) => ({
+        startTime: range.startTime,
+        endTime: range.endTime,
+      })),
+    };
   });
 
   suspendRules.value = { ...suspendRules.value };
 };
 
 const addNewIn = (day) => {
-  if (!suspendRules.value[day]) {
-    suspendRules.value[day] = [];
+  if (!suspendRules.value[day].rules) {
+    suspendRules.value[day].rules = [];
   }
-  suspendRules.value[day].push({
+  suspendRules.value[day].rules.push({
     endTime: "00:00",
     startTime: "00:00",
   });
@@ -136,17 +142,17 @@ const addNewIn = (day) => {
 };
 
 const deleteRangeFromDay = (day, index) => {
-  suspendRules.value[day] = suspendRules.value[day].filter(
+  suspendRules.value[day].rules = suspendRules.value[day].rules.filter(
     (_, i) => i !== index
   );
   suspendRules.value = { ...suspendRules.value };
 };
 
 const changeEnableAll = (day) => {
-  if (suspendRules.value[day]?.length === 0) {
-    suspendRules.value[day] = null;
+  if (suspendRules.value[day]?.rules.length === 0) {
+    addNewIn(day);
   } else {
-    suspendRules.value[day] = [];
+    suspendRules.value[day].rules = [];
   }
 };
 
@@ -167,8 +173,8 @@ const save = async () => {
     Object.keys(suspendRules.value).map((day) => {
       newSuspendRules.schedules.push({
         day,
-        allowedSuspendTime: suspendRules.value[day],
-        enabled: suspendRules.value[day] !== null,
+        allowedSuspendTime: suspendRules.value[day].rules,
+        enabled: suspendRules.value[day].enabled,
       });
     });
 
