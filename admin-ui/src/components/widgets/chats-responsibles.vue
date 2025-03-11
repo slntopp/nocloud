@@ -1,9 +1,9 @@
 <template>
   <widget
-    title="Chats resposibles"
+    title="Chats responses"
     :loading="isLoading || isStatisticLoading"
     class="pa-0 ma-0"
-    :more="{ name: 'Statistics', query: { tab: 'chats-responsibles' } }"
+    :more="{ name: 'Statistics', query: { tab: 'chats-responses' } }"
   >
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
@@ -30,7 +30,7 @@
         height="300px"
       ></apexchart>
       <div v-else class="d-flex justify-center align-center">
-        <v-card-title>Responsibles not found</v-card-title>
+        <v-card-title>Responses not found</v-card-title>
       </div>
     </v-card>
   </widget>

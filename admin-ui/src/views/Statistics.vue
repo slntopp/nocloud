@@ -30,6 +30,7 @@ import InstancesStatistic from "@/components/statistics/instancesStatistic.vue";
 import ChatsResponsesStatistic from "@/components/statistics/chatsResponsesStatistic.vue";
 import InstancesIncomeStatistic from "@/components/statistics/instancesIncomeStatistic.vue";
 import ChatsStatistics from "@/components/statistics/chatsStatistics.vue";
+import RevenueStatistics from "@/components/statistics/revenueStatistics.vue";
 import { onMounted, ref } from "vue";
 import { useStore } from "@/store/";
 import { useRoute } from "vue-router/composables";
@@ -45,6 +46,11 @@ const widgets = [
     key: "instances-income",
   },
   {
+    component: RevenueStatistics,
+    title: "Revenue",
+    key: "revenue",
+  },
+  {
     component: ChatsStatistics,
     title: "Chats",
     key: "chats",
@@ -52,7 +58,7 @@ const widgets = [
   {
     component: ChatsResponsesStatistic,
     title: "Chats responses",
-    key: "chats-responsibles",
+    key: "chats-responses",
   },
   { component: AccountsStatistic, title: "Accounts", key: "accounts" },
   {

@@ -1,4 +1,5 @@
 import api from "@/api";
+import { formatToYYMMDD } from "@/functions";
 
 const getCacheKey = (params) => JSON.stringify(params);
 
@@ -54,6 +55,30 @@ export default {
       return api.get(`/statistic/${params.entity}`, {
         params: params.params,
       });
+    },
+    getForChart({ dispatch }, { periods, periodType, entity }) {
+      let interval = "1 day";
+
+      if (periodType.split("-")[1]) {
+        interval = periodType.split("-")[1].replace("_", " ");
+      }
+
+      const params = {
+        entity,
+        params: {
+          with_timeseries: true,
+          bucket_interval: interval,
+        },
+      };
+
+      return Promise.all(
+        periods.map((period) => {
+          params.params.start_date = formatToYYMMDD(period[0]);
+          params.params.end_date = formatToYYMMDD(period[1]);
+
+          return dispatch("get", params);
+        })
+      );
     },
   },
   getters: {

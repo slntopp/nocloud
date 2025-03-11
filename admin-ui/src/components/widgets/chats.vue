@@ -146,7 +146,7 @@ const countForPeriod = computed(() => {
     return statisticForPeriod.value.closed;
   }
 
-  if (data.value.status == "open") {
+  if (data.value.status == "created") {
     return statisticForPeriod.value.created;
   }
 
