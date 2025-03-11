@@ -56,7 +56,7 @@
           close
           :color="!hidedOs?.includes(item.id) ? 'info' : 'error'"
           :close-icon="
-            hidedOs?.includes(item.id) ? 'mdi-plus-circle' : 'mdi-close-circle'
+            hidedOs?.includes(item.id) ? 'mdi-close-circle' : 'mdi-plus-circle'
           "
           @click:close="changeOsState(item)"
         >

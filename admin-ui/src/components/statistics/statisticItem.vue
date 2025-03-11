@@ -331,10 +331,6 @@ watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
     max-width: 1400px;
   }
 
-  @media (max-height: 1080px) {
-    max-width: 1200px;
-  }
-
   .chart_options {
     max-width: 1400px;
     display: flex;
