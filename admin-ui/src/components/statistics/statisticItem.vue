@@ -3,49 +3,61 @@
     <div class="chart_options">
       <div class="d-flex align-center">
         <template v-if="!comparable">
-          <v-card-title>Period:</v-card-title>
+          <span
+            class="period_title mr-2"
+            :style="`background-color: ${colors[0]};`"
+          >
+          </span>
 
           <div class="current_duration">
-            <v-btn small @click="periodOffset--">
+            <v-btn x-small @click="periodOffset--">
               <v-icon>mdi-minus</v-icon>
             </v-btn>
             <span class="current_duration_info"
               >{{ formatDate(period[0]) }} - {{ formatDate(period[1]) }}</span
             >
-            <v-btn small @click="periodOffset++">
+            <v-btn x-small @click="periodOffset++">
               <v-icon>mdi-plus</v-icon>
             </v-btn>
           </div>
         </template>
 
         <div class="current_periods" v-else>
-          <div class="d-flex">
-            <span class="period_title mr-2"> First period: </span>
+          <div class="d-flex align-center">
+            <span
+              class="period_title mr-2"
+              :style="`background-color: ${colors[0]};`"
+            >
+            </span>
             <div class="current_duration">
-              <v-btn small @click="periodsFirstOffset--">
+              <v-btn x-small @click="periodsFirstOffset--">
                 <v-icon>mdi-minus</v-icon>
               </v-btn>
               <span class="current_duration_info"
                 >{{ formatDate(periods.first[0]) }} -
                 {{ formatDate(periods.first[1]) }}</span
               >
-              <v-btn small @click="periodsFirstOffset++">
+              <v-btn x-small @click="periodsFirstOffset++">
                 <v-icon>mdi-plus</v-icon>
               </v-btn>
             </div>
           </div>
-          <div class="d-flex my-2">
-            <span class="period_title mr-2"> Second period:</span>
+          <div class="d-flex my-2 align-center">
+            <span
+              class="period_title mr-2"
+              :style="`background-color: ${colors[1]};`"
+            >
+            </span>
 
             <div class="current_duration">
-              <v-btn small @click="periodsSecondOffset--">
+              <v-btn x-small @click="periodsSecondOffset--">
                 <v-icon>mdi-minus</v-icon>
               </v-btn>
               <span class="current_duration_info"
                 >{{ formatDate(periods.second[0]) }} -
                 {{ formatDate(periods.second[1]) }}</span
               >
-              <v-btn small @click="periodsSecondOffset++">
+              <v-btn x-small @click="periodsSecondOffset++">
                 <v-icon>mdi-plus</v-icon>
               </v-btn>
             </div>
@@ -58,7 +70,7 @@
           v-if="periods && !notComparable"
           class="ml-2 mr-2"
           label="Comparison"
-          :value="comparable"
+          :input-value="comparable"
           @change="emit('input:comparable', $event)"
         />
         <slot name="options" />
@@ -117,6 +129,7 @@
 <script lang="ts" setup>
 import { toRefs, watch } from "vue";
 import { ref } from "vue";
+import { getApexChartsColors } from "@/functions";
 
 // const props = defineProps([
 //   "loading",
@@ -182,7 +195,9 @@ const typeOptions = [
 
 const periodOffset = ref(0);
 const periodsFirstOffset = ref(0);
-const periodsSecondOffset = ref(0);
+const periodsSecondOffset = ref(-1);
+
+const colors = getApexChartsColors();
 
 function getDurationTuple(type = "week", offset = 1) {
   let startDate, endDate;
@@ -283,6 +298,8 @@ setDefaultData();
 
 watch(periodType, () => {
   periodOffset.value = 0;
+  periodsFirstOffset.value = 0;
+  periodsSecondOffset.value = -1;
 });
 
 watch([periodType, periodOffset, comparable], () => {
@@ -327,14 +344,6 @@ watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
     margin: 0px;
   }
 
-  .chart {
-    max-width: 1400px;
-  }
-
-  @media (max-height: 1080px) {
-    max-width: 1200px;
-  }
-
   .chart_options {
     max-width: 1400px;
     display: flex;
@@ -343,18 +352,18 @@ watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
     .current_periods {
       display: flex;
       flex-direction: column;
+    }
 
-      .period_title {
-        width: 130px;
-        font-size: 1.1rem;
-      }
+    .period_title {
+      width: 50px;
+      height: 20px;
     }
 
     .current_duration {
       display: flex;
       align-items: center;
       .current_duration_info {
-        font-size: 1.3rem;
+        font-size: 1rem;
         text-align: center;
         margin: 0px 10px;
       }

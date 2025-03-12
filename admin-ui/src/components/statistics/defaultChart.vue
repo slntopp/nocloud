@@ -1,16 +1,17 @@
 <template>
   <apexchart
-    width="100%"
+    :height="height"
     :options="chartOptions"
     :type="type"
-    :series="series"
+    :series="coloredSeries"
   ></apexchart>
 </template>
 
 <script setup>
-import { computed, toRefs } from "vue";
+import { computed, ref, toRefs } from "vue";
 import apexchart from "vue-apexcharts";
 import { useStore } from "@/store";
+import { getApexChartsColors } from "@/functions";
 
 const props = defineProps([
   "series",
@@ -26,6 +27,10 @@ const { categories, series, summary, type, stacked, description, options } =
   toRefs(props);
 
 const store = useStore();
+
+const colors = getApexChartsColors();
+
+const height = ref(window.innerHeight * 0.7);
 
 const chartOptions = computed(() => ({
   ...(options.value || {}),
@@ -65,4 +70,8 @@ const chartOptions = computed(() => ({
         },
   },
 }));
+
+const coloredSeries = computed(() => {
+  return series.value.map((v, index) => ({ ...v, color: colors[index] }));
+});
 </script>
