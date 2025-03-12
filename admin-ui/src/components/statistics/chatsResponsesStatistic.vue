@@ -62,7 +62,7 @@ const seriesTypes = [
   { label: "By users", value: "users" },
   { label: "Amount", value: "amount" },
 ];
-const comparable = ref(false);
+const comparable = ref(true);
 const periods = ref({ first: [], second: [] });
 
 const isDataLoading = ref(false);

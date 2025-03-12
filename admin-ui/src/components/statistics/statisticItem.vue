@@ -58,7 +58,7 @@
           v-if="periods && !notComparable"
           class="ml-2 mr-2"
           label="Comparison"
-          :value="comparable"
+          :input-value="comparable"
           @change="emit('input:comparable', $event)"
         />
         <slot name="options" />
@@ -182,7 +182,7 @@ const typeOptions = [
 
 const periodOffset = ref(0);
 const periodsFirstOffset = ref(0);
-const periodsSecondOffset = ref(0);
+const periodsSecondOffset = ref(-1);
 
 function getDurationTuple(type = "week", offset = 1) {
   let startDate, endDate;
@@ -283,6 +283,8 @@ setDefaultData();
 
 watch(periodType, () => {
   periodOffset.value = 0;
+  periodsFirstOffset.value = 0;
+  periodsSecondOffset.value = -1;
 });
 
 watch([periodType, periodOffset, comparable], () => {

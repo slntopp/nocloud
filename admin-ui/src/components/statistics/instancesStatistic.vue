@@ -63,13 +63,13 @@ const seriesTypes = [
   { label: "By types", value: "type" },
   { label: "Amount", value: "amount" },
 ];
-const fields = ref(["created"]);
+const fields = ref("created");
 const allFields = ref([
   { label: "Created", value: "created" },
   { label: "Active", value: "active" },
   { label: "Total", value: "total" },
 ]);
-const comparable = ref(false);
+const comparable = ref(true);
 const periods = ref({ first: [], second: [] });
 const isDataLoading = ref(false);
 

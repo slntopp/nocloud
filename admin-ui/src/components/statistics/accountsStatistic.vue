@@ -42,14 +42,14 @@ const store = useStore();
 const period = ref([]);
 const periods = ref({ first: [], second: [] });
 const type = ref("bar");
-const comparable = ref(false);
+const comparable = ref(true);
 const periodType = ref("month");
 const allFields = ref([
   { label: "Created", value: "created" },
   { label: "Active", value: "active" },
   { label: "Total", value: "total" },
 ]);
-const fields = ref(["created"]);
+const fields = ref("created");
 
 const series = ref([]);
 const categories = ref([]);

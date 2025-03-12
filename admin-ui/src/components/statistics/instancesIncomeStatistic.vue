@@ -52,7 +52,7 @@ const store = useStore();
 const period = ref([]);
 const type = ref("bar");
 const periodType = ref("month");
-const fields = ref(["revenue", "revenue_new"]);
+const fields = ref("total");
 const allFields = ref([
   { label: "Periodical payments", value: "revenue" },
   { label: "First payment", value: "revenue_new" },
@@ -70,7 +70,7 @@ const seriesTypes = [
   { label: "Amount", value: "amount" },
 ];
 
-const comparable = ref(false);
+const comparable = ref(true);
 const periods = ref({ first: [], second: [] });
 const isDataLoading = ref(false);
 
