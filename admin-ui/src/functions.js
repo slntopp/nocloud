@@ -778,3 +778,40 @@ export function formatPrice(price, { precision, rounding } = {}) {
 
   return fn(price * Math.pow(10, precision)) / Math.pow(10, precision);
 }
+
+export function getApexChartsColors() {
+  const apexchartColors = [
+    //Retro
+    "#fd7f6f",
+    "#ea5545",
+    "#f46a9b",
+    "#ef9b20",
+    "#edbf33",
+    "#ede15b",
+    "#bdcf32",
+    "#87bc45",
+    "#27aeef",
+    //Spring Pastels
+    "#b33dc6",
+    "#7eb0d5",
+    "#b2e061",
+    "#bd7ebe",
+    "#ffb55a",
+    "#ffee65",
+    "#beb9db",
+    "#fdcce5",
+    "#8bd3c7",
+    //River Nights
+    "#b30000",
+    "#7c1158",
+    "#4421af",
+    "#1a53ff",
+    "#0d88e6",
+    "#00b7c7",
+    "#5ad45a",
+    "#8be04e",
+    "#ebdc78",
+  ];
+
+  return apexchartColors;
+}

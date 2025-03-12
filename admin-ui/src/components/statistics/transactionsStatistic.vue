@@ -45,8 +45,8 @@ const allFields = ref([
   { label: "Created", value: "created" },
   { label: "Total", value: "total" },
 ]);
-const fields = ref(["created"]);
-const comparable = ref(false);
+const fields = ref("created");
+const comparable = ref(true);
 const periods = ref({ first: [], second: [] });
 
 const series = ref([]);

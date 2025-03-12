@@ -47,7 +47,7 @@ const allFields = ref([
   { label: "Instance renew", value: "revenue_renew" },
   { label: "Top-up balance", value: "revenue_balance" },
 ]);
-const fields = ref(["revenue"]);
+const fields = ref("revenue");
 
 const series = ref([]);
 const categories = ref([]);
@@ -55,7 +55,7 @@ const summary = ref({});
 
 const isDataLoading = ref(false);
 const chartData = ref();
-const comparable = ref(false);
+const comparable = ref(true);
 const periods = ref({ first: [], second: [] });
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
