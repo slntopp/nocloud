@@ -121,7 +121,7 @@ const resources = ref([
     period: 0,
     title: "Image 1024*1792 or 1792*1024 HD",
     public: true,
-  }
+  },
 ]);
 
 const headers = [
@@ -141,9 +141,16 @@ onMounted(() => {
     const realResource = template.value.resources.find(
       (realResource) => realResource.key === resource.key
     );
-    console.log(realResource?.price);
 
     return { ...resource, price: realResource?.price || 0 };
+  });
+
+  template.value.resources.forEach((resource) => {
+    if (resources.value.find((r) => r.key === resource.key)) {
+      return;
+    }
+
+    resources.value.push({ ...resource });
   });
 
   addons.value = template.value.addons;
@@ -152,23 +159,23 @@ onMounted(() => {
 const save = async () => {
   isSaveLoading.value = true;
   try {
-    const result = JSON.parse(JSON.stringify(resources.value))
+    const result = JSON.parse(JSON.stringify(resources.value));
     const imageSize1792x1024 = result.find(({ key }) =>
-      key.includes('image_size_1792x1024_quality_standard')
-    )
+      key.includes("image_size_1792x1024_quality_standard")
+    );
     const imageSize1792x1024HD = result.find(({ key }) =>
-      key.includes('image_size_1792x1024_quality_hd')
-    )
+      key.includes("image_size_1792x1024_quality_hd")
+    );
 
     const imageSize1024x1792 = result.find(({ key }) =>
-      key.includes('image_size_1024x1792_quality_standard')
-    )
+      key.includes("image_size_1024x1792_quality_standard")
+    );
     const imageSize1024x1792HD = result.find(({ key }) =>
-      key.includes('image_size_1024x1792_quality_hd')
-    )
+      key.includes("image_size_1024x1792_quality_hd")
+    );
 
-    imageSize1792x1024.price = imageSize1024x1792.price
-    imageSize1792x1024HD.price = imageSize1024x1792HD.price
+    imageSize1792x1024.price = imageSize1024x1792.price;
+    imageSize1792x1024HD.price = imageSize1024x1792HD.price;
 
     await api.plans.update(props.template.uuid, {
       ...props.template,
