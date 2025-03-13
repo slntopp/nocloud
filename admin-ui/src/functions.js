@@ -783,7 +783,7 @@ export function getApexChartsColors() {
   const apexchartColors = [
     //Retro
     "#fd7f6f",
-    "#ea5545",
+    "#b33dc6",
     "#f46a9b",
     "#ef9b20",
     "#edbf33",
@@ -792,7 +792,7 @@ export function getApexChartsColors() {
     "#87bc45",
     "#27aeef",
     //Spring Pastels
-    "#b33dc6",
+    "#ea5545",
     "#7eb0d5",
     "#b2e061",
     "#bd7ebe",

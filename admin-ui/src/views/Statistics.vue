@@ -41,11 +41,6 @@ const route = useRoute();
 const widgets = [
   { component: InstancesStatistic, title: "Instances", key: "instances" },
   {
-    component: InstancesIncomeStatistic,
-    title: "Instances income",
-    key: "instances-income",
-  },
-  {
     component: RevenueStatistics,
     title: "Revenue",
     key: "revenue",
@@ -61,6 +56,11 @@ const widgets = [
     key: "chats-responses",
   },
   { component: AccountsStatistic, title: "Accounts", key: "accounts" },
+  {
+    component: InstancesIncomeStatistic,
+    title: "Instances income",
+    key: "instances-income",
+  },
   {
     component: TrasactionsStatistic,
     title: "Trasactions",
