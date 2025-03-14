@@ -46,8 +46,9 @@ const allFields = ref([
   { label: "Instance start", value: "revenue_start" },
   { label: "Instance renew", value: "revenue_renew" },
   { label: "Top-up balance", value: "revenue_balance" },
+  { label: "Total", value: "total" },
 ]);
-const fields = ref("revenue");
+const fields = ref("total");
 
 const series = ref([]);
 const categories = ref([]);
@@ -58,6 +59,23 @@ const chartData = ref();
 const comparable = ref(true);
 const periods = ref({ first: [], second: [] });
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
+
+function getFormattedPrice(price) {
+  return [price.toFixed(0), defaultCurrency.value.code].join("");
+}
+
+function getPrice(c, id) {
+  if (id === "total") {
+    return (
+      (c.revenue || 0) +
+      (c.revenue_start || 0) +
+      (c.revenue_balance || 0) +
+      (c.revenue_renew || 0)
+    );
+  } else {
+    return c[id] || 0;
+  }
+}
 
 async function fetchData() {
   isDataLoading.value = true;
@@ -87,15 +105,11 @@ watch([period, periods, comparable], () => {
 
 watch(comparable, (val) => {
   if (val) {
-    fields.value = "revenue";
+    fields.value = "total";
   } else {
-    fields.value = ["revenue"];
+    fields.value = ["total"];
   }
 });
-
-function getFormattedPrice(price) {
-  return [price.toFixed(0), defaultCurrency.value.code].join("");
-}
 
 watch([chartData, fields], () => {
   if (!chartData.value || !fields.value.length) {
@@ -120,13 +134,13 @@ watch([chartData, fields], () => {
     tempData[0].timeseries?.forEach((timeseries) => {
       newCategories.push(timeseries.ts.split("T")[0]);
       newSeries.forEach((serie) => {
-        serie.data.push(getFormattedPrice(timeseries[serie.id] || 0));
+        serie.data.push(getFormattedPrice(getPrice(timeseries, serie.id) || 0));
       });
     });
 
     newSeries.forEach((serie) => {
       summary.value[serie.name] = getFormattedPrice(
-        tempData[0].summary?.[serie.id] || 0
+        getPrice(tempData[0].summary, serie.id) || 0
       );
     });
   } else {
@@ -155,8 +169,8 @@ watch([chartData, fields], () => {
         newCategories.push(index + 1);
       }
 
-      newSeries[0].data.push(first?.[fields.value] || 0);
-      newSeries[1].data.push(second?.[fields.value] || 0);
+      newSeries[0].data.push(getPrice(first || {}, fields.value) || 0);
+      newSeries[1].data.push(getPrice(second || {}, fields.value) || 0);
     }
 
     newSeries.forEach((serie) => {
