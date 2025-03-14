@@ -34,6 +34,16 @@ func NewShowcasesServer(log *zap.Logger, db driver.Database) *ShowcasesServer {
 	}
 }
 
+func emptyPromo(promo *sppb.LanguagePromo) {
+	promo.Icons = nil
+	promo.Location = nil
+	promo.Locations = nil
+	promo.Offer = nil
+	promo.Preview = ""
+	promo.Rewards = nil
+	promo.Service = nil
+}
+
 func (s *ShowcasesServer) Create(ctx context.Context, req *sppb.Showcase) (*sppb.Showcase, error) {
 	log := s.log.Named("Create")
 	log.Debug("Create request received", zap.Any("request", req))
@@ -96,7 +106,6 @@ func (s *ShowcasesServer) List(ctx context.Context, req *sppb.ListRequest) (*spp
 	if !req.Anonymously {
 		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	log.Debug("Requestor", zap.String("id", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	isRoot := s.ca.HasAccess(ctx, requestor, ns, access.Level_ROOT)
@@ -104,7 +113,11 @@ func (s *ShowcasesServer) List(ctx context.Context, req *sppb.ListRequest) (*spp
 	showcases, err := s.ctrl.List(ctx, requestor, isRoot, req)
 	if req.GetOmitPromos() {
 		for _, sc := range showcases {
-			sc.Promo = nil
+			for _, promo := range sc.GetPromo() {
+				if promo != nil {
+					emptyPromo(promo)
+				}
+			}
 		}
 	}
 
