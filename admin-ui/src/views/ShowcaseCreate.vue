@@ -243,7 +243,7 @@ const allLocations = computed(() =>
 );
 
 watch(realShowcase, () => {
-  defaultLocation.value = realShowcase.value.promo.main?.default ?? "";
+  defaultLocation.value = realShowcase.value.main?.default ?? "";
   showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
 
@@ -302,8 +302,8 @@ const save = async () => {
       item.locations = locs.map(({ id }) => id);
     });
 
-    if (!data.promo.main) data.promo.main = {};
-    data.promo.main.default = defaultLocation.value;
+    if (!data.main) data.main = {};
+    data.main.default = defaultLocation.value;
     data.title = data.newTitle;
     delete data.newTitle;
 
