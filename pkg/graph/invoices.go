@@ -27,7 +27,7 @@ type InvoicesController interface {
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
 	List(ctx context.Context, account string, filter ...map[string]interface{}) ([]*Invoice, error)
 	Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error)
-	GetByExpiration(ctx context.Context, exp int64) (*Invoice, error)
+	GetByExpiration(ctx context.Context, exp int64, instance string, forbidStatuses []pb.BillingStatus) (*Invoice, error)
 }
 
 const InvoiceTaxMetaKey = "tax_rate"
@@ -242,25 +242,29 @@ func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 const getInvoiceByExp = `
 LET target_ts = @expiration_ts
 FOR inv IN @@Invoices
+  FILTER inv.status NOT IN @forbiddenStatuses
   FILTER LENGTH(
     FILTER inv.meta.billing_data.renewal_data
     FOR key IN ATTRIBUTES(inv.meta.billing_data.renewal_data)
+      FILTER key == @instance
       FILTER inv.meta.billing_data.renewal_data[key].expiration_ts == target_ts
       RETURN 1
   ) > 0
   RETURN MERGE(inv, { currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(inv.currency.id))), uuid: inv._key })
 `
 
-func (ctrl *invoicesController) GetByExpiration(ctx context.Context, exp int) (*Invoice, error) {
+func (ctrl *invoicesController) GetByExpiration(ctx context.Context, exp int64, instance string, forbidStatuses []pb.BillingStatus) (*Invoice, error) {
 	var tx = &Invoice{
 		Invoice:           &pb.Invoice{},
 		InvoiceNumberMeta: &InvoiceNumberMeta{},
 	}
 	result := map[string]interface{}{}
 	cur, err := ctrl.col.Database().Query(ctx, getInvoiceByExp, map[string]interface{}{
-		"@invoices":     schema.INVOICES_COL,
-		"@currencies":   schema.CUR_COL,
-		"expiration_ts": exp,
+		"@invoices":         schema.INVOICES_COL,
+		"@currencies":       schema.CUR_COL,
+		"instance":          instance,
+		"expiration_ts":     exp,
+		"forbiddenStatuses": forbidStatuses,
 	})
 	if err != nil {
 		ctrl.log.Error("Failed to query invoice", zap.Error(err))

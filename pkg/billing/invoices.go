@@ -1254,7 +1254,9 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	expire := expirings[0]
 	expireDate := time.Unix(expire, 0)
 
-	existingInv, err := s.invoices.GetByExpiration(ctx, expire)
+	forbiddenStatuses := []pb.BillingStatus{pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_DRAFT,
+		pb.BillingStatus_CANCELED, pb.BillingStatus_TERMINATED, pb.BillingStatus_RETURNED}
+	existingInv, err := s.invoices.GetByExpiration(ctx, expire, inst.GetUuid(), forbiddenStatuses)
 	if err != nil {
 		if !errors.Is(err, graph.ErrNotFound) {
 			log.Error("Error getting invoice by expiration", zap.Error(err))
