@@ -241,7 +241,7 @@ func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 
 const getInvoiceByExp = `
 LET target_ts = @expiration_ts
-FOR inv IN @@Invoices
+FOR inv IN @@invoices
   FILTER inv.status NOT IN @forbiddenStatuses
   FILTER LENGTH(
     FILTER inv.meta.billing_data.renewal_data
