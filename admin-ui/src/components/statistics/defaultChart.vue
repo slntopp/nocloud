@@ -36,6 +36,12 @@ const chartOptions = computed(() => ({
   ...(options.value || {}),
   dataLabels: {
     enabled: series.value?.[0]?.data?.length < 35,
+    style:
+      store.getters["app/theme"] == "light"
+        ? {
+            colors: Array(25).fill(() => "#262525"),
+          }
+        : {},
   },
   title: description.value
     ? {

@@ -2,11 +2,19 @@
   <statistic-item
     :period="period"
     :periodType="periodType"
-    @input:period="period = $event"
-    @input:period-type="periodType = $event"
-    @input:type="type = $event"
-    :loading="isDataLoading"
+    :periods="periods"
     :type="type"
+    :period-offset="periodOffset"
+    :periods-first-offset="periodsFirstOffset"
+    :periods-second-offset="periodsSecondOffset"
+    @input:period="emit('update:period', $event)"
+    @input:period-type="emit('update:period-type', $event)"
+    @input:periods="emit('update:periods', $event)"
+    @input:type="emit('update:type', $event)"
+    @input:period-offset="emit('update:period-offset', $event)"
+    @input:periods-first-offset="emit('update:periods-first-offset', $event)"
+    @input:periods-second-offset="emit('update:periods-second-offset', $event)"
+    :loading="isDataLoading"
     :all-fields="allFields"
     :fields="fields"
     @input:fields="fields = $event"
@@ -15,8 +23,6 @@
     description="Chats statistics for period"
     :comparable="comparable"
     @input:comparable="comparable = $event"
-    :periods="periods"
-    @input:periods="periods = $event"
   >
     <template v-slot:content>
       <default-chart
@@ -42,7 +48,7 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { ref, watch } from "vue";
+import { ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
@@ -50,9 +56,26 @@ import { formatToYYMMDD } from "@/functions";
 
 const store = useStore();
 
-const period = ref([]);
-const type = ref("bar");
-const periodType = ref("month");
+const props = defineProps({
+  period: { type: Array, default: () => [] },
+  periodType: { type: String, default: "month" },
+  type: { type: String, default: "bar" },
+  periods: { type: Object, default: () => ({ first: [], second: [] }) },
+  periodOffset: { type: Number, default: 0 },
+  periodsFirstOffset: { type: Number, default: 0 },
+  periodsSecondOffset: { type: Number, default: -1 },
+});
+const { period, periodType, periods, type } = toRefs(props);
+
+const emit = defineEmits([
+  "update:period",
+  "update:periods",
+  "update:period-type",
+  "update:type",
+  "update:period-offset",
+  "update:periods-first-offset",
+  "update:periods-second-offset",
+]);
 
 const data = ref({});
 const series = ref([]);
@@ -67,7 +90,6 @@ const allFields = ref([
 ]);
 const fields = ref("created");
 const comparable = ref(true);
-const periods = ref({ first: [], second: [] });
 
 const seriesTypes = [
   { label: "By departments", value: "departments" },
@@ -103,6 +125,8 @@ async function fetchData() {
 }
 
 const fetchDataDebounced = debounce(fetchData, 1000);
+
+debounce(fetchData, 100)()
 
 watch([period, periods, comparable], () => {
   if (!data.value) {

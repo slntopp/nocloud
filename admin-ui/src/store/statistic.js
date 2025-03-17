@@ -13,6 +13,9 @@ export default {
     setToCached(state, { key, value }) {
       state.cached[key] = value;
     },
+    clearCache(state) {
+      state.cached = {};
+    },
     setLoading(state, val) {
       state.loading = !!val;
     },
@@ -76,7 +79,7 @@ export default {
           params.params.start_date = formatToYYMMDD(period[0]);
           params.params.end_date = formatToYYMMDD(period[1]);
 
-          return dispatch("get", params);
+          return dispatch("fetch", params);
         })
       );
     },

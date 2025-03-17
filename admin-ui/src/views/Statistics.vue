@@ -7,15 +7,26 @@
     </v-tabs>
 
     <v-tabs-items v-model="tab">
-      <v-tab-item v-for="{ key, component } of widgets" :key="key">
+      <v-tab-item v-for="({ key, component }, index) of widgets" :key="key">
         <v-card color="background-light">
           <component
+            v-if="tab === index"
             :key="key"
             :is="component"
-            style="width: 33%"
-            :data="widgetsData[key] || {}"
-            @update="updateWidgetData(key, $event)"
-            @update:key="updateWidgetDataKey(key, $event)"
+            :period="period"
+            @update:period="period = $event"
+            :periods="periods"
+            @update:periods="periods = $event"
+            :period-type="periodType"
+            @update:period-type="periodType = $event"
+            :type="type"
+            @update:type="type = $event"
+            :period-offset="periodOffset"
+            @update:period-offset="periodOffset = $event"
+            :periods-first-offset="periodsFirstOffset"
+            @update:periods-first-offset="periodsFirstOffset = $event"
+            :periods-second-offset="periodsSecondOffset"
+            @update:periods-second-offset="periodsSecondOffset = $event"
           />
         </v-card>
       </v-tab-item>
@@ -31,7 +42,7 @@ import ChatsResponsesStatistic from "@/components/statistics/chatsResponsesStati
 import InstancesIncomeStatistic from "@/components/statistics/instancesIncomeStatistic.vue";
 import ChatsStatistics from "@/components/statistics/chatsStatistics.vue";
 import RevenueStatistics from "@/components/statistics/revenueStatistics.vue";
-import { onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useStore } from "@/store/";
 import { useRoute } from "vue-router/composables";
 
@@ -68,7 +79,13 @@ const widgets = [
   },
 ];
 
-const widgetsData = ref({});
+const period = ref([]);
+const periods = ref({ first: [], second: [] });
+const periodType = ref("month");
+const type = ref("bar");
+const periodOffset = ref(0);
+const periodsFirstOffset = ref(0);
+const periodsSecondOffset = ref(-1);
 
 const tab = ref(null);
 
@@ -82,7 +99,44 @@ onMounted(() => {
 
     tab.value = index == -1 ? 0 : index;
   }
+
+  loadWidgetsData();
+
+  window.addEventListener("beforeunload", saveWidgetsData);
 });
+
+onBeforeUnmount(() => {
+  store.commit("statistic/clearCache");
+});
+
+const saveWidgetsData = () => {
+  localStorage.setItem(
+    "nocloud-statistic",
+    JSON.stringify({
+      type: type.value,
+      periodType: periodType.value,
+      periodsFirstOffset: periodsFirstOffset.value,
+      periodsSecondOffset: periodsSecondOffset.value,
+      periodOffset: periodOffset.value,
+    })
+  );
+};
+
+const loadWidgetsData = () => {
+  try {
+    const data = JSON.parse(localStorage.getItem("nocloud-statistic"));
+
+    type.value = data.type ?? type.value;
+    periodType.value = data.periodType ?? periodType.value;
+    periodsFirstOffset.value =
+      data.periodsFirstOffset ?? periodsFirstOffset.value;
+    periodsSecondOffset.value =
+      data.periodsSecondOffset ?? periodsSecondOffset.value;
+    periodOffset.value = data.periodOffset ?? periodOffset.value;
+  } catch (e) {
+    console.log(e);
+  }
+};
 </script>
 
 <script>
