@@ -2,18 +2,10 @@
   <div class="pa-10">
     <v-row align="center" justify="space-between">
       <v-col cols="6">
-        <v-autocomplete
-          multiple
-          label="acceptable languages"
-          v-model="promo.languages"
-          :items="languages"
-        />
-      </v-col>
-      <v-col cols="6">
         <v-select
           label="current language"
           v-model="language"
-          :items="promo.languages"
+          :items="languages"
         />
       </v-col>
     </v-row>
@@ -267,9 +259,7 @@ const newIcon = ref({ file: null });
 const isSaveLoading = ref(false);
 const currentLocation = ref({});
 const tabsIndex = ref(0);
-const promo = ref({
-  languages: ["en"],
-});
+const promo = ref({});
 const widgetPlaces = ref([
   { value: "service", title: "Service settings" },
   { value: "location", title: "Location settings" },
@@ -279,18 +269,7 @@ const widgetPlaces = ref([
 const activeWidgetPlace = ref("service");
 
 onBeforeMount(() => {
-  if (template.value.promo?.languages?.length) {
-    promo.value.languages = template.value.promo.languages;
-    language.value = promo.value.languages[0];
-  } else {
-    language.value = "en";
-  }
-
-  if (!template.value.promo.main) {
-    promo.value.main = {};
-  } else {
-    promo.value.main = template.value.promo?.main;
-  }
+  language.value = template.value.languages[0] ?? "en";
 });
 
 watch(language, (newValue, prevValue) => {
@@ -314,6 +293,11 @@ watch(language, (newValue, prevValue) => {
   }
 
   currentLocation.value = promo.value[newValue];
+
+  currentLocation.value.location = currentLocation.value.location ?? {};
+  currentLocation.value.offer = currentLocation.value.offer ?? {};
+  currentLocation.value.rewards = currentLocation.value.rewards ?? {};
+  currentLocation.value.service = currentLocation.value.service ?? {};
 
   template.value?.locations.forEach((location) => {
     if (!promo.value[language.value]?.locations[getLocationKey(location)]) {
@@ -347,11 +331,10 @@ const save = () => {
   isSaveLoading.value = true;
 
   const data = JSON.parse(JSON.stringify(template.value));
-  const defaultKeys = ["languages", "main"];
 
   promo.value[language.value] = currentLocation.value;
   Object.keys(promo.value).forEach((key) => {
-    if (!defaultKeys.includes(key) && !promo.value.languages?.includes(key)) {
+    if (!languages.value?.includes(key)) {
       promo.value[key] = undefined;
     }
   });
