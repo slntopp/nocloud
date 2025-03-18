@@ -27,6 +27,7 @@ type InvoicesController interface {
 	Patch(ctx context.Context, id string, patch map[string]interface{}) error
 	List(ctx context.Context, account string, filter ...map[string]interface{}) ([]*Invoice, error)
 	Transfer(ctx context.Context, uuid string, account string, resCurr *pb.Currency) (err error)
+	GetByExpiration(ctx context.Context, exp int64, instance string, forbidStatuses []pb.BillingStatus) (*Invoice, error)
 }
 
 const InvoiceTaxMetaKey = "tax_rate"
@@ -92,6 +93,17 @@ func (i *Invoice) SetBillingData(d *BillingData) {
 		return
 	}
 	i.Meta[InvoiceRenewalDataKey] = structpb.NewStructValue(s)
+}
+
+func SetInvoiceBillingData(inv *pb.Invoice, d *BillingData) *pb.Invoice {
+	if inv == nil {
+		return nil
+	}
+	i := Invoice{
+		Invoice: inv,
+	}
+	i.SetBillingData(d)
+	return i.Invoice
 }
 
 func (i *Invoice) BillingData() *BillingData {
@@ -212,6 +224,54 @@ func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 	if err != nil {
 		ctrl.log.Error("Failed to query invoice", zap.Error(err))
 		return nil, err
+	}
+	meta, err := cur.ReadDocument(ctx, &result)
+	if err != nil {
+		ctrl.log.Error("Failed to read invoice", zap.Error(err))
+		return nil, err
+	}
+	if err = ctrl.DecodeInvoice(result, tx); err != nil {
+		ctrl.log.Error("Failed to decode invoice", zap.Error(err))
+		return nil, err
+	}
+
+	tx.Uuid = meta.Key
+	return tx, err
+}
+
+const getInvoiceByExp = `
+LET target_ts = @expiration_ts
+FOR inv IN @@invoices
+  FILTER inv.status NOT IN @forbiddenStatuses
+  FILTER LENGTH(
+    FILTER inv.meta.billing_data.renewal_data
+    FOR key IN ATTRIBUTES(inv.meta.billing_data.renewal_data)
+      FILTER key == @instance
+      FILTER inv.meta.billing_data.renewal_data[key].expiration_ts == target_ts
+      RETURN 1
+  ) > 0
+  RETURN MERGE(inv, { currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(inv.currency.id))), uuid: inv._key })
+`
+
+func (ctrl *invoicesController) GetByExpiration(ctx context.Context, exp int64, instance string, forbidStatuses []pb.BillingStatus) (*Invoice, error) {
+	var tx = &Invoice{
+		Invoice:           &pb.Invoice{},
+		InvoiceNumberMeta: &InvoiceNumberMeta{},
+	}
+	result := map[string]interface{}{}
+	cur, err := ctrl.col.Database().Query(ctx, getInvoiceByExp, map[string]interface{}{
+		"@invoices":         schema.INVOICES_COL,
+		"@currencies":       schema.CUR_COL,
+		"instance":          instance,
+		"expiration_ts":     exp,
+		"forbiddenStatuses": forbidStatuses,
+	})
+	if err != nil {
+		ctrl.log.Error("Failed to query invoice", zap.Error(err))
+		return nil, err
+	}
+	if !cur.HasMore() {
+		return nil, ErrNotFound
 	}
 	meta, err := cur.ReadDocument(ctx, &result)
 	if err != nil {

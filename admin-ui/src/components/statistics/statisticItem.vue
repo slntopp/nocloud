@@ -10,13 +10,19 @@
           </span>
 
           <div class="current_duration">
-            <v-btn x-small @click="periodOffset--">
+            <v-btn
+              x-small
+              @click="emit('input:period-offset', periodOffset - 1)"
+            >
               <v-icon>mdi-minus</v-icon>
             </v-btn>
             <span class="current_duration_info"
               >{{ formatDate(period[0]) }} - {{ formatDate(period[1]) }}</span
             >
-            <v-btn x-small @click="periodOffset++">
+            <v-btn
+              x-small
+              @click="emit('input:period-offset', periodOffset + 1)"
+            >
               <v-icon>mdi-plus</v-icon>
             </v-btn>
           </div>
@@ -30,14 +36,24 @@
             >
             </span>
             <div class="current_duration">
-              <v-btn x-small @click="periodsFirstOffset--">
+              <v-btn
+                x-small
+                @click="
+                  emit('input:periods-first-offset', periodsFirstOffset - 1)
+                "
+              >
                 <v-icon>mdi-minus</v-icon>
               </v-btn>
               <span class="current_duration_info"
                 >{{ formatDate(periods.first[0]) }} -
                 {{ formatDate(periods.first[1]) }}</span
               >
-              <v-btn x-small @click="periodsFirstOffset++">
+              <v-btn
+                x-small
+                @click="
+                  emit('input:periods-first-offset', periodsFirstOffset + 1)
+                "
+              >
                 <v-icon>mdi-plus</v-icon>
               </v-btn>
             </div>
@@ -50,14 +66,24 @@
             </span>
 
             <div class="current_duration">
-              <v-btn x-small @click="periodsSecondOffset--">
+              <v-btn
+                x-small
+                @click="
+                  emit('input:periods-second-offset', periodsSecondOffset - 1)
+                "
+              >
                 <v-icon>mdi-minus</v-icon>
               </v-btn>
               <span class="current_duration_info"
                 >{{ formatDate(periods.second[0]) }} -
                 {{ formatDate(periods.second[1]) }}</span
               >
-              <v-btn x-small @click="periodsSecondOffset++">
+              <v-btn
+                x-small
+                @click="
+                  emit('input:periods-second-offset', periodsSecondOffset + 1)
+                "
+              >
                 <v-icon>mdi-plus</v-icon>
               </v-btn>
             </div>
@@ -128,21 +154,7 @@
 
 <script lang="ts" setup>
 import { toRefs, watch } from "vue";
-import { ref } from "vue";
 import { getApexChartsColors } from "@/functions";
-
-// const props = defineProps([
-//   "loading",
-//   "period",
-//   "periodType",
-//   "description",
-//   "type",
-//   "allFields",
-//   "fields",
-//   "periods",
-//   "comparable",
-//   "fieldsMultiple",
-// ]);
 
 const props = defineProps({
   loading: { type: Boolean, default: false },
@@ -156,6 +168,9 @@ const props = defineProps({
   allFields: { type: Array, default: () => [] },
   fields: {},
   periods: { type: Object, default: () => ({ second: [], first: [] }) },
+  periodOffset: { type: Number, default: 0 },
+  periodsFirstOffset: { type: Number, default: 0 },
+  periodsSecondOffset: { type: Number, default: -1 },
 });
 
 const {
@@ -168,6 +183,9 @@ const {
   comparable,
   periods,
   type,
+  periodOffset,
+  periodsFirstOffset,
+  periodsSecondOffset,
 } = toRefs(props);
 
 const emit = defineEmits([
@@ -177,6 +195,9 @@ const emit = defineEmits([
   "input:type",
   "input:comparable",
   "input:fields",
+  "input:period-offset",
+  "input:periods-first-offset",
+  "input:periods-second-offset",
 ]);
 
 const durationOptions = [
@@ -192,10 +213,6 @@ const typeOptions = [
   { label: "Line", value: "line" },
   { label: "Area", value: "area" },
 ];
-
-const periodOffset = ref(0);
-const periodsFirstOffset = ref(0);
-const periodsSecondOffset = ref(-1);
 
 const colors = getApexChartsColors();
 
@@ -297,9 +314,9 @@ function setDefaultData() {
 setDefaultData();
 
 watch(periodType, () => {
-  periodOffset.value = 0;
-  periodsFirstOffset.value = 0;
-  periodsSecondOffset.value = -1;
+  emit("input:period-offset", 0);
+  emit("input:periods-first-offset", 0);
+  emit("input:periods-second-offset", -1);
 });
 
 watch([periodType, periodOffset, comparable], () => {
@@ -345,7 +362,6 @@ watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
   }
 
   .chart_options {
-    max-width: 1400px;
     display: flex;
     justify-content: space-between;
 

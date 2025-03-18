@@ -34,6 +34,7 @@ import (
 // Errors
 
 var ErrAlreadyExists = errors.New("resource already exists")
+var ErrNotFound = errors.New("not found")
 
 // ---
 

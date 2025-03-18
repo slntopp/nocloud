@@ -1254,6 +1254,19 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	expire := expirings[0]
 	expireDate := time.Unix(expire, 0)
 
+	forbiddenStatuses := []pb.BillingStatus{pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_DRAFT,
+		pb.BillingStatus_CANCELED, pb.BillingStatus_TERMINATED, pb.BillingStatus_RETURNED}
+	existingInv, err := s.invoices.GetByExpiration(ctx, expire, inst.GetUuid(), forbiddenStatuses)
+	if err != nil {
+		if !errors.Is(err, graph.ErrNotFound) {
+			log.Error("Error getting invoice by expiration", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Internal error")
+		}
+	} else {
+		response := connect.NewResponse(existingInv.Invoice)
+		return response, nil
+	}
+
 	var untilDate time.Time
 	const monthSecs = 3600 * 24 * 30
 	const daySecs = 3600 * 24
@@ -1313,6 +1326,13 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		},
 	}
 	items = append(items, promoItems...)
+	billingData := graph.BillingData{
+		RenewalData: map[string]graph.RenewalData{
+			inst.GetUuid(): {
+				ExpirationTs: expire,
+			},
+		},
+	}
 	inv := &pb.Invoice{
 		Status:    pb.BillingStatus_UNPAID,
 		Items:     items,
@@ -1328,6 +1348,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
 		},
 	}
+	inv = graph.SetInvoiceBillingData(inv, &billingData)
 
 	if val, ok := ctx.Value("create_as_draft").(bool); ok && val {
 		inv.Status = pb.BillingStatus_DRAFT

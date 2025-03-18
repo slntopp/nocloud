@@ -2,16 +2,22 @@
   <statistic-item
     :period="period"
     :periodType="periodType"
-    @input:period="period = $event"
-    @input:period-type="periodType = $event"
-    :loading="isDataLoading"
+    :periods="periods"
     :type="type"
-    @input:type="type = $event"
+    :period-offset="periodOffset"
+    :periods-first-offset="periodsFirstOffset"
+    :periods-second-offset="periodsSecondOffset"
+    @input:period="emit('update:period', $event)"
+    @input:period-type="emit('update:period-type', $event)"
+    @input:periods="emit('update:periods', $event)"
+    @input:type="emit('update:type', $event)"
+    @input:period-offset="emit('update:period-offset', $event)"
+    @input:periods-first-offset="emit('update:periods-first-offset', $event)"
+    @input:periods-second-offset="emit('update:periods-second-offset', $event)"
+    :loading="isDataLoading"
     :not-comparable="seriesType === 'users'"
     :comparable="comparable"
     @input:comparable="comparable = $event"
-    :periods="periods"
-    @input:periods="periods = $event"
   >
     <template v-slot:content>
       <default-chart
@@ -39,7 +45,7 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { computed, ref, watch } from "vue";
+import { computed, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import api from "@/api";
@@ -48,9 +54,26 @@ import { formatToYYMMDD } from "@/functions";
 
 const store = useStore();
 
-const period = ref([]);
-const periodType = ref("month");
-const type = ref("bar");
+const props = defineProps({
+  period: { type: Array, default: () => [] },
+  periodType: { type: String, default: "month" },
+  type: { type: String, default: "bar" },
+  periods: { type: Object, default: () => ({ first: [], second: [] }) },
+  periodOffset: { type: Number, default: 0 },
+  periodsFirstOffset: { type: Number, default: 0 },
+  periodsSecondOffset: { type: Number, default: -1 },
+});
+const { period, periodType, periods, type } = toRefs(props);
+
+const emit = defineEmits([
+  "update:period",
+  "update:periods",
+  "update:period-type",
+  "update:type",
+  "update:period-offset",
+  "update:periods-first-offset",
+  "update:periods-second-offset",
+]);
 
 const series = ref([]);
 const categories = ref([]);
@@ -63,7 +86,6 @@ const seriesTypes = [
   { label: "Amount", value: "amount" },
 ];
 const comparable = ref(true);
-const periods = ref({ first: [], second: [] });
 
 const isDataLoading = ref(false);
 
@@ -109,6 +131,8 @@ async function fetchData() {
 }
 
 const fetchDataDebounced = debounce(fetchData, 1000);
+
+debounce(fetchData, 100)();
 
 watch([period, periods, comparable], () => {
   if (!chartData.value) {
