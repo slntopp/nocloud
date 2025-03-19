@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/arangodb/go-driver"
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
@@ -19,7 +20,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -1418,6 +1418,9 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				Instance: proto.Clone(instOld.Instance).(*ipb.Instance),
 			}
 			cfg := instNew.Config
+			if cfg == nil {
+				cfg = map[string]*structpb.Value{}
+			}
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
 			// Add balance to compensate instance first payment
