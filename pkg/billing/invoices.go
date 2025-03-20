@@ -658,8 +658,8 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		}
 	}
 
-	balance = graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-	if balance < inv.GetTotal() {
+	rounded := graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
+	if rounded < inv.GetTotal() {
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
@@ -676,7 +676,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
 	}
 
-	tr, err := s.applyTransaction(ctxWithInternalAccess(ctx), inv.GetTotal(), inv.GetAccount(), invCurrency)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(ctx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
@@ -749,8 +749,8 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		}
 	}
 
-	balance = graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-	if balance < float64(inv.Balance) {
+	rounded := graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
+	if rounded < float64(inv.Balance) {
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
@@ -759,7 +759,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
 	}
 
-	_, err = s.applyTransaction(ctxWithInternalAccess(ctx), float64(inv.Balance), requester, invCurrency)
+	_, err = s.applyTransaction(ctxWithInternalAccess(ctx), math.Min(balance, float64(inv.Balance)), requester, invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
