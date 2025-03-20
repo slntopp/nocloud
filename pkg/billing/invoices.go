@@ -658,6 +658,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		}
 	}
 
+	balance = graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
 	if balance < inv.GetTotal() {
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
@@ -748,6 +749,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		}
 	}
 
+	balance = graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
 	if balance < float64(inv.Balance) {
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
