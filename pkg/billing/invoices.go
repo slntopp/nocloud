@@ -354,6 +354,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
 	defCurr := MakeCurrencyConf(log, &s.settingsClient).Currency
 
+	includeTaxInPrices := invConf.TaxIncluded
+
 	if t == nil {
 		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
 	}
@@ -363,6 +365,10 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		t.Type = pb.ActionType_NO_ACTION
 	}
+	if t.TaxOptions == nil {
+		t.TaxOptions = &pb.TaxOptions{}
+	}
+	t.TaxOptions.TaxIncluded = includeTaxInPrices
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
@@ -389,19 +395,36 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}
 	}
 
+	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+	tax := acc.GetTaxRate()
+	t.TaxOptions.TaxRate = tax
+
 	// Rounding invoice items
 	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
 	if err != nil {
 		log.Error("Failed to get currency", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get currency")
 	}
-	var newTotal float64
+	var newTotal, newSubtotal float64
 	for _, item := range t.GetItems() {
 		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 		item.Price = price
-		newTotal += price * float64(item.GetAmount())
+		if includeTaxInPrices {
+			priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
+			newTotal += price * float64(item.GetAmount())
+			newSubtotal += priceRaw * float64(item.GetAmount())
+		} else {
+			priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
+			newTotal += priceTaxed * float64(item.GetAmount())
+			newSubtotal += price * float64(item.GetAmount())
+		}
 	}
 	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
+	t.Subtotal = graph.Round(newSubtotal, cur.Precision, cur.Rounding)
 
 	now := time.Now()
 
@@ -423,18 +446,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}
 	}
 
-	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get account")
-	}
-	tax := acc.GetTaxRate()
-
 	if t.Meta == nil {
 		t.Meta = make(map[string]*structpb.Value)
-	}
-	if t.Meta[graph.InvoiceTaxMetaKey] == nil {
-		t.Meta[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 	}
 	if t.Meta["creator"] == nil {
 		t.Meta["creator"] = structpb.NewStringValue(requester)
@@ -869,6 +882,9 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	ignoreNulls := r.Msg.IgnoreNullFields
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requester", requester))
 
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	includeTaxInPrices := invConf.TaxIncluded
+
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
 	}
@@ -878,6 +894,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		req.Type = pb.ActionType_NO_ACTION
 	}
+	if req.TaxOptions == nil {
+		req.TaxOptions = &pb.TaxOptions{}
+	}
+	req.TaxOptions.TaxIncluded = includeTaxInPrices
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
@@ -914,7 +934,9 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
 	t.Total = req.GetTotal()
+	t.Subtotal = req.GetSubtotal()
 	t.Type = req.GetType()
+	t.TaxOptions = req.GetTaxOptions()
 	if req.Meta != nil {
 		t.Meta = req.GetMeta()
 	}
@@ -935,19 +957,27 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 
 	if req.Items != nil || !ignoreNulls {
-		var newTotal float64
 		cur, err := s.currencies.Get(ctx, t.Currency.GetId())
 		if err != nil {
 			log.Error("Failed to get currency", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get currency")
 		}
-		for _, item := range req.GetItems() {
+		var newTotal, newSubtotal float64
+		for _, item := range t.GetItems() {
 			price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 			item.Price = price
-			newTotal += price * float64(item.GetAmount())
+			if includeTaxInPrices {
+				priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
+				newTotal += price * float64(item.GetAmount())
+				newSubtotal += priceRaw * float64(item.GetAmount())
+			} else {
+				priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
+				newTotal += priceTaxed * float64(item.GetAmount())
+				newSubtotal += price * float64(item.GetAmount())
+			}
 		}
-		newTotal = graph.Round(newTotal, cur.Precision, cur.Rounding)
-		t.Total = newTotal
+		t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
+		t.Subtotal = graph.Round(newSubtotal, cur.Precision, cur.Rounding)
 	}
 
 	vars := map[string]interface{}{}
