@@ -60,6 +60,7 @@ type InvoicesConf struct {
 	ResetCounterMode         string  `json:"reset_counter_mode"`
 	IssueRenewalInvoiceAfter float64 `json:"issue_renewal_invoice_after"`
 	TopUpItemMessage         string  `json:"top_up_item_message"`
+	TaxIncluded              bool    `json:"tax_included"`
 }
 
 var (
@@ -99,6 +100,7 @@ var (
 			StartWithNumber:          0,
 			IssueRenewalInvoiceAfter: 0.666,
 			TopUpItemMessage:         "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+			TaxIncluded:              false,
 		},
 		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,
