@@ -413,13 +413,18 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	for _, item := range t.GetItems() {
 		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 		item.Price = price
-		if includeTaxInPrices {
-			priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
-			newTotal += price * float64(item.GetAmount())
-			newSubtotal += priceRaw * float64(item.GetAmount())
+		if item.GetApplyTax() {
+			if includeTaxInPrices {
+				priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
+				newTotal += price * float64(item.GetAmount())
+				newSubtotal += priceRaw * float64(item.GetAmount())
+			} else {
+				priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
+				newTotal += priceTaxed * float64(item.GetAmount())
+				newSubtotal += price * float64(item.GetAmount())
+			}
 		} else {
-			priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
-			newTotal += priceTaxed * float64(item.GetAmount())
+			newTotal += price * float64(item.GetAmount())
 			newSubtotal += price * float64(item.GetAmount())
 		}
 	}
@@ -966,13 +971,18 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		for _, item := range t.GetItems() {
 			price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 			item.Price = price
-			if includeTaxInPrices {
-				priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
-				newTotal += price * float64(item.GetAmount())
-				newSubtotal += priceRaw * float64(item.GetAmount())
+			if item.GetApplyTax() {
+				if includeTaxInPrices {
+					priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
+					newTotal += price * float64(item.GetAmount())
+					newSubtotal += priceRaw * float64(item.GetAmount())
+				} else {
+					priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
+					newTotal += priceTaxed * float64(item.GetAmount())
+					newSubtotal += price * float64(item.GetAmount())
+				}
 			} else {
-				priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
-				newTotal += priceTaxed * float64(item.GetAmount())
+				newTotal += price * float64(item.GetAmount())
 				newSubtotal += price * float64(item.GetAmount())
 			}
 		}
@@ -1146,27 +1156,28 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
-
 	tax := acc.GetTaxRate()
-	sum := req.GetSum() + req.GetSum()*tax
 
 	ivnToCreate := &pb.Invoice{
 		Deadline: time.Now().Add(72 * time.Hour).Unix(),
 		Status:   pb.BillingStatus_UNPAID,
 		Account:  acc.GetUuid(),
-		Total:    sum,
+		Total:    req.GetSum(),
 		Type:     pb.ActionType_BALANCE,
 		Items: []*pb.Item{
 			{
 				Amount:      1,
 				Unit:        "Pcs",
-				Price:       sum,
+				Price:       req.GetSum(),
 				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+				ApplyTax:    true,
 			},
 		},
 		Meta: map[string]*structpb.Value{
-			"creator":               structpb.NewStringValue(requester),
-			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
+			"creator": structpb.NewStringValue(requester),
+		},
+		TaxOptions: &pb.TaxOptions{
+			TaxRate: tax,
 		},
 	}
 
@@ -1337,7 +1348,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	renewDescription = strings.TrimSpace(renewDescription)
 
 	tax := acc.GetTaxRate()
-	invCost := initCost + initCost*tax
+	invCost := initCost
 
 	promoItems := make([]*pb.Item, 0)
 	for _, sum := range summary {
@@ -1346,7 +1357,8 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 			Description: fmt.Sprintf("Скидка %s (промокод %s)", renewDescription, sum.Code),
 			Amount:      1,
 			Unit:        "Pcs",
-			Price:       price + price*tax,
+			Price:       price,
+			ApplyTax:    true,
 		})
 	}
 	items := []*pb.Item{
@@ -1355,6 +1367,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 			Amount:      1,
 			Unit:        "Pcs",
 			Price:       invCost,
+			ApplyTax:    true,
 		},
 	}
 	items = append(items, promoItems...)
@@ -1376,8 +1389,10 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Account:   acc.GetUuid(),
 		Currency:  acc.Currency,
 		Meta: map[string]*structpb.Value{
-			"creator":               structpb.NewStringValue(requester),
-			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
+			"creator": structpb.NewStringValue(requester),
+		},
+		TaxOptions: &pb.TaxOptions{
+			TaxRate: tax,
 		},
 	}
 	inv = graph.SetInvoiceBillingData(inv, &billingData)
@@ -1410,18 +1425,10 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 }
 
 func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice, defCurr *pb.Currency) (*graph.Invoice, error) {
-	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
-
-	c, err := s.currencies.Get(ctx, inv.GetCurrency().GetId())
-	if err != nil {
-		return inv, err
-	}
 
 	switch inv.GetType() {
 	case pb.ActionType_BALANCE:
-		total := inv.GetTotal() / (tax + 1)
-		total = graph.Round(total, c.Precision, c.Rounding)
-		tr, err := s.applyTransaction(ctx, -total, inv.GetAccount(), inv.GetCurrency())
+		tr, err := s.applyTransaction(ctx, -inv.GetSubtotal(), inv.GetAccount(), inv.GetCurrency())
 		if err != nil {
 			return inv, fmt.Errorf("failed to apply transaction: %w", err)
 		}
@@ -1501,7 +1508,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				return nil
 			})
 		}
-		if err = g.Wait(); err != nil {
+		if err := g.Wait(); err != nil {
 			if *errs == len(inv.GetInstances()) {
 				return inv, fmt.Errorf("failed to publish free_renew command: %w", err)
 			}

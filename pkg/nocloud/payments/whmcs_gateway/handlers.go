@@ -55,13 +55,15 @@ func (g *WhmcsGateway) CreateFromWhmcsInvoice(ctx context.Context, log *zap.Logg
 		Transactions: make([]string, 0),
 		Instances:    make([]string, 0),
 		Meta: map[string]*structpb.Value{
-			"note":                  structpb.NewStringValue(""),
-			invoiceIdField:          structpb.NewNumberValue(float64(whmcsInv.InvoiceId)),
-			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(float64(whmcsInv.TaxRate / 100)),
-			"creator":               structpb.NewStringValue("whmcs-gateway"),
+			"note":         structpb.NewStringValue(""),
+			invoiceIdField: structpb.NewNumberValue(float64(whmcsInv.InvoiceId)),
+			"creator":      structpb.NewStringValue("whmcs-gateway"),
 		},
 		Currency: acc.GetCurrency(),
 		Type:     pb.ActionType_WHMCS_INVOICE,
+		TaxOptions: &pb.TaxOptions{
+			TaxRate: float64(whmcsInv.TaxRate / 100),
+		},
 	}
 
 	tax := float64(whmcsInv.TaxRate / 100)
@@ -72,9 +74,9 @@ func (g *WhmcsGateway) CreateFromWhmcsInvoice(ctx context.Context, log *zap.Logg
 		var price float64
 		whmcsAmount := float64(item.Amount)
 		if g.taxExcluded {
-			price = whmcsAmount + whmcsAmount*tax
-		} else {
 			price = whmcsAmount
+		} else {
+			price = whmcsAmount / (1 + tax)
 		}
 		price = graph.Round(price, cur.Precision, cur.Rounding)
 		total += price
@@ -84,6 +86,7 @@ func (g *WhmcsGateway) CreateFromWhmcsInvoice(ctx context.Context, log *zap.Logg
 			Amount:      1,
 			Price:       float64(item.Amount),
 			Unit:        "Pcs",
+			ApplyTax:    item.Taxed > 0,
 		})
 	}
 	inv.Items = newItems

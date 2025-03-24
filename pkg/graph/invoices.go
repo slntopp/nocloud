@@ -30,7 +30,6 @@ type InvoicesController interface {
 	GetByExpiration(ctx context.Context, exp int64, instance string, forbidStatuses []pb.BillingStatus) (*Invoice, error)
 }
 
-const InvoiceTaxMetaKey = "tax_rate"
 const InvoiceRenewalDataKey = "billing_data"
 
 type InvoiceNumberMeta struct {

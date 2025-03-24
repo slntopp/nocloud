@@ -321,8 +321,10 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			Account:   acc.GetUuid(),
 			Currency:  acc.Currency,
 			Meta: map[string]*structpb.Value{
-				"creator":               structpb.NewStringValue("system"),
-				graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
+				"creator": structpb.NewStringValue("system"),
+			},
+			TaxOptions: &pb.TaxOptions{
+				TaxRate: tax,
 			},
 		},
 	}
@@ -344,7 +346,6 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			continue
 		}
 		initCost *= rate
-		initCost = initCost + initCost*tax
 
 		expireDate := time.Unix(d.ExpireAt, 0)
 		var untilDate time.Time
@@ -381,7 +382,8 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 				Description: fmt.Sprintf("Скидка %s (промокод %s)", renewDescription, sum.Code),
 				Amount:      1,
 				Unit:        "Pcs",
-				Price:       price + price*tax,
+				Price:       price,
+				ApplyTax:    true,
 			})
 		}
 		item := &pb.Item{
@@ -389,6 +391,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			Amount:      1,
 			Unit:        "Pcs",
 			Price:       initCost,
+			ApplyTax:    true,
 		}
 		inv.Items = append(inv.Items, item)
 		inv.Items = append(inv.Items, promoItems...)

@@ -75,7 +75,3 @@ func (g *WhmcsGateway) getWhmcsInvoice(inv *pb.Invoice) (int, bool) {
 	}
 	return casted, true
 }
-
-const getAccountByWhmcsId = `
-
-`

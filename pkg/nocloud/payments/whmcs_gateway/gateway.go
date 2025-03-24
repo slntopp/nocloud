@@ -133,7 +133,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 
 	var sendEmail = (inv.Status != pb.BillingStatus_DRAFT) || !(len(noEmail) > 0 && noEmail[0])
 
-	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
+	tax := inv.GetTaxOptions().GetTaxRate() * 100
 	taxed := "0"
 	if tax > 0 {
 		taxed = "1"
@@ -154,9 +154,9 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	for i, item := range inv.GetItems() {
 		var price float64
 		if g.taxExcluded {
-			price = (item.GetPrice() * float64(item.GetAmount())) / (1 + tax/100)
-		} else {
 			price = item.GetPrice() * float64(item.GetAmount())
+		} else {
+			price = item.GetPrice()*float64(item.GetAmount()) + item.GetPrice()*float64(item.GetAmount())*(tax/100)
 		}
 		price = graph.Round(price, cur.Precision, cur.Rounding)
 
@@ -248,7 +248,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 	}
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
-	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue() * 100
+	tax := inv.GetTaxOptions().GetTaxRate() * 100
 	_taxed := tax > 0
 	isTaxed := "0"
 	if _taxed {
@@ -278,9 +278,9 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 	for i, item := range inv.GetItems() {
 		var price float64
 		if g.taxExcluded {
-			price = (item.GetPrice() * float64(item.GetAmount())) / (1 + tax/100)
-		} else {
 			price = item.GetPrice() * float64(item.GetAmount())
+		} else {
+			price = item.GetPrice()*float64(item.GetAmount()) + item.GetPrice()*float64(item.GetAmount())*(tax/100)
 		}
 		price = graph.Round(price, cur.Precision, cur.Rounding)
 
@@ -629,7 +629,7 @@ skipStatus:
 	}
 
 	tax := float64(whmcsInv.TaxRate / 100)
-	inv.GetMeta()[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
+	inv.TaxOptions.TaxRate = tax
 
 	whmcsItems := whmcsInv.Items.Items
 	ncItems := slices.Clone(inv.GetItems())
@@ -640,9 +640,9 @@ skipStatus:
 		var price float64
 		whmcsAmount := float64(item.Amount)
 		if g.taxExcluded {
-			price = whmcsAmount + whmcsAmount*tax
-		} else {
 			price = whmcsAmount
+		} else {
+			price = whmcsAmount / (1 + tax)
 		}
 		price = graph.Round(price, cur.Precision, cur.Rounding)
 
@@ -669,6 +669,7 @@ skipStatus:
 			Amount:      1,
 			Price:       price,
 			Unit:        "Pcs",
+			ApplyTax:    item.Taxed > 0,
 		})
 	}
 	total = graph.Round(total, cur.Precision, cur.Rounding)

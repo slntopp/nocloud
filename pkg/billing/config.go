@@ -212,6 +212,8 @@ func MakeInvoicesConf(log *zap.Logger, settingsClient *spb.SettingsServiceClient
 		conf = invoicesSetting.Value
 	}
 
-	log.Debug("Got invoices config", zap.Any("conf", conf))
+	log.Warn("Invoices Config: Force TaxIncluded option to False")
+	conf.TaxIncluded = false
+
 	return conf
 }
