@@ -75,6 +75,9 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 		if i.Meta == nil {
 			i.Meta = make(map[string]*structpb.Value)
 		}
+		if i.TaxOptions == nil {
+			i.TaxOptions = &pb.TaxOptions{}
+		}
 	}
 	prepare(_a)
 	prepare(_b)
@@ -90,7 +93,7 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 		}
 		i1 := _a.Items[i]
 		i2 := _b.Items[i]
-		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit {
+		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit || i1.ApplyTax != i2.ApplyTax {
 			return false
 		}
 		if !equalFloats(i1.Price, i2.Price) {
@@ -100,6 +103,9 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 	if (_a.Currency == nil && _b.Currency != nil) ||
 		(_a.Currency != nil && _b.Currency == nil) ||
 		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
+		return false
+	}
+	if _a.TaxOptions.TaxRate != _b.TaxOptions.TaxRate {
 		return false
 	}
 	_a.Currency = nil
