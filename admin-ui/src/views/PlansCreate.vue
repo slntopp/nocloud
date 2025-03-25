@@ -322,7 +322,7 @@ export default {
 
       const configs =
         type === "resource"
-          ? this.resources
+          ? this.plan.resources
           : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
 
