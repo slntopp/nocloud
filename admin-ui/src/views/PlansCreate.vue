@@ -325,6 +325,7 @@ export default {
           ? this.plan.resources
           : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
+console.log(key);
 
       switch (key) {
         case "key":
@@ -468,7 +469,7 @@ export default {
     },
     setPeriod(date, id) {
       const period = date;
-      const resource = this.resources.find((el) => el.id === id);
+      const resource = this.plan.resources.find((el) => el.id === id);
       const product = Object.values(this.plan.products).find(
         (el) => el.id === id
       );
