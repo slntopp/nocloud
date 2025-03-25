@@ -938,13 +938,12 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Uuid = req.GetUuid()
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
-	t.Total = req.GetTotal()
-	t.Subtotal = req.GetSubtotal()
 	t.Type = req.GetType()
-	t.TaxOptions = req.GetTaxOptions()
 	if req.Meta != nil {
 		t.Meta = req.GetMeta()
 	}
+	var diffTax = t.GetTaxOptions().GetTaxRate() != req.GetTaxOptions().GetTaxRate()
+	t.TaxOptions = req.GetTaxOptions()
 
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
@@ -961,14 +960,18 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 	}
 
-	if req.Items != nil || !ignoreNulls {
+	if req.Items != nil || !ignoreNulls || diffTax {
+		var items = t.GetItems()
+		if req.Items != nil {
+			items = req.GetItems()
+		}
 		cur, err := s.currencies.Get(ctx, t.Currency.GetId())
 		if err != nil {
 			log.Error("Failed to get currency", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get currency")
 		}
 		var newTotal, newSubtotal float64
-		for _, item := range t.GetItems() {
+		for _, item := range items {
 			price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 			item.Price = price
 			if item.GetApplyTax() {
