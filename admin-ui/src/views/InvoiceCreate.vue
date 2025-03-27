@@ -5,16 +5,29 @@
     </h1>
 
     <div
-      v-if="isEdit"
+      v-if="accountCurrency"
       style="z-index: 0; position: relative; top: -15px; right: 20px"
     >
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
-          Total:
-          {{ `${newInvoice.total} ${newInvoice.currency?.code}` }}
+          Subtotal:
+          {{
+            `${newInvoice.subtotal} ${
+              newInvoice.currency?.code || accountCurrency?.code
+            }`
+          }}
         </v-chip>
 
-        <v-chip :color="getInvoiceStatusColor(newInvoice.status)">
+        <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
+          Total:
+          {{
+            `${newInvoice.total} ${
+              newInvoice.currency?.code || accountCurrency?.code
+            }`
+          }}
+        </v-chip>
+
+        <v-chip v-if="isEdit" :color="getInvoiceStatusColor(newInvoice.status)">
           {{ `${newInvoice.status}` }}
         </v-chip>
       </div>
@@ -54,6 +67,17 @@
           >
             <v-icon>mdi-login</v-icon>
           </v-btn>
+        </div>
+
+        <div class="item" style="max-width: 80px" v-if="!isBalanceInvoice">
+          <v-text-field
+            :disabled="isEdit"
+            :value="newInvoice.taxRate * 100"
+            @input="newInvoice.taxRate = $event / 100"
+            label="tax rate"
+            type="number"
+            suffix="%"
+          />
         </div>
 
         <div class="item">
@@ -166,6 +190,7 @@
           v-if="!isBalanceInvoice || !isDraft"
           :show-delete="!isBalanceInvoice"
           :account="newInvoice.account"
+          :taxRate="newInvoice.taxRate"
           :items="newInvoice.items"
           @click:delete="deleteInvoiceItem"
         />
@@ -357,7 +382,11 @@ const newInvoice = ref({
   status: "DRAFT",
   type: "NO_ACTION",
   total: 0,
-  items: [{ price: null, description: "", amount: 1, unit: "Pcs" }],
+  subtotal: 0,
+  taxRate: 0,
+  items: [
+    { price: null, description: "", amount: 1, unit: "Pcs", applyTax: true },
+  ],
   deadline: formatSecondsToDateString(Date.now() / 1000 + 86400 * 30),
   meta: {
     note: "",
@@ -487,6 +516,7 @@ const setInvoice = () => {
       returned: formatSecondsToDateString(invoice.value.returned),
       processed: formatSecondsToDateString(invoice.value.processed),
       created: formatSecondsToDateString(invoice.value.created),
+      taxRate: formatSecondsToDateString(invoice.value.taxOptions.taxRate),
     };
 
     if (isBalanceInvoice.value) {
@@ -523,7 +553,10 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
       type: newInvoice.value.type,
       processed: invoice.value?.processed || 0,
+      taxOptions: { taxRate: newInvoice.value.taxRate },
     };
+
+    console.log(data);
 
     if (!isEdit.value && !invoice.value?.uuid) {
       await store.getters["invoices/invoicesClient"].createInvoice(
@@ -618,6 +651,7 @@ const addInvoiceItem = () => {
     price: 0,
     amount: 1,
     unit: "Pcs",
+    applyTax: true,
   });
 };
 
@@ -682,6 +716,7 @@ const onChangeInstance = () => {
       newItems.push(JSON.parse(JSON.stringify(existedProduct)));
     } else {
       newItems.push({
+        applyTax: true,
         price: price,
         amount: 1,
         description: title,
@@ -760,27 +795,45 @@ watch(isBalanceInvoice, (value) => {
         price: newInvoice.value.total,
         amount: 1,
         unit: "Pcs",
+        applyTax: true,
       },
     ];
   } else {
     newInvoice.value.items = [];
   }
 
+  newInvoice.value.taxRate = 0;
+
   newInvoice.value.instances = [];
 });
 
 watch(
-  () => newInvoice.value.items,
+  [() => newInvoice.value.items, () => newInvoice.value.taxRate],
   () => {
-    newInvoice.value.total = newInvoice.value.items?.reduce(
+    newInvoice.value.subtotal = newInvoice.value.items?.reduce(
       (acc, i) => acc + Number(i.price || 0) * Number(i.amount || 0),
       0
     );
+
+    newInvoice.value.total = newInvoice.value.items?.reduce((acc, i) => {
+      const price = Number(i.price || 0) * Number(i.amount || 0);
+
+      return acc + price + (i.applyTax ? price * newInvoice.value.taxRate : 0);
+    }, 0);
   },
   { deep: true }
 );
 
 watch(invoice, setInvoice);
+
+watch(
+  () => newInvoice.value.account,
+  () => {
+    newInvoice.value.taxRate = newInvoice.value.account?.data.tax_rate
+      ? newInvoice.value.account.data.tax_rate
+      : newInvoice.value.taxRate;
+  }
+);
 </script>
 
 <style scoped lang="scss">
