@@ -71,7 +71,6 @@
 
         <div class="item" style="max-width: 80px" v-if="!isBalanceInvoice">
           <v-text-field
-            :disabled="isEdit"
             :value="newInvoice.taxRate * 100"
             @input="newInvoice.taxRate = $event / 100"
             label="tax rate"
@@ -516,7 +515,7 @@ const setInvoice = () => {
       returned: formatSecondsToDateString(invoice.value.returned),
       processed: formatSecondsToDateString(invoice.value.processed),
       created: formatSecondsToDateString(invoice.value.created),
-      taxRate: formatSecondsToDateString(invoice.value.taxOptions.taxRate),
+      taxRate: invoice.value.taxOptions.taxRate,
     };
 
     if (isBalanceInvoice.value) {
@@ -818,7 +817,9 @@ watch(
     newInvoice.value.total = newInvoice.value.items?.reduce((acc, i) => {
       const price = Number(i.price || 0) * Number(i.amount || 0);
 
-      return acc + price + (i.applyTax ? price * newInvoice.value.taxRate : 0);
+      return (
+        acc + price + (i.applyTax ? price * (newInvoice.value.taxRate || 0) : 0)
+      );
     }, 0);
   },
   { deep: true }
