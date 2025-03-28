@@ -303,6 +303,12 @@ func (c *сurrencyController) DeleteExchangeRate(ctx context.Context, from *pb.C
 
 func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error) {
 
+	if from.Id == to.Id && from.Code != to.Code {
+		curr, _ := c.GetByCode(ctx, from.Code)
+		from.Id = curr.Id
+		curr, _ = c.GetByCode(ctx, to.Code)
+		to.Id = curr.Id
+	}
 	if from.GetId() == to.GetId() {
 		return amount, nil
 	}
