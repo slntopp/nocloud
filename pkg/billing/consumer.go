@@ -355,7 +355,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	startDescription = strings.TrimSpace(startDescription)
 
 	tax := acc.GetTaxRate()
-	invCost := initCost + initCost*tax
+	invCost := initCost
 
 	promoItems := make([]*bpb.Item, 0)
 	for _, sum := range summary {
@@ -364,7 +364,8 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			Description: fmt.Sprintf("Скидка %s (промокод %s)", startDescription, sum.Code),
 			Amount:      1,
 			Unit:        "Pcs",
-			Price:       price + price*tax,
+			Price:       price,
+			ApplyTax:    true,
 		})
 	}
 	items := []*bpb.Item{
@@ -373,6 +374,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			Amount:      1,
 			Unit:        "Pcs",
 			Price:       invCost,
+			ApplyTax:    true,
 		},
 	}
 	items = append(items, promoItems...)
@@ -380,8 +382,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		Status: bpb.BillingStatus_UNPAID,
 		Items:  items,
 		Meta: map[string]*structpb.Value{
-			"creator":               structpb.NewStringValue("system"),
-			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
+			"creator": structpb.NewStringValue("system"),
 		},
 		Total:     invCost,
 		Type:      bpb.ActionType_INSTANCE_START,
@@ -390,6 +391,9 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		Deadline:  now + (int64(time.Hour.Seconds()) * 24 * 5),
 		Account:   acc.GetUuid(),
 		Currency:  accCurrency,
+		TaxOptions: &bpb.TaxOptions{
+			TaxRate: tax,
+		},
 	}
 	invResp, err := s.CreateInvoice(ctxWithRoot(ctx), connect.NewRequest(&bpb.CreateInvoiceRequest{
 		Invoice:     inv,
