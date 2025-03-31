@@ -330,6 +330,16 @@ func (s *CurrencyServiceServer) Convert(ctx context.Context, r *connect.Request[
 	return connect.NewResponse(&pb.ConversionResponse{Amount: amount}), nil
 }
 
+func (s *CurrencyServiceServer) ConvertMany(ctx context.Context, r *connect.Request[pb.MultiConversionRequest]) (*connect.Response[pb.MultiConversionResponse], error) {
+	req := r.Msg
+	amounts, err := s.ctrl.ConvertMany(ctx, req.From, req.To, req.Amounts)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&pb.MultiConversionResponse{Amounts: amounts}), nil
+}
+
 func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, r *connect.Request[pb.GetCurrenciesRequest]) (*connect.Response[pb.GetCurrenciesResponse], error) {
 	log := s.log.Named("GetCurrencies")
 	log.Debug("Request received")
