@@ -436,7 +436,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 func filterInvoices(invoices []*graph.Invoice) []*graph.Invoice {
 	var filteredInvoices []*graph.Invoice
 	for _, inv := range invoices {
-		if inv.GetStatus() == pb.BillingStatus_PAID || inv.GetStatus() == pb.BillingStatus_RETURNED {
+		if inv.GetStatus() == pb.BillingStatus_RETURNED {
 			continue
 		}
 		filteredInvoices = append(filteredInvoices, inv)
