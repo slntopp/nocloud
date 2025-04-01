@@ -12,7 +12,7 @@
       </router-link>
     </template>
 
-    <template v-slot:top>
+    <template v-if="!hideActions" v-slot:top>
       <v-toolbar flat color="background">
         <v-toolbar-title>Actions</v-toolbar-title>
         <v-divider inset vertical class="mx-4" />
@@ -61,8 +61,8 @@ import confirmDialog from "@/components/confirmDialog.vue";
 import { onMounted, ref, toRefs } from "vue";
 import { useStore } from "@/store";
 
-const props = defineProps(["addons"]);
-const { addons } = toRefs(props);
+const props = defineProps(["addons","hideActions"]);
+const { addons,hideActions } = toRefs(props);
 
 const emit = defineEmits(["change:addons"]);
 

@@ -149,6 +149,8 @@ const saveAddon = async () => {
       public: newAddon.value.public,
       title: newAddon.value.title,
       group: newAddon.value.group,
+      meta: newAddon.value.meta || {},
+      system: !!newAddon.value.system,
       periods: newAddon.value.periods.reduce((acc, a) => {
         acc[a.period] = a.price;
         return acc;

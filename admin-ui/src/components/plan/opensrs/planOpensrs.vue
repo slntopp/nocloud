@@ -18,9 +18,10 @@
                       <template v-slot:default>
                         <v-list-item-content>
                           <v-list-item-title>
-                            Price from: {{ item.from }} {{ defaultCurrency?.code }},
-                            Price to: {{ item.to }} {{ defaultCurrency?.code }},
-                            Margin: {{ item.factor }}%
+                            Price from: {{ item.from }}
+                            {{ defaultCurrency?.code }}, Price to:
+                            {{ item.to }} {{ defaultCurrency?.code }}, Margin:
+                            {{ item.factor }}%
                           </v-list-item-title>
                         </v-list-item-content>
 
@@ -157,8 +158,8 @@ export default {
     };
   },
   created() {
-    if (this.isEdit && "ranges" in this.fee) {
-      this.currentFee = this.fee;
+    if (this.isEdit) {
+      this.currentFee = { ...this.currentFee, ...this.fee };
 
       if (typeof this.fee?.round !== "string") return;
       const roundes = [

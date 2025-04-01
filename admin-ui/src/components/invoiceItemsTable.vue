@@ -122,7 +122,7 @@
                   (acc, item) =>
                     acc +
                     (item.applyTax
-                      ? (item.amount || 0) * (item.price || 0) * taxRate
+                      ? (item.amount || 0) * (item.price || 0) * (taxRate || 0)
                       : 0),
                   0
                 )
