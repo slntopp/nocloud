@@ -21,21 +21,47 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <nocloud-table
-      table-name="opensrs-used-domens"
-      :show-select="false"
-      :items="existedDomens"
-      :headers="headers"
+    <v-tabs
+      class="rounded-t-lg"
+      v-model="tabsIndex"
+      background-color="background-light"
     >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field
-          class="mr-2"
-          v-model.number="item.price"
-          type="number"
-          append-icon="mdi-pencil"
-        />
-      </template>
-    </nocloud-table>
+      <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
+    </v-tabs>
+
+    <v-tabs-items
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
+    >
+      <v-tab-item v-for="tab in tabs" :key="tab">
+        <div v-if="tab === 'Domains'">
+          <nocloud-table
+            table-name="opensrs-used-domens"
+            :show-select="false"
+            :items="existedDomens"
+            :headers="headers"
+          >
+            <template v-slot:[`item.price`]="{ item }">
+              <v-text-field
+                class="mr-2"
+                v-model.number="item.price"
+                type="number"
+                append-icon="mdi-pencil"
+              />
+            </template>
+          </nocloud-table>
+        </div>
+
+        <div v-else>
+          <plan-addons-table
+            hide-actions="true"
+            @change:addons="planAddons = $event"
+            :addons="template.addons"
+          />
+        </div>
+      </v-tab-item>
+    </v-tabs-items>
 
     <v-btn class="mt-4" @click="isDialogVisible = true">Save</v-btn>
 
@@ -75,9 +101,11 @@ import api from "@/api.js";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import nocloudTable from "@/components/table.vue";
-import { computed, ref, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import { useStore } from "@/store/";
 import { getBillingPeriod } from "@/functions";
+import planAddonsTable from "@/components/planAddonsTable.vue";
+import { Addon } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 const props = defineProps({ template: { type: Object, required: true } });
 const { template } = toRefs(props);
@@ -91,11 +119,48 @@ const headers = [
   { text: "Sale price", value: "price" },
 ];
 
+const tabs = ["Domains", "System addons"];
+
 const fee = ref(template.value.fee || {});
 const isEditLoading = ref(false);
 const isCreateLoading = ref(false);
 const isDialogVisible = ref(false);
 const isValid = ref(true);
+const tabsIndex = ref(0);
+const planAddons = ref([]);
+
+onMounted(async () => {
+  planAddons.value = [...(template.value.addons || [])];
+
+  if (!planAddons.value.length) {
+    const defaultAddons = [
+      {
+        system: true,
+        title: `Who is privacy (${template.value.uuid})`,
+        group: template.value.uuid,
+        periods: { [0]: 0 },
+        public: true,
+        kind: "PREPAID",
+        meta: {
+          type: "who_is_privacy",
+        },
+      },
+    ];
+
+    const addonsBulk = await addonsClient.value.createBulk({
+      addons: defaultAddons.map((addon) => Addon.fromJson(addon)),
+    });
+
+    await api.plans.update(template.value.uuid, {
+      ...template.value,
+      addons: addonsBulk.addons.map((a) => a.uuid),
+    });
+
+    store.dispatch("reloadBtn/onclick");
+  }
+});
+
+const addonsClient = computed(() => store.getters["addons/addonsClient"]);
 
 const existedDomens = computed(() =>
   Object.keys(template.value.products || {}).map((key) => ({
