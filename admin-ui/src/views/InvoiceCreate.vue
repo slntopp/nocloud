@@ -515,7 +515,7 @@ const setInvoice = () => {
       returned: formatSecondsToDateString(invoice.value.returned),
       processed: formatSecondsToDateString(invoice.value.processed),
       created: formatSecondsToDateString(invoice.value.created),
-      taxRate: invoice.value.taxOptions.taxRate,
+      taxRate: invoice.value.taxOptions?.taxRate || 0,
     };
 
     if (isBalanceInvoice.value) {
