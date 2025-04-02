@@ -543,7 +543,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
 	log := s.log.Named("Invoke")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestor, _ := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())

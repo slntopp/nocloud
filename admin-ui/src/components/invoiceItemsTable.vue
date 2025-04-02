@@ -36,6 +36,10 @@
       <v-select :rules="generalRule" v-model="item.unit" :items="unitItems" />
     </template>
 
+    <template v-slot:[`item.applyTax`]="{ item }">
+      <v-switch v-model="item.applyTax" />
+    </template>
+
     <template v-slot:[`item.description`]="{ item }">
       <v-textarea
         :readonly="readonly"
@@ -59,6 +63,29 @@
     <template v-slot:[`item.total`]="{ item }">
       <span>{{
         [
+          (
+            (item.price * item.amount || 0) +
+            (item.price * item.amount || 0) * (item.applyTax ? taxRate : 0)
+          ).toFixed(2),
+          account?.currency?.code,
+        ].join(" ")
+      }}</span>
+    </template>
+
+    <template v-slot:[`item.taxtotal`]="{ item }">
+      <span>{{
+        [
+          (
+            (item.price * item.amount || 0) * (item.applyTax ? taxRate : 0)
+          ).toFixed(2),
+          account?.currency?.code,
+        ].join(" ")
+      }}</span>
+    </template>
+
+    <template v-slot:[`item.subtotal`]="{ item }">
+      <span>{{
+        [
           (item.price * item.amount || 0).toFixed(2),
           account?.currency?.code,
         ].join(" ")
@@ -71,6 +98,8 @@
         <td></td>
         <td></td>
         <td></td>
+        <td></td>
+
         <td>
           {{
             [
@@ -84,7 +113,43 @@
             ].join(" ")
           }}
         </td>
-        <td></td>
+
+        <td>
+          {{
+            [
+              items
+                .reduce(
+                  (acc, item) =>
+                    acc +
+                    (item.applyTax
+                      ? (item.amount || 0) * (item.price || 0) * (taxRate || 0)
+                      : 0),
+                  0
+                )
+                .toFixed(2),
+              account?.currency?.code,
+            ].join(" ")
+          }}
+        </td>
+
+        <td>
+          {{
+            [
+              items
+                .reduce(
+                  (acc, item) =>
+                    acc +
+                    ((item.amount || 0) * (item.price || 0) +
+                      (item.applyTax
+                        ? (item.amount || 0) * (item.price || 0) * taxRate
+                        : 0)),
+                  0
+                )
+                .toFixed(2),
+              account?.currency?.code,
+            ].join(" ")
+          }}
+        </td>
       </tr>
     </template>
   </nocloud-table>
@@ -101,9 +166,10 @@ const props = defineProps({
   showDelete: { type: Boolean, default: false },
   showDate: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
+  taxRate: { type: Number, default: 0 },
   sortBy: {},
 });
-const { items, account, showDelete, showDate, readonly, sortBy } =
+const { items, account, showDelete, showDate, readonly, sortBy, taxRate } =
   toRefs(props);
 
 const emit = defineEmits("click:delete");
@@ -119,7 +185,12 @@ const headers = computed(() =>
     { text: "Description", value: "description", width: "40%" },
     { text: "Unit", value: "unit", width: 100 },
     { text: "Amount", value: "amount", width: 100 },
+    { text: "Apply tax", value: "applyTax", width: 50 },
     { text: "Price", value: "price", width: 100 },
+    showDelete.value
+      ? { text: "Sub total", value: "subtotal", width: 75 }
+      : null,
+    { text: `Tax sum`, value: "taxtotal", width: 75 },
     showDelete.value ? { text: "Total", value: "total", width: 75 } : null,
     showDelete.value ? { text: "Actions", value: "actions", width: 25 } : null,
   ].filter((c) => !!c)

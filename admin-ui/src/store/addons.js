@@ -43,7 +43,7 @@ export default {
       commit("setLoading", true);
       try {
         const response = await getters.addonsClient.get({ uuid: id });
-        commit("setOne", response);
+        commit("setOne", response.toJson());
       } finally {
         commit("setLoading", false);
       }

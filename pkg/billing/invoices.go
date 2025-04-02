@@ -75,6 +75,9 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 		if i.Meta == nil {
 			i.Meta = make(map[string]*structpb.Value)
 		}
+		if i.TaxOptions == nil {
+			i.TaxOptions = &pb.TaxOptions{}
+		}
 	}
 	prepare(_a)
 	prepare(_b)
@@ -90,7 +93,7 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 		}
 		i1 := _a.Items[i]
 		i2 := _b.Items[i]
-		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit {
+		if i1.Amount != i2.Amount || i1.Description != i2.Description || i1.Unit != i2.Unit || i1.ApplyTax != i2.ApplyTax {
 			return false
 		}
 		if !equalFloats(i1.Price, i2.Price) {
@@ -100,6 +103,9 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 	if (_a.Currency == nil && _b.Currency != nil) ||
 		(_a.Currency != nil && _b.Currency == nil) ||
 		(_a.Currency != nil && _b.Currency != nil && _a.Currency.GetId() != _b.Currency.GetId()) {
+		return false
+	}
+	if _a.TaxOptions.TaxRate != _b.TaxOptions.TaxRate {
 		return false
 	}
 	_a.Currency = nil
@@ -354,6 +360,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
 	defCurr := MakeCurrencyConf(log, &s.settingsClient).Currency
 
+	includeTaxInPrices := invConf.TaxIncluded
+
 	if t == nil {
 		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
 	}
@@ -363,6 +371,10 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		t.Type = pb.ActionType_NO_ACTION
 	}
+	if t.TaxOptions == nil {
+		t.TaxOptions = &pb.TaxOptions{}
+	}
+	t.TaxOptions.TaxIncluded = includeTaxInPrices
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
@@ -389,19 +401,41 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}
 	}
 
+	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+	tax := acc.GetTaxRate()
+	t.TaxOptions.TaxRate = tax
+
 	// Rounding invoice items
 	cur, err := s.currencies.Get(ctx, t.Currency.GetId())
 	if err != nil {
 		log.Error("Failed to get currency", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get currency")
 	}
-	var newTotal float64
+	var newTotal, newSubtotal float64
 	for _, item := range t.GetItems() {
 		price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 		item.Price = price
-		newTotal += price * float64(item.GetAmount())
+		if item.GetApplyTax() {
+			if includeTaxInPrices {
+				priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
+				newTotal += price * float64(item.GetAmount())
+				newSubtotal += priceRaw * float64(item.GetAmount())
+			} else {
+				priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
+				newTotal += priceTaxed * float64(item.GetAmount())
+				newSubtotal += price * float64(item.GetAmount())
+			}
+		} else {
+			newTotal += price * float64(item.GetAmount())
+			newSubtotal += price * float64(item.GetAmount())
+		}
 	}
 	t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
+	t.Subtotal = graph.Round(newSubtotal, cur.Precision, cur.Rounding)
 
 	now := time.Now()
 
@@ -423,18 +457,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}
 	}
 
-	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, t.Account)
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get account")
-	}
-	tax := acc.GetTaxRate()
-
 	if t.Meta == nil {
 		t.Meta = make(map[string]*structpb.Value)
-	}
-	if t.Meta[graph.InvoiceTaxMetaKey] == nil {
-		t.Meta[graph.InvoiceTaxMetaKey] = structpb.NewNumberValue(tax)
 	}
 	if t.Meta["creator"] == nil {
 		t.Meta["creator"] = structpb.NewStringValue(requester)
@@ -869,6 +893,9 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	ignoreNulls := r.Msg.IgnoreNullFields
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requester", requester))
 
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	includeTaxInPrices := invConf.TaxIncluded
+
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "Invoice is nil")
 	}
@@ -878,6 +905,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		req.Type = pb.ActionType_NO_ACTION
 	}
+	if req.TaxOptions == nil {
+		req.TaxOptions = &pb.TaxOptions{}
+	}
+	req.TaxOptions.TaxIncluded = includeTaxInPrices
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
@@ -913,11 +944,12 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Uuid = req.GetUuid()
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
-	t.Total = req.GetTotal()
 	t.Type = req.GetType()
 	if req.Meta != nil {
 		t.Meta = req.GetMeta()
 	}
+	var diffTax = t.GetTaxOptions().GetTaxRate() != req.GetTaxOptions().GetTaxRate()
+	t.TaxOptions = req.GetTaxOptions()
 
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
@@ -934,20 +966,37 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 	}
 
-	if req.Items != nil || !ignoreNulls {
-		var newTotal float64
+	if req.Items != nil || !ignoreNulls || diffTax {
+		var items = t.GetItems()
+		if req.Items != nil {
+			items = req.GetItems()
+		}
 		cur, err := s.currencies.Get(ctx, t.Currency.GetId())
 		if err != nil {
 			log.Error("Failed to get currency", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get currency")
 		}
-		for _, item := range req.GetItems() {
+		var newTotal, newSubtotal float64
+		for _, item := range items {
 			price := graph.Round(item.GetPrice(), cur.Precision, cur.Rounding)
 			item.Price = price
-			newTotal += price * float64(item.GetAmount())
+			if item.GetApplyTax() {
+				if includeTaxInPrices {
+					priceRaw := price / (1 + t.GetTaxOptions().GetTaxRate())
+					newTotal += price * float64(item.GetAmount())
+					newSubtotal += priceRaw * float64(item.GetAmount())
+				} else {
+					priceTaxed := price + price*t.GetTaxOptions().GetTaxRate()
+					newTotal += priceTaxed * float64(item.GetAmount())
+					newSubtotal += price * float64(item.GetAmount())
+				}
+			} else {
+				newTotal += price * float64(item.GetAmount())
+				newSubtotal += price * float64(item.GetAmount())
+			}
 		}
-		newTotal = graph.Round(newTotal, cur.Precision, cur.Rounding)
-		t.Total = newTotal
+		t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
+		t.Subtotal = graph.Round(newSubtotal, cur.Precision, cur.Rounding)
 	}
 
 	vars := map[string]interface{}{}
@@ -1116,27 +1165,28 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
-
 	tax := acc.GetTaxRate()
-	sum := req.GetSum() + req.GetSum()*tax
 
 	ivnToCreate := &pb.Invoice{
 		Deadline: time.Now().Add(72 * time.Hour).Unix(),
 		Status:   pb.BillingStatus_UNPAID,
 		Account:  acc.GetUuid(),
-		Total:    sum,
+		Total:    req.GetSum(),
 		Type:     pb.ActionType_BALANCE,
 		Items: []*pb.Item{
 			{
 				Amount:      1,
 				Unit:        "Pcs",
-				Price:       sum,
+				Price:       req.GetSum(),
 				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+				ApplyTax:    true,
 			},
 		},
 		Meta: map[string]*structpb.Value{
-			"creator":               structpb.NewStringValue(requester),
-			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
+			"creator": structpb.NewStringValue(requester),
+		},
+		TaxOptions: &pb.TaxOptions{
+			TaxRate: tax,
 		},
 	}
 
@@ -1307,7 +1357,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	renewDescription = strings.TrimSpace(renewDescription)
 
 	tax := acc.GetTaxRate()
-	invCost := initCost + initCost*tax
+	invCost := initCost
 
 	promoItems := make([]*pb.Item, 0)
 	for _, sum := range summary {
@@ -1316,7 +1366,8 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 			Description: fmt.Sprintf("Скидка %s (промокод %s)", renewDescription, sum.Code),
 			Amount:      1,
 			Unit:        "Pcs",
-			Price:       price + price*tax,
+			Price:       price,
+			ApplyTax:    true,
 		})
 	}
 	items := []*pb.Item{
@@ -1325,6 +1376,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 			Amount:      1,
 			Unit:        "Pcs",
 			Price:       invCost,
+			ApplyTax:    true,
 		},
 	}
 	items = append(items, promoItems...)
@@ -1346,8 +1398,10 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Account:   acc.GetUuid(),
 		Currency:  acc.Currency,
 		Meta: map[string]*structpb.Value{
-			"creator":               structpb.NewStringValue(requester),
-			graph.InvoiceTaxMetaKey: structpb.NewNumberValue(tax),
+			"creator": structpb.NewStringValue(requester),
+		},
+		TaxOptions: &pb.TaxOptions{
+			TaxRate: tax,
 		},
 	}
 	inv = graph.SetInvoiceBillingData(inv, &billingData)
@@ -1380,18 +1434,10 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 }
 
 func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice, defCurr *pb.Currency) (*graph.Invoice, error) {
-	tax := inv.GetMeta()[graph.InvoiceTaxMetaKey].GetNumberValue()
-
-	c, err := s.currencies.Get(ctx, inv.GetCurrency().GetId())
-	if err != nil {
-		return inv, err
-	}
 
 	switch inv.GetType() {
 	case pb.ActionType_BALANCE:
-		total := inv.GetTotal() / (tax + 1)
-		total = graph.Round(total, c.Precision, c.Rounding)
-		tr, err := s.applyTransaction(ctx, -total, inv.GetAccount(), inv.GetCurrency())
+		tr, err := s.applyTransaction(ctx, -inv.GetSubtotal(), inv.GetAccount(), inv.GetCurrency())
 		if err != nil {
 			return inv, fmt.Errorf("failed to apply transaction: %w", err)
 		}
@@ -1471,7 +1517,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				return nil
 			})
 		}
-		if err = g.Wait(); err != nil {
+		if err := g.Wait(); err != nil {
 			if *errs == len(inv.GetInstances()) {
 				return inv, fmt.Errorf("failed to publish free_renew command: %w", err)
 			}

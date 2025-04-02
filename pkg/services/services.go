@@ -581,7 +581,7 @@ func (s *ServicesServer) Up(ctx context.Context, _request *connect.Request[pb.Up
 	event.Rc = 0
 	nocloud.Log(log, &event)
 
-	return connect.NewResponse(&pb.UpResponse{}), nil
+	return connect.NewResponse(result), nil
 }
 
 func (s *ServicesServer) Suspend(ctx context.Context, _request *connect.Request[pb.SuspendRequest]) (*connect.Response[pb.SuspendResponse], error) {

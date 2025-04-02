@@ -58,6 +58,25 @@
       </v-tooltip>
     </template>
 
+    <template v-slot:[`item.subtotal`]="{ item }">
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on, attrs }">
+          <v-chip v-bind="attrs" v-on="on" :color="getTotalColor(item)" abs>
+            {{
+              `${formatPrice(item.subtotal, item.currency)} ${
+                item.currency?.code || defaultCurrency.code
+              }`
+            }}
+          </v-chip>
+        </template>
+        <invoice-preview :invoice="item" />
+      </v-tooltip>
+    </template>
+
+    <template v-slot:[`item.taxOptions.taxRate`]="{ item }">
+      {{ item.taxOptions.taxRate * 100 || 0 }}%
+    </template>
+
     <template v-slot:[`item.processed`]="{ item }">
       {{ formatSecondsToDate(item.processed, true) }}
     </template>
@@ -148,8 +167,10 @@ const headers = ref([
   { text: "UUID", value: "uuid" },
   { text: "Number", value: "number" },
   { text: "Account ", value: "account" },
+  { text: "Subtotal ", value: "subtotal" },
   { text: "Total ", value: "total" },
   { text: "Type ", value: "type" },
+  { text: "Tax rate ", value: "taxOptions.taxRate" },
   { text: "External ID", value: "meta.whmcs_invoice_id" },
   { text: "Created date ", value: "created" },
   { text: "Due date", value: "deadline" },

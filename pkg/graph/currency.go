@@ -24,6 +24,7 @@ type CurrencyController interface {
 	UpdateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate, commission float64) error
 	DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error
 	Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error)
+	ConvertMany(ctx context.Context, from *pb.Currency, to *pb.Currency, amounts []float64) ([]float64, error)
 	GetCurrencies(ctx context.Context, isAdmin bool, mustFetch ...int32) ([]*pb.Currency, error)
 	GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error)
 	Get(ctx context.Context, id int32) (Currency, error)
@@ -319,6 +320,31 @@ func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to
 	}
 
 	return amount * rate, nil
+}
+
+func (c *сurrencyController) ConvertMany(ctx context.Context, from *pb.Currency, to *pb.Currency, amounts []float64) ([]float64, error) {
+	results := make([]float64, len(amounts))
+
+	if from.Id == to.Id && from.Code != to.Code {
+		curr, _ := c.GetByCode(ctx, from.Code)
+		from.Id = curr.Id
+		curr, _ = c.GetByCode(ctx, to.Code)
+		to.Id = curr.Id
+	}
+	if from.GetId() == to.GetId() {
+		return amounts, nil
+	}
+
+	rate, _, err := c.GetExchangeRate(ctx, from, to)
+	if err != nil {
+		return amounts, status.Error(codes.NotFound, err.Error())
+	}
+
+	for i, v := range amounts {
+		results[i] = v * rate
+	}
+
+	return results, nil
 }
 
 func (c *сurrencyController) GetCurrencies(ctx context.Context, isAdmin bool, mustFetch ...int32) ([]*pb.Currency, error) {
