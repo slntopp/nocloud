@@ -664,6 +664,10 @@ export default {
         window.open(`/admin/accounts/${data.value.uuid}`, "_blank");
         return;
       }
+      if (data.type === "open-chats-statistics") {
+        this.$router.push({ name: "Statistics", query: { tab: "chats" } });
+        return;
+      }
       if (data.type === "open-chat") {
         this.loginHandler({
           accountUuid: this.userdata.uuid,
