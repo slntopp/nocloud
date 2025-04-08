@@ -136,22 +136,21 @@ func main() {
 			log.Error("AMI socket error", zap.Error(err))
 		}
 	}
-	if socket == nil {
-		socket = &ami.Socket{}
-	}
-	if _, err := ami.Connect(socket); err != nil {
-		if amiRequired {
-			log.Fatal("AMI connect error", zap.Error(err))
-		} else {
-			log.Error("AMI connect error", zap.Error(err))
+	if socket != nil {
+		if _, err := ami.Connect(socket); err != nil {
+			if amiRequired {
+				log.Fatal("AMI connect error", zap.Error(err))
+			} else {
+				log.Error("AMI connect error", zap.Error(err))
+			}
 		}
-	}
-	uuid, _ := ami.GetUUID()
-	if ok, err := ami.Login(socket, amiUser, amiSecret, "Off", uuid); err != nil || !ok {
-		if amiRequired {
-			log.Fatal("AMI login error", zap.Error(err))
-		} else {
-			log.Error("AMI login error", zap.Error(err))
+		uuid, _ := ami.GetUUID()
+		if ok, err := ami.Login(socket, amiUser, amiSecret, "Off", uuid); err != nil || !ok {
+			if amiRequired {
+				log.Fatal("AMI login error", zap.Error(err))
+			} else {
+				log.Error("AMI login error", zap.Error(err))
+			}
 		}
 	}
 

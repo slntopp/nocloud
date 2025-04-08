@@ -220,13 +220,17 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				return nil, fmt.Errorf("internal error")
 			}
 
-			from := amiService
-			to := accountPhone
-			smsBody := fmt.Sprintf("Ваш код подтверждения: %s", code)
-			actionMessage := fmt.Sprintf("Action: MessageSend\r\nFrom: %s\r\nTo: %s\r\nBody: %s\r\n\r\n", from, to, smsBody)
-			if err := s.amiSocket.Send("%s", actionMessage); err != nil {
-				log.Error("failed to send ami message", zap.Error(err))
-				return nil, fmt.Errorf("internal error")
+			if s.amiSocket != nil {
+				from := amiService
+				to := accountPhone
+				smsBody := fmt.Sprintf("Ваш код подтверждения: %s", code)
+				actionMessage := fmt.Sprintf("Action: MessageSend\r\nFrom: %s\r\nTo: %s\r\nBody: %s\r\n\r\n", from, to, smsBody)
+				if err := s.amiSocket.Send("%s", actionMessage); err != nil {
+					log.Error("failed to send ami message", zap.Error(err))
+					return nil, fmt.Errorf("internal error")
+				}
+			} else {
+				log.Error("Cannot send SMS. AMI is not initialized")
 			}
 
 		}
