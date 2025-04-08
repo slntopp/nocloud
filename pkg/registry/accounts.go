@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	redis "github.com/go-redis/redis/v8"
 	"github.com/heltonmarx/goami/ami"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -186,8 +187,12 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 	}
 	res, err := s.rdb.Get(ctx, fmt.Sprintf(_key, acc.GetUuid())).Result()
 	if err != nil {
-		log.Error("failed to obtain verification data from redis", zap.Error(err))
-		return nil, fmt.Errorf("internal error")
+		if err.Error() == redis.Nil.Error() {
+			res = ""
+		} else {
+			log.Error("failed to obtain verification data from redis", zap.Error(err))
+			return nil, fmt.Errorf("internal error")
+		}
 	}
 	if res == "" {
 		res = "{}"
