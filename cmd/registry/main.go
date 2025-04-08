@@ -136,6 +136,9 @@ func main() {
 			log.Error("AMI socket error", zap.Error(err))
 		}
 	}
+	if socket == nil {
+		socket = &ami.Socket{}
+	}
 	if _, err := ami.Connect(socket); err != nil {
 		if amiRequired {
 			log.Fatal("AMI connect error", zap.Error(err))
