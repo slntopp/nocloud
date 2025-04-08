@@ -53,9 +53,10 @@ var (
 	redisHost       string
 	SIGNING_KEY     []byte
 
-	amiUser   string
-	amiHost   string
-	amiSecret string
+	amiUser     string
+	amiHost     string
+	amiSecret   string
+	amiRequired bool
 )
 
 func init() {
@@ -73,6 +74,7 @@ func init() {
 	viper.SetDefault("AMI_HOST", "127.0.0.1:5038")
 	viper.SetDefault("AMI_USERNAME", "admin")
 	viper.SetDefault("AMI_SECRET", "admin")
+	viper.SetDefault("AMI_REQUIRED", "false")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
@@ -90,6 +92,7 @@ func init() {
 	amiHost = viper.GetString("AMI_HOST")
 	amiUser = viper.GetString("AMI_USERNAME")
 	amiSecret = viper.GetString("AMI_SECRET")
+	amiRequired = viper.GetBool("AMI_REQUIRED")
 }
 
 func SetupSettingsClient() (settingspb.SettingsServiceClient, *grpc.ClientConn) {
@@ -127,16 +130,27 @@ func main() {
 	log.Debug("Initializing AMI")
 	socket, err := ami.NewSocket(amiHost)
 	if err != nil {
-		log.Fatal("AMI socket error", zap.Error(err))
+		if amiRequired {
+			log.Fatal("AMI socket error", zap.Error(err))
+		} else {
+			log.Error("AMI socket error", zap.Error(err))
+		}
 	}
 	if _, err := ami.Connect(socket); err != nil {
-		log.Fatal("AMI connect error", zap.Error(err))
+		if amiRequired {
+			log.Fatal("AMI connect error", zap.Error(err))
+		} else {
+			log.Error("AMI connect error", zap.Error(err))
+		}
 	}
 	uuid, _ := ami.GetUUID()
 	if ok, err := ami.Login(socket, amiUser, amiSecret, "Off", uuid); err != nil || !ok {
-		log.Fatal("AMI login error", zap.Error(err))
+		if amiRequired {
+			log.Fatal("AMI login error", zap.Error(err))
+		} else {
+			log.Error("AMI login error", zap.Error(err))
+		}
 	}
-	log.Debug("AMI initialized")
 
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
