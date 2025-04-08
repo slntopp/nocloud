@@ -19,6 +19,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"github.com/heltonmarx/goami/ami"
 	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -51,6 +52,10 @@ var (
 	settingsHost    string
 	redisHost       string
 	SIGNING_KEY     []byte
+
+	amiUser   string
+	amiHost   string
+	amiSecret string
 )
 
 func init() {
@@ -65,6 +70,9 @@ func init() {
 	viper.SetDefault("NOCLOUD_ROOT_PASSWORD", "secret")
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REDIS_HOST", "redis:6379")
+	viper.SetDefault("AMI_HOST", "127.0.0.1:5038")
+	viper.SetDefault("AMI_USERNAME", "admin")
+	viper.SetDefault("AMI_SECRET", "admin")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
@@ -78,6 +86,10 @@ func init() {
 	redisHost = viper.GetString("REDIS_HOST")
 
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+
+	amiHost = viper.GetString("AMI_HOST")
+	amiUser = viper.GetString("AMI_USERNAME")
+	amiSecret = viper.GetString("AMI_SECRET")
 }
 
 func SetupSettingsClient() (settingspb.SettingsServiceClient, *grpc.ClientConn) {
@@ -112,6 +124,20 @@ func main() {
 		)),
 	)
 
+	log.Debug("Initializing AMI")
+	socket, err := ami.NewSocket(amiHost)
+	if err != nil {
+		log.Fatal("AMI socket error", zap.Error(err))
+	}
+	if _, err := ami.Connect(socket); err != nil {
+		log.Fatal("AMI connect error", zap.Error(err))
+	}
+	uuid, _ := ami.GetUUID()
+	if ok, err := ami.Login(socket, amiUser, amiSecret, "Off", uuid); err != nil || !ok {
+		log.Fatal("AMI login error", zap.Error(err))
+	}
+	log.Debug("AMI initialized")
+
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
@@ -123,7 +149,7 @@ func main() {
 	sessions_server := sessions.NewSessionsServer(log, rdb, db)
 	sspb.RegisterSessionsServiceServer(s, sessions_server)
 
-	accounts_server := accounting.NewAccountsServer(log, db, rdb)
+	accounts_server := accounting.NewAccountsServer(log, db, rdb, socket)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
 	credentials.SetupSettingsClient(log.Named("Credentials"), sc, token)
 	accounts_server.SetupSettingsClient(sc, token)

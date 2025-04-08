@@ -17,8 +17,12 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/heltonmarx/goami/ami"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	"google.golang.org/protobuf/types/known/structpb"
+	"math/rand"
 	"slices"
 	"time"
 
@@ -53,12 +57,15 @@ import (
 
 var (
 	servicesClient servicespb.ServicesServiceClient
+	amiService     string
 )
 
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
+	viper.SetDefault("AMI_SERVICE", "SomeService")
 	servicesHost := viper.GetString("SERVICES_HOST")
+	amiService = viper.GetString("AMI_SERVICE")
 
 	servicesConn, err := grpc.Dial(servicesHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -77,10 +84,11 @@ type AccountsServiceServer struct {
 	log         *zap.Logger
 	SIGNING_KEY []byte
 
-	rdb redisdb.Client
+	rdb       redisdb.Client
+	amiSocket *ami.Socket
 }
 
-func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client) *AccountsServiceServer {
+func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, amiSocket *ami.Socket) *AccountsServiceServer {
 	return &AccountsServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewAccountsController(
@@ -92,7 +100,8 @@ func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client) 
 		ca: graph.NewCommonActionsController(
 			log.Named("CommonActionsController"), db,
 		),
-		rdb: rdb,
+		rdb:       rdb,
+		amiSocket: amiSocket,
 	}
 }
 
@@ -120,6 +129,129 @@ FOR node, edge, path IN 2 OUTBOUND @account
     FILTER IS_SAME_COLLECTION(node, @@services)
     RETURN node._key
 `
+
+const phoneVerificationDataKeyTemplate = "registry-phone-verification-%s"
+const emailVerificationDataKeyTemplate = "registry-email-verification-%s"
+
+type VerificationData struct {
+	Code    string `json:"code"`
+	Sent    int64  `json:"sent"`
+	Expires int64  `json:"expires"`
+}
+
+func generateCode() string {
+	return fmt.Sprintf("%06d", rand.Intn(1000000))
+}
+
+func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.VerificationRequest) (*pb.VerificationResponse, error) {
+	log := s.log.Named("Verify")
+
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("requester", requester))
+	log.Debug("Verify request received", zap.Any("request", req))
+
+	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
+	if !rootAccess && (req.GetAccount() != requester) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	acc, err := s.ctrl.Get(ctx, req.GetAccount())
+	if err != nil {
+		log.Error("error obtaining account", zap.Error(err))
+		return nil, err
+	}
+	if req.Type == pb.VerificationType_PHONE && acc.GetIsPhoneVerified() ||
+		req.Type == pb.VerificationType_EMAIL && acc.GetIsEmailVerified() {
+		return nil, fmt.Errorf("already verified")
+	}
+	dataVal := acc.GetData()
+	if dataVal == nil {
+		dataVal, _ = structpb.NewStruct(map[string]any{})
+	}
+	data := dataVal.AsMap()
+	accountEmail, _ := data["email"].(string)
+	accountPhone, _ := data["phone"].(string)
+	log.Debug("account's phone and email", zap.String("phone", accountPhone), zap.String("email", accountEmail))
+
+	var vData VerificationData
+	var _key string
+	switch req.Type {
+	case pb.VerificationType_PHONE:
+		_key = phoneVerificationDataKeyTemplate
+	case pb.VerificationType_EMAIL:
+		_key = emailVerificationDataKeyTemplate
+	default:
+		return nil, fmt.Errorf("unsupported verification type")
+	}
+	res, err := s.rdb.Get(ctx, fmt.Sprintf(_key, acc.GetUuid())).Result()
+	if err != nil {
+		log.Error("failed to obtain verification data from redis", zap.Error(err))
+		return nil, fmt.Errorf("internal error")
+	}
+	if res == "" {
+		res = "{}"
+	}
+	if err = json.Unmarshal([]byte(res), &vData); err != nil {
+		log.Error("failed to unmarshal verification data", zap.Error(err))
+		return nil, fmt.Errorf("internal error")
+	}
+
+	now := time.Now().Unix()
+	if req.Type == pb.VerificationType_PHONE {
+
+		if req.Action == pb.VerificationAction_BEGIN {
+
+			if now-vData.Sent < 150 {
+				return nil, fmt.Errorf("too many requests. Try again later")
+			}
+
+			code := generateCode()
+			vData.Code = code
+			vData.Expires = now + 600
+			vData.Sent = now
+			encoded, err := json.Marshal(vData)
+			if err != nil {
+				log.Error("failed to marshal verification data", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+			if err = s.rdb.Set(ctx, fmt.Sprintf(phoneVerificationDataKeyTemplate, acc.GetUuid()), string(encoded), 0).Err(); err != nil {
+				log.Error("failed to save verification data", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+
+			from := amiService
+			to := accountPhone
+			smsBody := fmt.Sprintf("Ваш код подтверждения: %s", code)
+			actionMessage := fmt.Sprintf("Action: MessageSend\r\nFrom: %s\r\nTo: %s\r\nBody: %s\r\n\r\n", from, to, smsBody)
+			if err := s.amiSocket.Send("%s", actionMessage); err != nil {
+				log.Error("failed to send ami message", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+
+		}
+
+		if req.Action == pb.VerificationAction_APPROVE {
+			if vData.Code == "" {
+				log.Error("no saved code")
+				return nil, fmt.Errorf("can't approve. You must request code first")
+			}
+			if vData.Code != req.GetSecureCode() || now > vData.Expires {
+				return nil, fmt.Errorf("invalid code")
+			}
+			if err = s.ctrl.Update(ctx, acc, map[string]interface{}{"is_phone_verified": true}); err != nil {
+				log.Error("failed to update account", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+		}
+	} else if req.Type == pb.VerificationType_EMAIL {
+		return nil, fmt.Errorf("email verification currently disabled")
+	} else {
+		return nil, fmt.Errorf("unsupported verification type")
+	}
+
+	return &pb.VerificationResponse{Result: true}, nil
+}
 
 func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.SuspendRequest) (*accountspb.SuspendResponse, error) {
 	log := s.log.Named("SuspendAccount")
