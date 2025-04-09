@@ -60,15 +60,12 @@ import (
 
 var (
 	servicesClient servicespb.ServicesServiceClient
-	amiService     string
 )
 
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
-	viper.SetDefault("AMI_SERVICE", "SomeService")
 	servicesHost := viper.GetString("SERVICES_HOST")
-	amiService = viper.GetString("AMI_SERVICE")
 
 	servicesConn, err := grpc.Dial(servicesHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
