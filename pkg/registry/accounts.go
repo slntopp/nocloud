@@ -227,11 +227,20 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 
 			if s.amiSocket != nil {
 				uuid, _ := ami.GetUUID()
+				resp, err := ami.Command(s.amiSocket, uuid, "dongle show devices")
+				if err != nil {
+					log.Error("failed to send devices ami message", zap.Error(err), zap.Any("response", resp))
+					return nil, fmt.Errorf("internal error")
+				}
+				fmt.Println(resp)
+				log.Debug("AMI devices response", zap.Any("response", resp))
+
+				uuid, _ = ami.GetUUID()
 				to := accountPhone
 				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
 				command := fmt.Sprintf("dongle sms %s %s %s", amiService, to, smsBody)
 				log.Debug("trying to send message via AMI")
-				resp, err := ami.Command(s.amiSocket, uuid, command)
+				resp, err = ami.Command(s.amiSocket, uuid, command)
 				if err != nil {
 					log.Error("failed to send ami message", zap.Error(err), zap.Any("response", resp))
 					return nil, fmt.Errorf("internal error")
