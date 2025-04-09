@@ -18,6 +18,7 @@ package registry
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	redis "github.com/go-redis/redis/v8"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
@@ -25,6 +26,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"math/rand"
 	"slices"
+	"strings"
 	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
@@ -144,11 +146,40 @@ func generateCode() string {
 	return fmt.Sprintf("%06d", rand.Intn(1000000))
 }
 
+type Record struct {
+	ID    string
+	State string
+}
+
+func parseDevices(content string) ([]Record, error) {
+	lines := strings.Split(content, "\n")
+	if len(lines) < 2 {
+		return nil, errors.New("no data")
+	}
+	var records []Record
+	for i, line := range lines[1:] {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			return nil, fmt.Errorf("not enough fields on line %d", i+2)
+		}
+		record := Record{
+			ID:    strings.ToLower(fields[0]),
+			State: strings.ToLower(fields[2]),
+		}
+		records = append(records, record)
+	}
+	return records, nil
+}
+
 func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.VerificationRequest) (*pb.VerificationResponse, error) {
 	log := s.log.Named("Verify")
 
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	log = log.With(zap.String("requester", requester))
+	log = log.With(zap.String("account", req.GetAccount()))
 	log.Debug("Verify request received", zap.Any("request", req))
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
@@ -173,7 +204,7 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 	data := dataVal.AsMap()
 	accountEmail, _ := data["email"].(string)
 	accountPhone, _ := data["phone"].(string)
-	log.Debug("account's phone and email", zap.String("phone", accountPhone), zap.String("email", accountEmail))
+	log.Debug("Account's phone and email", zap.String("phone", accountPhone), zap.String("email", accountEmail))
 
 	var vData VerificationData
 	var _key string
@@ -227,22 +258,40 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 
 			if s.asteriskConn != nil {
 
-				resp, err := s.asteriskConn.RunCommand(`asterisk -rx "dongle show devices"`)
+				resp, err := s.asteriskConn.RunCommand(`sudo /usr/sbin/asterisk -rx "dongle show devices"`)
 				if err != nil {
 					log.Error("failed to get available devices", zap.Error(err))
 					return nil, fmt.Errorf("internal error")
 				}
-				log.Debug("show devices response", zap.String("response", resp))
+				log.Debug("Show devices response", zap.String("response", resp))
+				devices, err := parseDevices(resp)
+				if err != nil {
+					log.Error("failed to obtain available devices")
+					return nil, fmt.Errorf("internal error")
+				}
+				log.Debug("Parsed devices", zap.Any("devices", devices))
+				var available string
+				for _, device := range devices {
+					if device.State == "free" {
+						available = device.ID
+						break
+					}
+				}
+				if available == "" {
+					log.Error("No available device")
+					return nil, fmt.Errorf("couldn't perform your request at the moment. Try again later")
+				}
+				log.Debug("Chosen Asterisk device", zap.String("device", available))
 
 				to := accountPhone
 				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
-				command := fmt.Sprintf(`asterisk -rx 'dongle sms %s %s %s'`, amiService, to, smsBody)
+				command := fmt.Sprintf(`sudo /usr/sbin/asterisk -rx 'dongle sms %s %s %s'`, available, to, smsBody)
 				resp, err = s.asteriskConn.RunCommand(command)
 				if err != nil {
 					log.Error("failed to send sms", zap.Error(err), zap.Any("response", resp))
 					return nil, fmt.Errorf("internal error")
 				}
-				log.Debug("send sms response", zap.Any("response", resp))
+				log.Debug("Send SMS response", zap.Any("response", resp))
 
 			} else {
 				log.Error("Cannot send SMS. AMI is not initialized")
@@ -252,16 +301,17 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 
 		if req.Action == pb.VerificationAction_APPROVE {
 			if vData.Code == "" {
-				log.Error("no saved code")
+				log.Error("No saved code")
 				return nil, fmt.Errorf("can't approve. You must request code first")
 			}
 			if vData.Code != req.GetSecureCode() || now > vData.Expires {
 				return nil, fmt.Errorf("invalid code")
 			}
 			if err = s.ctrl.Update(ctx, acc, map[string]interface{}{"is_phone_verified": true}); err != nil {
-				log.Error("failed to update account", zap.Error(err))
+				log.Error("Failed to update account", zap.Error(err))
 				return nil, fmt.Errorf("internal error")
 			}
+			log.Info("Phone was successfully verified")
 		}
 	} else if req.Type == pb.VerificationType_EMAIL {
 		return nil, fmt.Errorf("email verification currently disabled")
