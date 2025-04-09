@@ -226,13 +226,15 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 			}
 
 			if s.amiSocket != nil {
+				uuid, _ := ami.GetUUID()
 				to := accountPhone
 				smsBody := fmt.Sprintf("%s", code)
 				command := fmt.Sprintf("dongle sms %s %s %s", amiService, to, smsBody)
-				actionMessage := fmt.Sprintf("Action: Command\r\nActionID: %s\r\nCommand: %s\r\n\r\n", code, command)
-				if err := s.amiSocket.Send("%s", actionMessage); err != nil {
-					log.Error("failed to send ami message", zap.Error(err))
+				if resp, err := ami.Command(s.amiSocket, uuid, command); err != nil {
+					log.Error("failed to send ami message", zap.Error(err), zap.Any("response", resp))
 					return nil, fmt.Errorf("internal error")
+				} else {
+					log.Debug("AMI response", zap.Any("response", resp))
 				}
 			} else {
 				log.Error("Cannot send SMS. AMI is not initialized")
