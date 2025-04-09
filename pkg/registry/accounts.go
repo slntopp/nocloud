@@ -232,6 +232,11 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 					log.Error("failed to send devices ami message", zap.Error(err), zap.Any("response", resp))
 					return nil, fmt.Errorf("internal error")
 				}
+				if resp == nil {
+					log.Debug("nil map", zap.Any("response", resp))
+				} else {
+					log.Debug("not nil map", zap.Any("response", resp))
+				}
 				fmt.Println(resp)
 				log.Debug("AMI devices response", zap.Any("response", resp))
 
