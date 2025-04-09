@@ -236,6 +236,7 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 					log.Error("failed to send ami message", zap.Error(err), zap.Any("response", resp))
 					return nil, fmt.Errorf("internal error")
 				}
+				fmt.Println(resp)
 				log.Debug("AMI response", zap.Any("response", resp))
 			} else {
 				log.Error("Cannot send SMS. AMI is not initialized")
