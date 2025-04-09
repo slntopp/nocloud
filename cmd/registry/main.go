@@ -145,7 +145,7 @@ func main() {
 			}
 		}
 		uuid, _ := ami.GetUUID()
-		if ok, err := ami.Login(socket, amiUser, amiSecret, "Off", uuid); err != nil || !ok {
+		if ok, err := ami.Login(socket, amiUser, amiSecret, "on", uuid); err != nil || !ok {
 			if amiRequired {
 				log.Fatal("AMI login error", zap.Error(err))
 			} else {
