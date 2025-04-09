@@ -226,10 +226,10 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 			}
 
 			if s.amiSocket != nil {
-				from := amiService
 				to := accountPhone
-				smsBody := fmt.Sprintf("Ваш код подтверждения: %s", code)
-				actionMessage := fmt.Sprintf("Action: MessageSend\r\nFrom: %s\r\nTo: %s\r\nBody: %s\r\n\r\n", from, to, smsBody)
+				smsBody := fmt.Sprintf("%s", code)
+				command := fmt.Sprintf("dongle sms %s %s %s", amiService, to, smsBody)
+				actionMessage := fmt.Sprintf("Action: Command\r\nActionID: %s\r\nCommand: %s\r\n\r\n", code, command)
 				if err := s.amiSocket.Send("%s", actionMessage); err != nil {
 					log.Error("failed to send ami message", zap.Error(err))
 					return nil, fmt.Errorf("internal error")
