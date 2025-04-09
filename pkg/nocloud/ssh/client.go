@@ -38,6 +38,23 @@ func NewSSHClient(sshHost, sshUser, keyPath string) (*Client, error) {
 	return &Client{client: client}, nil
 }
 
+func NewSSHClientFromPassword(sshHost, sshUser, pass string) (*Client, error) {
+	config := &ssh.ClientConfig{
+		User: sshUser,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(pass),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	client, err := ssh.Dial("tcp", sshHost, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to server: %w", err)
+	}
+
+	return &Client{client: client}, nil
+}
+
 func (s *Client) RunCommand(command string) (string, error) {
 	session, err := s.client.NewSession()
 	if err != nil {

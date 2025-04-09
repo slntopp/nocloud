@@ -55,10 +55,11 @@ var (
 
 	sshPrivateKeyPath string
 
-	amiUser     string
-	amiHost     string
-	amiSecret   string
-	amiRequired bool
+	amiUser        string
+	amiHost        string
+	amiSecret      string
+	amiRequired    bool
+	amiSshPassword string
 )
 
 func init() {
@@ -96,6 +97,7 @@ func init() {
 	amiUser = viper.GetString("AMI_USERNAME")
 	amiSecret = viper.GetString("AMI_SECRET")
 	amiRequired = viper.GetBool("AMI_REQUIRED")
+	amiSshPassword = viper.GetString("AMI_SSH_PASSWORD")
 
 	sshPrivateKeyPath = viper.GetString("SSH_PRIVATE_KEY")
 }
@@ -133,7 +135,7 @@ func main() {
 	)
 
 	log.Debug("Initializing AMI")
-	asteriskClient, err := ssh.NewSSHClient(amiHost, amiUser, sshPrivateKeyPath)
+	asteriskClient, err := ssh.NewSSHClientFromPassword(amiHost, amiUser, amiSshPassword)
 	if err != nil {
 		if amiRequired {
 			log.Fatal("failed to initialize asterisk client", zap.Error(err))
