@@ -228,7 +228,7 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 			if s.amiSocket != nil {
 				uuid, _ := ami.GetUUID()
 				to := accountPhone
-				smsBody := fmt.Sprintf("%s", code)
+				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
 				command := fmt.Sprintf("dongle sms %s %s %s", amiService, to, smsBody)
 				log.Debug("trying to send message via AMI")
 				if resp, err := ami.Command(s.amiSocket, uuid, command); err != nil {
