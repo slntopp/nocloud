@@ -53,13 +53,13 @@ var (
 	redisHost       string
 	SIGNING_KEY     []byte
 
-	sshPrivateKeyPath string
+	sshPrivateKeyPath string // Host's private key
 
-	amiUser        string
-	amiHost        string
-	amiSecret      string
-	amiRequired    bool
-	amiSshPassword string
+	// Asterisk server credentials
+	amiUser        string // SSH user
+	amiHost        string // SSH host:port
+	amiRequired    bool   // Fatal if AMI fails
+	amiSshPassword string // Asterisk server SSH password
 )
 
 func init() {
@@ -77,7 +77,6 @@ func init() {
 	viper.SetDefault("SSH_PRIVATE_KEY", "/private_key.rsa")
 	viper.SetDefault("AMI_HOST", "127.0.0.1:5038")
 	viper.SetDefault("AMI_USERNAME", "admin")
-	viper.SetDefault("AMI_SECRET", "admin")
 	viper.SetDefault("AMI_REQUIRED", "false")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
@@ -95,7 +94,6 @@ func init() {
 
 	amiHost = viper.GetString("AMI_HOST")
 	amiUser = viper.GetString("AMI_USERNAME")
-	amiSecret = viper.GetString("AMI_SECRET")
 	amiRequired = viper.GetBool("AMI_REQUIRED")
 	amiSshPassword = viper.GetString("AMI_SSH_PASSWORD")
 
