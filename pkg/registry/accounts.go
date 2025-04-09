@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 	redis "github.com/go-redis/redis/v8"
-	"github.com/heltonmarx/goami/ami"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	"github.com/slntopp/nocloud/pkg/nocloud/ssh"
 	"google.golang.org/protobuf/types/known/structpb"
 	"math/rand"
 	"slices"
@@ -85,11 +85,11 @@ type AccountsServiceServer struct {
 	log         *zap.Logger
 	SIGNING_KEY []byte
 
-	rdb       redisdb.Client
-	amiSocket *ami.Socket
+	rdb          redisdb.Client
+	asteriskConn *ssh.Client
 }
 
-func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, amiSocket *ami.Socket) *AccountsServiceServer {
+func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, asteriskConn *ssh.Client) *AccountsServiceServer {
 	return &AccountsServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewAccountsController(
@@ -101,8 +101,8 @@ func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, 
 		ca: graph.NewCommonActionsController(
 			log.Named("CommonActionsController"), db,
 		),
-		rdb:       rdb,
-		amiSocket: amiSocket,
+		rdb:          rdb,
+		asteriskConn: asteriskConn,
 	}
 }
 
@@ -225,33 +225,25 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				return nil, fmt.Errorf("internal error")
 			}
 
-			if s.amiSocket != nil {
-				uuid, _ := ami.GetUUID()
-				resp, err := ami.Command(s.amiSocket, uuid, "dongle show devices")
+			if s.asteriskConn != nil {
+
+				resp, err := s.asteriskConn.RunCommand(`asterisk -rx "dongle show devices"`)
 				if err != nil {
-					log.Error("failed to send devices ami message", zap.Error(err), zap.Any("response", resp))
+					log.Error("failed to get available devices", zap.Error(err))
 					return nil, fmt.Errorf("internal error")
 				}
-				if resp == nil {
-					log.Debug("nil map", zap.Any("response", resp))
-				} else {
-					log.Debug("not nil map", zap.Any("response", resp))
-				}
-				fmt.Println(resp)
-				log.Debug("AMI devices response", zap.Any("response", resp))
+				log.Debug("show devices response", zap.String("response", resp))
 
-				uuid, _ = ami.GetUUID()
 				to := accountPhone
 				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
-				command := fmt.Sprintf("dongle sms %s %s %s", amiService, to, smsBody)
-				log.Debug("trying to send message via AMI")
-				resp, err = ami.Command(s.amiSocket, uuid, command)
+				command := fmt.Sprintf(`asterisk -rx 'dongle sms %s %s %s'`, amiService, to, smsBody)
+				resp, err = s.asteriskConn.RunCommand(command)
 				if err != nil {
-					log.Error("failed to send ami message", zap.Error(err), zap.Any("response", resp))
+					log.Error("failed to send sms", zap.Error(err), zap.Any("response", resp))
 					return nil, fmt.Errorf("internal error")
 				}
-				fmt.Println(resp)
-				log.Debug("AMI response", zap.Any("response", resp))
+				log.Debug("send sms response", zap.Any("response", resp))
+
 			} else {
 				log.Error("Cannot send SMS. AMI is not initialized")
 			}
