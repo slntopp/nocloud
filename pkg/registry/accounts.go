@@ -231,12 +231,12 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
 				command := fmt.Sprintf("dongle sms %s %s %s", amiService, to, smsBody)
 				log.Debug("trying to send message via AMI")
-				if resp, err := ami.Command(s.amiSocket, uuid, command); err != nil {
+				resp, err := ami.Command(s.amiSocket, uuid, command)
+				if err != nil {
 					log.Error("failed to send ami message", zap.Error(err), zap.Any("response", resp))
 					return nil, fmt.Errorf("internal error")
-				} else {
-					log.Debug("AMI response", zap.Any("response", resp))
 				}
+				log.Debug("AMI response", zap.Any("response", resp))
 			} else {
 				log.Error("Cannot send SMS. AMI is not initialized")
 			}
