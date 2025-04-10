@@ -201,6 +201,7 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 	data := dataVal.AsMap()
 	accountEmail, _ := data["email"].(string)
 	accountPhone, _ := data["phone"].(string)
+	accountPhone = "375" + accountPhone
 	log.Debug("Account's phone and email", zap.String("phone", accountPhone), zap.String("email", accountEmail))
 
 	var vData VerificationData
