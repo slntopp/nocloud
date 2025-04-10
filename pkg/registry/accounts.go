@@ -163,7 +163,7 @@ func parseDevices(content string) ([]Record, error) {
 			return nil, fmt.Errorf("not enough fields on line %d", i+2)
 		}
 		record := Record{
-			ID:    strings.ToLower(fields[0]),
+			ID:    fields[0],
 			State: strings.ToLower(fields[2]),
 		}
 		records = append(records, record)
