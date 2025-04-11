@@ -123,6 +123,19 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 
 var forbiddenStatusConversions = make([]pair[pb.BillingStatus], 0)
 
+func checkAdditionalProperties(inv graph.Invoice, acc graph.Account) error {
+	if inv.Properties == nil {
+		return nil
+	}
+	if inv.GetProperties().GetEmailVerificationRequired() && !acc.GetIsEmailVerified() {
+		return fmt.Errorf("email is not verified")
+	}
+	if inv.GetProperties().GetPhoneVerificationRequired() && !acc.GetIsPhoneVerified() {
+		return fmt.Errorf("phone is not verified")
+	}
+	return nil
+}
+
 const instanceOwner = `
 LET account = LAST( // Find Instance owner Account
     FOR node, edge, path IN 4
@@ -687,6 +700,10 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
+	if err = checkAdditionalProperties(*inv, acc); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "Failed to pay invoice. Error: "+err.Error())
+	}
+
 	ctx = context.WithValue(ctx, "paid-with-balance", true)
 	resp, err := s.UpdateInvoiceStatus(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 		Uuid:   inv.GetUuid(),
@@ -945,6 +962,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
 	t.Type = req.GetType()
+	t.Properties = req.GetProperties()
 	if req.Meta != nil {
 		t.Meta = req.GetMeta()
 	}
@@ -1139,6 +1157,10 @@ func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb
 	if err != nil {
 		log.Error("Error getting account", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Internal error")
+	}
+
+	if err = checkAdditionalProperties(*inv, acc); err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "Failed to pay invoice. Error: "+err.Error())
 	}
 
 	uri, err := payments.GetPaymentGateway(acc.GetPaymentsGateway()).PaymentURI(ctx, inv.Invoice)

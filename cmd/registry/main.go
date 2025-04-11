@@ -20,6 +20,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
+	"github.com/slntopp/nocloud/pkg/nocloud/ssh"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -51,6 +52,14 @@ var (
 	settingsHost    string
 	redisHost       string
 	SIGNING_KEY     []byte
+
+	sshPrivateKeyPath string // Host's private key
+
+	// Asterisk server credentials
+	amiUser        string // SSH user
+	amiHost        string // SSH host:port
+	amiRequired    bool   // Fatal if AMI fails
+	amiSshPassword string // Asterisk server SSH password
 )
 
 func init() {
@@ -65,6 +74,10 @@ func init() {
 	viper.SetDefault("NOCLOUD_ROOT_PASSWORD", "secret")
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REDIS_HOST", "redis:6379")
+	viper.SetDefault("SSH_PRIVATE_KEY", "/private_key.rsa")
+	viper.SetDefault("AMI_HOST", "127.0.0.1:5038")
+	viper.SetDefault("AMI_USERNAME", "admin")
+	viper.SetDefault("AMI_REQUIRED", "false")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
@@ -78,6 +91,13 @@ func init() {
 	redisHost = viper.GetString("REDIS_HOST")
 
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+
+	amiHost = viper.GetString("AMI_HOST")
+	amiUser = viper.GetString("AMI_USERNAME")
+	amiRequired = viper.GetBool("AMI_REQUIRED")
+	amiSshPassword = viper.GetString("AMI_SSH_PASSWORD")
+
+	sshPrivateKeyPath = viper.GetString("SSH_PRIVATE_KEY")
 }
 
 func SetupSettingsClient() (settingspb.SettingsServiceClient, *grpc.ClientConn) {
@@ -112,6 +132,27 @@ func main() {
 		)),
 	)
 
+	log.Debug("Initializing AMI")
+	asteriskClient, err := ssh.NewSSHClientFromPassword(amiHost, amiUser, amiSshPassword)
+	if err != nil {
+		if amiRequired {
+			log.Fatal("failed to initialize asterisk client", zap.Error(err))
+		} else {
+			log.Error("failed to initialize asterisk client", zap.Error(err))
+		}
+	}
+	if asteriskClient != nil {
+		resp, err := asteriskClient.RunCommand(`echo "pong"`)
+		if err != nil {
+			if amiRequired {
+				log.Fatal("failed to ensure asterisk client connection", zap.Error(err), zap.String("response", resp))
+			} else {
+				log.Error("failed to ensure asterisk client connection", zap.Error(err), zap.String("response", resp))
+			}
+		}
+		log.Debug("asterisk ping response", zap.String("response", resp))
+	}
+
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
@@ -123,7 +164,7 @@ func main() {
 	sessions_server := sessions.NewSessionsServer(log, rdb, db)
 	sspb.RegisterSessionsServiceServer(s, sessions_server)
 
-	accounts_server := accounting.NewAccountsServer(log, db, rdb)
+	accounts_server := accounting.NewAccountsServer(log, db, rdb, asteriskClient)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
 	credentials.SetupSettingsClient(log.Named("Credentials"), sc, token)
 	accounts_server.SetupSettingsClient(sc, token)

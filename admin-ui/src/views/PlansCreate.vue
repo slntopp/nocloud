@@ -99,7 +99,7 @@
           />
         </v-col>
 
-        <v-col cols="2" class="align-center d-flex">
+        <v-col cols="1" class="align-center d-flex">
           <v-subheader
             >Auto start
             <v-tooltip>
@@ -124,7 +124,15 @@
           />
         </v-col>
 
-        <v-col v-if="plan.type === 'ione'" cols="2" class="align-center d-flex">
+        <v-col cols="2" class="align-center d-flex">
+          <v-subheader> Require verified phone </v-subheader>
+          <v-switch
+            style="width: fit-content"
+            v-model="plan.properties.phoneVerificationRequired"
+          />
+        </v-col>
+
+        <v-col v-if="plan.type === 'ione'" cols="1" class="align-center d-flex">
           <v-subheader> High CPU </v-subheader>
           <v-switch style="width: fit-content" v-model="plan.meta.highCPU" />
         </v-col>
@@ -291,6 +299,10 @@ export default {
         auto_start: false,
         after_payment_setup: false,
       },
+      properties: {
+        emailVerificationRequired: false,
+        phoneVerificationRequired: false,
+      },
       fee: null,
     },
     rules: {
@@ -325,7 +337,6 @@ export default {
           ? this.plan.resources
           : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
-console.log(key);
 
       switch (key) {
         case "key":
@@ -488,6 +499,13 @@ console.log(key);
         this.plan = item;
         this.isVisible = false;
         this.selectedKind = item.kind;
+
+        if (!this.plan.properties) {
+          this.plan.properties = {
+            emailVerificationRequired: false,
+            phoneVerificationRequired: false,
+          };
+        }
 
         item.resources.forEach((_, i) => {
           this.plan.resources[i].id = Math.random().toString(16).slice(2);

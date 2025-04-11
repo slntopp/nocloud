@@ -344,6 +344,9 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	initCost *= rate
 
 	bp := instance.GetBillingPlan()
+	if bp.Properties == nil {
+		bp.Properties = &bpb.AdditionalProperties{}
+	}
 	product, hasProduct := bp.GetProducts()[instance.GetProduct()]
 	if !hasProduct {
 		log.Warn("Product not found in billing plan", zap.String("product", instance.GetProduct()))
@@ -393,6 +396,10 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		Currency:  accCurrency,
 		TaxOptions: &bpb.TaxOptions{
 			TaxRate: tax,
+		},
+		Properties: &bpb.AdditionalProperties{
+			PhoneVerificationRequired: bp.GetProperties().GetPhoneVerificationRequired(),
+			EmailVerificationRequired: bp.GetProperties().GetEmailVerificationRequired(),
 		},
 	}
 	invResp, err := s.CreateInvoice(ctxWithRoot(ctx), connect.NewRequest(&bpb.CreateInvoiceRequest{

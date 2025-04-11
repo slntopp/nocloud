@@ -17,9 +17,16 @@ package registry
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	redis "github.com/go-redis/redis/v8"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	"github.com/slntopp/nocloud/pkg/nocloud/ssh"
+	"google.golang.org/protobuf/types/known/structpb"
+	"math/rand"
 	"slices"
+	"strings"
 	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
@@ -77,10 +84,11 @@ type AccountsServiceServer struct {
 	log         *zap.Logger
 	SIGNING_KEY []byte
 
-	rdb redisdb.Client
+	rdb          redisdb.Client
+	asteriskConn *ssh.Client
 }
 
-func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client) *AccountsServiceServer {
+func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, asteriskConn *ssh.Client) *AccountsServiceServer {
 	return &AccountsServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewAccountsController(
@@ -92,7 +100,8 @@ func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client) 
 		ca: graph.NewCommonActionsController(
 			log.Named("CommonActionsController"), db,
 		),
-		rdb: rdb,
+		rdb:          rdb,
+		asteriskConn: asteriskConn,
 	}
 }
 
@@ -120,6 +129,196 @@ FOR node, edge, path IN 2 OUTBOUND @account
     FILTER IS_SAME_COLLECTION(node, @@services)
     RETURN node._key
 `
+
+const phoneVerificationDataKeyTemplate = "registry-phone-verification-%s"
+const emailVerificationDataKeyTemplate = "registry-email-verification-%s"
+
+type VerificationData struct {
+	Code    string `json:"code"`
+	Sent    int64  `json:"sent"`
+	Expires int64  `json:"expires"`
+}
+
+func generateCode() string {
+	return fmt.Sprintf("%06d", rand.Intn(1000000))
+}
+
+type Record struct {
+	ID    string
+	State string
+}
+
+func parseDevices(content string) ([]Record, error) {
+	lines := strings.Split(content, "\n")
+	if len(lines) < 2 {
+		return nil, errors.New("no data")
+	}
+	var records []Record
+	for i, line := range lines[1:] {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 3 {
+			return nil, fmt.Errorf("not enough fields on line %d", i+2)
+		}
+		record := Record{
+			ID:    fields[0],
+			State: strings.ToLower(fields[2]),
+		}
+		records = append(records, record)
+	}
+	return records, nil
+}
+
+func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.VerificationRequest) (*pb.VerificationResponse, error) {
+	log := s.log.Named("Verify")
+
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("requester", requester))
+	log = log.With(zap.String("account", req.GetAccount()))
+	log.Debug("Verify request received", zap.Any("request", req))
+
+	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
+	if !rootAccess && (req.GetAccount() != requester) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	acc, err := s.ctrl.Get(ctx, req.GetAccount())
+	if err != nil {
+		log.Error("error obtaining account", zap.Error(err))
+		return nil, err
+	}
+	if req.Type == pb.VerificationType_PHONE && acc.GetIsPhoneVerified() ||
+		req.Type == pb.VerificationType_EMAIL && acc.GetIsEmailVerified() {
+		return nil, fmt.Errorf("already verified")
+	}
+	dataVal := acc.GetData()
+	if dataVal == nil {
+		dataVal, _ = structpb.NewStruct(map[string]any{})
+	}
+	data := dataVal.AsMap()
+	accountEmail, _ := data["email"].(string)
+	accountPhone, _ := data["phone"].(string)
+	accountPhone = "375" + accountPhone
+	log.Debug("Account's phone and email", zap.String("phone", accountPhone), zap.String("email", accountEmail))
+
+	var vData VerificationData
+	var _key string
+	switch req.Type {
+	case pb.VerificationType_PHONE:
+		_key = phoneVerificationDataKeyTemplate
+	case pb.VerificationType_EMAIL:
+		_key = emailVerificationDataKeyTemplate
+	default:
+		return nil, fmt.Errorf("unsupported verification type")
+	}
+	res, err := s.rdb.Get(ctx, fmt.Sprintf(_key, acc.GetUuid())).Result()
+	if err != nil {
+		if err.Error() == redis.Nil.Error() {
+			res = ""
+		} else {
+			log.Error("failed to obtain verification data from redis", zap.Error(err))
+			return nil, fmt.Errorf("internal error")
+		}
+	}
+	if res == "" {
+		res = "{}"
+	}
+	if err = json.Unmarshal([]byte(res), &vData); err != nil {
+		log.Error("failed to unmarshal verification data", zap.Error(err))
+		return nil, fmt.Errorf("internal error")
+	}
+
+	now := time.Now().Unix()
+	if req.Type == pb.VerificationType_PHONE {
+
+		if req.Action == pb.VerificationAction_BEGIN {
+
+			if now-vData.Sent < 150 {
+				return nil, fmt.Errorf("too many requests. Try again later")
+			}
+
+			code := generateCode()
+			vData.Code = code
+			vData.Expires = now + 600
+			vData.Sent = now
+			encoded, err := json.Marshal(vData)
+			if err != nil {
+				log.Error("failed to marshal verification data", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+			if err = s.rdb.Set(ctx, fmt.Sprintf(phoneVerificationDataKeyTemplate, acc.GetUuid()), string(encoded), 0).Err(); err != nil {
+				log.Error("failed to save verification data", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+
+			if s.asteriskConn != nil {
+
+				resp, err := s.asteriskConn.RunCommand(`sudo /usr/sbin/asterisk -rx "dongle show devices"`)
+				if err != nil {
+					log.Error("failed to get available devices", zap.Error(err))
+					return nil, fmt.Errorf("internal error")
+				}
+				log.Debug("Show devices response", zap.String("response", resp))
+				devices, err := parseDevices(resp)
+				if err != nil {
+					log.Error("failed to obtain available devices")
+					return nil, fmt.Errorf("internal error")
+				}
+				log.Debug("Parsed devices", zap.Any("devices", devices))
+				var available string
+				for _, device := range devices {
+					if device.State == "free" {
+						available = device.ID
+						break
+					}
+				}
+				if available == "" {
+					log.Error("No available device")
+					return nil, fmt.Errorf("couldn't perform your request at the moment. Try again later")
+				}
+				log.Debug("Chosen Asterisk device", zap.String("device", available))
+
+				to := accountPhone
+				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
+				command := fmt.Sprintf(`sudo /usr/sbin/asterisk -rx 'dongle sms %s %s %s'`, available, to, smsBody)
+				resp, err = s.asteriskConn.RunCommand(command)
+				if err != nil {
+					log.Error("failed to send sms", zap.Error(err), zap.Any("response", resp))
+					return nil, fmt.Errorf("internal error")
+				}
+				log.Debug("Send SMS response", zap.Any("response", resp))
+
+			} else {
+				log.Error("Cannot send SMS. AMI is not initialized")
+			}
+
+		}
+
+		if req.Action == pb.VerificationAction_APPROVE {
+			if vData.Code == "" {
+				log.Error("No saved code")
+				return nil, fmt.Errorf("can't approve. You must request code first")
+			}
+			if vData.Code != req.GetSecureCode() || now > vData.Expires {
+				return nil, fmt.Errorf("invalid code")
+			}
+			if err = s.ctrl.Update(ctx, acc, map[string]interface{}{"is_phone_verified": true}); err != nil {
+				log.Error("Failed to update account", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+			log.Info("Phone was successfully verified")
+		}
+	} else if req.Type == pb.VerificationType_EMAIL {
+		return nil, fmt.Errorf("email verification currently disabled")
+	} else {
+		return nil, fmt.Errorf("unsupported verification type")
+	}
+
+	return &pb.VerificationResponse{Result: true}, nil
+}
 
 func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.SuspendRequest) (*accountspb.SuspendResponse, error) {
 	log := s.log.Named("SuspendAccount")
