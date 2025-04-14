@@ -132,68 +132,47 @@
       </v-col>
     </v-row>
 
-    <nocloud-expansion-panels
-      class="account-additional"
-      title="Additional info"
-    >
-      <v-row>
-        <v-col lg="3" md="4" sm="6" cols="12">
-          <v-text-field readonly :value="account.data?.email" label="Email" />
-        </v-col>
+    <v-row>
+      <v-col lg="2" md="3" sm="4" cols="1">
+        <v-text-field readonly :value="account.data?.email" label="Email" />
+      </v-col>
 
-        <v-col lg="3" md="4" sm="6" cols="12">
-          <v-text-field
-            readonly
-            :value="account.data?.company"
-            label="Company"
-          />
-        </v-col>
+      <v-col lg="2" md="3" sm="4" cols="1">
+        <v-text-field readonly :value="account.data?.company" label="Company" />
+      </v-col>
 
-        <v-col lg="3" md="4" sm="6" cols="12">
-          <v-text-field readonly :value="account.data?.phone" label="Phone" />
-        </v-col>
+      <v-col lg="1" md="2" sm="3" cols="4">
+        <v-text-field readonly :value="account.data?.phone" label="Phone" />
+      </v-col>
 
-        <v-col lg="3" md="4" sm="6" cols="12">
-          <v-text-field
-            readonly
-            :value="formatSecondsToDate(account.data?.date_create || 0)"
-            label="Date of create"
-          />
-        </v-col>
+      <v-col lg="1" md="2" sm="3" cols="4">
+        <v-text-field
+          readonly
+          :value="formatSecondsToDate(account.data?.date_create || 0)"
+          label="Date of create"
+        />
+      </v-col>
 
-        <v-col lg="3" md="4" sm="6" cols="12">
-          <v-text-field
-            readonly
-            :value="account.data?.country"
-            label="Country"
-          />
-        </v-col>
+      <v-col lg="1" md="2" sm="3" cols="4">
+        <v-text-field readonly :value="account.data?.country" label="Country" />
+      </v-col>
 
-        <v-col lg="3" md="4" sm="6" cols="12">
-          <v-text-field readonly :value="account.data?.city" label="City" />
-        </v-col>
+      <v-col lg="1" md="2" sm="3" cols="4">
+        <v-text-field readonly :value="account.data?.city" label="City" />
+      </v-col>
 
-        <v-col lg="3" md="4" sm="6" cols="12">
-          <v-text-field
-            readonly
-            :value="account.data?.address"
-            label="Address"
-          />
-        </v-col>
+      <v-col lg="2" md="3" sm="4" cols="1">
+        <v-text-field readonly :value="account.data?.address" label="Address" />
+      </v-col>
 
-        <v-col lg="1" md="3" sm="4" cols="12">
-          <v-text-field
-            readonly
-            :value="account.data?.whmcs_id"
-            label="WHMCS id"
-          >
-            <template v-slot:append>
-              <whmcs-btn :account="account" />
-            </template>
-          </v-text-field>
-        </v-col>
-      </v-row>
-    </nocloud-expansion-panels>
+      <v-col lg="1" md="2" sm="3" cols="4">
+        <v-text-field readonly :value="account.data?.whmcs_id" label="WHMCS id">
+          <template v-slot:append>
+            <whmcs-btn :account="account" />
+          </template>
+        </v-text-field>
+      </v-col>
+    </v-row>
 
     <div class="d-flex align-center">
       <v-card-title class="px-0 instances-panel">Instances:</v-card-title>
@@ -275,314 +254,276 @@
   </v-card>
 </template>
 
-<script>
-import config from "@/config.js";
+<script setup>
 import api from "@/api.js";
-import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import InstancesTable from "@/components/instancesTable.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
-import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import hintBtn from "@/components/ui/hintBtn.vue";
 import { formatSecondsToDate } from "@/functions";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
+import { computed, onMounted, onUnmounted, ref, toRefs, watch } from "vue";
+import { useStore } from "@/store";
+import { useRouter } from "vue-router/composables";
 
+const props = defineProps(["account"]);
+const { account } = toRefs(props);
+
+const store = useStore();
+const router = useRouter();
+
+const newKey = ref({ title: "", value: "" });
+const headers = ref([
+  { text: "Title", value: "title" },
+  { text: "Key", value: "value" },
+]);
+const generalRule = ref([(v) => !!v || "Required field"]);
+const accountNamespace = ref(null);
+const uuid = ref("");
+const currency = ref("");
+const title = ref("");
+const taxRate = ref(0);
+const keys = ref([]);
+const selected = ref([]);
+const isVisible = ref(false);
+const isEditLoading = ref(false);
+const isChangeRegularPaymentLoading = ref(false);
+const isChangeRegularPaymentOpen = ref(false);
+const showDeletedInstances = ref(false);
+const statusChangeValue = ref("");
+const viewport = ref(window.innerWidth);
+
+onMounted(() => {
+  title.value = account.value.title;
+  currency.value = account.value.currency;
+  uuid.value = account.value.uuid;
+  keys.value = account.value.data?.ssh_keys || [];
+  store.dispatch("services/fetch", { showDeleted: true });
+  store.dispatch("servicesProviders/fetch", { anonymously: true });
+  fetchNamespace();
+
+  window.addEventListener("resize", setViewport);
+
+  initTaxRate();
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", setViewport);
+});
+
+const services = computed(() => store.getters["services/all"]);
+const currencies = computed(() =>
+  store.getters["currencies/all"].filter((c) => c.title !== "NCU")
+);
+
+const instances = computed(() => store.getters["services/getInstances"]);
+const accountsByInstance = computed(() =>
+  instances.value.filter(
+    (i) => i.access.namespace === accountNamespace.value?.uuid
+  )
+);
+
+const isCurrencyReadonly = computed(
+  () => account.value.currency && account.value.currency.code !== "NCU"
+);
+const isLocked = computed(() => account.value.status !== "ACTIVE");
+const stateButtons = computed(() => {
+  const status = account.value.status?.toLowerCase();
+  const lock = {
+    hint: "Delete user",
+    icon: "mdi-delete",
+    newStatusValue: "PERMANENT_LOCK",
+    method: permanentLock,
+  };
+
+  switch (status) {
+    case "lock": {
+      return [
+        {
+          hint: "Unlock access",
+          newStatusValue: "ACTIVE",
+          icon: "md-lock-off",
+        },
+        lock,
+      ];
+    }
+    case "active": {
+      return [
+        { hint: "Block access", icon: "mdi-lock", newStatusValue: "LOCK" },
+        lock,
+      ];
+    }
+    default: {
+      return [];
+    }
+  }
+});
+
+const whmcsApi = computed(() => store.getters["settings/whmcsApi"]);
+
+const addKey = () => {
+  keys.value.push(newKey.value);
+  isVisible.value = false;
+  newKey.value = { title: "", value: "" };
+};
+const deleteKeys = () => {
+  if (selected.value.length < 1) return;
+  const arr = selected.value.map((el) => el.value);
+
+  keys.value = keys.value.filter((el) => !arr.includes(el.value));
+  selected.value = [];
+};
+const updateAccount = (newAccount) => {
+  return api.accounts.update(account.value.uuid, newAccount).catch((err) => {
+    store.commit("snackbar/showSnackbarError", {
+      message: err,
+    });
+  });
+};
+const editAccount = async () => {
+  const newAccount = {
+    ...account.value,
+    title: title.value,
+    currency: currency.value,
+    data: {
+      ...(account.value.data || {}),
+      tax_rate: taxRate.value / 100,
+    },
+  };
+  if (!newAccount.data) {
+    newAccount.data = {};
+  }
+  newAccount.data.ssh_keys = keys.value;
+
+  isEditLoading.value = true;
+  try {
+    await updateAccount(newAccount);
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Account edited successfully",
+    });
+
+    router.push({ name: "Accounts" });
+  } finally {
+    isEditLoading.value = false;
+  }
+};
+const changeStatus = async (newStatus) => {
+  statusChangeValue.value = newStatus;
+  try {
+    await fetch(
+      /https:\/\/(.+?\.?\/)/.exec(whmcsApi.value)[0] +
+        `modules/addons/nocloud/api/index.php?run=status_user&account=${
+          account.value.uuid
+        }&status=${newStatus === "ACTIVE" ? "open" : "close"}`
+    );
+    await updateAccount({ ...account.value, status: newStatus });
+    account.value.status = newStatus;
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Status change successfully",
+    });
+  } finally {
+    statusChangeValue.value = "";
+  }
+};
+//need remake to instances api
+const permanentLock = async () => {
+  const newStatus = "PERMANENT_LOCK";
+  statusChangeValue.value = newStatus;
+  try {
+    const accountServices = services.value.filter(
+      (s) => s.access.namespace === accountNamespace.value?.uuid
+    );
+
+    const servicesForDown = accountServices.filter((s) => s.status !== "INIT");
+    await Promise.all(servicesForDown.map((s) => api.services.down(s.uuid)));
+    await Promise.all(accountServices.map((s) => api.services.delete(s.uuid)));
+    await changeStatus(newStatus);
+
+    router.push({ name: "Accounts" });
+  } catch {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Error while change status",
+    });
+  } finally {
+    statusChangeValue.value = "";
+  }
+};
+//need remake to instances api
+const changeRegularPayment = async (value) => {
+  isChangeRegularPaymentLoading.value = true;
+  isChangeRegularPaymentOpen.value = false;
+  try {
+    const services = [];
+
+    accountsByInstance.value.forEach((instance) => {
+      const tempService =
+        services.find((s) => s.uuid === instance.service) ||
+        JSON.parse(
+          JSON.stringify(
+            services.value.find((s) => s.uuid === instance.service)
+          )
+        );
+      const igIndex = tempService.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === instance.uuid)
+      );
+      const instanceIndex = tempService.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === instance.uuid);
+
+      instance.config.regular_payment = value;
+
+      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
+
+      const sIndex = services.findIndex((s) => s.uuid === instance.service);
+      if (sIndex !== -1) {
+        services[sIndex] = tempService;
+      } else {
+        services.push(tempService);
+      }
+    });
+    await Promise.all(services.map((s) => api.services._update(s)));
+  } catch {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Error while change invoice based",
+    });
+  } finally {
+    isChangeRegularPaymentLoading.value = false;
+  }
+};
+const openInvoice = async () => {
+  router.push({
+    name: "Invoice create",
+    query: { account: account.value.uuid },
+  });
+};
+const fetchNamespace = async () => {
+  try {
+    const { pool } = await store.dispatch("namespaces/fetch", {
+      filters: { account: account.value.uuid },
+    });
+    accountNamespace.value = pool[0];
+  } catch (e) {
+    console.log(e);
+  }
+};
+const setViewport = () => {
+  viewport.value = window.innerWidth;
+};
+const initTaxRate = () => {
+  taxRate.value = account.value.data?.tax_rate
+    ? account.value.data?.tax_rate * 100
+    : 0;
+};
+
+watch(account, () => {
+  initTaxRate();
+});
+</script>
+
+<script>
 export default {
   name: "account-info",
-  components: {
-    NocloudExpansionPanels,
-    LoginInAccountIcon,
-    ConfirmDialog,
-    InstancesTable,
-    nocloudTable,
-    hintBtn,
-    whmcsBtn,
-  },
-  mixins: [snackbar],
-  props: ["account"],
-  data: () => ({
-    newKey: { title: "", value: "" },
-    headers: [
-      { text: "Title", value: "title" },
-      { text: "Key", value: "value" },
-    ],
-    generalRule: [(v) => !!v || "Required field"],
-    navTitles: config.navTitles ?? {},
-    accountNamespace: null,
-    uuid: "",
-    title: "",
-    taxRate: 0,
-    currency: "",
-    keys: [],
-    selected: [],
-    isVisible: false,
-    isEditLoading: false,
-    statusChangeValue: "",
-    isChangeRegularPaymentLoading: false,
-    isChangeRegularPaymentOpen: false,
-    showDeletedInstances: false,
-    viewport: window.innerWidth,
-  }),
-  methods: {
-    formatSecondsToDate,
-    navTitle(title) {
-      if (title && this.navTitles[title]) {
-        return this.navTitles[title];
-      }
-
-      return title;
-    },
-    addKey() {
-      this.keys.push(this.newKey);
-      this.isVisible = false;
-      this.newKey = { title: "", value: "" };
-    },
-    deleteKeys() {
-      if (this.selected.length < 1) return;
-      const arr = this.selected.map((el) => el.value);
-
-      this.keys = this.keys.filter((el) => !arr.includes(el.value));
-      this.selected = [];
-    },
-    updateAccount(newAccount) {
-      return api.accounts.update(this.account.uuid, newAccount).catch((err) => {
-        this.showSnackbarError({ message: err });
-      });
-    },
-    async editAccount() {
-      const newAccount = {
-        ...this.account,
-        title: this.title,
-        currency: this.currency,
-        data: {
-          ...this.account.data,
-          tax_rate: this.taxRate / 100,
-        },
-      };
-      if (!newAccount.data) {
-        newAccount.data = {};
-      }
-      newAccount.data.ssh_keys = this.keys;
-
-      this.isEditLoading = true;
-      try {
-        await this.updateAccount(newAccount);
-        this.showSnackbarSuccess({
-          message: "Account edited successfully",
-        });
-
-        this.$router.push({ name: "Accounts" });
-      } finally {
-        this.isEditLoading = false;
-      }
-    },
-    async changeStatus(newStatus) {
-      this.statusChangeValue = newStatus;
-      try {
-        await fetch(
-          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-            `modules/addons/nocloud/api/index.php?run=status_user&account=${
-              this.account.uuid
-            }&status=${newStatus === "ACTIVE" ? "open" : "close"}`
-        );
-        await this.updateAccount({ ...this.account, status: newStatus });
-        this.$set(this.account, "status", newStatus);
-        this.showSnackbarSuccess({
-          message: "Status change successfully",
-        });
-      } finally {
-        this.statusChangeValue = "";
-      }
-    },
-    //need remake to instances api
-    async permanentLock() {
-      const newStatus = "PERMANENT_LOCK";
-      this.statusChangeValue = newStatus;
-      try {
-        const accountServices = this.services.filter(
-          (s) => s.access.namespace === this.accountNamespace?.uuid
-        );
-
-        const servicesForDown = accountServices.filter(
-          (s) => s.status !== "INIT"
-        );
-        await Promise.all(
-          servicesForDown.map((s) => api.services.down(s.uuid))
-        );
-        await Promise.all(
-          accountServices.map((s) => api.services.delete(s.uuid))
-        );
-        await this.changeStatus(newStatus);
-
-        this.$router.push({ name: "Accounts" });
-      } catch {
-        this.showSnackbarError({
-          message: "Error while change status",
-        });
-      } finally {
-        this.statusChangeValue = "";
-      }
-    },
-    //need remake to instances api
-    async changeRegularPayment(value) {
-      this.isChangeRegularPaymentLoading = true;
-      this.isChangeRegularPaymentOpen = false;
-      try {
-        const services = [];
-
-        this.accountsByInstance.forEach((instance) => {
-          const tempService =
-            services.find((s) => s.uuid === instance.service) ||
-            JSON.parse(
-              JSON.stringify(
-                this.services.find((s) => s.uuid === instance.service)
-              )
-            );
-          const igIndex = tempService.instancesGroups.findIndex((ig) =>
-            ig.instances.find((i) => i.uuid === instance.uuid)
-          );
-          const instanceIndex = tempService.instancesGroups[
-            igIndex
-          ].instances.findIndex((i) => i.uuid === instance.uuid);
-
-          instance.config.regular_payment = value;
-
-          tempService.instancesGroups[igIndex].instances[instanceIndex] =
-            instance;
-
-          const sIndex = services.findIndex((s) => s.uuid === instance.service);
-          if (sIndex !== -1) {
-            services[sIndex] = tempService;
-          } else {
-            services.push(tempService);
-          }
-        });
-        await Promise.all(services.map((s) => api.services._update(s)));
-      } catch {
-        this.showSnackbarError({
-          message: "Error while change invoice based",
-        });
-      } finally {
-        this.isChangeRegularPaymentLoading = false;
-      }
-    },
-    openInvoice() {
-      this.$router.push({
-        name: "Invoice create",
-        query: { account: this.account.uuid },
-      });
-    },
-    async fetchNamespace() {
-      try {
-        const { pool } = await this.$store.dispatch("namespaces/fetch", {
-          filters: { account: this.account.uuid },
-        });
-        this.accountNamespace = pool[0];
-      } catch (e) {
-        console.log(e);
-      }
-    },
-    setViewport() {
-      this.viewport = window.innerWidth;
-    },
-    initTaxRate() {
-      this.taxRate = this.account.data.tax_rate
-        ? this.account.data.tax_rate * 100
-        : 0;
-    },
-  },
-  mounted() {
-    this.title = this.account.title;
-    this.currency = this.account.currency;
-    this.uuid = this.account.uuid;
-    this.keys = this.account.data?.ssh_keys || [];
-    this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
-    this.fetchNamespace();
-
-    window.addEventListener("resize", this.setViewport);
-
-    this.initTaxRate();
-  },
-  destroyed() {
-    window.removeEventListener("resize", this.setViewport);
-  },
-  computed: {
-    services() {
-      return this.$store.getters["services/all"];
-    },
-    currencies() {
-      return this.$store.getters["currencies/all"].filter(
-        (c) => c.title !== "NCU"
-      );
-    },
-    servicesProviders() {
-      return this.$store.getters["servicesProviders/all"];
-    },
-    instances() {
-      return this.$store.getters["services/getInstances"];
-    },
-    accountsByInstance() {
-      return this.instances.filter(
-        (i) => i.access.namespace === this.accountNamespace?.uuid
-      );
-    },
-    filteredInstances() {
-      if (this.showDeletedInstances) {
-        return this.accountsByInstance;
-      }
-
-      return this.accountsByInstance.filter(
-        (inst) => inst.state?.state !== "DELETED"
-      );
-    },
-    isCurrencyReadonly() {
-      return this.account.currency && this.account.currency.code !== "NCU";
-    },
-    isLocked() {
-      return this.account.status !== "ACTIVE";
-    },
-    stateButtons() {
-      const status = this.account.status?.toLowerCase();
-      const permanentLock = {
-        hint: "Delete user",
-        icon: "mdi-delete",
-        newStatusValue: "PERMANENT_LOCK",
-        method: this.permanentLock,
-      };
-
-      switch (status) {
-        case "lock": {
-          return [
-            {
-              hint: "Unlock access",
-              newStatusValue: "ACTIVE",
-              icon: "md-lock-off",
-            },
-            permanentLock,
-          ];
-        }
-        case "active": {
-          return [
-            { hint: "Block access", icon: "mdi-lock", newStatusValue: "LOCK" },
-            permanentLock,
-          ];
-        }
-        default: {
-          return [];
-        }
-      }
-    },
-    whmcsApi() {
-      return this.$store.getters["settings/whmcsApi"];
-    },
-  },
-  watch: {
-    account() {
-      this.initTaxRate();
-    },
-  },
 };
 </script>
 
