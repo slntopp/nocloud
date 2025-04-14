@@ -33,6 +33,14 @@
       {{ getShortName(item.data.email) }}
     </template>
 
+    <template v-slot:[`item.isPhoneVerified`]="{ item }">
+      <div class="d-flex justify-center">
+        <v-icon :color="item.isPhoneVerified ? 'green' : 'red'">{{
+          item.isPhoneVerified ? "mdi-check-circle" : "mdi-close-circle"
+        }}</v-icon>
+      </div>
+    </template>
+
     <template v-slot:[`item.data.tax_rate`]="{ item }">
       {{ (item.data.tax_rate || 0) * 100 }}
     </template>
@@ -133,6 +141,7 @@ const headers = ref([
   { text: "Status", value: "status" },
   { text: "Balance", value: "balance" },
   { text: "Email", value: "data.email" },
+  { text: "Phone verified", value: "isPhoneVerified" },
   { text: "Created date", value: "data.date_create" },
   { text: "Country", value: "data.country" },
   { text: "Address", value: "address" },
@@ -257,6 +266,7 @@ const searchFields = computed(() => [
   },
   { title: "Balance", key: "balance", type: "number-range" },
   { title: "Email", key: "data.email", type: "input" },
+  { title: "Phone verified", key: "is_phone_verified", type: "logic-select" },
   { title: "Created date", key: "data.date_create", type: "date" },
   { title: "Company", key: "data.company", type: "input" },
   { title: "Country", key: "data.country", type: "input" },

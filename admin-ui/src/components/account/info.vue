@@ -117,6 +117,19 @@
       <v-col lg="2" md="4" sm="6" cols="12">
         <v-text-field v-model="taxRate" label="tax rate" suffix="%" />
       </v-col>
+
+      <v-col
+        lg="2"
+        md="4"
+        sm="6"
+        cols="12"
+        class="d-flex justify-start align-center"
+      >
+        <span class="mr-2"> Phone verified </span>
+        <v-icon :color="account.isPhoneVerified ? 'green' : 'red'">{{
+          account.isPhoneVerified ? "mdi-check-circle" : "mdi-close-circle"
+        }}</v-icon>
+      </v-col>
     </v-row>
 
     <nocloud-expansion-panels
