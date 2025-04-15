@@ -134,9 +134,10 @@ const phoneVerificationDataKeyTemplate = "registry-phone-verification-%s"
 const emailVerificationDataKeyTemplate = "registry-email-verification-%s"
 
 type VerificationData struct {
-	Code    string `json:"code"`
-	Sent    int64  `json:"sent"`
-	Expires int64  `json:"expires"`
+	Code          string `json:"code"`
+	Sent          int64  `json:"sent"`
+	Expires       int64  `json:"expires"`
+	RequestsCount int32  `json:"attempts"`
 }
 
 func generateCode() string {
@@ -237,13 +238,17 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 		if req.Action == pb.VerificationAction_BEGIN {
 
 			if now-vData.Sent < 150 {
-				return nil, fmt.Errorf("too many requests. Try again later")
+				return nil, fmt.Errorf("Too many requests. Try again later.")
+			}
+			if vData.RequestsCount > 5 {
+				return nil, fmt.Errorf("You've reached your limit. Try again later or contact support.")
 			}
 
 			code := generateCode()
 			vData.Code = code
 			vData.Expires = now + 600
 			vData.Sent = now
+			vData.RequestsCount += 1
 			encoded, err := json.Marshal(vData)
 			if err != nil {
 				log.Error("failed to marshal verification data", zap.Error(err))
