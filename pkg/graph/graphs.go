@@ -537,6 +537,9 @@ func listAccounts[T Accessible](
 			}
 			insert += ` FILTER node._key in @uuids`
 			bindVars["uuids"] = values
+		} else if key == "is_phone_verified" {
+			insert += ` FILTER TO_BOOL(node.is_phone_verified) == @phoneVerified`
+			bindVars["phoneVerified"] = val.GetBoolValue()
 		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
