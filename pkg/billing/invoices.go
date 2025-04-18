@@ -123,14 +123,15 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 
 var forbiddenStatusConversions = make([]pair[pb.BillingStatus], 0)
 
-func checkAdditionalProperties(inv graph.Invoice, acc graph.Account) error {
+func checkAdditionalProperties(conf InvoicesConf, inv graph.Invoice, acc graph.Account) error {
 	if inv.Properties == nil {
 		return nil
 	}
 	if inv.GetProperties().GetEmailVerificationRequired() && !acc.GetIsEmailVerified() {
 		return fmt.Errorf("email is not verified")
 	}
-	if inv.GetProperties().GetPhoneVerificationRequired() && !acc.GetIsPhoneVerified() {
+	if (inv.GetProperties().GetPhoneVerificationRequired() && !acc.GetIsPhoneVerified()) ||
+		(conf.ForceRequirePhoneVerification && !acc.GetIsPhoneVerified()) {
 		return fmt.Errorf("phone is not verified")
 	}
 	return nil
@@ -345,6 +346,9 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 	}
 	defer cursor.Close()
 
+	conf := MakeInvoicesConf(log, &s.settingsClient)
+	requirePhoneVer := conf.ForceRequirePhoneVerification
+
 	var invoices []*pb.Invoice
 	for {
 		invoice := &pb.Invoice{}
@@ -357,6 +361,12 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 			return nil, status.Error(codes.Internal, "Failed to retrieve invoices")
 		}
 		invoice.Uuid = meta.Key
+		if invoice.Properties == nil {
+			invoice.Properties = &pb.AdditionalProperties{}
+		}
+		if requirePhoneVer {
+			invoice.Properties.PhoneVerificationRequired = true
+		}
 		invoices = append(invoices, invoice)
 	}
 
@@ -676,6 +686,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Account not found")
 	}
 	currConf := MakeCurrencyConf(log, &s.settingsClient)
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
 
 	balance := acc.GetBalance()
 	accCurrency := acc.Currency
@@ -700,7 +711,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
-	if err = checkAdditionalProperties(*inv, acc); err != nil {
+	if err = checkAdditionalProperties(invConf, *inv, acc); err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Failed to pay invoice. Error: "+err.Error())
 	}
 
@@ -1111,6 +1122,14 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 		return nil, err
 	}
 
+	conf := MakeInvoicesConf(s.log, &s.settingsClient)
+	if t.Properties == nil {
+		t.Properties = &pb.AdditionalProperties{}
+	}
+	if conf.ForceRequirePhoneVerification {
+		t.Properties.PhoneVerificationRequired = true
+	}
+
 	return connect.NewResponse(t.Invoice), nil
 }
 
@@ -1159,7 +1178,7 @@ func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb
 		return nil, status.Error(codes.NotFound, "Internal error")
 	}
 
-	if err = checkAdditionalProperties(*inv, acc); err != nil {
+	if err = checkAdditionalProperties(MakeInvoicesConf(log, &s.settingsClient), *inv, acc); err != nil {
 		return nil, status.Error(codes.FailedPrecondition, "Failed to pay invoice. Error: "+err.Error())
 	}
 
@@ -1448,6 +1467,14 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 		if ok := s.ca.HasAccess(ctx, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN); !ok && acc != tr.GetAccount() {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
+	}
+
+	conf := MakeInvoicesConf(s.log, &s.settingsClient)
+	if tr.Properties == nil {
+		tr.Properties = &pb.AdditionalProperties{}
+	}
+	if conf.ForceRequirePhoneVerification {
+		tr.Properties.PhoneVerificationRequired = true
 	}
 
 	resp := connect.NewResponse(&pb.Invoices{Pool: []*pb.Invoice{tr.Invoice}})
