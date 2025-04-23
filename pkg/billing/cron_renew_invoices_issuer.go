@@ -13,6 +13,7 @@ import (
 	"github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/periods"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -350,7 +351,11 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		expireDate := time.Unix(d.ExpireAt, 0)
 		var untilDate time.Time
 		if d.Period == monthSecs {
-			untilDate = expireDate.AddDate(0, 1, 0)
+			if inst.GetMeta() != nil && inst.GetMeta().Started > 0 {
+				untilDate = time.Unix(periods.GetNextDate(d.ExpireAt, periods.BillingMonth, inst.GetMeta().Started), 0)
+			} else {
+				untilDate = expireDate.AddDate(0, 1, 0)
+			}
 		} else {
 			untilDate = expireDate.Add(time.Duration(d.Period) * time.Second)
 		}

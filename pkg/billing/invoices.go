@@ -8,6 +8,7 @@ import (
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	per "github.com/slntopp/nocloud/pkg/nocloud/periods"
 	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"github.com/slntopp/nocloud/pkg/pubsub/billing"
 	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
@@ -1364,7 +1365,11 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	const monthSecs = 3600 * 24 * 30
 	const daySecs = 3600 * 24
 	if period == monthSecs {
-		untilDate = expireDate.AddDate(0, 1, 0)
+		if inst.GetMeta() != nil && inst.GetMeta().Started > 0 {
+			untilDate = time.Unix(per.GetNextDate(expire, per.BillingMonth, inst.GetMeta().Started), 0)
+		} else {
+			untilDate = expireDate.AddDate(0, 1, 0)
+		}
 	} else {
 		untilDate = expireDate.Add(time.Duration(period) * time.Second)
 	}

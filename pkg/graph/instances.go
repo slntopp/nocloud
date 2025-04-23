@@ -539,6 +539,13 @@ func (ctrl *instancesController) Create(ctx context.Context, group driver.Docume
 
 	log.Debug("instance for hash calculating while Creating", zap.Any("inst", i))
 
+	if i.GetConfig()["auto_start"].GetBoolValue() {
+		if i.Meta == nil {
+			i.Meta = &pb.InstanceMeta{}
+		}
+		i.Meta.Started = time.Now().Unix()
+	}
+
 	log.Debug("period and estimate", zap.Any("period", period), zap.Any("estimate", estimate))
 	// Attempt create document
 	meta, err := ctrl.col.CreateDocument(driver.WithWaitForSync(ctx, true), i)
@@ -751,6 +758,13 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 			log.Error("Failed to update data")
 			return err
 		}
+	}
+
+	if !oldInst.GetConfig()["auto_start"].GetBoolValue() && inst.GetConfig()["auto_start"].GetBoolValue() {
+		if mask.Meta == nil {
+			mask.Meta = &pb.InstanceMeta{}
+		}
+		mask.Meta.Started = time.Now().Unix()
 	}
 
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
