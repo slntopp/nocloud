@@ -133,10 +133,17 @@ FOR node, edge, path IN 2 OUTBOUND @account
 const phoneVerificationDataKeyTemplate = "registry-phone-verification-%s"
 const emailVerificationDataKeyTemplate = "registry-email-verification-%s"
 
+const phoneNumberRequestsCountKeyTemplate = "registry-phone-number-requests-%s"
+
 type VerificationData struct {
-	Code    string `json:"code"`
-	Sent    int64  `json:"sent"`
-	Expires int64  `json:"expires"`
+	Code          string `json:"code"`
+	Sent          int64  `json:"sent"`
+	Expires       int64  `json:"expires"`
+	RequestsCount int32  `json:"attempts"`
+}
+type PhoneRequestsCount struct {
+	Phone string `json:"phone"`
+	Count int    `json:"count"`
 }
 
 func generateCode() string {
@@ -146,6 +153,32 @@ func generateCode() string {
 type Record struct {
 	ID    string
 	State string
+}
+
+func getRedisParsed[T any](rdb redisdb.Client, key string, result *T, def T) error {
+	res, err := rdb.Get(context.Background(), key).Result()
+	if err != nil {
+		if err.Error() == redis.Nil.Error() {
+			result = &def
+			return nil
+		} else {
+			return fmt.Errorf("failed to obtain verification data from redis: %w", err)
+		}
+	}
+	if err = json.Unmarshal([]byte(res), result); err != nil {
+		return fmt.Errorf("failed to unmarshal verification data: %w", err)
+	}
+	return nil
+}
+func setRedis[T any](rdb redisdb.Client, key string, value T) error {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("failed to marshal verification data: %w", err)
+	}
+	if err = rdb.Set(context.Background(), key, string(encoded), 0).Err(); err != nil {
+		return fmt.Errorf("failed to save verification data: %w", err)
+	}
+	return nil
 }
 
 func parseDevices(content string) ([]Record, error) {
@@ -214,21 +247,9 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 	default:
 		return nil, fmt.Errorf("unsupported verification type")
 	}
-	res, err := s.rdb.Get(ctx, fmt.Sprintf(_key, acc.GetUuid())).Result()
-	if err != nil {
-		if err.Error() == redis.Nil.Error() {
-			res = ""
-		} else {
-			log.Error("failed to obtain verification data from redis", zap.Error(err))
-			return nil, fmt.Errorf("internal error")
-		}
-	}
-	if res == "" {
-		res = "{}"
-	}
-	if err = json.Unmarshal([]byte(res), &vData); err != nil {
-		log.Error("failed to unmarshal verification data", zap.Error(err))
-		return nil, fmt.Errorf("internal error")
+	if err = getRedisParsed(s.rdb, fmt.Sprintf(_key, acc.GetUuid()), &vData, vData); err != nil {
+		log.Error("Failed to get verification data from redis", zap.Error(err))
+		return nil, fmt.Errorf("failed to get verification data")
 	}
 
 	now := time.Now().Unix()
@@ -236,21 +257,30 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 
 		if req.Action == pb.VerificationAction_BEGIN {
 
+			var phoneData PhoneRequestsCount
+			if err = getRedisParsed(s.rdb, fmt.Sprintf(phoneNumberRequestsCountKeyTemplate, strings.TrimPrefix(accountPhone, "+")),
+				&phoneData, phoneData); err != nil {
+				log.Error("Failed to get phone's data from redis", zap.Error(err))
+				return nil, fmt.Errorf("failed to get phone's data")
+			}
+			if phoneData.Count >= 5 {
+				return nil, fmt.Errorf("Too many requests. Try again later or contact support.")
+			}
+
 			if now-vData.Sent < 150 {
-				return nil, fmt.Errorf("too many requests. Try again later")
+				return nil, fmt.Errorf("Too many requests. Try again later.")
+			}
+			if vData.RequestsCount > 5 {
+				return nil, fmt.Errorf("You've reached your limit. Try again later or contact support.")
 			}
 
 			code := generateCode()
 			vData.Code = code
 			vData.Expires = now + 600
 			vData.Sent = now
-			encoded, err := json.Marshal(vData)
-			if err != nil {
-				log.Error("failed to marshal verification data", zap.Error(err))
-				return nil, fmt.Errorf("internal error")
-			}
-			if err = s.rdb.Set(ctx, fmt.Sprintf(phoneVerificationDataKeyTemplate, acc.GetUuid()), string(encoded), 0).Err(); err != nil {
-				log.Error("failed to save verification data", zap.Error(err))
+			vData.RequestsCount += 1
+			if err = setRedis(s.rdb, fmt.Sprintf(phoneVerificationDataKeyTemplate, acc.GetUuid()), vData); err != nil {
+				log.Error("Failed to save verification data", zap.Error(err))
 				return nil, fmt.Errorf("internal error")
 			}
 
@@ -290,6 +320,11 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 					return nil, fmt.Errorf("internal error")
 				}
 				log.Debug("Send SMS response", zap.Any("response", resp))
+
+				phoneData.Count++
+				if err = setRedis(s.rdb, fmt.Sprintf(phoneNumberRequestsCountKeyTemplate, strings.TrimPrefix(accountPhone, "+")), phoneData); err != nil {
+					log.Error("Failed to save phone's data", zap.Error(err))
+				}
 
 			} else {
 				log.Error("Cannot send SMS. AMI is not initialized")

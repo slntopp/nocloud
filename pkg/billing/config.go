@@ -54,13 +54,14 @@ type SuspendConf struct {
 }
 
 type InvoicesConf struct {
-	Template                 string  `json:"template"`
-	NewTemplate              string  `json:"new_template"`
-	StartWithNumber          int     `json:"start_with_number"`
-	ResetCounterMode         string  `json:"reset_counter_mode"`
-	IssueRenewalInvoiceAfter float64 `json:"issue_renewal_invoice_after"`
-	TopUpItemMessage         string  `json:"top_up_item_message"`
-	TaxIncluded              bool    `json:"tax_included"`
+	Template                      string  `json:"template"`
+	NewTemplate                   string  `json:"new_template"`
+	StartWithNumber               int     `json:"start_with_number"`
+	ResetCounterMode              string  `json:"reset_counter_mode"`
+	IssueRenewalInvoiceAfter      float64 `json:"issue_renewal_invoice_after"`
+	TopUpItemMessage              string  `json:"top_up_item_message"`
+	TaxIncluded                   bool    `json:"tax_included"`
+	ForceRequirePhoneVerification bool    `json:"require_phone_verification"`
 }
 
 var (
@@ -94,13 +95,14 @@ var (
 	}
 	invoicesSetting = &sc.Setting[InvoicesConf]{
 		Value: InvoicesConf{
-			Template:                 "PAID {YEAR}/{MONTH}/{NUMBER}",
-			NewTemplate:              "{NUMBER}",
-			ResetCounterMode:         "MONTHLY",
-			StartWithNumber:          0,
-			IssueRenewalInvoiceAfter: 0.666,
-			TopUpItemMessage:         "Пополнение баланса (услуги хостинга, оплата за сервисы)",
-			TaxIncluded:              false,
+			Template:                      "PAID {YEAR}/{MONTH}/{NUMBER}",
+			NewTemplate:                   "{NUMBER}",
+			ResetCounterMode:              "MONTHLY",
+			StartWithNumber:               0,
+			IssueRenewalInvoiceAfter:      0.666,
+			TopUpItemMessage:              "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+			TaxIncluded:                   false,
+			ForceRequirePhoneVerification: false,
 		},
 		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,
