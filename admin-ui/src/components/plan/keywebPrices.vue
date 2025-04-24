@@ -69,6 +69,19 @@
               <template v-slot:[`item.name`]="{ item }">
                 <v-text-field v-model="item.name" />
               </template>
+
+              <template v-slot:[`item.cpu`]="{ item }">
+                <v-text-field suffix="vCPU" v-model="item.cpu" />
+              </template>
+
+              <template v-slot:[`item.ram`]="{ item }">
+                <v-text-field suffix="GB" v-model="item.ram" />
+              </template>
+
+              <template v-slot:[`item.disk`]="{ item }">
+                <v-text-field suffix="GB" v-model="item.disk" />
+              </template>
+
               <template v-slot:[`item.sell`]="{ item }">
                 <v-switch v-model.number="item.sell" />
               </template>
@@ -187,12 +200,28 @@ const tabs = ref(["Tariffs", "Os", "Custom addons"]);
 const tabsIndex = ref(0);
 const allOs = ref([]);
 const planAddons = ref([]);
+const defaultResources = {
+  ProxmoxVPS_S0: { cpu: 1, ram: 1, disk: 20, traffic: 0.2 },
+  ProxmoxVPS_S1: { cpu: 1, ram: 2, disk: 40, traffic: 1 },
+  ProxmoxVPS_S2: { cpu: 2, ram: 4, disk: 80, traffic: 2 },
+  ProxmoxVPS_S3: { cpu: 3, ram: 9, disk: 120, traffic: 3 },
+  ProxmoxVPS_S4: { cpu: 4, ram: 12, disk: 480, traffic: 5 },
+  ProxmoxVPS_S5: { cpu: 6, ram: 16, disk: 480, traffic: 7 },
+  ProxmoxVPS_S6: { cpu: 8, ram: 20, disk: 640, traffic: 9 },
+  ProxmoxVPS_S7: { cpu: 12, ram: 36, disk: 640, traffic: 12 },
+  ProxmoxVPS_S8: { cpu: 16, ram: 64, disk: 960, traffic: 14 },
+  ProxmoxVPS_S9: { cpu: 20, ram: 96, disk: 1280, traffic: 16 },
+  ProxmoxVPS_S10: { cpu: 24, ram: 128, disk: 1920, traffic: 34 },
+};
 
 const headers = ref([
   { text: "Key", value: "key" },
   { text: "Title", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
   { text: "Addons", value: "addons", width: "50" },
+  { text: "Cpu", value: "cpu", width: "100" },
+  { text: "Ram", value: "ram", width: "75" },
+  { text: "Disk", value: "disk", width: "90" },
   { text: "Incoming price", value: "basePrice", width: "75" },
   { text: "Sale price", value: "price", width: "200" },
   { text: "Sell", value: "sell", width: "100" },
@@ -351,6 +380,18 @@ onMounted(async () => {
           duration: duration,
           os: addonsValues.os.map((os) => os.key),
           addons: getTariffAddons(duration),
+          cpu:
+            realProducts[duration]?.resources?.cpu ||
+            defaultResources[`${p.integration}_${p.name}`].cpu ||
+            0,
+          ram:
+            realProducts[duration]?.resources?.ram ||
+            defaultResources[`${p.integration}_${p.name}`].ram ||
+            0,
+          disk:
+            realProducts[duration]?.resources?.disk ||
+            defaultResources[`${p.integration}_${p.name}`].disk ||
+            0,
           price: realProducts[duration]?.price || basePrice,
           basePrice,
           description: realProducts[duration]?.meta?.description,
@@ -521,6 +562,11 @@ const save = async () => {
         price: t.price,
         title: t.name,
         public: t.sell,
+        resources: {
+          cpu: t.cpu,
+          ram: t.ram,
+          disk: t.disk,
+        },
         addons: [...addons.values()],
         meta: {
           keywebId: t.id,
