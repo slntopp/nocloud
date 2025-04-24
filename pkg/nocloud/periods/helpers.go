@@ -16,30 +16,42 @@ func GetNextDate(start int64, period PeriodKind, cycleBeginning int64) int64 {
 
 	switch period {
 	case BillingMonth:
-		targetDay := cycleStart.Day()
+		cycleStartDay := cycleStart.Day()
+		startDay := startTime.Day()
+
 		year, month, _ := startTime.Date()
-		loc := startTime.Location()
-		month++
-		if month > 12 {
-			month = 1
-			year++
-		}
-		_ = time.Date(year, month, 1, startTime.Hour(), startTime.Minute(), startTime.Second(), startTime.Nanosecond(), loc)
 		nextMonth := month + 1
 		nextYear := year
 		if nextMonth > 12 {
 			nextMonth = 1
 			nextYear++
 		}
-		firstOfFollowing := time.Date(nextYear, nextMonth, 1, 0, 0, 0, 0, loc)
-		daysInNext := int(firstOfFollowing.Sub(time.Date(year, month, 1, 0, 0, 0, 0, loc)).Hours() / 24)
-		day := targetDay
-		if day > daysInNext {
-			day = daysInNext
+
+		firstOfMonthAfterNext := time.Date(nextYear, nextMonth+1, 1, 0, 0, 0, 0, time.UTC)
+		lastOfNextMonth := firstOfMonthAfterNext.Add(-time.Hour * 24)
+		daysInNextMonth := lastOfNextMonth.Day()
+
+		var targetDay int
+		if cycleStartDay > 28 && startDay > 27 {
+			if cycleStartDay <= daysInNextMonth {
+				targetDay = cycleStartDay
+			} else {
+				targetDay = daysInNextMonth
+			}
+		} else {
+			if startDay <= daysInNextMonth {
+				targetDay = startDay
+			} else {
+				targetDay = daysInNextMonth
+			}
 		}
-		result := time.Date(year, month, day, startTime.Hour(), startTime.Minute(), startTime.Second(), startTime.Nanosecond(), loc)
-		return result.Unix()
-	default:
-		return start
+
+		nextDate := time.Date(nextYear, nextMonth, targetDay,
+			startTime.Hour(), startTime.Minute(), startTime.Second(),
+			startTime.Nanosecond(), time.UTC)
+
+		return nextDate.Unix()
 	}
+
+	return start
 }
