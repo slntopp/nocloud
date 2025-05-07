@@ -273,8 +273,9 @@ func main() {
 	go server.ConsumeInvoiceStatusActions(log, ctx, ps, worker(workers))
 	go server.ConsumeCreatedInstances(log, ctx, ps, worker(workers))
 	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw, worker(workers))
-	go server.
-		log.Info("Check settings server")
+	go server.HandleStreaming(ctx, worker(workers))
+
+	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
 		log.Fatal("Can't check settings connection", zap.Error(err))
 	}

@@ -267,7 +267,7 @@ type streamContext struct {
 	Invoice *pb.Invoice
 }
 
-func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.WaitGroup) error {
+func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ctx := context.WithoutCancel(_ctx)
 	log := s.log.Named("HandleStreaming")
@@ -280,18 +280,18 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 	}
 	msgs, err := s.ps.Consume("updates_stream", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"), opt)
 	if err != nil {
-		log.Error("Failed to start consumer", zap.Error(err))
-		return status.Error(codes.Internal, "Error starting stream")
+		log.Fatal("Failed to start consumer", zap.Error(err))
+		return
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		case msg, ok := <-msgs:
 			if !ok {
 				log.Error("Messages channel is closed")
-				return nil
+				return
 			}
 			var event epb.Event
 			if err = proto.Unmarshal(msg.Body, &event); err != nil {
