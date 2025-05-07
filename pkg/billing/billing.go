@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/cskr/pubsub"
 	epb "github.com/slntopp/nocloud-proto/events"
 	ccinstances "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
@@ -25,8 +26,12 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
+	"github.com/slntopp/nocloud/pkg/pubsub/billing"
+	"google.golang.org/protobuf/proto"
 	"slices"
 	"strings"
+	"sync"
 
 	"encoding/json"
 	"time"
@@ -109,6 +114,9 @@ type BillingServiceServer struct {
 
 	invoicesPublisher   func(event *epb.Event) error
 	instanceCommandsPub func(event *epb.Event) error
+	ps                  *ps.PubSub[*epb.Event]
+
+	topicsPs *pubsub.PubSub
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
@@ -116,7 +124,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:                conn,
@@ -146,6 +154,8 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		whmcsGateway:        whmcsGateway,
 		invoicesPublisher:   invPub,
 		instanceCommandsPub: instPub,
+		ps:                  ps,
+		topicsPs:            tps,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
@@ -248,6 +258,72 @@ func (s *BillingServiceServer) migrate() {
 		}
 	}
 	log.Info("Finished migration")
+}
+
+const streamTopic = "updates-streaming"
+
+type streamContext struct {
+	Event   pb.BillingEvent
+	Invoice *pb.Invoice
+}
+
+func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+	log := s.log.Named("HandleStreaming")
+
+	opt := ps.ConsumeOptions{
+		Durable:   false,
+		NoWait:    false,
+		Exclusive: false,
+		WithRetry: false,
+	}
+	msgs, err := s.ps.Consume("updates_stream", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"), opt)
+	if err != nil {
+		log.Error("Failed to start consumer", zap.Error(err))
+		return status.Error(codes.Internal, "Error starting stream")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case msg, ok := <-msgs:
+			if !ok {
+				log.Error("Messages channel is closed")
+				return nil
+			}
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+				if err = msg.Ack(false); err != nil {
+					log.Error("Failed to acknowledge the delivery", zap.Error(err))
+				}
+				continue
+			}
+			// Set streaming event
+			var streamCtx streamContext
+			switch event.GetKey() {
+			case billing.InvoiceDraft, billing.InvoiceReturned, billing.InvoicePaid, billing.InvoiceUpdated, billing.InvoiceUnpaid, billing.InvoiceCancelled, billing.InvoiceTerminated:
+				streamCtx.Event = pb.BillingEvent_EVENT_INVOICE_UPDATED
+			case billing.InvoiceCreated:
+				streamCtx.Event = pb.BillingEvent_EVENT_INVOICE_CREATED
+			}
+			// Set other data
+			switch event.GetKey() {
+			case billing.InvoiceDraft, billing.InvoiceReturned, billing.InvoicePaid, billing.InvoiceUpdated,
+				billing.InvoiceUnpaid, billing.InvoiceCancelled, billing.InvoiceTerminated, billing.InvoiceCreated:
+				inv, err := s.invoices.Get(ctx, event.Uuid)
+				if err != nil || inv == nil || inv.Invoice == nil {
+					log.Error("failed to get invoice", zap.Error(err))
+					continue
+				}
+				streamCtx.Invoice = inv.Invoice
+			}
+			s.topicsPs.Pub(streamCtx, streamTopic)
+		}
+	}
+
 }
 
 func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
@@ -881,6 +957,64 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 	resp := connect.NewResponse(&pb.ListPlansInstancesResponse{Plans: result})
 
 	return resp, nil
+}
+
+func (s *BillingServiceServer) Stream(ctx context.Context, _req *connect.Request[pb.StreamRequest], srv *connect.ServerStream[pb.StreamResponse]) error {
+	log := s.log.Named("Stream")
+	req := _req.Msg
+	log.Debug("Request received", zap.Any("req", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+
+	reconnections := 0
+retry:
+	messages := make(chan interface{}, 20)
+	s.topicsPs.AddSub(messages, streamTopic)
+	defer func() {
+		go s.topicsPs.Unsub(messages)
+		for range messages {
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Debug("Context is cancelled. Connection was probably closed by the client")
+			return nil
+		case msg, ok := <-messages:
+			if !ok {
+				if reconnections > 5 {
+					log.Error("Too many reconnections. Closing stream")
+					return fmt.Errorf("internal channel closed")
+				}
+				log.Warn("Messages pubsub channel is closed. Trying to resubscribe...")
+				reconnections++
+				goto retry
+			}
+			streamCtx, ok := msg.(streamContext)
+			if !ok {
+				log.Error("Invalid stream context body")
+				continue
+			}
+			var response pb.StreamResponse
+			response.Event = streamCtx.Event
+			// Handle event cases
+			if invoice := streamCtx.Invoice; invoice != nil {
+				if !isAdmin && invoice.GetAccount() != requester {
+					continue
+				}
+				response.Uuid = invoice.GetUuid()
+			} else {
+				log.Error("Got event but no bodies", zap.Any("event", streamCtx))
+				continue
+			}
+			err := srv.Send(&response)
+			if err != nil {
+				log.Warn("Unable to send message", zap.Error(err))
+				return nil
+			}
+		}
+	}
 }
 
 const getInstancesBillingPlans = `
