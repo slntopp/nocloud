@@ -966,6 +966,13 @@ func (s *BillingServiceServer) Stream(ctx context.Context, _req *connect.Request
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
+	// Send preflight empty event
+	err := srv.Send(&pb.StreamResponse{})
+	if err != nil {
+		log.Error("Unable to send preflight event", zap.Error(err))
+		return status.Error(codes.Internal, "Failed to establish stream connection")
+	}
+
 	reconnections := 0
 retry:
 	messages := make(chan interface{}, 20)
