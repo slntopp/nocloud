@@ -319,7 +319,9 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 					continue
 				}
 				streamCtx.Invoice = inv.Invoice
+				log = log.With(zap.String("invoice_uuid", streamCtx.Invoice.GetUuid()))
 			}
+			log.Debug("Sending stream event to pubsub", zap.Any("event", streamCtx.Event))
 			s.topicsPs.Pub(streamCtx, streamTopic)
 		}
 	}
