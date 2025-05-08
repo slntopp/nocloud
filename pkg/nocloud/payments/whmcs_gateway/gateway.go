@@ -238,14 +238,14 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 	body.Status = nil
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
-		if inv.Status == pb.BillingStatus_PAID && whmcsInv.Status != statusToWhmcs(pb.BillingStatus_PAID) {
+		if inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID)) {
 			paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
 			if err = g.PayInvoice(ctx, int(id.GetNumberValue()), paidWithBalance); err != nil {
 				return fmt.Errorf("failed to pay invoice: %w", err)
 			}
 		}
-		body.Status = ptr(statusToWhmcs(inv.Status))
 	}
+	body.Status = ptr(statusToWhmcs(inv.Status))
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 	tax := inv.GetTaxOptions().GetTaxRate() * 100
