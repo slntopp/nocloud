@@ -273,7 +273,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 	log := s.log.Named("HandleStreaming")
 
 	opt := ps.ConsumeOptions{
-		Durable:   false,
+		Durable:   true,
 		NoWait:    false,
 		Exclusive: false,
 		WithRetry: false,
