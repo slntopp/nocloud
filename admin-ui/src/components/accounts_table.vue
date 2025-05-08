@@ -33,7 +33,7 @@
       {{ getShortName(item.data.email) }}
     </template>
 
-    <template v-slot:[`item.isPhoneVerified`]="{ item }">
+    <template v-slot:[`item.is_phone_verified`]="{ item }">
       <div class="d-flex justify-center">
         <v-icon :color="item.isPhoneVerified ? 'green' : 'red'">{{
           item.isPhoneVerified ? "mdi-check-circle" : "mdi-close-circle"
@@ -141,7 +141,7 @@ const headers = ref([
   { text: "Status", value: "status" },
   { text: "Balance", value: "balance" },
   { text: "Email", value: "data.email" },
-  { text: "Phone verified", value: "isPhoneVerified" },
+  { text: "Phone verified", value: "is_phone_verified" },
   { text: "Created date", value: "data.date_create" },
   { text: "Country", value: "data.country" },
   { text: "Address", value: "address" },

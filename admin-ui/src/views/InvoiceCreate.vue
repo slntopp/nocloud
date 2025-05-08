@@ -555,8 +555,6 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       taxOptions: { taxRate: newInvoice.value.taxRate },
     };
 
-    console.log(data);
-
     if (!isEdit.value && !invoice.value?.uuid) {
       await store.getters["invoices/invoicesClient"].createInvoice(
         CreateInvoiceRequest.fromJson({
@@ -589,6 +587,8 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
           newInvoice.value.payment
         );
       }
+
+      data.status = invoice.value.status;
 
       await store.getters["invoices/invoicesClient"].updateInvoice(
         UpdateInvoiceRequest.fromJson({
