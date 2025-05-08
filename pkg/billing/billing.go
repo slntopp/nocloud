@@ -969,7 +969,7 @@ func (s *BillingServiceServer) Stream(ctx context.Context, _req *connect.Request
 	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	// Send preflight empty event
-	err := srv.Send(&pb.StreamResponse{})
+	err := srv.Send(&pb.StreamResponse{Event: pb.BillingEvent_EVENT_PING})
 	if err != nil {
 		log.Error("Unable to send preflight event", zap.Error(err))
 		return status.Error(codes.Internal, "Failed to establish stream connection")
@@ -1005,14 +1005,13 @@ retry:
 				log.Error("Invalid stream context body")
 				continue
 			}
-			var response pb.StreamResponse
-			response.Event = streamCtx.Event
+			var response = pb.StreamResponse{Event: streamCtx.Event, Body: &pb.StreamResponseBody{}}
 			// Handle event cases
 			if invoice := streamCtx.Invoice; invoice != nil {
 				if !isAdmin && invoice.GetAccount() != requester {
 					continue
 				}
-				response.Uuid = invoice.GetUuid()
+				response.Body.Invoice = invoice
 			} else {
 				log.Error("Got event but no bodies", zap.Any("event", streamCtx))
 				continue
