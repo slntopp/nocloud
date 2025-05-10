@@ -270,7 +270,7 @@ type streamContext struct {
 func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ctx := context.WithoutCancel(_ctx)
-	log := s.log.Named("HandleStreaming")
+	_log := s.log.Named("HandleStreaming")
 
 	opt := ps.ConsumeOptions{
 		Durable:   true,
@@ -280,7 +280,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 	}
 	msgs, err := s.ps.Consume("updates_stream", ps.DEFAULT_EXCHANGE, billing.Topic("#"), opt)
 	if err != nil {
-		log.Fatal("Failed to start consumer", zap.Error(err))
+		_log.Fatal("Failed to start consumer", zap.Error(err))
 		return
 	}
 
@@ -289,6 +289,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 		case <-ctx.Done():
 			return
 		case msg, ok := <-msgs:
+			log := _log.With()
 			if !ok {
 				log.Error("Messages channel is closed")
 				return
