@@ -1016,12 +1016,12 @@ retry:
 				log.Error("Invalid stream context body")
 				continue
 			}
-			log.Debug("Got stream event", zap.Any("event", streamCtx.Event))
-			if streamCtx.Ts < started-30 {
-				log.Debug("Skipping expired event")
+			if streamCtx.Event == pb.BillingEvent_EVENT_UNKNOWN {
 				continue
 			}
-			if streamCtx.Event == pb.BillingEvent_EVENT_UNKNOWN {
+			log.Debug("Got stream event", zap.Any("event", streamCtx.Event), zap.Int64("ts_started", started), zap.Int64("ts_msg", streamCtx.Ts))
+			if started-60 > streamCtx.Ts {
+				log.Debug("Skipping expired event")
 				continue
 			}
 			var response = pb.StreamResponse{Event: streamCtx.Event, Body: &pb.StreamResponseBody{}}
