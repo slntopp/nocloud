@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/cskr/pubsub"
+	amqp "github.com/rabbitmq/amqp091-go"
 	epb "github.com/slntopp/nocloud-proto/events"
 	ccinstances "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
@@ -284,6 +285,11 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 		_log.Fatal("Failed to start consumer", zap.Error(err))
 		return
 	}
+	ack := func(msg amqp.Delivery) {
+		if err = msg.Ack(false); err != nil {
+			_log.Error("Failed to acknowledge delivery", zap.Error(err))
+		}
+	}
 
 	for {
 		select {
@@ -298,9 +304,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 			var event epb.Event
 			if err = proto.Unmarshal(msg.Body, &event); err != nil {
 				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
-				if err = msg.Ack(false); err != nil {
-					log.Error("Failed to acknowledge the delivery", zap.Error(err))
-				}
+				ack(msg)
 				continue
 			}
 			// Set streaming event
@@ -320,6 +324,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 				inv, err := s.invoices.Get(ctx, event.Uuid)
 				if err != nil || inv == nil || inv.Invoice == nil {
 					log.Error("Failed to get invoice", zap.Error(err))
+					ack(msg)
 					continue
 				}
 				streamCtx.Invoice = inv.Invoice
@@ -327,6 +332,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 			}
 			log.Debug("Sending stream event to pubsub", zap.Any("event", streamCtx.Event))
 			s.topicsPs.Pub(streamCtx, streamTopic)
+			ack(msg)
 		}
 	}
 
