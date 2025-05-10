@@ -264,6 +264,7 @@ const streamTopic = "updates-streaming"
 
 type streamContext struct {
 	Event   pb.BillingEvent
+	Ts      int64
 	Invoice *pb.Invoice
 }
 
@@ -303,7 +304,9 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 				continue
 			}
 			// Set streaming event
-			var streamCtx streamContext
+			var streamCtx = streamContext{
+				Ts: msg.Timestamp.Unix(),
+			}
 			switch event.GetKey() {
 			case billing.InvoiceDraft, billing.InvoiceReturned, billing.InvoicePaid, billing.InvoiceUpdated, billing.InvoiceUnpaid, billing.InvoiceCancelled, billing.InvoiceTerminated:
 				streamCtx.Event = pb.BillingEvent_EVENT_INVOICE_UPDATED
@@ -969,6 +972,7 @@ func (s *BillingServiceServer) Stream(ctx context.Context, _req *connect.Request
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
+	started := time.Now().Unix()
 	// Send preflight empty event
 	err := srv.Send(&pb.StreamResponse{Event: pb.BillingEvent_EVENT_PING})
 	if err != nil {
@@ -1004,6 +1008,10 @@ retry:
 			streamCtx, ok := msg.(streamContext)
 			if !ok {
 				log.Error("Invalid stream context body")
+				continue
+			}
+			if streamCtx.Ts < started-30 {
+				log.Debug("Skipping expired event")
 				continue
 			}
 			var response = pb.StreamResponse{Event: streamCtx.Event, Body: &pb.StreamResponseBody{}}
