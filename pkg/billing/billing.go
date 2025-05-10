@@ -1016,6 +1016,7 @@ retry:
 				log.Error("Invalid stream context body")
 				continue
 			}
+			log.Debug("Got stream event", zap.Any("event", streamCtx.Event))
 			if streamCtx.Ts < started-30 {
 				log.Debug("Skipping expired event")
 				continue
