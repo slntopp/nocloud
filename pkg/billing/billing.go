@@ -979,6 +979,7 @@ func (s *BillingServiceServer) Stream(ctx context.Context, _req *connect.Request
 	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 
 	started := time.Now().Unix()
+	forbiddenStatuses := []pb.BillingStatus{pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_TERMINATED, pb.BillingStatus_DRAFT}
 	// Send preflight empty event
 	err := srv.Send(&pb.StreamResponse{Event: pb.BillingEvent_EVENT_PING})
 	if err != nil {
@@ -1027,6 +1028,9 @@ retry:
 			// Handle event cases
 			if invoice := streamCtx.Invoice; invoice != nil {
 				if !isAdmin && invoice.GetAccount() != requester {
+					continue
+				}
+				if !isAdmin && slices.Contains(forbiddenStatuses, invoice.Status) {
 					continue
 				}
 				response.Body.Invoice = invoice
