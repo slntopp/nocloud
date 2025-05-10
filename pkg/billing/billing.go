@@ -1020,6 +1020,9 @@ retry:
 				log.Debug("Skipping expired event")
 				continue
 			}
+			if streamCtx.Event == pb.BillingEvent_EVENT_UNKNOWN {
+				continue
+			}
 			var response = pb.StreamResponse{Event: streamCtx.Event, Body: &pb.StreamResponseBody{}}
 			// Handle event cases
 			if invoice := streamCtx.Invoice; invoice != nil {
