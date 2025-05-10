@@ -1019,7 +1019,6 @@ retry:
 			if streamCtx.Event == pb.BillingEvent_EVENT_UNKNOWN {
 				continue
 			}
-			log.Debug("Got stream event", zap.Any("event", streamCtx.Event), zap.Int64("ts_started", started), zap.Int64("ts_msg", streamCtx.Ts))
 			if started-60 > streamCtx.Ts {
 				log.Debug("Skipping expired event")
 				continue
