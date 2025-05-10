@@ -278,7 +278,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 		Exclusive: false,
 		WithRetry: false,
 	}
-	msgs, err := s.ps.Consume("updates_stream", ps.DEFAULT_EXCHANGE, billing.Topic("invoices"), opt)
+	msgs, err := s.ps.Consume("updates_stream", ps.DEFAULT_EXCHANGE, billing.Topic("#"), opt)
 	if err != nil {
 		log.Fatal("Failed to start consumer", zap.Error(err))
 		return
@@ -315,7 +315,7 @@ func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.Wa
 				billing.InvoiceUnpaid, billing.InvoiceCancelled, billing.InvoiceTerminated, billing.InvoiceCreated:
 				inv, err := s.invoices.Get(ctx, event.Uuid)
 				if err != nil || inv == nil || inv.Invoice == nil {
-					log.Error("failed to get invoice", zap.Error(err))
+					log.Error("Failed to get invoice", zap.Error(err))
 					continue
 				}
 				streamCtx.Invoice = inv.Invoice
