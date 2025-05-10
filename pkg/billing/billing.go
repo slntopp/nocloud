@@ -1038,7 +1038,7 @@ retry:
 			err := srv.Send(&response)
 			if err != nil {
 				log.Warn("Unable to send message", zap.Error(err))
-				return nil
+				continue
 			}
 		}
 	}
