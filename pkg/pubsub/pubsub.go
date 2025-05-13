@@ -245,6 +245,7 @@ func (ps *PubSub[T]) Publish(exchange, topic string, msg T) error {
 		ContentType:  "text/plain",
 		DeliveryMode: amqp091.Persistent,
 		Body:         body,
+		Timestamp:    time.Now(),
 	})
 }
 

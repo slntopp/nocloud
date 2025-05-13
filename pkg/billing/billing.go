@@ -18,6 +18,8 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/cskr/pubsub"
+	amqp "github.com/rabbitmq/amqp091-go"
 	epb "github.com/slntopp/nocloud-proto/events"
 	ccinstances "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
@@ -25,8 +27,12 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
+	"github.com/slntopp/nocloud/pkg/pubsub/billing"
+	"google.golang.org/protobuf/proto"
 	"slices"
 	"strings"
+	"sync"
 
 	"encoding/json"
 	"time"
@@ -109,6 +115,9 @@ type BillingServiceServer struct {
 
 	invoicesPublisher   func(event *epb.Event) error
 	instanceCommandsPub func(event *epb.Event) error
+	ps                  *ps.PubSub[*epb.Event]
+
+	topicsPs *pubsub.PubSub
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
@@ -116,7 +125,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:                conn,
@@ -146,6 +155,8 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		whmcsGateway:        whmcsGateway,
 		invoicesPublisher:   invPub,
 		instanceCommandsPub: instPub,
+		ps:                  ps,
+		topicsPs:            tps,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
@@ -248,6 +259,83 @@ func (s *BillingServiceServer) migrate() {
 		}
 	}
 	log.Info("Finished migration")
+}
+
+const streamTopic = "updates-streaming"
+
+type streamContext struct {
+	Event   pb.BillingEvent
+	Ts      int64
+	Invoice *pb.Invoice
+}
+
+func (s *BillingServiceServer) HandleStreaming(_ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+	_log := s.log.Named("HandleStreaming")
+
+	opt := ps.ConsumeOptions{
+		Durable:   true,
+		NoWait:    false,
+		Exclusive: false,
+		WithRetry: false,
+	}
+	msgs, err := s.ps.Consume("updates_stream", ps.DEFAULT_EXCHANGE, billing.Topic("#"), opt)
+	if err != nil {
+		_log.Fatal("Failed to start consumer", zap.Error(err))
+		return
+	}
+	ack := func(msg amqp.Delivery) {
+		if err = msg.Ack(false); err != nil {
+			_log.Error("Failed to acknowledge delivery", zap.Error(err))
+		}
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg, ok := <-msgs:
+			log := _log.With()
+			if !ok {
+				log.Error("Messages channel is closed")
+				return
+			}
+			var event epb.Event
+			if err = proto.Unmarshal(msg.Body, &event); err != nil {
+				log.Error("Failed to unmarshal event. Incorrect delivery. Skip", zap.Error(err))
+				ack(msg)
+				continue
+			}
+			// Set streaming event
+			var streamCtx = streamContext{
+				Ts: msg.Timestamp.Unix(),
+			}
+			switch event.GetKey() {
+			case billing.InvoiceDraft, billing.InvoiceReturned, billing.InvoicePaid, billing.InvoiceUpdated, billing.InvoiceUnpaid, billing.InvoiceCancelled, billing.InvoiceTerminated:
+				streamCtx.Event = pb.BillingEvent_EVENT_INVOICE_UPDATED
+			case billing.InvoiceCreated:
+				streamCtx.Event = pb.BillingEvent_EVENT_INVOICE_CREATED
+			}
+			// Set other data
+			switch event.GetKey() {
+			case billing.InvoiceDraft, billing.InvoiceReturned, billing.InvoicePaid, billing.InvoiceUpdated,
+				billing.InvoiceUnpaid, billing.InvoiceCancelled, billing.InvoiceTerminated, billing.InvoiceCreated:
+				inv, err := s.invoices.Get(ctx, event.Uuid)
+				if err != nil || inv == nil || inv.Invoice == nil {
+					log.Error("Failed to get invoice", zap.Error(err))
+					ack(msg)
+					continue
+				}
+				streamCtx.Invoice = inv.Invoice
+				log = log.With(zap.String("invoice_uuid", streamCtx.Invoice.GetUuid()))
+			}
+			log.Debug("Sending stream event", zap.Any("event", streamCtx.Event))
+			s.topicsPs.Pub(streamCtx, streamTopic)
+			ack(msg)
+		}
+	}
+
 }
 
 func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
@@ -881,6 +969,82 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connec
 	resp := connect.NewResponse(&pb.ListPlansInstancesResponse{Plans: result})
 
 	return resp, nil
+}
+
+func (s *BillingServiceServer) Stream(ctx context.Context, _req *connect.Request[pb.StreamRequest], srv *connect.ServerStream[pb.StreamResponse]) error {
+	log := s.log.Named("Stream")
+	req := _req.Msg
+	log.Debug("Request received", zap.Any("req", req))
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	isAdmin := s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+
+	started := time.Now().Unix()
+	forbiddenStatuses := []pb.BillingStatus{pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_TERMINATED, pb.BillingStatus_DRAFT}
+	// Send preflight empty event
+	err := srv.Send(&pb.StreamResponse{Event: pb.BillingEvent_EVENT_PING})
+	if err != nil {
+		log.Error("Unable to send preflight event", zap.Error(err))
+		return status.Error(codes.Internal, "Failed to establish stream connection")
+	}
+
+	reconnections := 0
+retry:
+	messages := make(chan interface{}, 20)
+	s.topicsPs.AddSub(messages, streamTopic)
+	defer func() {
+		go s.topicsPs.Unsub(messages)
+		for range messages {
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Debug("Context is cancelled. Connection was probably closed by the client")
+			return nil
+		case msg, ok := <-messages:
+			if !ok {
+				if reconnections > 5 {
+					log.Error("Too many reconnections. Closing stream")
+					return fmt.Errorf("internal channel closed")
+				}
+				log.Warn("Messages pubsub channel is closed. Trying to resubscribe...")
+				reconnections++
+				goto retry
+			}
+			streamCtx, ok := msg.(streamContext)
+			if !ok {
+				log.Error("Invalid stream context body")
+				continue
+			}
+			if streamCtx.Event == pb.BillingEvent_EVENT_UNKNOWN {
+				continue
+			}
+			if started-60 > streamCtx.Ts {
+				log.Debug("Skipping expired event")
+				continue
+			}
+			var response = pb.StreamResponse{Event: streamCtx.Event, Body: &pb.StreamResponseBody{}}
+			// Handle event cases
+			if invoice := streamCtx.Invoice; invoice != nil {
+				if !isAdmin && invoice.GetAccount() != requester {
+					continue
+				}
+				if !isAdmin && slices.Contains(forbiddenStatuses, invoice.Status) {
+					continue
+				}
+				response.Body.Invoice = invoice
+			} else {
+				log.Error("Got event but no bodies", zap.Any("event", streamCtx))
+				continue
+			}
+			err := srv.Send(&response)
+			if err != nil {
+				log.Warn("Unable to send message", zap.Error(err))
+				continue
+			}
+		}
+	}
 }
 
 const getInstancesBillingPlans = `

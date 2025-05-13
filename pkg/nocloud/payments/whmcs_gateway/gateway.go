@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"google.golang.org/protobuf/types/known/structpb"
 	"io"
@@ -197,7 +198,8 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	meta[invoiceIdField] = structpb.NewNumberValue(float64(invResp.InvoiceId))
 	meta["note"] = structpb.NewStringValue(newNote)
 	invoice.Meta = meta
-	if _, err := g.invMan.InvoicesController().Update(ctx, invoice); err != nil {
+	// Update invoice using api but using gateway-callback flag to not trigger useless whmcs update
+	if err := g.invMan.UpdateInvoice(context.WithValue(ctx, types.GatewayCallback, true), invoice.Invoice, false); err != nil {
 		return ps.NoNackErr(err)
 	}
 
@@ -238,14 +240,14 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error
 
 	body.Status = nil
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
-		if inv.Status == pb.BillingStatus_PAID && whmcsInv.Status != statusToWhmcs(pb.BillingStatus_PAID) {
+		if inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID)) {
 			paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
 			if err = g.PayInvoice(ctx, int(id.GetNumberValue()), paidWithBalance); err != nil {
 				return fmt.Errorf("failed to pay invoice: %w", err)
 			}
 		}
-		body.Status = ptr(statusToWhmcs(inv.Status))
 	}
+	body.Status = ptr(statusToWhmcs(inv.Status))
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 	tax := inv.GetTaxOptions().GetTaxRate() * 100

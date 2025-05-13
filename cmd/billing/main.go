@@ -19,6 +19,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"github.com/cskr/pubsub"
 	"github.com/rs/cors"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -259,11 +260,12 @@ func main() {
 	ps := nps.NewPubSub[*epb.Event](rbmq, log)
 	invoicesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, billingps.Topic("invoices"))
 	instancesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, services_registry.Topic("instances-commands"))
+	tps := pubsub.New(50)
 
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher, instancesPublisher)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps)
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 
@@ -271,6 +273,7 @@ func main() {
 	go server.ConsumeInvoiceStatusActions(log, ctx, ps, worker(workers))
 	go server.ConsumeCreatedInstances(log, ctx, ps, worker(workers))
 	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw, worker(workers))
+	go server.HandleStreaming(ctx, worker(workers))
 
 	log.Info("Check settings server")
 	if _, err = settingsClient.Get(ctx, &settingspb.GetRequest{}); err != nil {
