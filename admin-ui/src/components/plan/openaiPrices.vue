@@ -50,33 +50,6 @@
                   label="Full key"
                 ></v-text-field>
 
-                <v-row>
-                  <v-col cols="3">
-                    <v-text-field
-                      :value="newModel.split('|')[0]"
-                      outlined
-                      disabled
-                      label="Specification"
-                    ></v-text-field>
-                  </v-col>
-                  <v-col cols="3">
-                    <v-text-field
-                      :value="newModel.split('|')[1]"
-                      outlined
-                      disabled
-                      label="Key"
-                    ></v-text-field>
-                  </v-col>
-                  <v-col cols="3">
-                    <v-text-field
-                      :value="newModel.split('|')[2]"
-                      outlined
-                      disabled
-                      label="Type"
-                    ></v-text-field>
-                  </v-col>
-                </v-row>
-
                 <div class="d-flex justify-end">
                   <v-btn
                     color="primary"
@@ -84,7 +57,13 @@
                     @click="isAddNewModelOpen = false"
                     >Close</v-btn
                   >
-                  <v-btn color="primary" @click="addNewModelToNewResources"
+                  <v-btn
+                    color="primary"
+                    @click="addNewModelToNewResources"
+                    :disabled="
+                      newModel.length === 0 ||
+                      newPricesResources.find((r) => r.key === newModel)
+                    "
                     >Add</v-btn
                   >
                 </div>
@@ -116,14 +95,6 @@
 
             <template v-slot:[`item.key`]="{ item }">
               <v-text-field dense v-model="item.key" />
-            </template>
-
-            <template v-slot:[`item.specification`]="{ item }">
-              <v-text-field dense v-model="item.specification" />
-            </template>
-
-            <template v-slot:[`item.type`]="{ item }">
-              <v-text-field dense v-model="item.type" />
             </template>
           </nocloud-table>
         </div>
@@ -240,8 +211,6 @@ const oldPricesHeaders = [
 const newPricesHeaders = [
   { text: "Key", value: "key" },
   { text: "Title", value: "title" },
-  { text: "Specification", value: "specification" },
-  { text: "Type", value: "type" },
   {
     text: "Price",
     value: "price",
@@ -273,12 +242,8 @@ onMounted(() => {
       return;
     }
 
-    const [specification, key, type] = resource.key.split("|");
-
     newPricesResources.value.push({
-      specification,
-      key,
-      type,
+      key: resource.key,
       price: resource.price,
       title: resource.title,
     });
@@ -290,20 +255,13 @@ onMounted(() => {
 const newPricesResourcesFiltred = computed(() => {
   const param = searchParam.value.toLowerCase();
   return newPricesResources.value.filter(
-    (r) =>
-      r.title.includes(param) ||
-      r.key.includes(param) ||
-      r.specification.includes(param) ||
-      r.type.includes(param)
+    (r) => r.title.includes(param) || r.key.includes(param)
   );
 });
 
 const addNewModelToNewResources = () => {
-  const [specification, key, type] = newModel.value.split("|");
   newPricesResources.value.push({
-    specification: specification || "",
-    key: key || "",
-    type: type || "",
+    key: newModel.value,
     price: 0,
     title: newModel.value,
   });
@@ -314,12 +272,7 @@ const addNewModelToNewResources = () => {
 
 const deleteModelFromNewPrices = (item) => {
   newPricesResources.value = newPricesResources.value.filter(
-    (i) =>
-      !(
-        item.specification === i.specification &&
-        item.type === i.type &&
-        item.key === i.key
-      )
+    (i) => !(item.key === i.key)
   );
 };
 
@@ -349,22 +302,12 @@ const save = async () => {
     const newPricesResult = [];
 
     for (const value of newPricesResources.value) {
-      const key = [];
-      if (value.specification) {
-        key.push(value.specification);
-      }
-      if (value.key) {
-        key.push(value.key);
-      }
-      if (value.type) {
-        key.push(value.type);
-      }
       newPricesResult.push({
         kind: "POSTPAID",
         price: value.price,
         title: value.title,
         public: true,
-        key: key.length > 1 ? key.join("|") : key[0],
+        key: value.key,
       });
     }
 
