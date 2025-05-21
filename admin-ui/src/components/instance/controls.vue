@@ -443,6 +443,9 @@ export default {
   computed: {
     ...mapGetters("actions", ["isSendActionLoading"]),
     type() {
+      if (this.template.billingPlan.type === "ione-vpn") {
+        return "ione";
+      }
       return this.template.billingPlan.type;
     },
     baseVmControls() {
