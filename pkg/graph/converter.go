@@ -11,9 +11,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"strconv"
 )
 
 const CurrencyHeader = "NoCloud-Primary-Currency-Code"
+const PrecisionOverrideHeader = "NoCloud-Primary-Currency-Precision-Override"
 const PrimaryCurrencyCtxKey = ContextKey("nocloud-primary-currency")
 
 func CtxWithPrimaryCurrency(ctx context.Context, currCode string) context.Context {
@@ -37,6 +39,18 @@ type PricesConverter struct {
 	failed     bool
 }
 
+func GetPrecision(header http.Header, def int32) int32 {
+	overrideHeader := header.Get(PrecisionOverrideHeader)
+	if overrideHeader == "" {
+		return def
+	}
+	overridePrecision, err := strconv.Atoi(overrideHeader)
+	if err != nil {
+		return def
+	}
+	return int32(overridePrecision)
+}
+
 func ExplicitSetPrimaryCurrencyHeader(header http.Header, code string) {
 	header.Set(CurrencyHeader, code)
 }
@@ -49,7 +63,7 @@ func HandleConvertionError[T any](resp *connect.Response[T], conv PricesConverte
 }
 
 func NewConverter(header http.Header, curr CurrencyController) PricesConverter {
-	def := Currency{Id: schema.DEFAULT_CURRENCY_ID, Code: schema.DEFAULT_CURRENCY_NAME, Precision: 2, Rounding: bpb.Rounding_ROUND_HALF}
+	def := Currency{Id: schema.DEFAULT_CURRENCY_ID, Code: schema.DEFAULT_CURRENCY_NAME, Precision: GetPrecision(header, 2), Rounding: bpb.Rounding_ROUND_HALF}
 	code := header.Get(CurrencyHeader)
 	if code == "" || code == schema.DEFAULT_CURRENCY_NAME {
 		return PricesConverter{currencies: curr, target: def, rate: 1}
@@ -59,6 +73,7 @@ func NewConverter(header http.Header, curr CurrencyController) PricesConverter {
 	if err != nil {
 		return PricesConverter{currencies: curr, failed: true}
 	}
+	c.Precision = GetPrecision(header, c.Precision)
 	rate, _, err := curr.GetExchangeRate(ctx,
 		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME},
 		&bpb.Currency{Id: c.Id, Title: c.Title})
