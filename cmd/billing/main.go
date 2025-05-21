@@ -338,7 +338,7 @@ func main() {
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
 		AllowedHeaders: []string{"*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code", "NoCloud-Primary-Currency-Precision-Override",
-			"grpc-metadata-nocloud-primary-currency-precision-override"},
+			"grpc-metadata-nocloud-primary-currency-precision-override", "nocloud-primary-currency-precision-override"},
 		AllowCredentials:    true,
 		AllowPrivateNetwork: true,
 	}).Handler(h2c.NewHandler(router, &http2.Server{}))
