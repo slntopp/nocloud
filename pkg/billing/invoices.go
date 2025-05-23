@@ -677,6 +677,11 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
+	if slices.Contains([]pb.BillingStatus{pb.BillingStatus_CANCELED, pb.BillingStatus_TERMINATED,
+		pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_DRAFT}, inv.GetStatus()) {
+		return nil, status.Error(codes.InvalidArgument, "Can't pay this invoice. Try again later or contact support")
+	}
+
 	if inv.GetType() == pb.ActionType_BALANCE {
 		return nil, status.Error(codes.InvalidArgument, "Can't pay top-up balance invoice with balance")
 	}
@@ -759,6 +764,10 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	if err != nil {
 		log.Warn("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Invoice not found")
+	}
+
+	if slices.Contains([]string{"cancelled", "draft", "paid", "terminated"}, strings.ToLower(inv.Status)) {
+		return nil, status.Error(codes.InvalidArgument, "Can't pay this invoice. Try again later or contact support")
 	}
 
 	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
@@ -1171,6 +1180,11 @@ func (s *BillingServiceServer) Pay(ctx context.Context, _req *connect.Request[pb
 		if isRoot := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT); !isRoot {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
+	}
+
+	if slices.Contains([]pb.BillingStatus{pb.BillingStatus_CANCELED, pb.BillingStatus_TERMINATED,
+		pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_DRAFT}, inv.GetStatus()) {
+		return nil, status.Error(codes.InvalidArgument, "Can't pay this invoice. Try again later or contact support")
 	}
 
 	acc, err := s.accounts.Get(ctx, inv.Account)

@@ -811,7 +811,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 
 		for planIndex := range plans {
 			plan := plans[planIndex]
-			graph.ConvertPlan(plan, rate, cur.Precision, cur.Rounding)
+			graph.ConvertPlan(plan, rate, graph.GetPrecision(r.Header(), cur.Precision), cur.Rounding)
 		}
 
 		resp := connect.NewResponse(&pb.ListResponse{Pool: plans, Total: uint64(count)})
