@@ -292,16 +292,18 @@ func main() {
 
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 	handler := cors.New(cors.Options{
-		AllowedOrigins:   corsAllowed,
-		AllowedHeaders:   []string{"Content-Type", "Authorization", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
+		AllowedOrigins: corsAllowed,
+		AllowedHeaders: []string{"*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code", "NoCloud-Primary-Currency-Precision-Override",
+			"grpc-metadata-nocloud-primary-currency-precision-override", "nocloud-primary-currency-precision-override"},
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
 		AllowCredentials: true,
 	}).Handler(gwmux)
 
 	// AdminUI Handler
 	ui_handler := cors.New(cors.Options{
-		AllowedOrigins:   corsAllowed,
-		AllowedHeaders:   []string{"Content-Type", "Authorization", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
+		AllowedOrigins: corsAllowed,
+		AllowedHeaders: []string{"*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code", "NoCloud-Primary-Currency-Precision-Override",
+			"grpc-metadata-nocloud-primary-currency-precision-override", "nocloud-primary-currency-precision-override"},
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
 		AllowCredentials: true,
 	}).Handler(AdminUIHandler())
