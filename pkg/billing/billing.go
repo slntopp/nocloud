@@ -531,7 +531,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, req *connect.Requ
 
 func (s *BillingServiceServer) GetPlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
 	log := s.log.Named("GetPlan")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestor, _ := ctx.Value(nocloud.NoCloudAccount).(string)
 	plan := req.Msg
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
