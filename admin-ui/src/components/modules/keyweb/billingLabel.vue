@@ -3,7 +3,7 @@
     :due-date="dueDate"
     :tariff-price="instancePrice"
     :template="template"
-    :addons-price="{}"
+    :addons-price="addonsPrices"
     :account="account"
     @update="emit('update', $event)"
   />
@@ -24,6 +24,22 @@ const dueDate = computed(() => {
 });
 
 const instancePrice = computed(() => props.template.estimate);
+
+const addonsPrices = ref({});
+
+onMounted(() => {
+  const prices = {};
+
+  addons.value.forEach(
+    (a) =>
+      (prices[a.title] =
+        a.periods[
+          template.value.billingPlan.products[template.value.product]?.period
+        ])
+  );
+
+  addonsPrices.value = prices;
+});
 </script>
 
 <style scoped></style>
