@@ -33,7 +33,7 @@
         <confirm-dialog
           title="Do you want to renew server?"
           :text="renewTemplate"
-          :disabled="isDeleted"
+          :disabled="isDeleted || isRenewDisabled"
           :width="500"
           :success-disabled="isRenewDisabled"
           @confirm="sendRenew"
@@ -144,9 +144,11 @@ function sendRenew() {
     });
 }
 
-const addonsTemplate = Object.entries(addonsPrice.value).map(
-  ([key, value]) =>
-    `<li>${key}: ${(value || 0).toFixed(2)} ${currency.value?.code}</li>`
+const addonsTemplate = computed(() =>
+  Object.entries(addonsPrice.value).map(
+    ([key, value]) =>
+      `<li>${key}: ${(value || 0).toFixed(2)} ${currency.value?.code}</li>`
+  )
 );
 
 const isLoading = computed(() => store.getters["actions/isSendActionLoading"]);
@@ -165,7 +167,7 @@ const renewTemplate = computed(() =>
           <div>
             <span style="font-weight: 700">Addons prices:</span>
             <ul style="list-style: '-  '; padding-left: 25px; margin-bottom: 5px">
-              ${addonsTemplate.join("")}
+              ${addonsTemplate.value.join("")}
             </ul>
           </div>
         `

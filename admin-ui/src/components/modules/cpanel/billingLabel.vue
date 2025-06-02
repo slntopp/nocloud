@@ -27,7 +27,7 @@ onMounted(() => {
 
   addons.value.forEach(
     (a) =>
-      (prices[a.uuid] =
+      (prices[a.title] =
         a.periods[
           template.value.billingPlan.products[template.value.product]?.period
         ])
