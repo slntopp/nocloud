@@ -581,7 +581,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 	nowBeforeActions := time.Now().Unix()
-	if newStatus == pb.BillingStatus_PAID {
+	if newStatus == pb.BillingStatus_PAID && s.syncCreatedDate {
 		newInv.Created = nowBeforeActions
 	}
 	newInv.Status = newStatus

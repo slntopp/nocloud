@@ -118,6 +118,8 @@ type BillingServiceServer struct {
 	ps                  *ps.PubSub[*epb.Event]
 
 	topicsPs *pubsub.PubSub
+
+	syncCreatedDate bool
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
@@ -125,7 +127,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub, syncCreatedDate bool) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:                conn,
@@ -191,6 +193,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 				Status:  healthpb.Status_STOPPED,
 			},
 		},
+		syncCreatedDate: syncCreatedDate,
 	}
 
 	s.migrate()
