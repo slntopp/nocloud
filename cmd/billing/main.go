@@ -83,7 +83,8 @@ var (
 
 	dailyCronTime string
 
-	whmcsPricesTaxExcluded bool
+	whmcsPricesTaxExcluded   bool
+	syncCreatedDateOnPayment bool
 )
 
 func init() {
@@ -110,6 +111,7 @@ func init() {
 	viper.SetDefault("DAILY_CRON_TIME", "08:00")
 
 	viper.SetDefault("WHMCS_PRICES_TAX_EXCLUDED", true)
+	viper.SetDefault("SYNC_CREATED_DATE_ON_PAYMENT", false)
 
 	port = viper.GetString("PORT")
 
@@ -134,6 +136,7 @@ func init() {
 	dailyCronTime = viper.GetString("DAILY_CRON_TIME")
 
 	whmcsPricesTaxExcluded = viper.GetBool("WHMCS_PRICES_TAX_EXCLUDED")
+	syncCreatedDateOnPayment = viper.GetBool("SYNC_CREATED_DATE_ON_PAYMENT")
 }
 
 func main() {
@@ -265,7 +268,7 @@ func main() {
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 
