@@ -18,7 +18,7 @@ import { formatSecondsToDate } from "@/functions";
 const props = defineProps(["template", "account"]);
 const emit = defineEmits(["update"]);
 
-const { template, account } = toRefs(props);
+const { template, account, addons } = toRefs(props);
 
 const tariffPrice = ref(
   template.value.billingPlan.products[template.value.product]?.price ?? 0
