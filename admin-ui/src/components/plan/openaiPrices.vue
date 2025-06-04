@@ -71,6 +71,10 @@
               <v-switch dense v-model="item.disabled" />
             </template>
 
+            <template v-slot:[`item.key`]="{ item }">
+              {{ getShortName(item.key) }}
+            </template>
+
             <template v-slot:[`item.visibility`]="{ item }">
               <v-select
                 dense
@@ -86,7 +90,7 @@
             </template>
 
             <template v-slot:[`item.types`]="{ item }">
-              <span v-if="item.types.length">{{ item.types?.join(", ") }}</span>
+              <span v-if="item.types?.length">{{ item.types?.join(", ") }}</span>
               <span v-else>None</span>
             </template>
 
@@ -300,7 +304,7 @@ import planAddonsTable from "@/components/planAddonsTable.vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
-import { getMarginedValue } from "@/functions";
+import { getMarginedValue, getShortName } from "@/functions";
 import confirmDialog from "@/components/confirmDialog.vue";
 
 const props = defineProps(["template"]);
@@ -395,6 +399,7 @@ const oldPricesHeaders = [
 ];
 
 const newPricesHeaders = [
+  { text: "Key", value: "key", width: 150 },
   { text: "Name", value: "name" },
   { text: "Provider", value: "provider", width: 100 },
   { text: "Types", value: "types", sortable: false },
