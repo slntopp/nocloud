@@ -90,7 +90,16 @@
             </template>
 
             <template v-slot:[`item.types`]="{ item }">
-              <span v-if="item.types?.length">{{ item.types?.join(", ") }}</span>
+              <template v-if="item.types?.length">
+                <v-chip
+                  v-for="type in item.types"
+                  :key="type"
+                  class="ml-1"
+                  small
+                  dense
+                  >{{ type }}</v-chip
+                >
+              </template>
               <span v-else>None</span>
             </template>
 
@@ -128,6 +137,7 @@
               <v-card-title>{{ currentBillingSettings.name }} </v-card-title>
               <v-select
                 outlined
+                chips
                 label="Types"
                 :items="availableTypes"
                 multiple
