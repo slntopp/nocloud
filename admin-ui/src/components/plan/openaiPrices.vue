@@ -97,6 +97,7 @@
                   class="ml-1"
                   small
                   dense
+                  :color="typesColorMap[type]"
                   >{{ type }}</v-chip
                 >
               </template>
@@ -451,6 +452,12 @@ const newSubkeysForMaps = ref({});
 const currentSerial = ref();
 
 const availableTypes = ["text", "text_to_audio", "audio_to_text", "image"];
+const typesColorMap = {
+  text: "indigo darken-4",
+  text_to_audio: "purple",
+  audio_to_text: "pink darken-4",
+  image: "red darken-4",
+};
 
 const fieldsForTypes = {
   text: {
