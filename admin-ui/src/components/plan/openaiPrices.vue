@@ -95,6 +95,7 @@
                   v-for="type in item.types"
                   :key="type"
                   class="ml-1"
+                  style="color: white"
                   small
                   dense
                   :color="typesColorMap[type]"
@@ -111,6 +112,7 @@
                     dense
                     v-bind="attrs"
                     v-on="on"
+                    style="color: white"
                     :color="item.state?.state === 'broken' ? 'red' : 'green'"
                     >{{ item.state?.state }}</v-chip
                   >
@@ -135,7 +137,9 @@
               color="background-light"
               style="min-height: 60vh"
             >
-              <v-card-title>{{ currentBillingSettings.name }} </v-card-title>
+              <v-card-title class="key_title"
+                >{{ currentBillingSettings.name }}
+              </v-card-title>
               <v-select
                 outlined
                 chips
@@ -147,7 +151,9 @@
 
               <v-row v-for="key in Object.keys(fieldsForAdd)" :key="key">
                 <v-col cols="12">
-                  <v-card-title style="padding: 0px">{{ key }}</v-card-title>
+                  <v-card-title class="key_title" style="padding: 0px">{{
+                    keyLabelMap[key]
+                  }}</v-card-title>
                 </v-col>
                 <v-col cols="12">
                   <v-row
@@ -459,6 +465,13 @@ const typesColorMap = {
   image: "red darken-4",
 };
 
+const keyLabelMap = {
+  tokens: "Tokens",
+  other: "Other",
+  media_duration: "Media",
+  images: "Images",
+};
+
 const fieldsForTypes = {
   text: {
     type: "default",
@@ -612,6 +625,9 @@ const fieldsForAdd = computed(() => {
 
 const openBillingSettings = (item) => {
   const temp = JSON.parse(JSON.stringify(item));
+  if (!temp.types) {
+    temp.types = [];
+  }
 
   for (const type of Object.keys(fieldsForTypes)) {
     for (const fields of fieldsForTypes[type].fields) {
@@ -826,6 +842,7 @@ const save = async () => {
 watch(isBillingSettingsOpen, (value) => {
   if (!value) {
     currentBillingSettings.value = {};
+    billingSettinfsMessages.value = [];
   }
 });
 </script>
@@ -833,5 +850,8 @@ watch(isBillingSettingsOpen, (value) => {
 <style scoped>
 .key_text {
   font-size: 1rem;
+}
+.key_title {
+  font-size: 1.4em;
 }
 </style>
