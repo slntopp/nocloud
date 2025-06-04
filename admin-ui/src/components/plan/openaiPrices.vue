@@ -71,6 +71,10 @@
               <v-switch dense v-model="item.disabled" />
             </template>
 
+            <template v-slot:[`item.key`]="{ item }">
+              {{ getShortName(item.key) }}
+            </template>
+
             <template v-slot:[`item.visibility`]="{ item }">
               <v-select
                 dense
@@ -86,7 +90,17 @@
             </template>
 
             <template v-slot:[`item.types`]="{ item }">
-              <span v-if="item.types.length">{{ item.types?.join(", ") }}</span>
+              <template v-if="item.types?.length">
+                <v-chip
+                  v-for="type in item.types"
+                  :key="type"
+                  class="ml-1"
+                  small
+                  dense
+                  :color="typesColorMap[type]"
+                  >{{ type }}</v-chip
+                >
+              </template>
               <span v-else>None</span>
             </template>
 
@@ -124,136 +138,152 @@
               <v-card-title>{{ currentBillingSettings.name }} </v-card-title>
               <v-select
                 outlined
+                chips
                 label="Types"
                 :items="availableTypes"
                 multiple
                 v-model="currentBillingSettings.types"
               />
 
-              <v-row align="center">
-                <template v-for="field in fieldsForAdd">
-                  <template v-if="field.type === 'number'">
-                    <v-col cols="2" :key="field.subkey">
-                      <span class="key_text">{{ field.subkey }}</span>
-                    </v-col>
+              <v-row v-for="key in Object.keys(fieldsForAdd)" :key="key">
+                <v-col cols="12">
+                  <v-card-title style="padding: 0px">{{ key }}</v-card-title>
+                </v-col>
+                <v-col cols="12">
+                  <v-row
+                    align="center"
+                    v-for="field in fieldsForAdd[key]"
+                    :key="field.key"
+                  >
+                    <template v-if="field.type === 'number'">
+                      <v-col cols="2" :key="field.subkey">
+                        <span class="key_text">{{ field.subkey }}</span>
+                      </v-col>
 
-                    <v-col
-                      v-for="{ key: priceKey, label: priceLabel } in priceKeys"
-                      cols="5"
-                      :key="`${field.subkey}-${priceKey}`"
-                    >
-                      <v-text-field
-                        hide-details
-                        dense
-                        outlined
-                        type="number"
-                        :label="priceLabel"
-                        :value="
-                          currentBillingSettings.billing[field.key][
-                            [field.subkey]
-                          ].price[priceKey]
-                        "
-                        @input="
-                          currentBillingSettings.billing[field.key][
-                            [field.subkey]
-                          ].price[priceKey] = +$event
-                        "
-                      />
-                    </v-col>
-                  </template>
-                  <v-col v-else :key="field.subkey" cols="12">
-                    <div>
-                      <v-card-title>Table for {{ field.subkey }}</v-card-title>
-                      <template
-                        v-for="key in Object.keys(
-                          currentBillingSettings.billing[field.key][
-                            [field.subkey]
-                          ]
-                        )"
+                      <v-col
+                        v-for="{
+                          key: priceKey,
+                          label: priceLabel,
+                        } in priceKeys"
+                        cols="5"
+                        :key="`${field.subkey}-${priceKey}`"
                       >
-                        <v-row
-                          v-for="subkey in Object.keys(
+                        <v-text-field
+                          hide-details
+                          dense
+                          outlined
+                          type="number"
+                          :label="priceLabel"
+                          :value="
                             currentBillingSettings.billing[field.key][
                               [field.subkey]
-                            ][key]
-                          )"
-                          :key="`${key}-${subkey}`"
+                            ].price[priceKey]
+                          "
+                          @input="
+                            currentBillingSettings.billing[field.key][
+                              [field.subkey]
+                            ].price[priceKey] = +$event
+                          "
+                        />
+                      </v-col>
+                    </template>
+                    <v-col v-else :key="field.subkey" cols="12">
+                      <div>
+                        <span class="key_text"
+                          >Table for {{ field.subkey }}</span
                         >
-                          <v-col
-                            cols="2"
-                            class="d-flex justify-start align-center"
-                            ><span class="key_text"
-                              >{{ key }} {{ subkey }}</span
-                            >
-
-                            <v-btn icon @click="deleteFromMap(field, key)"
-                              ><v-icon>mdi-delete</v-icon></v-btn
-                            >
-                          </v-col>
-                          <v-col
-                            cols="5"
-                            v-for="{
-                              key: priceKey,
-                              label: priceLabel,
-                            } in priceKeys"
-                            :key="`${field.subkey}-${priceKey}`"
+                        <template
+                          v-for="key in Object.keys(
+                            currentBillingSettings.billing[field.key][
+                              [field.subkey]
+                            ]
+                          )"
+                        >
+                          <v-row
+                            v-for="subkey in Object.keys(
+                              currentBillingSettings.billing[field.key][
+                                [field.subkey]
+                              ][key]
+                            )"
+                            :key="`${key}-${subkey}`"
                           >
+                            <v-col
+                              cols="2"
+                              class="d-flex justify-start align-center"
+                              ><span class="key_text"
+                                >{{ key }} {{ subkey }}</span
+                              >
+
+                              <v-btn icon @click="deleteFromMap(field, key)"
+                                ><v-icon>mdi-delete</v-icon></v-btn
+                              >
+                            </v-col>
+                            <v-col
+                              cols="5"
+                              v-for="{
+                                key: priceKey,
+                                label: priceLabel,
+                              } in priceKeys"
+                              :key="`${field.subkey}-${priceKey}`"
+                            >
+                              <v-text-field
+                                dense
+                                outlined
+                                type="number"
+                                :label="priceLabel"
+                                :value="
+                                  currentBillingSettings.billing[field.key][
+                                    [field.subkey]
+                                  ][key][subkey][priceKey]
+                                "
+                                hide-details
+                                @input="
+                                  currentBillingSettings.billing[field.key][
+                                    [field.subkey]
+                                  ][key][subkey][priceKey] = +$event
+                                "
+                              />
+                            </v-col>
+                          </v-row>
+                        </template>
+
+                        <v-row justify="end">
+                          <v-col cols="3">
                             <v-text-field
                               dense
                               outlined
-                              type="number"
-                              :label="priceLabel"
-                              :value="
-                                currentBillingSettings.billing[field.key][
-                                  [field.subkey]
-                                ][key][subkey][priceKey]
-                              "
                               hide-details
-                              @input="
-                                currentBillingSettings.billing[field.key][
-                                  [field.subkey]
-                                ][key][subkey][priceKey] = +$event
-                              "
+                              label="New key"
+                              v-model="newKeysForMaps[field.subkey]"
                             />
                           </v-col>
+                          <v-col cols="3">
+                            <v-text-field
+                              dense
+                              outlined
+                              hide-details
+                              label="New subkey"
+                              v-model="newSubkeysForMaps[field.subkey]"
+                            />
+                          </v-col>
+                          <v-col cols="2">
+                            <v-btn
+                              :disabled="
+                                !newKeysForMaps[field.subkey] ||
+                                !newSubkeysForMaps[field.subkey] ||
+                                isSaveModelLoading
+                              "
+                              @click="addToMap(field)"
+                              >Add new value</v-btn
+                            >
+                          </v-col>
                         </v-row>
-                      </template>
-
-                      <v-row justify="end">
-                        <v-col cols="3">
-                          <v-text-field
-                            dense
-                            outlined
-                            hide-details
-                            label="New key"
-                            v-model="newKeysForMaps[field.subkey]"
-                          />
-                        </v-col>
-                        <v-col cols="3">
-                          <v-text-field
-                            dense
-                            outlined
-                            hide-details
-                            label="New subkey"
-                            v-model="newSubkeysForMaps[field.subkey]"
-                          />
-                        </v-col>
-                        <v-col cols="2">
-                          <v-btn
-                            :disabled="
-                              !newKeysForMaps[field.subkey] ||
-                              !newSubkeysForMaps[field.subkey] ||
-                              isSaveModelLoading
-                            "
-                            @click="addToMap(field)"
-                            >Add new value</v-btn
-                          >
-                        </v-col>
-                      </v-row>
-                    </div>
-                  </v-col>
-                </template>
+                      </div>
+                    </v-col>
+                  </v-row>
+                </v-col>
               </v-row>
+
               <div
                 class="d-flex justify-center align-center mt-2 mb-2"
                 v-if="billingSettinfsMessages.length"
@@ -300,7 +330,7 @@ import planAddonsTable from "@/components/planAddonsTable.vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
-import { getMarginedValue } from "@/functions";
+import { getMarginedValue, getShortName } from "@/functions";
 import confirmDialog from "@/components/confirmDialog.vue";
 
 const props = defineProps(["template"]);
@@ -395,6 +425,7 @@ const oldPricesHeaders = [
 ];
 
 const newPricesHeaders = [
+  { text: "Key", value: "key", width: 150 },
   { text: "Name", value: "name" },
   { text: "Provider", value: "provider", width: 100 },
   { text: "Types", value: "types", sortable: false },
@@ -421,6 +452,12 @@ const newSubkeysForMaps = ref({});
 const currentSerial = ref();
 
 const availableTypes = ["text", "text_to_audio", "audio_to_text", "image"];
+const typesColorMap = {
+  text: "indigo darken-4",
+  text_to_audio: "purple",
+  audio_to_text: "pink darken-4",
+  image: "red darken-4",
+};
 
 const fieldsForTypes = {
   text: {
@@ -561,7 +598,16 @@ const fieldsForAdd = computed(() => {
 
   result.sort((a) => (a.type === "number" ? -1 : 1));
 
-  return result;
+  const resultByTypes = result.reduce((acc, v) => {
+    if (!acc[v.key]) {
+      acc[v.key] = [];
+    }
+    acc[v.key].push(v);
+    acc[v.key].sort((a, b) => a.subkey.localeCompare(b.subkey));
+    return acc;
+  }, {});
+
+  return resultByTypes;
 });
 
 const openBillingSettings = (item) => {
