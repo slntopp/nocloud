@@ -477,45 +477,6 @@ const keyLabelMap = {
   images: "Images",
 };
 
-const fieldsForTypes = {
-  text: {
-    type: "default",
-    fields: [{ "tokens.text_output": "number", "tokens.text_input": "number" }],
-  },
-  text_to_audio: {
-    type: "default",
-    fields: [
-      {
-        "tokens.text_output": "number",
-        "tokens.text_input": "number",
-        "media_duration.duration_price": "number",
-        "other.sampling_step_price": "number",
-        "other.characters_price": "number",
-      },
-    ],
-  },
-  audio_to_text: {
-    type: "default",
-    fields: [
-      {
-        "tokens.text_output": "number",
-        "tokens.text_input": "number",
-        "media_duration.duration_price": "number",
-      },
-    ],
-  },
-  image: {
-    type: "variant",
-    fields: [
-      { "images.res_to_quality": "map-map-number" },
-      {
-        "tokens.text_input": "number",
-        "tokens.image_input": "number",
-        "tokens.image_output": "number",
-      },
-    ],
-  },
-};
 
 onMounted(async () => {
   oldPricesResources.value = oldPricesResources.value.map((resource) => {
@@ -540,6 +501,8 @@ onMounted(async () => {
   }
   addons.value = template.value.addons;
 });
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const changeFee = (value) => {
   fee.value = JSON.parse(JSON.stringify(value));
@@ -658,7 +621,7 @@ const openBillingSettings = (item) => {
           temp.billing[key][subkey].price = {
             amount: 0,
             raw_amount: 0,
-            currency: "USD",
+            currency: defaultCurrency.value.code,
           };
         }
       }
@@ -775,7 +738,7 @@ const addToMap = (field) => {
   ][newSubkeysForMaps.value[field.subkey]] = {
     amount: 0,
     raw_amount: 0,
-    currency: "USD",
+    currency: defaultCurrency.value.code,
   };
 
   currentBillingSettings.value.billing[field.key][field.subkey] = {
