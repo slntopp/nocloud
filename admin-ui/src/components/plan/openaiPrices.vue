@@ -21,7 +21,6 @@
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
-
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
@@ -57,6 +56,9 @@
               v-model="searchParam"
               label="Search"
             ></v-text-field>
+            <v-btn :loading="isFillLoading" @click="fillConfig"
+              >Fill config</v-btn
+            >
           </div>
           <nocloud-table
             :headers="newPricesHeaders"
@@ -113,6 +115,7 @@
                     v-bind="attrs"
                     v-on="on"
                     style="color: white"
+                    y
                     :color="item.state?.state === 'broken' ? 'red' : 'green'"
                     >{{ item.state?.state }}</v-chip
                   >
@@ -346,6 +349,8 @@ const store = useStore();
 
 const tabs = ref(["Prices", "Old prices", "Addons"]);
 const tabsIndex = ref(0);
+
+const isFillLoading = ref(false);
 
 const isValid = ref(false);
 const fee = ref(template.value.fee || {});
@@ -783,6 +788,25 @@ const deleteFromMap = (field, key) => {
   currentBillingSettings.value.billing[field.key][field.subkey] = {
     ...currentBillingSettings.value.billing[field.key][field.subkey],
   };
+};
+
+const fillConfig = async () => {
+  try {
+    isFillLoading.value = true;
+
+    await api.post("/api/openai/fill_config", {});
+
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Fill config success",
+    });
+    store.dispatch("reloadBtn/onclick");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during fill config",
+    });
+  } finally {
+    isFillLoading.value = false;
+  }
 };
 
 const save = async () => {
