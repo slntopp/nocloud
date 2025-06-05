@@ -589,7 +589,11 @@ const setFee = () => {
 const newPricesResourcesFiltred = computed(() => {
   const param = searchParam.value.toLowerCase();
   return newPricesResources.value.filter(
-    (r) => r.name.includes(param) || r.key.includes(param)
+    (r) =>
+      r.name.includes(param) ||
+      r.key.includes(param) ||
+      (r?.types || []).includes(param) ||
+      r.provider === param
   );
 });
 
