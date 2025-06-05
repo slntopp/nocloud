@@ -850,7 +850,12 @@ const save = async () => {
       ...props.template,
       products: {},
       addons: addons.value,
-      resources: [...oldPricesResult],
+      resources: [
+        ...template.value.resources.filter(
+          (r) => oldPricesResult.findIndex((old) => old.key === r.key) === -1
+        ),
+        ...oldPricesResult,
+      ],
       fee: fee.value,
     });
 
