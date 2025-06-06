@@ -309,6 +309,12 @@ func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to
 		from.Id = curr.Id
 		curr, _ = c.GetByCode(ctx, to.Code)
 		to.Id = curr.Id
+		to.Precision = curr.Precision
+		to.Rounding = curr.Rounding
+	} else {
+		curr, _ := c.Get(ctx, to.Id)
+		to.Precision = curr.Precision
+		to.Rounding = curr.Rounding
 	}
 	if from.GetId() == to.GetId() {
 		return amount, nil
@@ -319,7 +325,7 @@ func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to
 		return 0, status.Error(codes.NotFound, err.Error())
 	}
 
-	return amount * rate, nil
+	return Round(amount*rate, to.Precision, to.Rounding), nil
 }
 
 func (c *сurrencyController) ConvertMany(ctx context.Context, from *pb.Currency, to *pb.Currency, amounts []float64) ([]float64, error) {
@@ -330,6 +336,12 @@ func (c *сurrencyController) ConvertMany(ctx context.Context, from *pb.Currency
 		from.Id = curr.Id
 		curr, _ = c.GetByCode(ctx, to.Code)
 		to.Id = curr.Id
+		to.Precision = curr.Precision
+		to.Rounding = curr.Rounding
+	} else {
+		curr, _ := c.Get(ctx, to.Id)
+		to.Precision = curr.Precision
+		to.Rounding = curr.Rounding
 	}
 	if from.GetId() == to.GetId() {
 		return amounts, nil
@@ -341,7 +353,7 @@ func (c *сurrencyController) ConvertMany(ctx context.Context, from *pb.Currency
 	}
 
 	for i, v := range amounts {
-		results[i] = v * rate
+		results[i] = Round(v*rate, to.Precision, to.Rounding)
 	}
 
 	return results, nil
