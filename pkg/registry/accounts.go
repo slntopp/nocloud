@@ -233,8 +233,8 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 	}
 	data := dataVal.AsMap()
 	accountEmail, _ := data["email"].(string)
-	accountPhone, _ := data["phone"].(string)
-	accountPhone = "375" + accountPhone
+	phone, hasPhone := acc.GetPhone()
+	accountPhone := phone.CountryCode + phone.Number
 	log.Debug("Account's phone and email", zap.String("phone", accountPhone), zap.String("email", accountEmail))
 
 	var vData VerificationData
@@ -254,6 +254,10 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 
 	now := time.Now().Unix()
 	if req.Type == pb.VerificationType_PHONE {
+
+		if !hasPhone {
+			return nil, fmt.Errorf("phone not found or invalid")
+		}
 
 		if req.Action == pb.VerificationAction_BEGIN {
 
