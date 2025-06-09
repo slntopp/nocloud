@@ -204,6 +204,43 @@ func parseDevices(content string) ([]Record, error) {
 	return records, nil
 }
 
+// TODO: Events when phone changed or verified
+
+func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb.ChangePhoneRequest) (*accountspb.ChangePhoneResponse, error) {
+	log := s.log.Named("ChangePhone")
+
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("requester", requester))
+	log = log.With(zap.String("account", requester))
+	log.Debug("ChangePhone request received", zap.Any("request", req))
+
+	acc, err := s.ctrl.Get(ctx, requester)
+	if err != nil {
+		log.Error("error obtaining account", zap.Error(err))
+		return nil, err
+	}
+	if req.NewPhone == nil {
+		return nil, fmt.Errorf("no phone provided")
+	}
+	if req.NewPhone.Number == "" || req.NewPhone.CountryCode == "" {
+		return nil, fmt.Errorf("invalid phone or country code")
+	}
+	old, _ := acc.GetPhone()
+	if old.CountryCode == req.NewPhone.CountryCode && old.Number == req.NewPhone.Number {
+		return nil, fmt.Errorf("can't change to existing phone number")
+	}
+	acc.SetPhone(graph.Phone{CountryCode: req.NewPhone.CountryCode, Number: req.NewPhone.Number})
+	if err = s.ctrl.Update(ctx, acc, map[string]interface{}{
+		"is_phone_verified": false,
+		"data":              acc.Data,
+	}); err != nil {
+		log.Error("Failed to update account's phone", zap.Error(err))
+		return nil, fmt.Errorf("failed to change phone. Internal error")
+	}
+
+	return &accountspb.ChangePhoneResponse{Result: true}, nil
+}
+
 func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.VerificationRequest) (*pb.VerificationResponse, error) {
 	log := s.log.Named("Verify")
 
