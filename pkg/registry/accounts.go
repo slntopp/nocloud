@@ -238,6 +238,19 @@ func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb
 		return nil, fmt.Errorf("failed to change phone. Internal error")
 	}
 
+	nocloud.Log(log, &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.GetUuid(),
+		Scope:     "database",
+		Action:    "phone_changed",
+		Rc:        0,
+		Requestor: requester,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	})
+
 	return &accountspb.ChangePhoneResponse{Result: true}, nil
 }
 
@@ -385,6 +398,18 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				log.Error("Failed to update account", zap.Error(err))
 				return nil, fmt.Errorf("internal error")
 			}
+			nocloud.Log(log, &elpb.Event{
+				Entity:    schema.ACCOUNTS_COL,
+				Uuid:      acc.GetUuid(),
+				Scope:     "database",
+				Action:    "phone_verified",
+				Rc:        0,
+				Requestor: requester,
+				Ts:        time.Now().Unix(),
+				Snapshot: &elpb.Snapshot{
+					Diff: "",
+				},
+			})
 			log.Info("Phone was successfully verified")
 		}
 	} else if req.Type == pb.VerificationType_EMAIL {
