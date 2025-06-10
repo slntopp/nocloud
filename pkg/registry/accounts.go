@@ -122,6 +122,14 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 	}
 }
 
+func ContainsOnlyDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	isNotDigit := func(c rune) bool { return c < '0' || c > '9' }
+	return !strings.ContainsFunc(s, isNotDigit)
+}
+
 const getOwnServices = `
 FOR node, edge, path IN 2 OUTBOUND @account
 	GRAPH @permissions
@@ -220,7 +228,7 @@ func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb
 	if req.NewPhone == nil {
 		return nil, fmt.Errorf("no phone provided")
 	}
-	if req.NewPhone.Number == "" || req.NewPhone.CountryCode == "" {
+	if req.NewPhone.Number == "" || req.NewPhone.CountryCode == "" || !ContainsOnlyDigits(req.NewPhone.CountryCode+req.NewPhone.Number) {
 		return nil, fmt.Errorf("invalid phone or country code")
 	}
 	old, _ := acc.GetPhone()
@@ -303,7 +311,7 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 	now := time.Now().Unix()
 	if req.Type == pb.VerificationType_PHONE {
 
-		if !hasPhone {
+		if !hasPhone || phone.Number == "" || phone.CountryCode == "" || !ContainsOnlyDigits(accountPhone) {
 			return nil, fmt.Errorf("phone not found or invalid")
 		}
 
@@ -336,50 +344,44 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				return nil, fmt.Errorf("internal error")
 			}
 
-			if s.asteriskConn != nil {
+			resp, err := s.asteriskConn.RunCommand(`sudo /usr/sbin/asterisk -rx "dongle show devices"`)
+			if err != nil {
+				log.Error("failed to get available devices", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+			log.Debug("Show devices response", zap.String("response", resp))
+			devices, err := parseDevices(resp)
+			if err != nil {
+				log.Error("failed to obtain available devices")
+				return nil, fmt.Errorf("internal error")
+			}
+			log.Debug("Parsed devices", zap.Any("devices", devices))
+			var available string
+			for _, device := range devices {
+				if device.State == "free" {
+					available = device.ID
+					break
+				}
+			}
+			if available == "" {
+				log.Error("No available device")
+				return nil, fmt.Errorf("couldn't perform your request at the moment. Try again later")
+			}
+			log.Debug("Chosen Asterisk device", zap.String("device", available))
 
-				resp, err := s.asteriskConn.RunCommand(`sudo /usr/sbin/asterisk -rx "dongle show devices"`)
-				if err != nil {
-					log.Error("failed to get available devices", zap.Error(err))
-					return nil, fmt.Errorf("internal error")
-				}
-				log.Debug("Show devices response", zap.String("response", resp))
-				devices, err := parseDevices(resp)
-				if err != nil {
-					log.Error("failed to obtain available devices")
-					return nil, fmt.Errorf("internal error")
-				}
-				log.Debug("Parsed devices", zap.Any("devices", devices))
-				var available string
-				for _, device := range devices {
-					if device.State == "free" {
-						available = device.ID
-						break
-					}
-				}
-				if available == "" {
-					log.Error("No available device")
-					return nil, fmt.Errorf("couldn't perform your request at the moment. Try again later")
-				}
-				log.Debug("Chosen Asterisk device", zap.String("device", available))
+			to := accountPhone
+			smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
+			command := fmt.Sprintf(`sudo /usr/sbin/asterisk -rx 'dongle sms %s %s %s'`, available, to, smsBody)
+			resp, err = s.asteriskConn.RunCommand(command)
+			if err != nil {
+				log.Error("failed to send sms", zap.Error(err), zap.Any("response", resp))
+				return nil, fmt.Errorf("internal error")
+			}
+			log.Debug("Send SMS response", zap.Any("response", resp))
 
-				to := accountPhone
-				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
-				command := fmt.Sprintf(`sudo /usr/sbin/asterisk -rx 'dongle sms %s %s %s'`, available, to, smsBody)
-				resp, err = s.asteriskConn.RunCommand(command)
-				if err != nil {
-					log.Error("failed to send sms", zap.Error(err), zap.Any("response", resp))
-					return nil, fmt.Errorf("internal error")
-				}
-				log.Debug("Send SMS response", zap.Any("response", resp))
-
-				phoneData.Count++
-				if err = setRedis(s.rdb, fmt.Sprintf(phoneNumberRequestsCountKeyTemplate, strings.TrimPrefix(accountPhone, "+")), phoneData); err != nil {
-					log.Error("Failed to save phone's data", zap.Error(err))
-				}
-
-			} else {
-				log.Error("Cannot send SMS. AMI is not initialized")
+			phoneData.Count++
+			if err = setRedis(s.rdb, fmt.Sprintf(phoneNumberRequestsCountKeyTemplate, strings.TrimPrefix(accountPhone, "+")), phoneData); err != nil {
+				log.Error("Failed to save phone's data", zap.Error(err))
 			}
 
 		}
