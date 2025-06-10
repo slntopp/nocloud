@@ -204,8 +204,6 @@ func parseDevices(content string) ([]Record, error) {
 	return records, nil
 }
 
-// TODO: Events when phone changed or verified
-
 func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb.ChangePhoneRequest) (*accountspb.ChangePhoneResponse, error) {
 	log := s.log.Named("ChangePhone")
 
@@ -1038,10 +1036,12 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		patch["status"] = request.GetStatus()
 	}
 
+	var requestData map[string]any
 	if request.Data == nil {
 		log.Debug("Data patch is not present, skipping")
 		goto patch
 	}
+	requestData = request.Data.AsMap()
 
 	if len(request.Data.AsMap()) == 0 {
 		log.Debug("Data patch is empty, wiping data")
@@ -1049,8 +1049,10 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		goto patch
 	}
 
+	// Remove phone keys from request data
+	delete(requestData, "phone_new")
 	log.Debug("Merging data")
-	patch["data"] = MergeMaps(acc.Data.AsMap(), request.Data.AsMap())
+	patch["data"] = MergeMaps(acc.Data.AsMap(), requestData)
 
 patch:
 	if len(patch) == 0 {
