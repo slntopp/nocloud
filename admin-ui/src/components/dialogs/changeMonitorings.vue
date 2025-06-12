@@ -45,7 +45,7 @@
 import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
-import DatePicker from "@/components/ui/datePicker.vue";
+import DatePicker from "@/components/ui/dateTimePicker.vue";
 
 const props = defineProps(["template", "service", "value"]);
 const emit = defineEmits(["refresh", "input"]);
@@ -58,18 +58,18 @@ const isChangeAll = ref(true);
 const nextPaymentDates = ref({});
 const newAllDate = ref();
 
-function formatDate(timestamp) {
+function toDateTimeLocal(timestamp) {
   const date = new Date(timestamp * 1000);
 
-  const year = date.toUTCString().split(" ")[3];
-  let month = date.getUTCMonth() + 1;
-  let day = date.getUTCDate();
+  const pad = (n) => String(n).padStart(2, "0");
 
-  if (`${month}`.length < 2) month = `0${month}`;
-  if (`${day}`.length < 2) day = `0${day}`;
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
 
-  let result = `${year}-${month}-${day}`;
-  return result;
+  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }
 
 const setNextPaymentDate = () => {
@@ -83,7 +83,7 @@ const setNextPaymentDate = () => {
         .replace("_next_payment_date", "")
         .replace("next_payment_date", "product");
       let value = +data[key];
-      value = formatDate(value);
+      value = toDateTimeLocal(value);
       monitorings[key] = {
         value: value,
         firstValue: value,
