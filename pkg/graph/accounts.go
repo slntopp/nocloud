@@ -72,6 +72,11 @@ type accountsController struct {
 	log     *zap.Logger
 }
 
+type Phone struct {
+	Number      string `json:"phone_number"`
+	CountryCode string `json:"phone_cc"`
+}
+
 func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsController {
 	ctx := context.TODO()
 	log := logger.Named("AccountsController")
@@ -105,6 +110,40 @@ func (acc *Account) GetTaxRate() float64 {
 	data := _data.AsMap()
 	rate, _ := data["tax_rate"].(float64)
 	return rate
+}
+
+func (acc *Account) GetPhone() (Phone, bool) {
+	_data := acc.Data
+	if _data == nil {
+		return Phone{}, false
+	}
+	data := _data.AsMap()
+	phone, ok := data["phone_new"].(map[string]any)
+	if !ok {
+		return Phone{}, false
+	}
+	number, _ := phone["phone_number"].(string)
+	cc, _ := phone["phone_cc"].(string)
+	return Phone{
+		Number:      number,
+		CountryCode: cc,
+	}, true
+}
+
+func (acc *Account) SetPhone(phone Phone) {
+	var data map[string]any
+	_data := acc.Data
+	if _data == nil {
+		data = map[string]any{}
+	} else {
+		data = _data.AsMap()
+	}
+	data["phone_new"] = map[string]any{
+		"phone_number": phone.Number,
+		"phone_cc":     phone.CountryCode,
+	}
+	newData, _ := structpb.NewStruct(data)
+	acc.Data = newData
 }
 
 func (ctrl *accountsController) Get(ctx context.Context, id string) (Account, error) {

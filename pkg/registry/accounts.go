@@ -122,6 +122,14 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 	}
 }
 
+func ContainsOnlyDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	isNotDigit := func(c rune) bool { return c < '0' || c > '9' }
+	return !strings.ContainsFunc(s, isNotDigit)
+}
+
 const getOwnServices = `
 FOR node, edge, path IN 2 OUTBOUND @account
 	GRAPH @permissions
@@ -204,6 +212,54 @@ func parseDevices(content string) ([]Record, error) {
 	return records, nil
 }
 
+func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb.ChangePhoneRequest) (*accountspb.ChangePhoneResponse, error) {
+	log := s.log.Named("ChangePhone")
+
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("requester", requester))
+	log = log.With(zap.String("account", requester))
+	log.Debug("ChangePhone request received", zap.Any("request", req))
+
+	acc, err := s.ctrl.Get(ctx, requester)
+	if err != nil {
+		log.Error("error obtaining account", zap.Error(err))
+		return nil, err
+	}
+	if req.NewPhone == nil {
+		return nil, fmt.Errorf("no phone provided")
+	}
+	if req.NewPhone.Number == "" || req.NewPhone.CountryCode == "" || !ContainsOnlyDigits(req.NewPhone.CountryCode+req.NewPhone.Number) {
+		return nil, fmt.Errorf("invalid phone or country code")
+	}
+	old, _ := acc.GetPhone()
+	if old.CountryCode == req.NewPhone.CountryCode && old.Number == req.NewPhone.Number {
+		return nil, fmt.Errorf("can't change to existing phone number")
+	}
+	acc.SetPhone(graph.Phone{CountryCode: req.NewPhone.CountryCode, Number: req.NewPhone.Number})
+	if err = s.ctrl.Update(ctx, acc, map[string]interface{}{
+		"is_phone_verified": false,
+		"data":              acc.Data,
+	}); err != nil {
+		log.Error("Failed to update account's phone", zap.Error(err))
+		return nil, fmt.Errorf("failed to change phone. Internal error")
+	}
+
+	nocloud.Log(log, &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.GetUuid(),
+		Scope:     "database",
+		Action:    "phone_changed",
+		Rc:        0,
+		Requestor: requester,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	})
+
+	return &accountspb.ChangePhoneResponse{Result: true}, nil
+}
+
 func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.VerificationRequest) (*pb.VerificationResponse, error) {
 	log := s.log.Named("Verify")
 
@@ -233,8 +289,8 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 	}
 	data := dataVal.AsMap()
 	accountEmail, _ := data["email"].(string)
-	accountPhone, _ := data["phone"].(string)
-	accountPhone = "375" + accountPhone
+	phone, hasPhone := acc.GetPhone()
+	accountPhone := phone.CountryCode + phone.Number
 	log.Debug("Account's phone and email", zap.String("phone", accountPhone), zap.String("email", accountEmail))
 
 	var vData VerificationData
@@ -254,6 +310,10 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 
 	now := time.Now().Unix()
 	if req.Type == pb.VerificationType_PHONE {
+
+		if !hasPhone || phone.Number == "" || phone.CountryCode == "" || !ContainsOnlyDigits(accountPhone) {
+			return nil, fmt.Errorf("phone not found or invalid")
+		}
 
 		if req.Action == pb.VerificationAction_BEGIN {
 
@@ -284,50 +344,44 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				return nil, fmt.Errorf("internal error")
 			}
 
-			if s.asteriskConn != nil {
+			resp, err := s.asteriskConn.RunCommand(`sudo /usr/sbin/asterisk -rx "dongle show devices"`)
+			if err != nil {
+				log.Error("failed to get available devices", zap.Error(err))
+				return nil, fmt.Errorf("internal error")
+			}
+			log.Debug("Show devices response", zap.String("response", resp))
+			devices, err := parseDevices(resp)
+			if err != nil {
+				log.Error("failed to obtain available devices")
+				return nil, fmt.Errorf("internal error")
+			}
+			log.Debug("Parsed devices", zap.Any("devices", devices))
+			var available string
+			for _, device := range devices {
+				if device.State == "free" {
+					available = device.ID
+					break
+				}
+			}
+			if available == "" {
+				log.Error("No available device")
+				return nil, fmt.Errorf("couldn't perform your request at the moment. Try again later")
+			}
+			log.Debug("Chosen Asterisk device", zap.String("device", available))
 
-				resp, err := s.asteriskConn.RunCommand(`sudo /usr/sbin/asterisk -rx "dongle show devices"`)
-				if err != nil {
-					log.Error("failed to get available devices", zap.Error(err))
-					return nil, fmt.Errorf("internal error")
-				}
-				log.Debug("Show devices response", zap.String("response", resp))
-				devices, err := parseDevices(resp)
-				if err != nil {
-					log.Error("failed to obtain available devices")
-					return nil, fmt.Errorf("internal error")
-				}
-				log.Debug("Parsed devices", zap.Any("devices", devices))
-				var available string
-				for _, device := range devices {
-					if device.State == "free" {
-						available = device.ID
-						break
-					}
-				}
-				if available == "" {
-					log.Error("No available device")
-					return nil, fmt.Errorf("couldn't perform your request at the moment. Try again later")
-				}
-				log.Debug("Chosen Asterisk device", zap.String("device", available))
+			to := accountPhone
+			smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
+			command := fmt.Sprintf(`sudo /usr/sbin/asterisk -rx 'dongle sms %s %s %s'`, available, to, smsBody)
+			resp, err = s.asteriskConn.RunCommand(command)
+			if err != nil {
+				log.Error("failed to send sms", zap.Error(err), zap.Any("response", resp))
+				return nil, fmt.Errorf("internal error")
+			}
+			log.Debug("Send SMS response", zap.Any("response", resp))
 
-				to := accountPhone
-				smsBody := fmt.Sprintf("Ваш проверочный код: %s", code)
-				command := fmt.Sprintf(`sudo /usr/sbin/asterisk -rx 'dongle sms %s %s %s'`, available, to, smsBody)
-				resp, err = s.asteriskConn.RunCommand(command)
-				if err != nil {
-					log.Error("failed to send sms", zap.Error(err), zap.Any("response", resp))
-					return nil, fmt.Errorf("internal error")
-				}
-				log.Debug("Send SMS response", zap.Any("response", resp))
-
-				phoneData.Count++
-				if err = setRedis(s.rdb, fmt.Sprintf(phoneNumberRequestsCountKeyTemplate, strings.TrimPrefix(accountPhone, "+")), phoneData); err != nil {
-					log.Error("Failed to save phone's data", zap.Error(err))
-				}
-
-			} else {
-				log.Error("Cannot send SMS. AMI is not initialized")
+			phoneData.Count++
+			if err = setRedis(s.rdb, fmt.Sprintf(phoneNumberRequestsCountKeyTemplate, strings.TrimPrefix(accountPhone, "+")), phoneData); err != nil {
+				log.Error("Failed to save phone's data", zap.Error(err))
 			}
 
 		}
@@ -344,6 +398,18 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				log.Error("Failed to update account", zap.Error(err))
 				return nil, fmt.Errorf("internal error")
 			}
+			nocloud.Log(log, &elpb.Event{
+				Entity:    schema.ACCOUNTS_COL,
+				Uuid:      acc.GetUuid(),
+				Scope:     "database",
+				Action:    "phone_verified",
+				Rc:        0,
+				Requestor: requester,
+				Ts:        time.Now().Unix(),
+				Snapshot: &elpb.Snapshot{
+					Diff: "",
+				},
+			})
 			log.Info("Phone was successfully verified")
 		}
 	} else if req.Type == pb.VerificationType_EMAIL {
@@ -972,10 +1038,12 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		patch["status"] = request.GetStatus()
 	}
 
+	var requestData map[string]any
 	if request.Data == nil {
 		log.Debug("Data patch is not present, skipping")
 		goto patch
 	}
+	requestData = request.Data.AsMap()
 
 	if len(request.Data.AsMap()) == 0 {
 		log.Debug("Data patch is empty, wiping data")
@@ -983,8 +1051,10 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		goto patch
 	}
 
+	// Remove phone keys from request data
+	delete(requestData, "phone_new")
 	log.Debug("Merging data")
-	patch["data"] = MergeMaps(acc.Data.AsMap(), request.Data.AsMap())
+	patch["data"] = MergeMaps(acc.Data.AsMap(), requestData)
 
 patch:
 	if len(patch) == 0 {
