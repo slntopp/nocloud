@@ -142,7 +142,15 @@
       </v-col>
 
       <v-col lg="1" md="2" sm="3" cols="4">
-        <v-text-field readonly :value="account.data?.phone" label="Phone" />
+        <v-text-field
+          readonly
+          :value="
+            account.data?.phone_new?.phone_cc
+              ? `${account.data?.phone_new?.phone_cc} ${account.data?.phone_new?.phone_number}`
+              : account.data?.phone || ''
+          "
+          label="Phone"
+        />
       </v-col>
 
       <v-col lg="1" md="2" sm="3" cols="4">

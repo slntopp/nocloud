@@ -54,6 +54,34 @@
 
     <confirm-dialog
       :disabled="selected.length < 1"
+      @confirm="unsuspendSelectedInstances"
+    >
+      <v-btn
+        class="mr-2"
+        color="background-light"
+        :disabled="selected.length < 1"
+        :loading="isUnsuspendLoading"
+      >
+        Unsuspend
+      </v-btn>
+    </confirm-dialog>
+
+    <confirm-dialog
+      :disabled="selected.length < 1"
+      @confirm="suspendSelectedInstances"
+    >
+      <v-btn
+        class="mr-2"
+        color="background-light"
+        :disabled="selected.length < 1"
+        :loading="isSuspendLoading"
+      >
+        Suspend
+      </v-btn>
+    </confirm-dialog>
+
+    <confirm-dialog
+      :disabled="selected.length < 1"
       @confirm="deleteSelectedInstances"
     >
       <v-btn
@@ -86,6 +114,8 @@ const newInstance = ref({
   account: "",
 });
 const isDeleteLoading = ref(false);
+const isSuspendLoading = ref(false);
+const isUnsuspendLoading = ref(false);
 const refetch = ref(false);
 const rules = ref({
   req: [(v) => !!v || "This field is required!"],
@@ -135,6 +165,102 @@ const deleteSelectedInstances = async () => {
     }
   } finally {
     isDeleteLoading.value = false;
+  }
+};
+
+const suspendSelectedInstances = async () => {
+  const suspendPromises = selected.value.map((el) =>
+    store.dispatch("actions/sendVmAction", {
+      action: "suspend",
+      template: { ...el },
+      params: {},
+    })
+  );
+  isSuspendLoading.value = true;
+
+  try {
+    const res = await Promise.all(suspendPromises);
+    if (res.every(({ result }) => result)) {
+      const ending = suspendPromises.length === 1 ? "" : "s";
+
+      refetch.value = !refetch.value;
+      selected.value = [];
+
+      store.commit("snackbar/showSnackbarSuccess", {
+        message: `Instance${ending} suspended successfully.`,
+      });
+    } else {
+      store.commit("snackbar/showSnackbarError", {
+        message: `Error: ${
+          res.response?.data?.message ?? res.message ?? "Unknown"
+        }.`,
+      });
+    }
+  } catch (err) {
+    if (err.response.status >= 500 || err.response.status < 600) {
+      const opts = {
+        message: `Service Unavailable: ${
+          err.response?.data?.message ?? err.message ?? "Unknown"
+        }.`,
+        timeout: 0,
+      };
+      store.commit("snackbar/showSnackbarError", opts);
+    } else {
+      const opts = {
+        message: `Error: ${err.response?.data?.message ?? "Unknown"}.`,
+      };
+      store.commit("snackbar/showSnackbarError", opts);
+    }
+  } finally {
+    isSuspendLoading.value = false;
+  }
+};
+
+const unsuspendSelectedInstances = async () => {
+  const unsuspendPromises = selected.value.map((el) =>
+    store.dispatch("actions/sendVmAction", {
+      action: "unsuspend",
+      template: { ...el },
+      params: {},
+    })
+  );
+  isUnsuspendLoading.value = true;
+
+  try {
+    const res = await Promise.all(unsuspendPromises);
+    if (res.every(({ result }) => result)) {
+      const ending = unsuspendPromises.length === 1 ? "" : "s";
+
+      refetch.value = !refetch.value;
+      selected.value = [];
+
+      store.commit("snackbar/showSnackbarSuccess", {
+        message: `Instance${ending} unsuspended successfully.`,
+      });
+    } else {
+      store.commit("snackbar/showSnackbarError", {
+        message: `Error: ${
+          res.response?.data?.message ?? res.message ?? "Unknown"
+        }.`,
+      });
+    }
+  } catch (err) {
+    if (err.response.status >= 500 || err.response.status < 600) {
+      const opts = {
+        message: `Service Unavailable: ${
+          err.response?.data?.message ?? err.message ?? "Unknown"
+        }.`,
+        timeout: 0,
+      };
+      store.commit("snackbar/showSnackbarError", opts);
+    } else {
+      const opts = {
+        message: `Error: ${err.response?.data?.message ?? "Unknown"}.`,
+      };
+      store.commit("snackbar/showSnackbarError", opts);
+    }
+  } finally {
+    isUnsuspendLoading.value = false;
   }
 };
 
