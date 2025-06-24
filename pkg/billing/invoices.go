@@ -1466,6 +1466,10 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		TaxOptions: &pb.TaxOptions{
 			TaxRate: tax,
 		},
+		Properties: &pb.AdditionalProperties{
+			PhoneVerificationRequired: bp.GetProperties().GetPhoneVerificationRequired(),
+			EmailVerificationRequired: bp.GetProperties().GetEmailVerificationRequired(),
+		},
 	}
 	inv = graph.SetInvoiceBillingData(inv, &billingData)
 
