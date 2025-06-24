@@ -338,6 +338,9 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	billingData := graph.BillingData{
 		RenewalData: make(map[string]graph.RenewalData),
 	}
+	var (
+		requireEmailApproved, requirePhoneApproved bool
+	)
 	for _, d := range data {
 		inst := d.Instance
 		initCost, _ := s.instances.CalculateInstanceEstimatePrice(inst, false)
@@ -380,6 +383,15 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			ExpirationTs: d.ExpireAt,
 		}
 
+		if bp.Properties != nil {
+			if bp.Properties.PhoneVerificationRequired {
+				requirePhoneApproved = true
+			}
+			if bp.Properties.EmailVerificationRequired {
+				requireEmailApproved = true
+			}
+		}
+
 		promoItems := make([]*pb.Item, 0)
 		for _, sum := range summary {
 			price := -sum.DiscountAmount * rate
@@ -402,6 +414,10 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		inv.Items = append(inv.Items, promoItems...)
 		inv.Instances = append(inv.Instances, d.Instance.GetUuid())
 		expirations = append(expirations, d.ExpireAt)
+	}
+	inv.Properties = &pb.AdditionalProperties{
+		PhoneVerificationRequired: requirePhoneApproved,
+		EmailVerificationRequired: requireEmailApproved,
 	}
 	inv.SetBillingData(&billingData)
 
