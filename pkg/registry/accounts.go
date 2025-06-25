@@ -144,10 +144,9 @@ const emailVerificationDataKeyTemplate = "registry-email-verification-%s"
 const phoneNumberRequestsCountKeyTemplate = "registry-phone-number-requests-%s"
 
 type VerificationData struct {
-	Code          string `json:"code"`
-	Sent          int64  `json:"sent"`
-	Expires       int64  `json:"expires"`
-	RequestsCount int32  `json:"attempts"`
+	Code    string `json:"code"`
+	Sent    int64  `json:"sent"`
+	Expires int64  `json:"expires"`
 }
 type PhoneRequestsCount struct {
 	Phone string `json:"phone"`
@@ -330,15 +329,11 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 			if now-vData.Sent < 150 {
 				return nil, fmt.Errorf("Too many requests. Try again later.")
 			}
-			if vData.RequestsCount > 5 {
-				return nil, fmt.Errorf("You've reached your limit. Try again later or contact support.")
-			}
 
 			code := generateCode()
 			vData.Code = code
 			vData.Expires = now + 600
 			vData.Sent = now
-			vData.RequestsCount += 1
 			if err = setRedis(s.rdb, fmt.Sprintf(phoneVerificationDataKeyTemplate, acc.GetUuid()), vData); err != nil {
 				log.Error("Failed to save verification data", zap.Error(err))
 				return nil, fmt.Errorf("internal error")
