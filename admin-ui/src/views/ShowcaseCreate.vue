@@ -153,6 +153,7 @@ const types = [
   "openai",
   "vpn",
   "ione-vpn",
+  "bots",
   "domains",
   "acronis",
   "ssl",

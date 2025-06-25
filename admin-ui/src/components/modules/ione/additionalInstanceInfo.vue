@@ -62,7 +62,7 @@
           @input="
             emit('update', {
               key: 'resources.cpu',
-              value: $event,
+              value: +$event,
             })
           "
           :value="template.resources.cpu"
