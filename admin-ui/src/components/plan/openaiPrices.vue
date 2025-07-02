@@ -462,12 +462,19 @@ const newKeysForMaps = ref({});
 const newSubkeysForMaps = ref({});
 const currentSerial = ref();
 
-const availableTypes = ["text", "text_to_audio", "audio_to_text", "image"];
+const availableTypes = [
+  "text",
+  "text_to_audio",
+  "audio_to_text",
+  "image",
+  "video",
+];
 const typesColorMap = {
   text: "indigo darken-4",
   text_to_audio: "purple",
   audio_to_text: "pink darken-4",
   image: "red darken-4",
+  video: "orange darken-3",
 };
 
 const keyLabelMap = {
@@ -542,6 +549,14 @@ const fieldsForTypes = {
         "tokens.text_input": "number",
         "tokens.image_input": "number",
         "tokens.image_output": "number",
+      },
+    ],
+  },
+  video: {
+    type: "variant",
+    fields: [
+      {
+        "media_duration.duration_price": "number",
       },
     ],
   },

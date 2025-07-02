@@ -59,7 +59,7 @@ export default {
         params: params.params,
       });
     },
-    getForChart({ dispatch }, { periods, periodType, entity }) {
+    async getForChart({ dispatch }, { periods, periodType, entity }) {
       let interval = "1 day";
 
       if (periodType.split("-")[1]) {
@@ -74,7 +74,7 @@ export default {
         },
       };
 
-      return Promise.all(
+      const data = await Promise.all(
         periods.map((period) => {
           params.params.start_date = formatToYYMMDD(period[0]);
           params.params.end_date = formatToYYMMDD(period[1]);
@@ -82,6 +82,18 @@ export default {
           return dispatch("fetch", params);
         })
       );
+
+      data.forEach((data) => {
+        if (!data.timeseries) {
+          data.timeseries = [];
+        }
+
+        if (!data.summary) {
+          data.summary = {};
+        }
+      });
+
+      return data;
     },
   },
   getters: {
