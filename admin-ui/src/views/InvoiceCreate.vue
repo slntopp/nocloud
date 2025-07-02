@@ -219,7 +219,7 @@
             color="background-light"
             :loading="isSaveLoading"
             :disabled="isSaveDisabled"
-            @click="saveInvoice(false)"
+            @click="saveInvoice(false, isDraft ? 'UNPAID' : undefined)"
           >
             {{ isEdit && !isDraft ? "Save" : "Publish" }}
           </v-btn>
@@ -227,7 +227,7 @@
             class="mx-1"
             color="background-light"
             :loading="isSaveLoading"
-            @click="saveInvoice(true)"
+            @click="saveInvoice(true, isDraft ? 'UNPAID' : undefined)"
             :disabled="isEmailDisabled"
           >
             {{ isEdit && !isDraft ? "Save" : "Publish" }} + email
@@ -534,7 +534,7 @@ const getInvoiceDateTs = (originalTs, newDate) => {
   );
 };
 
-const saveInvoice = async (withEmail = false, status = "UNPAID") => {
+const saveInvoice = async (withEmail = false, status) => {
   if (!(await invoiceForm.value.validate())) {
     return;
   }
@@ -587,8 +587,6 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
           newInvoice.value.payment
         );
       }
-
-      data.status = invoice.value.status;
 
       await store.getters["invoices/invoicesClient"].updateInvoice(
         UpdateInvoiceRequest.fromJson({
