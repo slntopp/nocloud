@@ -54,11 +54,13 @@
         />
       </v-col>
 
-      <v-col v-if="template.billingPlan.title.toLowerCase() !== 'payg'">
+      <v-col v-if="!isMonitoringEmpty">
         <v-text-field
           readonly
           label="Due to date/next payment"
           :value="dueDate"
+          :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
+          @click:append="changeDatesDialog = true"
         />
       </v-col>
     </v-row>
@@ -155,6 +157,16 @@
       @refresh="emit('refresh')"
       :service="service"
     />
+
+    <change-ione-monitorings
+      :template="template"
+      :service="service"
+      v-model="changeDatesDialog"
+      @refresh="emit('refresh')"
+      v-if="
+        template.billingPlan.title.toLowerCase() !== 'payg' || isMonitoringEmpty
+      "
+    />
   </div>
 </template>
 
@@ -174,6 +186,7 @@ import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 import { formatPrice } from "../../../functions";
+import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh"]);
@@ -186,6 +199,7 @@ const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
 
 const priceModelDialog = ref(false);
 const isAddonsDialog = ref(false);
+const changeDatesDialog = ref(false);
 
 const billingHeaders = ref([
   { text: "Name", value: "name" },
@@ -198,6 +212,8 @@ const billingItems = ref([]);
 const dueDate = computed(() =>
   formatSecondsToDate(template.value?.data?.next_payment_date, true)
 );
+
+const isMonitoringEmpty = computed(() => dueDate.value === "-");
 
 const totalPrice = computed(() => {
   return billingItems.value.reduce((acc, i) => acc + +i.price, 0);
