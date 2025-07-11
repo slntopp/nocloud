@@ -52,6 +52,10 @@
         <v-col cols="2">
           <v-select v-model="showcase.meta.type" label="Type" :items="types" />
         </v-col>
+
+        <v-col cols="2">
+          <v-switch v-model="showcase.meta.isNew" label="Is new?" />
+        </v-col>
       </v-row>
 
       <v-expansion-panels :value="0">
