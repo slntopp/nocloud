@@ -468,6 +468,7 @@ const availableTypes = [
   "audio_to_text",
   "image",
   "video",
+  "vision",
 ];
 const typesColorMap = {
   text: "indigo darken-4",
@@ -475,6 +476,7 @@ const typesColorMap = {
   audio_to_text: "pink darken-4",
   image: "red darken-4",
   video: "orange darken-3",
+  vision: "blue darken-3",
 };
 
 const keyLabelMap = {
@@ -546,6 +548,10 @@ const fieldsForTypes = {
         "media_duration.duration_price": "number",
       },
     ],
+  },
+  vision: {
+    type: "default",
+    fields: [{ "other.pages_count_price": "number" }],
   },
   image: {
     type: "variant",
