@@ -517,7 +517,13 @@ const changeFee = (value) => {
 const fieldsForTypes = {
   text: {
     type: "default",
-    fields: [{ "tokens.text_output": "number", "tokens.text_input": "number" }],
+    fields: [
+      {
+        "tokens.text_output": "number",
+        "tokens.text_input": "number",
+        "other.web_search_price": "number",
+      },
+    ],
   },
   text_to_audio: {
     type: "default",
