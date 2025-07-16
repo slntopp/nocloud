@@ -1312,9 +1312,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	_processed := 0
 	_expiring := 0
 	for _, r := range records {
-		log := log.With(zap.Any("record", r))
 		if r.Product == "" {
-			log.Info("Ignoring non product record")
 			continue
 		}
 		periods = append(periods, r.Period)
