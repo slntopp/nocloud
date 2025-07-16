@@ -739,10 +739,34 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 
 	log.Debug("Generating transaction after invoice payment")
 	noCancelCtx := context.WithoutCancel(ctx)
+	noCancelCtx, err = graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
+		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL},
+	})
+	if err != nil {
+		log.Error("Failed to start transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to start transaction. Error: "+err.Error())
+	}
+	abort := func() {
+		if err := graph.AbortTransaction(ctx, s.db); err != nil {
+			log.Error("Failed to abort transaction")
+		}
+	}
+	commit := func() error {
+		if err := graph.CommitTransaction(ctx, s.db); err != nil {
+			log.Error("Failed to commit transaction")
+			return err
+		}
+		return nil
+	}
 	tr, err := s.applyTransaction(ctxWithInternalAccess(noCancelCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
 	if err != nil {
+		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	}
+	if err = commit(); err != nil {
+		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to commit transaction. Error: "+err.Error())
 	}
 	if tr != nil {
 		respTrans := resp.Msg.Transactions
@@ -827,11 +851,36 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
 	}
 
+	log.Debug("Generating transaction after whmcs invoice payment")
 	noCancelCtx := context.WithoutCancel(ctx)
+	noCancelCtx, err = graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
+		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL},
+	})
+	if err != nil {
+		log.Error("Failed to start transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to start transaction. Error: "+err.Error())
+	}
+	abort := func() {
+		if err := graph.AbortTransaction(ctx, s.db); err != nil {
+			log.Error("Failed to abort transaction")
+		}
+	}
+	commit := func() error {
+		if err := graph.CommitTransaction(ctx, s.db); err != nil {
+			log.Error("Failed to commit transaction")
+			return err
+		}
+		return nil
+	}
 	_, err = s.applyTransaction(ctxWithInternalAccess(noCancelCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency)
 	if err != nil {
+		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+	}
+	if err = commit(); err != nil {
+		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to commit transaction. Error: "+err.Error())
 	}
 
 	return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
