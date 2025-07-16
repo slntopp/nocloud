@@ -254,7 +254,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, _ctx
 			}
 			log := log.With(zap.String("invoice", event.Uuid))
 			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
-			if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
+			if err = s.ProcessInvoiceStatusAction(log, ctxWithInternalAccess(ctx), &event); err != nil {
 				ps.HandleAckNack(log, msg, err)
 				continue
 			}
