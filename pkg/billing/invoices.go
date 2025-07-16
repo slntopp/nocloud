@@ -740,7 +740,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	log.Debug("Generating transaction after invoice payment")
 	noCancelCtx := context.WithoutCancel(ctx)
 	noCancelCtx, err = graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
-		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL},
+		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL},
 	})
 	if err != nil {
 		log.Error("Failed to start transaction", zap.Error(err))
@@ -854,7 +854,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	log.Debug("Generating transaction after whmcs invoice payment")
 	noCancelCtx := context.WithoutCancel(ctx)
 	noCancelCtx, err = graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
-		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL},
+		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL},
 	})
 	if err != nil {
 		log.Error("Failed to start transaction", zap.Error(err))
