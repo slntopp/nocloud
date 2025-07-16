@@ -663,6 +663,8 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 }
 
 func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency) (*pb.Transaction, error) {
+	closeTransactionGate(account)
+	defer openTransactionGate(account)
 	if account == "" {
 		return nil, fmt.Errorf("account is required")
 	}

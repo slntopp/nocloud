@@ -270,6 +270,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 				return err
 			}
 
+			closeTransactionGate(tr.Account) // Sync transactions to prevent balance leak
 			_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
 				"tr":            doc.ID,
 				"@transactions": schema.TRANSACTIONS_COL,
@@ -281,6 +282,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 				"currencies":    schema.CUR_COL,
 				"currency":      currencyConf.Currency,
 			})
+			openTransactionGate(tr.Account)
 			if err != nil {
 				log.Error("Error Process Transactions", zap.Error(err))
 				return err
