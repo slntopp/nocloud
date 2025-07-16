@@ -737,7 +737,8 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
 	}
 
-	tr, err := s.applyTransaction(ctxWithInternalAccess(ctx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
+	noCancelCtx := context.WithoutCancel(ctx)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(noCancelCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
@@ -748,7 +749,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 			respTrans = make([]string, 0)
 		}
 		respTrans = append(respTrans, tr.GetUuid())
-		if err = s.invoices.Patch(ctx, resp.Msg.GetUuid(), map[string]interface{}{
+		if err = s.invoices.Patch(noCancelCtx, resp.Msg.GetUuid(), map[string]interface{}{
 			"transactions": respTrans,
 		}); err != nil {
 			log.Error("Failed to patch invoice", zap.Error(err))
@@ -824,7 +825,8 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+err.Error())
 	}
 
-	_, err = s.applyTransaction(ctxWithInternalAccess(ctx), math.Min(balance, float64(inv.Balance)), requester, invCurrency)
+	noCancelCtx := context.WithoutCancel(ctx)
+	_, err = s.applyTransaction(ctxWithInternalAccess(noCancelCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency)
 	if err != nil {
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
