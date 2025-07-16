@@ -764,6 +764,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	log := s.log.Named("payWithBalanceWhmcsInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
+	log.Info("Paying WHMCS invoice with balance", zap.Int64("id", invId))
 	inv, err := s.whmcsGateway.GetInvoice(ctx, int(invId))
 	if err != nil {
 		log.Warn("Failed to get invoice", zap.Error(err))
