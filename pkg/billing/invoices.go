@@ -737,6 +737,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
 	}
 
+	log.Debug("Generating transaction after invoice payment")
 	noCancelCtx := context.WithoutCancel(ctx)
 	tr, err := s.applyTransaction(ctxWithInternalAccess(noCancelCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
 	if err != nil {
