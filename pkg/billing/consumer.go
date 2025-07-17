@@ -254,7 +254,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, _ctx
 			}
 			log := log.With(zap.String("invoice", event.Uuid))
 			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
-			if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
+			if err = s.ProcessInvoiceStatusAction(log, ctxWithInternalAccess(ctx), &event); err != nil {
 				ps.HandleAckNack(log, msg, err)
 				continue
 			}
@@ -424,8 +424,8 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, _ctx con
 		NoWait:     false,
 		Exclusive:  false,
 		WithRetry:  true,
-		DelayMilli: 300 * 1000, // Every 5 minute
-		MaxRetries: 36,         // 3 hours in general
+		DelayMilli: 60 * 1000, // Every minute
+		MaxRetries: 72,
 	}
 	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"), opt)
 	if err != nil {
