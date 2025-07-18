@@ -340,7 +340,7 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 	}
 	query += ` RETURN merge(t, {uuid: t._key, currency: DOCUMENT(@@currencies, TO_STRING(TO_NUMBER(t.currency.id)))})`
 
-	log.Debug("ready to fetch invoices", zap.String("query", query))
+	log.Debug("ready to fetch invoices", zap.String("query", query), zap.Any("vars", vars))
 	cursor, err := s.db.Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to retrieve invoices", zap.Error(err))
