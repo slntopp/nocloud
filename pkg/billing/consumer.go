@@ -411,6 +411,16 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		return fmt.Errorf("failed to create invoice: %w", err)
 	}
 	log.Info("Created invoice", zap.String("uuid", invResp.Msg.GetUuid()))
+
+	// Auto-pay invoice if instance configured as auto_renew
+	if instance.GetMeta() != nil && instance.GetMeta().GetAutoRenew() &&
+		inv.Total > 0 {
+		if _, err = s.PayWithBalance(ctxWithRoot(ctx), connect.NewRequest(&bpb.PayWithBalanceRequest{
+			InvoiceUuid: invResp.Msg.GetUuid(),
+		})); err != nil {
+			log.Warn("Failed to auto-pay INSTANCE_START invoice from user balance", zap.Error(err))
+		}
+	}
 	return nil
 }
 
