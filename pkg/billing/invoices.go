@@ -296,7 +296,7 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				if len(values) == 0 {
 					continue
 				}
-				query += fmt.Sprintf(` FILTER INTERSECTION(@%s, t.instances)`, "instancesUuids")
+				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
 			} else {
 				values := value.GetListValue().AsSlice()
