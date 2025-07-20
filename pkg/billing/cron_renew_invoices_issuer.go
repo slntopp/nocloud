@@ -486,13 +486,15 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 					eventData["next_payment_date"] = structpb.NewNumberValue(inst.Data["next_payment_date"].GetNumberValue())
 				}
 				// Send
-				_, _ = s.eventsClient.Publish(ctx, &epb.Event{
+				if _, err = s.eventsClient.Publish(ctx, &epb.Event{
 					Type: "email",
 					Uuid: resp.Msg.GetAccount(),
 					Key:  "auto_payment_failure",
 					Data: eventData,
 					Ts:   now,
-				})
+				}); err != nil {
+					log.Error("Failed to send auto_payment_failure event", zap.Error(err))
+				}
 			}
 		}
 	}
