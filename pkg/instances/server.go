@@ -1150,6 +1150,13 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 				to := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.created <= %d`, to)
 			}
+		} else if key == "uuids" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node._key in @%s`, key)
+			bindVars[key] = values
 		}
 	}
 
