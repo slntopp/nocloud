@@ -8,7 +8,6 @@ import (
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
-	epb "github.com/slntopp/nocloud-proto/events"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud-proto/states"
@@ -342,7 +341,6 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	var (
 		requireEmailApproved = false
 		requirePhoneApproved = false
-		autoRenew            = true
 	)
 	for _, d := range data {
 		inst := d.Instance
@@ -394,10 +392,8 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 				requireEmailApproved = true
 			}
 			if !bp.Properties.AutoRenew {
-				autoRenew = false
 			}
 		} else {
-			autoRenew = false
 		}
 
 		promoItems := make([]*pb.Item, 0)
@@ -457,47 +453,6 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		return fmt.Errorf("error creating invoice: %w", err)
 	}
 	log.Info("Created invoice", zap.String("uuid", resp.Msg.GetUuid()), zap.Int("item_count", len(inv.Items)))
-
-	// Auto-pay invoice if all listed instances configured as auto_renew
-	if autoRenew && inv.Total > 0 {
-		if _, err = s.PayWithBalance(ctxWithRoot(ctx), connect.NewRequest(&pb.PayWithBalanceRequest{
-			InvoiceUuid: resp.Msg.GetUuid(),
-		})); err != nil {
-			log.Warn("Failed to auto-pay INSTANCE_RENEW invoice from user balance", zap.Error(err), zap.String("invoice", resp.Msg.GetUuid()))
-			// Send auto payment failure events
-			for _, d := range data {
-				inst := d.Instance
-				if inst == nil {
-					continue
-				}
-				// Add extra fields
-				eventData := map[string]*structpb.Value{}
-				eventData["instance"] = structpb.NewStringValue(inst.GetTitle())
-				eventData["instance_uuid"] = structpb.NewStringValue(inst.GetUuid())
-				bp := inst.GetBillingPlan()
-				if bp != nil && bp.GetProducts() != nil {
-					bpProducts := bp.GetProducts()
-					instProduct, _ := bpProducts[inst.GetProduct()]
-					if instProduct != nil {
-						eventData["product"] = structpb.NewStringValue(instProduct.GetTitle())
-					}
-				}
-				if inst.Data != nil {
-					eventData["next_payment_date"] = structpb.NewNumberValue(inst.Data["next_payment_date"].GetNumberValue())
-				}
-				// Send
-				if _, err = s.eventsClient.Publish(ctx, &epb.Event{
-					Type: "email",
-					Uuid: resp.Msg.GetAccount(),
-					Key:  "auto_payment_failure",
-					Data: eventData,
-					Ts:   now,
-				}); err != nil {
-					log.Error("Failed to send auto_payment_failure event", zap.Error(err))
-				}
-			}
-		}
-	}
 
 	delaySeconds(601)
 	return nil

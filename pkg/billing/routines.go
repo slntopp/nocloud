@@ -16,8 +16,18 @@ limitations under the License.
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	"github.com/slntopp/nocloud-proto/events"
+	instancespb "github.com/slntopp/nocloud-proto/instances"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"golang.org/x/exp/maps"
+	"google.golang.org/protobuf/types/known/structpb"
 	"sync"
 	"time"
 
@@ -219,7 +229,263 @@ start:
 			goto start
 		}
 	}
+}
 
+const lowFrequentRoutinesFreqSeconds = 7200
+
+func (s *BillingServiceServer) AutoPayInvoicesRoutine(_ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+	log := s.log.Named("AutoPayInvoicesRoutine")
+
+start:
+	roundingConf := MakeRoundingConf(log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
+
+	upd := make(chan bool, 1)
+
+	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("rounding", roundingConf))
+
+	ticker := time.NewTicker(time.Second * time.Duration(lowFrequentRoutinesFreqSeconds))
+	tick := time.Now()
+
+	for {
+		log.Info("Entering new Iteration", zap.Time("ts", tick))
+		s.AutoPayInvoices(ctx, log, tick, currencyConf, roundingConf)
+
+		select {
+		case <-_ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
+	}
+}
+
+const lastAutoPaymentAttemptKey = "last_auto_payment_attempt"
+const autoPaymentAttemptsKey = "auto_payment_attempts_count"
+
+func (s *BillingServiceServer) getInstanceExpiration(ctx context.Context, inst *instancespb.ResponseInstance) (int64, int64, error) {
+	client, ok := s.drivers[inst.Type]
+	if !ok {
+		return 0, 0, fmt.Errorf("driver not found for type: %s", inst.Type)
+	}
+	resp, err := client.GetExpiration(ctx, &vanilla.GetExpirationRequest{
+		Instance:         inst.Instance,
+		ServicesProvider: &sppb.ServicesProvider{Uuid: inst.Sp},
+	})
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get expiration records: %w", err)
+	}
+	expires := int64(0)
+	period := int64(0)
+	for _, rec := range resp.Records {
+		if rec.Product != "" {
+			expires = rec.Expires
+			period = rec.Period
+			break
+		}
+	}
+	if expires == 0 {
+		return 0, 0, fmt.Errorf("expiration is 0")
+	}
+	return expires, period, nil
+}
+
+func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Logger, _ time.Time,
+	_ CurrencyConf, _ RoundingConf) {
+	log.Info("Starting Auto Pay Invoices Routine")
+	rootToken, _ := ctx.Value(nocloud.NoCloudToken).(string)
+
+	// Fetch unpaid renewal invoices
+	unpaidFilter, _ := structpb.NewList([]any{int(pb.BillingStatus_UNPAID)})
+	actionFilter, _ := structpb.NewList([]any{int(pb.ActionType_INSTANCE_RENEWAL)})
+	invReq := connect.NewRequest(&pb.GetInvoicesRequest{
+		Filters: map[string]*structpb.Value{
+			"status": structpb.NewListValue(unpaidFilter),
+			"type":   structpb.NewListValue(actionFilter),
+		},
+	})
+	invResp, err := s.GetInvoices(ctx, invReq)
+	if err != nil {
+		log.Error("Failed to list invoices", zap.Error(err))
+		return
+	}
+	log.Debug("Fetched invoices", zap.Any("len", len(invResp.Msg.Pool)))
+	var (
+		passedInvoices     = map[string]*pb.Invoice{}
+		instanceToInvoice  = map[string][]string{}
+		instancesToFetch   = make([]any, 0)
+		instancesSearchMap = map[string]*instancespb.ResponseInstance{}
+	)
+	unmarkAllByInstance := func(inst string) {
+		for _, inv := range instanceToInvoice[inst] {
+			delete(passedInvoices, inv)
+		}
+		delete(instanceToInvoice, inst)
+	}
+	for _, inv := range invResp.Msg.Pool {
+		if inv.Meta == nil || inv.Meta["creator"].GetStringValue() != "system" {
+			continue
+		}
+		if int(inv.Meta[autoPaymentAttemptsKey].GetNumberValue()) >= 1 {
+			continue
+		}
+		passedInvoices[inv.GetUuid()] = inv
+		for _, inst := range inv.GetInstances() {
+			if instanceToInvoice[inst] == nil {
+				instanceToInvoice[inst] = make([]string, 0)
+			}
+			instanceToInvoice[inst] = append(instanceToInvoice[inst], inv.GetUuid())
+			instancesToFetch = append(instancesToFetch, inst)
+		}
+	}
+
+	// Fetch required instances
+	var (
+		page  = uint64(1)
+		limit = uint64(100_000)
+	)
+	instancesFilter, _ := structpb.NewList(instancesToFetch)
+	instReq := connect.NewRequest(&instancespb.ListInstancesRequest{
+		Page:  &page,
+		Limit: &limit,
+		Filters: map[string]*structpb.Value{
+			"uuids": structpb.NewListValue(instancesFilter),
+		},
+	})
+	instReq.Header().Set("Authorization", "Bearer "+rootToken)
+	instResp, err := s.instancesClient.List(ctx, instReq)
+	if err != nil {
+		log.Error("Failed to list instances", zap.Error(err))
+		return
+	}
+	log.Debug("Obtained instances", zap.Any("len", len(instResp.Msg.Pool)))
+
+	// Filter instances and invoices that are not fitted for auto payment
+	// 1. Filter if at least 1 instance is not on auto-renew
+	var passedInstances = make([]*instancespb.ResponseInstance, 0)
+	for _, instValue := range instResp.Msg.Pool {
+		inst := instValue.Instance
+		if inst.Meta == nil || !inst.Meta.AutoRenew {
+			unmarkAllByInstance(inst.GetUuid())
+			continue
+		}
+		passedInstances = append(passedInstances, instValue)
+		instancesSearchMap[inst.GetUuid()] = instValue
+	}
+	// 2. Fetch and compare expiration data with expiration data in current invoices
+	log.Debug("Auto renew candidates: instances", zap.Any("len", len(passedInstances)))
+	log.Debug("Auto renew candidates: invoices", zap.Any("len", len(passedInvoices)), zap.Any("uuids", maps.Keys(passedInvoices)))
+	now := time.Now().Unix()
+	isTimeToRenew := func(expiration, period, now int64) bool {
+		const day = int64(24 * time.Hour / time.Second)
+		const threeDays = 3 * day
+		if period <= 0 {
+			return now >= expiration
+		}
+		if period < threeDays {
+			start := expiration - period
+			elapsed := now - start
+			return elapsed*100 >= period*80
+		}
+		if now >= expiration {
+			return true
+		}
+		expDayStart := expiration - (expiration % day)
+		nowDayStart := now - (now % day)
+		if nowDayStart != expDayStart {
+			return false
+		}
+		hourUTC := (now % day) / int64(time.Hour/time.Second)
+		return hourUTC >= 6 && hourUTC < 21
+	}
+	for _, instValue := range passedInstances {
+		inst := instValue.Instance
+		expiration, period, err := s.getInstanceExpiration(ctx, instValue)
+		if err != nil {
+			log.Error("Failed to get instance expiration", zap.Error(err))
+			unmarkAllByInstance(inst.GetUuid())
+			continue
+		}
+		if period == 0 || !isTimeToRenew(expiration, period, now) {
+			unmarkAllByInstance(inst.GetUuid())
+			continue
+		}
+		for _, invID := range instanceToInvoice[inst.GetUuid()] {
+			invoice, ok := passedInvoices[invID]
+			if !ok {
+				continue
+			}
+			inv := graph.Invoice{Invoice: invoice}
+			billingData := inv.BillingData()
+			if billingData == nil || billingData.RenewalData == nil ||
+				billingData.RenewalData[inst.GetUuid()].ExpirationTs != expiration {
+				delete(passedInvoices, invoice.GetUuid())
+			}
+		}
+	}
+
+	log.Debug("Auto renew: picked invoices", zap.Any("len", len(passedInvoices)), zap.Any("uuids", maps.Keys(passedInvoices)))
+	// Now passedInvoices contains invoices, that are ready for auto-payment
+	now = time.Now().Unix()
+	for _, inv := range passedInvoices {
+		log.Debug("Trying to auto-pay invoice", zap.Any("uuid", inv.GetUuid()))
+		if inv.Total <= 0 {
+			continue
+		}
+		if _, err = s.PayWithBalance(ctxWithRoot(ctx), connect.NewRequest(&pb.PayWithBalanceRequest{
+			InvoiceUuid: inv.GetUuid(),
+		})); err != nil {
+			log.Warn("Failed to auto-pay INSTANCE_RENEW invoice from user balance", zap.Error(err), zap.String("invoice", inv.GetUuid()))
+			// Send auto payment failure events
+			for _, id := range inv.GetInstances() {
+				d := instancesSearchMap[id]
+				inst := d.Instance
+				if inst == nil {
+					continue
+				}
+				// Add extra fields
+				eventData := map[string]*structpb.Value{}
+				eventData["instance"] = structpb.NewStringValue(inst.GetTitle())
+				eventData["instance_uuid"] = structpb.NewStringValue(inst.GetUuid())
+				bp := inst.GetBillingPlan()
+				if bp != nil && bp.GetProducts() != nil {
+					bpProducts := bp.GetProducts()
+					instProduct, _ := bpProducts[inst.GetProduct()]
+					if instProduct != nil {
+						eventData["product"] = structpb.NewStringValue(instProduct.GetTitle())
+					}
+				}
+				if inst.Data != nil {
+					eventData["next_payment_date"] = structpb.NewNumberValue(inst.Data["next_payment_date"].GetNumberValue())
+				}
+				// Send
+				if _, err = s.eventsClient.Publish(ctx, &events.Event{
+					Type: "email",
+					Uuid: d.Account,
+					Key:  "auto_payment_failure",
+					Data: eventData,
+					Ts:   now,
+				}); err != nil {
+					log.Error("Failed to send auto_payment_failure event", zap.Error(err))
+				}
+			}
+		}
+		inv.Meta[lastAutoPaymentAttemptKey] = structpb.NewNumberValue(float64(now))
+		inv.Meta[autoPaymentAttemptsKey] = structpb.NewNumberValue(inv.Meta[autoPaymentAttemptsKey].GetNumberValue() + 1)
+		if err = s.invoices.Patch(ctx, inv.GetUuid(), map[string]interface{}{
+			"meta": inv.Meta,
+		}); err != nil {
+			log.Error("Failed to patch invoice after payment attempt", zap.Error(err))
+		}
+	}
+
+	log.Info("Finished Auto Pay Invoices Routine")
 }
 
 const accToUnsuspend = `
