@@ -1573,6 +1573,9 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		if tr != nil {
 			inv.Transactions = append(inv.Transactions, tr.GetUuid())
 		}
+		if err = s.accounts.InvalidateBalanceEvents(ctx, inv.GetAccount()); err != nil {
+			s.log.Error("Failed to invalidate balance events for user", zap.Error(err), zap.String("account", inv.GetAccount()))
+		}
 
 	case pb.ActionType_INSTANCE_START:
 		for _, i := range inv.GetInstances() {
