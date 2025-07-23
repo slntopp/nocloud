@@ -24,6 +24,7 @@ import (
 	"github.com/slntopp/nocloud-proto/events"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
+	"github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"golang.org/x/exp/maps"
@@ -559,6 +560,10 @@ func (s *BillingServiceServer) SendLowCreditsNotifications(ctx context.Context, 
 		return err
 	}
 	log.Debug("Obtained plans", zap.Any("len", len(plansResp.Msg.Pool)))
+	if len(plansResp.Msg.Pool) == 0 {
+		log.Debug("No auto_payment plans. Quitting...")
+		return nil
+	}
 
 	var (
 		instancesPlansFilter = make([]any, 0)
@@ -573,11 +578,15 @@ func (s *BillingServiceServer) SendLowCreditsNotifications(ctx context.Context, 
 		limit = uint64(100_000)
 	)
 	instancesFilter, _ := structpb.NewList(instancesPlansFilter)
+	instancesStatusFilter, _ := structpb.NewList([]any{statuses.NoCloudStatus_UP, statuses.NoCloudStatus_INIT,
+		statuses.NoCloudStatus_SUS, statuses.NoCloudStatus_UNSPECIFIED})
 	instReq := connect.NewRequest(&instancespb.ListInstancesRequest{
 		Page:  &page,
 		Limit: &limit,
 		Filters: map[string]*structpb.Value{
 			"billing_plan": structpb.NewListValue(instancesFilter),
+			"status":       structpb.NewListValue(instancesStatusFilter),
+			"started":      structpb.NewBoolValue(true),
 		},
 	})
 	instReq.Header().Set("Authorization", "Bearer "+rootToken)
@@ -587,6 +596,10 @@ func (s *BillingServiceServer) SendLowCreditsNotifications(ctx context.Context, 
 		return err
 	}
 	log.Debug("Obtained instances", zap.Any("len", len(instResp.Msg.Pool)))
+	if len(instResp.Msg.Pool) == 0 {
+		log.Debug("No active instances, connected with auto_payment plans. Quitting...")
+		return nil
+	}
 
 	var (
 		accountsCandidates = make([]any, 0)

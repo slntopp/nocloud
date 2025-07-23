@@ -1157,6 +1157,17 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 			query += fmt.Sprintf(` FILTER node._key in @%s`, key)
 			bindVars[key] = values
+		} else if key == "status" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node.status in @%s`, "statusFilter")
+			bindVars["statusFilter"] = values
+		} else if key == "started" {
+			keyVal := "startedFilter"
+			query += fmt.Sprintf(` FILTER TO_BOOL(node.config.auto_start) == @%s`, keyVal)
+			bindVars[keyVal] = val.GetBoolValue()
 		}
 	}
 
