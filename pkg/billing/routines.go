@@ -705,6 +705,8 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 	}
 	log.Info(fmt.Sprintf("Event %s was successfully sent for %s account", eventKey, account.GetUuid()))
 	notification.Invalidated = true
+	notification.Base.LastNotification = time.Now().Unix()
+	notification.Base.SentNotifications += 1
 	if err := s.accounts.Update(ctx, *account, map[string]interface{}{
 		"meta": account.Meta,
 	}); err != nil {
