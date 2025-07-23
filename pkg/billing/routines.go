@@ -543,9 +543,188 @@ start:
 func (s *BillingServiceServer) SendLowCreditsNotifications(ctx context.Context, log *zap.Logger, _ time.Time,
 	_ CurrencyConf, _ RoundingConf) error {
 	log.Info("Starting Send Low Credits Notify Routine")
+	rootToken, _ := ctx.Value(nocloud.NoCloudToken).(string)
+
+	// Fetch all auto_renew plans
+	plansReq := connect.NewRequest(&pb.ListRequest{
+		Anonymously: false,
+		ShowDeleted: true,
+		Filters: map[string]*structpb.Value{
+			"auto_payment": structpb.NewBoolValue(true),
+		},
+	})
+	plansResp, err := s.ListPlans(ctx, plansReq)
+	if err != nil {
+		log.Error("Failed to list plans", zap.Error(err))
+		return err
+	}
+	log.Debug("Obtained plans", zap.Any("len", len(plansResp.Msg.Pool)))
+
+	var (
+		instancesPlansFilter = make([]any, 0)
+	)
+	for _, p := range plansResp.Msg.Pool {
+		instancesPlansFilter = append(instancesPlansFilter, p.GetUuid())
+	}
+
+	// Fetch required instances
+	var (
+		page  = uint64(1)
+		limit = uint64(100_000)
+	)
+	instancesFilter, _ := structpb.NewList(instancesPlansFilter)
+	instReq := connect.NewRequest(&instancespb.ListInstancesRequest{
+		Page:  &page,
+		Limit: &limit,
+		Filters: map[string]*structpb.Value{
+			"billing_plan": structpb.NewListValue(instancesFilter),
+		},
+	})
+	instReq.Header().Set("Authorization", "Bearer "+rootToken)
+	instResp, err := s.instancesClient.List(ctx, instReq)
+	if err != nil {
+		log.Error("Failed to list instances", zap.Error(err))
+		return err
+	}
+	log.Debug("Obtained instances", zap.Any("len", len(instResp.Msg.Pool)))
+
+	var (
+		accountsCandidates = make([]any, 0)
+	)
+	for _, instValue := range instResp.Msg.Pool {
+		accountsCandidates = append(accountsCandidates, instValue.Account)
+	}
+
+	accountsFilter, _ := structpb.NewList(accountsCandidates)
+	accounts, _, _, err := s.accounts.ListImproved(ctx, schema.ROOT_ACCOUNT_KEY, 100, 0, 0, "", "", map[string]*structpb.Value{
+		"uuid": structpb.NewListValue(accountsFilter),
+	})
+	if err != nil {
+		log.Error("Failed to list accounts", zap.Error(err))
+		return err
+	}
+	log.Debug("Obtained accounts", zap.Any("len", len(accounts)))
+
+	currencies, err := s.currencies.GetCurrencies(ctx, true)
+	if err != nil {
+		log.Error("Failed to get currencies", zap.Error(err))
+		return err
+	}
+	var defaultCurrency *pb.Currency
+	for _, c := range currencies {
+		if c.Default {
+			defaultCurrency = c
+			break
+		}
+	}
+	if defaultCurrency == nil {
+		log.Error("Default currency not found")
+		return fmt.Errorf("default currency not found")
+	}
+	allRates, err := s.currencies.GetExchangeRates(ctx)
+	if err != nil {
+		log.Error("Failed to get exchange rates", zap.Error(err))
+		return err
+	}
+
+	// Now accounts contains valid candidates for low credit events
+	for _, account := range accounts {
+		balance := float64(0)
+		if account.Balance != nil {
+			balance = *account.Balance
+		}
+		balanceInDefault, ok := convertWithRate(allRates, account.Currency, &pb.Currency{Id: 0}, balance)
+		if !ok {
+			log.Error("Failed to convert client balance to default currency", zap.Any("client_currency", account.Currency))
+			return fmt.Errorf("cannot convert client's balance")
+		}
+		s.processLowCreditEvent(ctx, log, &account, balanceInDefault, 5, defaultCurrency.Code, 1)
+		s.processLowCreditEvent(ctx, log, &account, balanceInDefault, 2, defaultCurrency.Code, 2)
+	}
 
 	log.Info("Finished Send Low Credits Notify Routine")
 	return nil
+}
+
+func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *zap.Logger,
+	account *graph.Account, convertedBalance float64,
+	limit float64, defaultCurrencyCode string, eventNum int) {
+	ensure(&account.Balance)
+	ensure(&account.Meta)
+	ensure(&account.Meta.Notifications)
+	ensure(&account.Meta.Notifications.FirstBalanceNotify)
+	ensure(&account.Meta.Notifications.SecondBalanceNotify)
+	ensure(&account.Meta.Notifications.SecondBalanceNotify.Base)
+	ensure(&account.Meta.Notifications.FirstBalanceNotify.Base)
+	var (
+		eventKey     = "low_credits_first"
+		notification = account.Meta.Notifications.FirstBalanceNotify
+		threshold    = limit
+	)
+	if eventNum == 2 {
+		eventKey = "low_credits_second"
+		notification = account.Meta.Notifications.SecondBalanceNotify
+	}
+	if notification.Threshold != nil {
+		threshold = *notification.Threshold
+	}
+	if notification.Invalidated || convertedBalance >= threshold || notification.Base.Disabled {
+		return
+	}
+
+	var code = defaultCurrencyCode
+	if account.Currency != nil {
+		code = account.Currency.Code
+	}
+	eventData := map[string]*structpb.Value{
+		"balance_amount": structpb.NewNumberValue(*account.Balance),
+		"currency_code":  structpb.NewStringValue(code),
+	}
+	if _, err := s.eventsClient.Publish(ctx, &events.Event{
+		Type: "email",
+		Uuid: account.Uuid,
+		Key:  eventKey,
+		Data: eventData,
+		Ts:   time.Now().Unix(),
+	}); err != nil {
+		log.Error(fmt.Sprintf("Failed to send %s event", eventKey), zap.Error(err))
+		return
+	}
+	log.Info(fmt.Sprintf("Event %s was successfully sent for %s account", eventKey, account.GetUuid()))
+	notification.Invalidated = true
+	if err := s.accounts.Update(ctx, *account, map[string]interface{}{
+		"meta": account.Meta,
+	}); err != nil {
+		log.Error(fmt.Sprintf("Failed to invalidate account's event: %s", account.GetUuid()), zap.Error(err))
+	}
+}
+
+func ensure[T any](p **T) {
+	if *p == nil {
+		*p = new(T)
+	}
+}
+
+func convertWithRate(rates []*pb.GetExchangeRateResponse, from *pb.Currency, to *pb.Currency, amount float64) (float64, bool) {
+	var fromId, toId int32
+	if from != nil {
+		fromId = from.Id
+	}
+	if to != nil {
+		toId = to.Id
+	}
+	for _, r := range rates {
+		if r.To == nil {
+			r.To = &pb.Currency{}
+		}
+		if r.From == nil {
+			r.From = &pb.Currency{}
+		}
+		if r.To.Id == toId && r.From.Id == fromId {
+			return amount * r.Rate, true
+		}
+	}
+	return amount, false
 }
 
 const accToUnsuspend = `
