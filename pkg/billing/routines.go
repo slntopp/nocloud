@@ -238,6 +238,8 @@ func (s *BillingServiceServer) AutoPayInvoicesRoutine(_ctx context.Context, wg *
 	ctx := context.WithoutCancel(_ctx)
 	log := s.log.Named("AutoPayInvoicesRoutine")
 
+	const maxRetries = 3
+	var retries = 0
 start:
 	roundingConf := MakeRoundingConf(log, &s.settingsClient)
 	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
@@ -251,8 +253,15 @@ start:
 
 	for {
 		log.Info("Entering new Iteration", zap.Time("ts", tick))
-		s.AutoPayInvoices(ctx, log, tick, currencyConf, roundingConf)
+		err := s.AutoPayInvoices(ctx, log, tick, currencyConf, roundingConf)
+		if err != nil && retries < maxRetries {
+			log.Info("Retrying...")
+			time.Sleep(time.Second * 5)
+			retries++
+			goto start
+		}
 
+		retries = 0
 		select {
 		case <-_ctx.Done():
 			log.Info("Context is done. Quitting")
@@ -297,7 +306,7 @@ func (s *BillingServiceServer) getInstanceExpiration(ctx context.Context, inst *
 }
 
 func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Logger, _ time.Time,
-	_ CurrencyConf, _ RoundingConf) {
+	_ CurrencyConf, _ RoundingConf) error {
 	log.Info("Starting Auto Pay Invoices Routine")
 	rootToken, _ := ctx.Value(nocloud.NoCloudToken).(string)
 
@@ -313,7 +322,7 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 	invResp, err := s.GetInvoices(ctx, invReq)
 	if err != nil {
 		log.Error("Failed to list invoices", zap.Error(err))
-		return
+		return err
 	}
 	log.Debug("Fetched invoices", zap.Any("len", len(invResp.Msg.Pool)))
 	var (
@@ -362,7 +371,7 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 	instResp, err := s.instancesClient.List(ctx, instReq)
 	if err != nil {
 		log.Error("Failed to list instances", zap.Error(err))
-		return
+		return err
 	}
 	log.Debug("Obtained instances", zap.Any("len", len(instResp.Msg.Pool)))
 
@@ -486,6 +495,7 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 	}
 
 	log.Info("Finished Auto Pay Invoices Routine")
+	return nil
 }
 
 const accToUnsuspend = `
