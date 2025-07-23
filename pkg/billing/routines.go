@@ -498,6 +498,56 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 	return nil
 }
 
+func (s *BillingServiceServer) SendLowCreditsNotificationsRoutine(_ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctx := context.WithoutCancel(_ctx)
+	log := s.log.Named("SendLowCreditsNotificationsRoutine")
+
+	const maxRetries = 3
+	var retries = 0
+start:
+	roundingConf := MakeRoundingConf(log, &s.settingsClient)
+	currencyConf := MakeCurrencyConf(log, &s.settingsClient)
+
+	upd := make(chan bool, 1)
+
+	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("rounding", roundingConf))
+
+	ticker := time.NewTicker(time.Second * time.Duration(lowFrequentRoutinesFreqSeconds))
+	tick := time.Now()
+
+	for {
+		log.Info("Entering new Iteration", zap.Time("ts", tick))
+		err := s.SendLowCreditsNotifications(ctx, log, tick, currencyConf, roundingConf)
+		if err != nil && retries < maxRetries {
+			log.Info("Retrying...")
+			time.Sleep(time.Second * 5)
+			retries++
+			goto start
+		}
+
+		retries = 0
+		select {
+		case <-_ctx.Done():
+			log.Info("Context is done. Quitting")
+			return
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
+	}
+}
+
+func (s *BillingServiceServer) SendLowCreditsNotifications(ctx context.Context, log *zap.Logger, _ time.Time,
+	_ CurrencyConf, _ RoundingConf) error {
+	log.Info("Starting Send Low Credits Notify Routine")
+
+	log.Info("Finished Send Low Credits Notify Routine")
+	return nil
+}
+
 const accToUnsuspend = `
 let conf = @conf
 
