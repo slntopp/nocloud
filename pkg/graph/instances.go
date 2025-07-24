@@ -701,6 +701,7 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 		Hash:      inst.GetHash(),
 		Period:    period,
 		Estimate:  estimate,
+		Meta:      inst.Meta,
 	}
 
 	if inst.GetTitle() != oldInst.GetTitle() {
