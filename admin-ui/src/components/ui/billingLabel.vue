@@ -8,10 +8,10 @@
         <v-switch
           hide-details
           dense
-          :input-value="template.config.regular_payment"
-          @change="updateInvoiceBased"
+          :input-value="template.meta.autoRenew"
+          @change="updateAutomaticDebit"
           :disabled="isDeleted"
-          label="Invoice based"
+          label="Automatic debit"
         />
       </v-col>
       <v-col
@@ -184,11 +184,8 @@ const renewTemplate = computed(() =>
     `.trim()
 );
 
-const updateInvoiceBased = (value) => {
-  if (template.value.config.auto_renew && value) {
-    emit("update", { key: "config.auto_renew", value: false });
-  }
-  emit("update", { key: "config.regular_payment", value: !!value });
+const updateAutomaticDebit = (value) => {
+  emit("update", { key: "meta.autoRenew", value: !!value });
 };
 </script>
 

@@ -103,7 +103,7 @@
           <v-subheader>Automatic debit</v-subheader>
           <v-switch
             style="width: fit-content"
-            v-model="plan.properties.auto_renew"
+            v-model="plan.properties.autoRenew"
           />
         </v-col>
 
