@@ -58,13 +58,13 @@
       </div>
     </template>
 
-    <template v-slot:[`item.meta.auto_renew`]="{ item }">
+    <template v-slot:[`item.meta.autoRenew`]="{ item }">
       <div class="d-flex justify-center align-center regular_payment">
         <v-switch
           dense
           hide-details
           :disabled="isChangeRegularPaymentLoading"
-          :input-value="item.meta?.auto_renew"
+          :input-value="item.meta?.autoRenew"
           @change="changeAutoRenew(item, $event)"
         />
       </div>
@@ -328,7 +328,7 @@ const headers = computed(() => {
     },
     {
       text: "Automatic debit",
-      value: "meta.auto_renew",
+      value: "meta.autoRenew",
       editable: { type: "logic-select" },
     },
 
@@ -624,14 +624,14 @@ const changeAutoRenew = async (instance, value) => {
     if (!instance.meta) {
       instance.meta = {};
     }
-    instance.meta.auto_renew = value;
+    instance.meta.autoRenew = value;
     const data = store.getters["instances/all"].find(
       (data) => data.uuid === instance.uuid
     );
     if (!data.meta) {
       data.meta = {};
     }
-    data.meta.auto_renew = value;
+    data.meta.autoRenew = value;
 
     await store.getters["instances/instancesClient"].update(
       UpdateRequest.fromJson({ instance: data }, { ignoreUnknownFields: true })
