@@ -381,7 +381,7 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 	var passedInstances = make([]*instancespb.ResponseInstance, 0)
 	for _, instValue := range instResp.Msg.Pool {
 		inst := instValue.Instance
-		if inst.Meta == nil || !inst.Meta.AutoRenew {
+		if inst.Meta == nil || !inst.Meta.GetAutoRenew() {
 			unmarkAllByInstance(inst.GetUuid())
 			continue
 		}
