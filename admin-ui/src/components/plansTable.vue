@@ -17,6 +17,7 @@
         {{ getShortName(item.title, 45) }}
       </router-link>
     </template>
+
     <template v-slot:[`item.meta.auto_start`]="{ item }">
       <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
       <v-switch
@@ -34,6 +35,25 @@
         "
       />
     </template>
+
+    <template v-slot:[`item.properties.auto_renew`]="{ item }">
+      <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
+      <v-switch
+        v-else
+        dense
+        hide-details
+        :readonly="!!updatedPlanUuid"
+        :input-value="item.properties?.auto_renew"
+        :disabled="isDeleted(item)"
+        @change="
+          updatePlan(item, {
+            key: 'properties.auto_renew',
+            value: $event,
+          })
+        "
+      />
+    </template>
+
     <template v-slot:[`item.public`]="{ item }">
       <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
       <v-switch
@@ -203,6 +223,7 @@ const headers = computed(() => {
       { text: "Status ", value: "status" },
       { text: "Public ", value: "public" },
       { text: "Auto start ", value: "meta.auto_start" },
+      { text: "Automatic debit", value: "properties.auto_renew" },
       { text: "Linked instances count ", value: "instanceCount" },
     ];
   }
@@ -334,15 +355,29 @@ const setOptions = (newOptions) => {
 const updatePlan = async (item, { key, value }) => {
   try {
     updatedPlanUuid.value = item.uuid;
+    const newPlan = { ...item };
 
-    await store.getters["plans/plansClient"].updatePlan(
-      Plan.fromJson({
-        ...item,
-        [key]: !!value,
-      })
-    );
+    const subkeys = key.split(".");
+    if (subkeys.length === 1) {
+      newPlan[subkeys[0]] = value;
+    } else {
+      let data = newPlan;
+
+      subkeys.forEach((subkey, index) => {
+        if (!data[subkey]) data[subkey] = {};
+        if (index == subkeys.length - 1) {
+          data = value;
+        } else {
+          data = data[subkey];
+        }
+      });
+    }
+
+    await store.getters["plans/plansClient"].updatePlan(Plan.fromJson(newPlan));
     item[key] = value;
-  } catch {
+  } catch (e) {
+    console.log(e);
+
     store.commit("snackbar/showSnackbarError", {
       message: "Error during update plan",
     });
