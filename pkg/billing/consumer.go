@@ -254,7 +254,7 @@ func (s *BillingServiceServer) ConsumeInvoiceStatusActions(log *zap.Logger, _ctx
 			}
 			log := log.With(zap.String("invoice", event.Uuid))
 			log.Debug("Pubsub event received", zap.String("key", event.Key), zap.String("type", event.Type), zap.String("routingKey", msg.RoutingKey))
-			if err = s.ProcessInvoiceStatusAction(log, ctx, &event); err != nil {
+			if err = s.ProcessInvoiceStatusAction(log, ctxWithInternalAccess(ctx), &event); err != nil {
 				ps.HandleAckNack(log, msg, err)
 				continue
 			}
@@ -411,6 +411,17 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		return fmt.Errorf("failed to create invoice: %w", err)
 	}
 	log.Info("Created invoice", zap.String("uuid", invResp.Msg.GetUuid()))
+
+	// Auto-pay invoice if instance configured as auto_renew
+	if instance.GetMeta() != nil && instance.GetMeta().GetAutoRenew() &&
+		inv.Total > 0 {
+		if _, err = s.PayWithBalance(ctxWithRoot(ctx), connect.NewRequest(&bpb.PayWithBalanceRequest{
+			InvoiceUuid: invResp.Msg.GetUuid(),
+		})); err != nil {
+			log.Warn("Failed to auto-pay INSTANCE_START invoice from user balance", zap.Error(err), zap.String("invoice", invResp.Msg.GetUuid()))
+		}
+	}
+
 	return nil
 }
 
@@ -424,8 +435,8 @@ func (s *BillingServiceServer) ConsumeCreatedInstances(log *zap.Logger, _ctx con
 		NoWait:     false,
 		Exclusive:  false,
 		WithRetry:  true,
-		DelayMilli: 300 * 1000, // Every 5 minute
-		MaxRetries: 36,         // 3 hours in general
+		DelayMilli: 60 * 1000, // Every minute
+		MaxRetries: 72,
 	}
 	msgs, err := p.Consume("created-instance-start-invoice", ps.DEFAULT_EXCHANGE, services_registry.Topic("instances"), opt)
 	if err != nil {

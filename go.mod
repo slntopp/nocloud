@@ -20,7 +20,7 @@ require (
 	github.com/pkg/sftp v1.13.7
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/cors v1.10.1
-	github.com/slntopp/nocloud-proto v0.0.0-20250609230255-84b6794b8274
+	github.com/slntopp/nocloud-proto v0.0.0-20250723105508-d76ade2457f5
 	github.com/spf13/viper v1.18.2
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.9.0
@@ -29,6 +29,7 @@ require (
 	github.com/wI2L/jsondiff v0.5.2
 	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.35.0
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/net v0.23.0
 	golang.org/x/oauth2 v0.20.0
 	golang.org/x/sync v0.11.0
@@ -54,7 +55,6 @@ require (
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tiendc/go-rflutil v0.0.0-20231112145832-693b7b74d697 // indirect
 	github.com/tiendc/gofn v1.11.0 // indirect
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240513163218-0867130af1f8 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240513163218-0867130af1f8 // indirect
 )
