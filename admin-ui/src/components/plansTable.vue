@@ -36,18 +36,18 @@
       />
     </template>
 
-    <template v-slot:[`item.properties.auto_renew`]="{ item }">
+    <template v-slot:[`item.properties.autoRenew`]="{ item }">
       <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
       <v-switch
         v-else
         dense
         hide-details
         :readonly="!!updatedPlanUuid"
-        :input-value="item.properties?.auto_renew"
+        :input-value="item.properties?.autoRenew"
         :disabled="isDeleted(item)"
         @change="
           updatePlan(item, {
-            key: 'properties.auto_renew',
+            key: 'properties.autoRenew',
             value: $event,
           })
         "
@@ -223,7 +223,7 @@ const headers = computed(() => {
       { text: "Status ", value: "status" },
       { text: "Public ", value: "public" },
       { text: "Auto start ", value: "meta.auto_start" },
-      { text: "Automatic debit", value: "properties.auto_renew" },
+      { text: "Automatic debit", value: "properties.autoRenew" },
       { text: "Linked instances count ", value: "instanceCount" },
     ];
   }
@@ -358,26 +358,29 @@ const updatePlan = async (item, { key, value }) => {
     const newPlan = { ...item };
 
     const subkeys = key.split(".");
+
     if (subkeys.length === 1) {
       newPlan[subkeys[0]] = value;
     } else {
       let data = newPlan;
 
       subkeys.forEach((subkey, index) => {
-        if (!data[subkey]) data[subkey] = {};
-        if (index == subkeys.length - 1) {
-          data = value;
+        if (index === subkeys.length - 1) {
+          data[subkey] = value;
         } else {
+          if (!data[subkey] || typeof data[subkey] !== "object") {
+            data[subkey] = {};
+          }
           data = data[subkey];
         }
       });
     }
 
-    await store.getters["plans/plansClient"].updatePlan(Plan.fromJson(newPlan));
+    await store.getters["plans/plansClient"].updatePlan(
+      Plan.fromJson(newPlan, { ignoreUnknownFields: true })
+    );
     item[key] = value;
   } catch (e) {
-    console.log(e);
-
     store.commit("snackbar/showSnackbarError", {
       message: "Error during update plan",
     });
