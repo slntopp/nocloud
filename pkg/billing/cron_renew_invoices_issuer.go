@@ -322,7 +322,8 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			Account:   acc.GetUuid(),
 			Currency:  acc.Currency,
 			Meta: map[string]*structpb.Value{
-				"creator": structpb.NewStringValue("system"),
+				"creator":      structpb.NewStringValue("system"),
+				"auto_created": structpb.NewBoolValue(true),
 			},
 			TaxOptions: &pb.TaxOptions{
 				TaxRate: tax,
@@ -339,7 +340,8 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		RenewalData: make(map[string]graph.RenewalData),
 	}
 	var (
-		requireEmailApproved, requirePhoneApproved bool
+		requireEmailApproved = false
+		requirePhoneApproved = false
 	)
 	for _, d := range data {
 		inst := d.Instance
@@ -390,6 +392,9 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			if bp.Properties.EmailVerificationRequired {
 				requireEmailApproved = true
 			}
+			if !bp.Properties.AutoRenew {
+			}
+		} else {
 		}
 
 		promoItems := make([]*pb.Item, 0)
@@ -448,9 +453,9 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		log.Error("Error creating invoice", zap.Error(err))
 		return fmt.Errorf("error creating invoice: %w", err)
 	}
-	delaySeconds(601)
-
 	log.Info("Created invoice", zap.String("uuid", resp.Msg.GetUuid()), zap.Int("item_count", len(inv.Items)))
+
+	delaySeconds(601)
 	return nil
 }
 

@@ -267,6 +267,8 @@ export default {
         this.copyInstance[key] = value;
       }
       this.copyInstance = { ...this.copyInstance };
+      console.log(this.copyInstance);
+      
     },
     goToPlan() {
       this.$router.push({

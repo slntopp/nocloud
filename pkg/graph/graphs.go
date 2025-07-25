@@ -656,3 +656,9 @@ func listNamespaces[T Accessible](
 
 	return &result, nil
 }
+
+func ensure[T any](p **T) {
+	if *p == nil {
+		*p = new(T)
+	}
+}

@@ -402,7 +402,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
-	if !rootAccess && (t.Account != requester || !hasInternalAccess(ctx)) {
+	if !rootAccess && t.Account != requester && !hasInternalAccess(ctx) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
@@ -1512,7 +1512,8 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 		Account:   acc.GetUuid(),
 		Currency:  acc.Currency,
 		Meta: map[string]*structpb.Value{
-			"creator": structpb.NewStringValue(requester),
+			"creator":      structpb.NewStringValue(requester),
+			"auto_created": structpb.NewBoolValue(true),
 		},
 		TaxOptions: &pb.TaxOptions{
 			TaxRate: tax,
@@ -1572,6 +1573,9 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 		}
 		if tr != nil {
 			inv.Transactions = append(inv.Transactions, tr.GetUuid())
+		}
+		if err = s.accounts.InvalidateBalanceEvents(ctx, inv.GetAccount()); err != nil {
+			s.log.Error("Failed to invalidate balance events for user", zap.Error(err), zap.String("account", inv.GetAccount()))
 		}
 
 	case pb.ActionType_INSTANCE_START:

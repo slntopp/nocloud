@@ -261,7 +261,6 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		}
 
 		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
-
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
 			return nil, status.Error(codes.Internal, err.Error())
@@ -332,8 +331,14 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		}
 	}
 
-	resp := connect.NewResponse(r.Transaction)
+	// If top-up transaction that is called with API
+	if !hasInternalAccess(ctx) && t.Total < 0 {
+		if err = s.accounts.InvalidateBalanceEvents(ctxWithRoot(context.Background()), t.GetAccount()); err != nil {
+			log.Error("Failed to invalidate account balance events", zap.Error(err))
+		}
+	}
 
+	resp := connect.NewResponse(r.Transaction)
 	return resp, nil
 }
 
@@ -673,7 +678,7 @@ func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount floa
 		conf := MakeCurrencyConf(s.log, &s.settingsClient)
 		curr = conf.Currency
 	}
-	resp, err := s.CreateTransaction(ctxWithRoot(ctx), connect.NewRequest(&pb.Transaction{
+	resp, err := s.CreateTransaction(ctxWithInternalAccess(ctxWithRoot(ctx)), connect.NewRequest(&pb.Transaction{
 		Exec:     time.Now().Unix(),
 		Priority: pb.Priority_URGENT,
 		Account:  account,

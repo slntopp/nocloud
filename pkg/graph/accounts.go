@@ -58,6 +58,7 @@ type AccountsController interface {
 	GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool)
 	Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool)
 	EnsureRootExists(passwd string) (err error)
+	InvalidateBalanceEvents(ctx context.Context, acc string) error
 }
 
 type Account struct {
@@ -222,6 +223,24 @@ func (ctrl *accountsController) Create(ctx context.Context, acc pb.Account) (Acc
 
 func (ctrl *accountsController) Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error) {
 	_, err = ctrl.col.UpdateDocument(ctx, acc.Key, patch)
+	return err
+}
+
+func (ctrl *accountsController) InvalidateBalanceEvents(ctx context.Context, acc string) error {
+	account, err := ctrl.Get(ctx, acc)
+	if err != nil {
+		return err
+	}
+	ensure(&account.Meta)
+	ensure(&account.Meta.Notifications)
+	ensure(&account.Meta.Notifications.FirstBalanceNotify)
+	ensure(&account.Meta.Notifications.SecondBalanceNotify)
+	f := false
+	account.Meta.Notifications.FirstBalanceNotify.Invalidated = &f
+	account.Meta.Notifications.SecondBalanceNotify.Invalidated = &f
+	_, err = ctrl.col.UpdateDocument(ctx, acc, map[string]any{
+		"meta": account.Meta,
+	})
 	return err
 }
 

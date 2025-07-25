@@ -661,6 +661,11 @@ func buildPlansListQuery(req *pb.ListRequest, hasAccess bool) (string, map[strin
 				varsKey := "filteredPlans"
 				query += fmt.Sprintf(` FILTER p._key in @%s`, varsKey)
 				vars[varsKey] = values
+			} else if key == "auto_payment" {
+				values := value.GetBoolValue()
+				varsKey := "autoRenew"
+				query += fmt.Sprintf(` FILTER TO_BOOL(p.properties.auto_renew) == @%s`, varsKey)
+				vars[varsKey] = values
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {

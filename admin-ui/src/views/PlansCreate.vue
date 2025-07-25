@@ -100,6 +100,14 @@
         </v-col>
 
         <v-col cols="1" class="align-center d-flex">
+          <v-subheader>Automatic debit</v-subheader>
+          <v-switch
+            style="width: fit-content"
+            v-model="plan.properties.autoRenew"
+          />
+        </v-col>
+
+        <v-col cols="1" class="align-center d-flex">
           <v-subheader
             >Auto start
             <v-tooltip>
