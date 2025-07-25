@@ -22,6 +22,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud-proto/events"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud-proto/statuses"
@@ -495,6 +496,16 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 				}
 			}
 		}
+		nocloud.Log(log, &elpb.Event{
+			Uuid:      inv.GetUuid(),
+			Entity:    "Invoices",
+			Action:    "auto_payment",
+			Scope:     "database",
+			Rc:        0,
+			Ts:        time.Now().Unix(),
+			Snapshot:  &elpb.Snapshot{Diff: ""},
+			Requestor: schema.ROOT_ACCOUNT_KEY,
+		})
 		inv.Meta[lastAutoPaymentAttemptKey] = structpb.NewNumberValue(float64(now))
 		inv.Meta[autoPaymentAttemptsKey] = structpb.NewNumberValue(inv.Meta[autoPaymentAttemptsKey].GetNumberValue() + 1)
 		if err = s.invoices.Patch(ctx, inv.GetUuid(), map[string]interface{}{

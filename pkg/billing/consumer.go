@@ -9,7 +9,9 @@ import (
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/promocodes"
 	epb "github.com/slntopp/nocloud-proto/events"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -420,6 +422,17 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 			InvoiceUuid: invResp.Msg.GetUuid(),
 		})); err != nil {
 			log.Warn("Failed to auto-pay INSTANCE_START invoice from user balance", zap.Error(err), zap.String("invoice", invResp.Msg.GetUuid()))
+		} else {
+			nocloud.Log(log, &elpb.Event{
+				Uuid:      inv.GetUuid(),
+				Entity:    "Invoices",
+				Action:    "auto_payment",
+				Scope:     "database",
+				Rc:        0,
+				Ts:        time.Now().Unix(),
+				Snapshot:  &elpb.Snapshot{Diff: ""},
+				Requestor: schema.ROOT_ACCOUNT_KEY,
+			})
 		}
 	}
 
