@@ -676,6 +676,10 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 	ensure(&account.Meta.Notifications.SecondBalanceNotify)
 	ensure(&account.Meta.Notifications.SecondBalanceNotify.Base)
 	ensure(&account.Meta.Notifications.FirstBalanceNotify.Base)
+	ensure(&account.Meta.Notifications.FirstBalanceNotify.Invalidated)
+	ensure(&account.Meta.Notifications.SecondBalanceNotify.Invalidated)
+	ensure(&account.Meta.Notifications.FirstBalanceNotify.Base.Disabled)
+	ensure(&account.Meta.Notifications.SecondBalanceNotify.Base.Disabled)
 	var (
 		eventKey     = "low_credits_first"
 		notification = account.Meta.Notifications.FirstBalanceNotify
@@ -688,7 +692,7 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 	if notification.Threshold != nil {
 		threshold = *notification.Threshold
 	}
-	if notification.Invalidated || convertedBalance >= threshold || notification.Base.Disabled {
+	if *notification.Invalidated || convertedBalance >= threshold || *notification.Base.Disabled {
 		return
 	}
 
@@ -711,7 +715,7 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 		return
 	}
 	log.Info(fmt.Sprintf("Event %s was successfully sent for %s account", eventKey, account.GetUuid()))
-	notification.Invalidated = true
+	notification.Invalidated = ptr(true)
 	notification.Base.LastNotification = time.Now().Unix()
 	notification.Base.SentNotifications += 1
 	if err := s.accounts.Update(ctx, *account, map[string]interface{}{

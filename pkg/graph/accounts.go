@@ -235,8 +235,9 @@ func (ctrl *accountsController) InvalidateBalanceEvents(ctx context.Context, acc
 	ensure(&account.Meta.Notifications)
 	ensure(&account.Meta.Notifications.FirstBalanceNotify)
 	ensure(&account.Meta.Notifications.SecondBalanceNotify)
-	account.Meta.Notifications.FirstBalanceNotify.Invalidated = false
-	account.Meta.Notifications.SecondBalanceNotify.Invalidated = false
+	f := false
+	account.Meta.Notifications.FirstBalanceNotify.Invalidated = &f
+	account.Meta.Notifications.SecondBalanceNotify.Invalidated = &f
 	_, err = ctrl.col.UpdateDocument(ctx, acc, map[string]any{
 		"meta": account.Meta,
 	})
