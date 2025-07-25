@@ -432,6 +432,7 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 			unmarkAllByInstance(inst.GetUuid())
 			continue
 		}
+		log.Debug("Got expiration for instance", zap.String("instance", inst.GetUuid()), zap.Int64("expiration", expiration), zap.Int64("period", period))
 		if period == 0 || !isTimeToRenew(expiration, period, now) {
 			unmarkAllByInstance(inst.GetUuid())
 			continue
