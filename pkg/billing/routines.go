@@ -27,6 +27,7 @@ import (
 	"github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
 	"sync"
@@ -39,6 +40,14 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
+
+func init() {
+	viper.AutomaticEnv()
+	viper.SetDefault("LOW_FREQ_ROUTINES_FREQ_SECONDS", 7200)
+	lowFrequentRoutinesFreqSeconds = viper.GetInt("LOW_FREQ_ROUTINES_FREQ_SECONDS")
+}
+
+var lowFrequentRoutinesFreqSeconds = 7200
 
 func (s *BillingServiceServer) RoutinesState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
@@ -231,8 +240,6 @@ start:
 		}
 	}
 }
-
-const lowFrequentRoutinesFreqSeconds = 7200
 
 func (s *BillingServiceServer) AutoPayInvoicesRoutine(_ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
