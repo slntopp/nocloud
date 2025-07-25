@@ -385,7 +385,8 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		Status: bpb.BillingStatus_UNPAID,
 		Items:  items,
 		Meta: map[string]*structpb.Value{
-			"creator": structpb.NewStringValue("system"),
+			"creator":      structpb.NewStringValue("system"),
+			"auto_created": structpb.NewBoolValue(true),
 		},
 		Total:     invCost,
 		Type:      bpb.ActionType_INSTANCE_START,

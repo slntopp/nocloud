@@ -346,7 +346,9 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 		delete(instanceToInvoice, inst)
 	}
 	for _, inv := range invResp.Msg.Pool {
-		if inv.Meta == nil || inv.Meta["creator"].GetStringValue() != "system" {
+		if inv.Meta == nil ||
+			inv.Meta["auto_created"] == nil ||
+			!inv.Meta["auto_created"].GetBoolValue() {
 			continue
 		}
 		if int(inv.Meta[autoPaymentAttemptsKey].GetNumberValue()) >= 1 {
