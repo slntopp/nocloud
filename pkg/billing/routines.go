@@ -503,17 +503,18 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 					log.Error("Failed to send auto_payment_failure event", zap.Error(err))
 				}
 			}
+		} else {
+			nocloud.Log(log, &elpb.Event{
+				Uuid:      inv.GetUuid(),
+				Entity:    "Invoices",
+				Action:    "auto_payment",
+				Scope:     "database",
+				Rc:        0,
+				Ts:        time.Now().Unix(),
+				Snapshot:  &elpb.Snapshot{Diff: ""},
+				Requestor: schema.ROOT_ACCOUNT_KEY,
+			})
 		}
-		nocloud.Log(log, &elpb.Event{
-			Uuid:      inv.GetUuid(),
-			Entity:    "Invoices",
-			Action:    "auto_payment",
-			Scope:     "database",
-			Rc:        0,
-			Ts:        time.Now().Unix(),
-			Snapshot:  &elpb.Snapshot{Diff: ""},
-			Requestor: schema.ROOT_ACCOUNT_KEY,
-		})
 		inv.Meta[lastAutoPaymentAttemptKey] = structpb.NewNumberValue(float64(now))
 		inv.Meta[autoPaymentAttemptsKey] = structpb.NewNumberValue(inv.Meta[autoPaymentAttemptsKey].GetNumberValue() + 1)
 		if err = s.invoices.Patch(ctx, inv.GetUuid(), map[string]interface{}{
