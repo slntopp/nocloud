@@ -365,6 +365,10 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 		}
 	}
 
+	if len(instancesToFetch) == 0 {
+		log.Debug("No instances to fetch. Skipping...")
+		return nil
+	}
 	// Fetch required instances
 	var (
 		page  = uint64(1)
