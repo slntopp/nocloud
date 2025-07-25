@@ -428,7 +428,7 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 		inst := instValue.Instance
 		expiration, period, err := s.getInstanceExpiration(ctx, instValue)
 		if err != nil {
-			log.Error("Failed to get instance expiration", zap.Error(err))
+			log.Warn("Failed to get instance expiration", zap.Error(err), zap.String("instance", inst.GetUuid()))
 			unmarkAllByInstance(inst.GetUuid())
 			continue
 		}
