@@ -371,11 +371,14 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 		limit = uint64(100_000)
 	)
 	instancesFilter, _ := structpb.NewList(instancesToFetch)
+	instancesStatusFilter, _ := structpb.NewList([]any{statuses.NoCloudStatus_UP, statuses.NoCloudStatus_INIT,
+		statuses.NoCloudStatus_SUS, statuses.NoCloudStatus_UNSPECIFIED})
 	instReq := connect.NewRequest(&instancespb.ListInstancesRequest{
 		Page:  &page,
 		Limit: &limit,
 		Filters: map[string]*structpb.Value{
-			"uuids": structpb.NewListValue(instancesFilter),
+			"uuids":  structpb.NewListValue(instancesFilter),
+			"status": structpb.NewListValue(instancesStatusFilter),
 		},
 	})
 	instReq.Header().Set("Authorization", "Bearer "+rootToken)
