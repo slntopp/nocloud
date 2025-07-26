@@ -153,7 +153,7 @@ func (a ActiveMonitoring) Start(sp string, freq int64, action func()) {
 		t := time.NewTicker(time.Duration(mCtx.Frequency) * time.Second)
 		defer t.Stop()
 		for {
-			action()
+			go action()
 			select {
 			case <-mCtx.ctx.Done():
 				return
