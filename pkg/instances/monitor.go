@@ -307,5 +307,5 @@ func (s *InstancesServer) monitoringAction(ctx context.Context, _log *zap.Logger
 	}
 
 	elapsed := time.Since(start)
-	log.Debug("Finished monitoring", zap.Duration("monitoring_duration", elapsed))
+	log.Debug("Finished monitoring", zap.Float64("duration_seconds", elapsed.Seconds()))
 }
