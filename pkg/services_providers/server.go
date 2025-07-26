@@ -325,6 +325,9 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if hooks := req.GetHooks(); hooks != nil {
 		sp.Hooks = hooks
 	}
+	if req.MonitoringFrequency != nil {
+		sp.MonitoringFrequency = req.MonitoringFrequency
+	}
 
 	sp.Meta = req.GetMeta()
 	sp.Public = req.GetPublic()
