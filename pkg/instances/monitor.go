@@ -291,6 +291,7 @@ func (s *InstancesServer) monitoringAction(ctx context.Context, _log *zap.Logger
 			continue
 		}
 		balance[group.GetUuid()] = convertedToDefault
+		log.Debug("Balance for monitoring", zap.Any("ig", group), zap.Float64("balance", balance[group.GetUuid()]))
 	}
 
 	var addons = map[string]*pb.Addon{}
