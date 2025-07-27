@@ -254,7 +254,7 @@ func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb
 		Requestor: requester,
 		Ts:        time.Now().Unix(),
 		Snapshot: &elpb.Snapshot{
-			Diff: fmt.Sprintf("Old: %s New: %s", oldPhone, newPhone),
+			Diff: fmt.Sprintf("Old: %s New: %s OldWasVerified: %t", oldPhone, newPhone, acc.IsPhoneVerified),
 		},
 	})
 
