@@ -197,7 +197,6 @@ start:
 			var freq = int64(conf.Frequency)
 			if sp.MonitoringFrequency != nil && *sp.MonitoringFrequency > 0 {
 				freq = *sp.MonitoringFrequency
-				log.Debug("Found custom monitoring frequency", zap.Int64("freq", freq), zap.String("sp", spUuid))
 			}
 			monitoring, ok := activeMonitoring.Get(spUuid)
 			if !ok || monitoring.Frequency != freq {
@@ -218,6 +217,7 @@ start:
 			log.Info("New Configuration Received, restarting Routine")
 			goto start
 		}
+
 	}
 }
 
