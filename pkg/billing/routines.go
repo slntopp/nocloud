@@ -761,6 +761,9 @@ func convertWithRate(rates []*pb.GetExchangeRateResponse, from *pb.Currency, to 
 	if to != nil {
 		toId = to.Id
 	}
+	if fromId == toId {
+		return amount, true
+	}
 	for _, r := range rates {
 		if r.To == nil {
 			r.To = &pb.Currency{}

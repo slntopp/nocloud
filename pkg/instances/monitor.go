@@ -17,6 +17,7 @@ package instances
 
 import (
 	"context"
+	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
 	"github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
@@ -91,13 +92,16 @@ func (s *InstancesServer) RoutinesState() []*health.RoutineStatus {
 	}
 }
 
-const getAccsBalance = `
+const getAccountBalance = `
 FOR node, edge, path IN 3
     INBOUND @ig
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-    RETURN LENGTH(node.account_owner) > 0 ? TO_NUMBER(DOCUMENT(@@accounts, node.account_owner)["balance"]) : TO_NUMBER(node.balance)
+    LET account = LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
+    FILTER account
+    LET currencyID = node.currency != null ? TO_NUMBER(node.currency.id) : 0
+    RETURN { currency: currencyID, balance: TO_NUMBER(account.balance) }
 `
 
 const getAddons = `
@@ -254,9 +258,13 @@ func (s *InstancesServer) monitoringAction(ctx context.Context, _log *zap.Logger
 	}
 
 	var balance = make(map[string]float64, len(iGroups))
-
+	rates, err := s.curr_ctrl.GetExchangeRates(ctx)
+	if err != nil {
+		log.Error("Failed to get exchange rates", zap.Error(err))
+		return
+	}
 	for _, group := range iGroups {
-		cur, err := s.db.Query(ctx, getAccsBalance, map[string]any{
+		cur, err := s.db.Query(ctx, getAccountBalance, map[string]any{
 			"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group.GetUuid()),
 			"permissions": schema.PERMISSIONS_GRAPH.Name,
 			"@accounts":   schema.ACCOUNTS_COL,
@@ -266,15 +274,23 @@ func (s *InstancesServer) monitoringAction(ctx context.Context, _log *zap.Logger
 			continue
 		}
 
-		var result float64
-
+		var result struct {
+			Balance  float64
+			Currency int32
+		}
 		_, err = cur.ReadDocument(ctx, &result)
 		if err != nil {
 			log.Error("Failed to get balance", zap.Error(err), zap.String("uuid", group.GetUuid()))
 			continue
 		}
-		balance[group.GetUuid()] = result
 		cur.Close()
+
+		convertedToDefault, ok := convertWithRate(rates, &bpb.Currency{Id: result.Currency}, &bpb.Currency{Id: 0}, result.Balance)
+		if !ok {
+			log.Error("Failed to convert account's balance to default", zap.Error(err), zap.String("ig_uuid", group.GetUuid()))
+			continue
+		}
+		balance[group.GetUuid()] = convertedToDefault
 	}
 
 	var addons = map[string]*pb.Addon{}
@@ -308,6 +324,7 @@ func (s *InstancesServer) monitoringAction(ctx context.Context, _log *zap.Logger
 		return
 	}
 
+	elapsedOnPrep := time.Since(start)
 	_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
 		Groups:           iGroups,
 		ServicesProvider: sp.ServicesProvider,
@@ -320,5 +337,30 @@ func (s *InstancesServer) monitoringAction(ctx context.Context, _log *zap.Logger
 	}
 
 	elapsed := time.Since(start)
-	log.Debug("Finished monitoring", zap.Float64("duration_seconds", elapsed.Seconds()))
+	log.Debug("Finished monitoring", zap.Float64("duration_seconds", elapsed.Seconds()), zap.Float64("preparing_duration", elapsedOnPrep.Seconds()))
+}
+
+func convertWithRate(rates []*bpb.GetExchangeRateResponse, from *bpb.Currency, to *bpb.Currency, amount float64) (float64, bool) {
+	var fromId, toId int32
+	if from != nil {
+		fromId = from.Id
+	}
+	if to != nil {
+		toId = to.Id
+	}
+	if fromId == toId {
+		return amount, true
+	}
+	for _, r := range rates {
+		if r.To == nil {
+			r.To = &bpb.Currency{}
+		}
+		if r.From == nil {
+			r.From = &bpb.Currency{}
+		}
+		if r.To.Id == toId && r.From.Id == fromId {
+			return amount * r.Rate, true
+		}
+	}
+	return amount, false
 }
