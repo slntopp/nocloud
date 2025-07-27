@@ -138,7 +138,7 @@ func (a ActiveMonitoring) Get(sp string) (MonitoringContext, bool) {
 	return ctx, ok
 }
 
-func (a ActiveMonitoring) Start(sp string, freq int64, action func()) {
+func (a ActiveMonitoring) Start(sp string, freq int64, action func(), logger *zap.Logger) {
 	a.Abort(sp)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -150,10 +150,23 @@ func (a ActiveMonitoring) Start(sp string, freq int64, action func()) {
 	}
 	a[sp] = mCtx
 	go func() {
+		log := logger
 		t := time.NewTicker(time.Duration(mCtx.Frequency) * time.Second)
 		defer t.Stop()
 		for {
-			go action()
+			go func() {
+				start := time.Now()
+				action()
+				elapsed := time.Since(start).Seconds()
+				if elapsed >= float64(mCtx.Frequency) {
+					log.Error("[ERROR] Monitoring took longer than expected",
+						zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
+				}
+				if elapsed >= float64(mCtx.Frequency)/2 {
+					log.Warn("[WARNING] Monitoring took half of expected time (Maybe lower frequency?)",
+						zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
+				}
+			}()
 			select {
 			case <-mCtx.ctx.Done():
 				return
@@ -202,7 +215,7 @@ start:
 			if !ok || monitoring.Frequency != freq {
 				activeMonitoring.Start(spUuid, freq, func() {
 					s.monitoringAction(ctx, log, spUuid)
-				})
+				}, log)
 			}
 		}
 
