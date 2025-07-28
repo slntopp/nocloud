@@ -22,11 +22,13 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud-proto/events"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/spf13/viper"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
 	"sync"
@@ -39,6 +41,14 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
+
+func init() {
+	viper.AutomaticEnv()
+	viper.SetDefault("LOW_FREQ_ROUTINES_FREQ_SECONDS", 7200)
+	lowFrequentRoutinesFreqSeconds = viper.GetInt("LOW_FREQ_ROUTINES_FREQ_SECONDS")
+}
+
+var lowFrequentRoutinesFreqSeconds = 7200
 
 func (s *BillingServiceServer) RoutinesState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
@@ -232,8 +242,6 @@ start:
 	}
 }
 
-const lowFrequentRoutinesFreqSeconds = 7200
-
 func (s *BillingServiceServer) AutoPayInvoicesRoutine(_ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	ctx := context.WithoutCancel(_ctx)
@@ -339,7 +347,9 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 		delete(instanceToInvoice, inst)
 	}
 	for _, inv := range invResp.Msg.Pool {
-		if inv.Meta == nil || inv.Meta["creator"].GetStringValue() != "system" {
+		if inv.Meta == nil ||
+			inv.Meta["auto_created"] == nil ||
+			!inv.Meta["auto_created"].GetBoolValue() {
 			continue
 		}
 		if int(inv.Meta[autoPaymentAttemptsKey].GetNumberValue()) >= 1 {
@@ -355,17 +365,24 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 		}
 	}
 
+	if len(instancesToFetch) == 0 {
+		log.Debug("No instances to fetch. Skipping...")
+		return nil
+	}
 	// Fetch required instances
 	var (
 		page  = uint64(1)
 		limit = uint64(100_000)
 	)
 	instancesFilter, _ := structpb.NewList(instancesToFetch)
+	instancesStatusFilter, _ := structpb.NewList([]any{statuses.NoCloudStatus_UP, statuses.NoCloudStatus_INIT,
+		statuses.NoCloudStatus_SUS, statuses.NoCloudStatus_UNSPECIFIED})
 	instReq := connect.NewRequest(&instancespb.ListInstancesRequest{
 		Page:  &page,
 		Limit: &limit,
 		Filters: map[string]*structpb.Value{
-			"uuids": structpb.NewListValue(instancesFilter),
+			"uuids":  structpb.NewListValue(instancesFilter),
+			"status": structpb.NewListValue(instancesStatusFilter),
 		},
 	})
 	instReq.Header().Set("Authorization", "Bearer "+rootToken)
@@ -381,7 +398,7 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 	var passedInstances = make([]*instancespb.ResponseInstance, 0)
 	for _, instValue := range instResp.Msg.Pool {
 		inst := instValue.Instance
-		if inst.Meta == nil || !inst.Meta.AutoRenew {
+		if inst.Meta == nil || !inst.Meta.GetAutoRenew() {
 			unmarkAllByInstance(inst.GetUuid())
 			continue
 		}
@@ -418,10 +435,11 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 		inst := instValue.Instance
 		expiration, period, err := s.getInstanceExpiration(ctx, instValue)
 		if err != nil {
-			log.Error("Failed to get instance expiration", zap.Error(err))
+			log.Warn("Failed to get instance expiration", zap.Error(err), zap.String("instance", inst.GetUuid()))
 			unmarkAllByInstance(inst.GetUuid())
 			continue
 		}
+		log.Debug("Got expiration for instance", zap.String("instance", inst.GetUuid()), zap.Int64("expiration", expiration), zap.Int64("period", period))
 		if period == 0 || !isTimeToRenew(expiration, period, now) {
 			unmarkAllByInstance(inst.GetUuid())
 			continue
@@ -485,6 +503,17 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 					log.Error("Failed to send auto_payment_failure event", zap.Error(err))
 				}
 			}
+		} else {
+			nocloud.Log(log, &elpb.Event{
+				Uuid:      inv.GetUuid(),
+				Entity:    "Invoices",
+				Action:    "auto_payment",
+				Scope:     "database",
+				Rc:        0,
+				Ts:        time.Now().Unix(),
+				Snapshot:  &elpb.Snapshot{Diff: ""},
+				Requestor: schema.ROOT_ACCOUNT_KEY,
+			})
 		}
 		inv.Meta[lastAutoPaymentAttemptKey] = structpb.NewNumberValue(float64(now))
 		inv.Meta[autoPaymentAttemptsKey] = structpb.NewNumberValue(inv.Meta[autoPaymentAttemptsKey].GetNumberValue() + 1)
@@ -669,6 +698,10 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 	ensure(&account.Meta.Notifications.SecondBalanceNotify)
 	ensure(&account.Meta.Notifications.SecondBalanceNotify.Base)
 	ensure(&account.Meta.Notifications.FirstBalanceNotify.Base)
+	ensure(&account.Meta.Notifications.FirstBalanceNotify.Invalidated)
+	ensure(&account.Meta.Notifications.SecondBalanceNotify.Invalidated)
+	ensure(&account.Meta.Notifications.FirstBalanceNotify.Base.Disabled)
+	ensure(&account.Meta.Notifications.SecondBalanceNotify.Base.Disabled)
 	var (
 		eventKey     = "low_credits_first"
 		notification = account.Meta.Notifications.FirstBalanceNotify
@@ -681,7 +714,7 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 	if notification.Threshold != nil {
 		threshold = *notification.Threshold
 	}
-	if notification.Invalidated || convertedBalance >= threshold || notification.Base.Disabled {
+	if *notification.Invalidated || convertedBalance >= threshold || *notification.Base.Disabled {
 		return
 	}
 
@@ -704,7 +737,7 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 		return
 	}
 	log.Info(fmt.Sprintf("Event %s was successfully sent for %s account", eventKey, account.GetUuid()))
-	notification.Invalidated = true
+	notification.Invalidated = ptr(true)
 	notification.Base.LastNotification = time.Now().Unix()
 	notification.Base.SentNotifications += 1
 	if err := s.accounts.Update(ctx, *account, map[string]interface{}{
@@ -727,6 +760,9 @@ func convertWithRate(rates []*pb.GetExchangeRateResponse, from *pb.Currency, to 
 	}
 	if to != nil {
 		toId = to.Id
+	}
+	if fromId == toId {
+		return amount, true
 	}
 	for _, r := range rates {
 		if r.To == nil {

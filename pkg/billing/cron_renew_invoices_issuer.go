@@ -322,7 +322,8 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 			Account:   acc.GetUuid(),
 			Currency:  acc.Currency,
 			Meta: map[string]*structpb.Value{
-				"creator": structpb.NewStringValue("system"),
+				"creator":      structpb.NewStringValue("system"),
+				"auto_created": structpb.NewBoolValue(true),
 			},
 			TaxOptions: &pb.TaxOptions{
 				TaxRate: tax,
