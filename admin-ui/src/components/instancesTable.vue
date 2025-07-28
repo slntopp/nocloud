@@ -58,6 +58,18 @@
       </div>
     </template>
 
+    <template v-slot:[`item.meta.autoRenew`]="{ item }">
+      <div class="d-flex justify-center align-center regular_payment">
+        <v-switch
+          dense
+          hide-details
+          :disabled="isChangeRegularPaymentLoading"
+          :input-value="item.meta?.autoRenew"
+          @change="changeAutoRenew(item, $event)"
+        />
+      </div>
+    </template>
+
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta?.networking?.public">-</template>
       <instance-ip-menu v-else :item="item" ui="span" />
@@ -314,6 +326,12 @@ const headers = computed(() => {
       value: "config.regular_payment",
       editable: { type: "logic-select" },
     },
+    {
+      text: "Automatic debit",
+      value: "meta.autoRenew",
+      editable: { type: "logic-select" },
+    },
+
     { text: "Auto renew", value: "config.auto_renew" },
   ];
   return headers;
@@ -587,12 +605,36 @@ const changeRegularPayment = async (instance, value) => {
     instance.config.regular_payment = value;
 
     const data = store.getters["instances/all"].find(
-      (data) => data.instance.uuid === instance.uuid
-    ).instance;
+      (data) => data.uuid === instance.uuid
+    );
     data.config.regular_payment = value;
 
     await store.getters["instances/instancesClient"].update(
       UpdateRequest.fromJson({ instance: data })
+    );
+  } finally {
+    isChangeRegularPaymentLoading.value = false;
+  }
+};
+
+const changeAutoRenew = async (instance, value) => {
+  isChangeRegularPaymentLoading.value = true;
+
+  try {
+    if (!instance.meta) {
+      instance.meta = {};
+    }
+    instance.meta.autoRenew = value;
+    const data = store.getters["instances/all"].find(
+      (data) => data.uuid === instance.uuid
+    );
+    if (!data.meta) {
+      data.meta = {};
+    }
+    data.meta.autoRenew = value;
+
+    await store.getters["instances/instancesClient"].update(
+      UpdateRequest.fromJson({ instance: data }, { ignoreUnknownFields: true })
     );
   } finally {
     isChangeRegularPaymentLoading.value = false;

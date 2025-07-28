@@ -17,6 +17,7 @@ package instances
 
 import (
 	"context"
+	bpb "github.com/slntopp/nocloud-proto/billing"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
 	"github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
@@ -34,7 +35,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -92,13 +92,16 @@ func (s *InstancesServer) RoutinesState() []*health.RoutineStatus {
 	}
 }
 
-const getAccsBalance = `
+const getAccountBalance = `
 FOR node, edge, path IN 3
     INBOUND @ig
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-    RETURN LENGTH(node.account_owner) > 0 ? TO_NUMBER(DOCUMENT(@@accounts, node.account_owner)["balance"]) : TO_NUMBER(node.balance)
+    LET account = LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
+    FILTER account
+    LET currencyID = node.currency != null ? TO_NUMBER(node.currency.id) : 0
+    RETURN { currency: currencyID, balance: TO_NUMBER(account.balance) }
 `
 
 const getAddons = `
@@ -118,125 +121,106 @@ FOR a IN inst.addons
     RETURN MERGE(DOCUMENT(CONCAT(@addons, "/", uuid)), { uuid })
 `
 
+type MonitoringContext struct {
+	ctx       context.Context
+	cancel    context.CancelFunc
+	Sp        string
+	Frequency int64
+}
+
+type ActiveMonitoring map[string]MonitoringContext
+
+func (a ActiveMonitoring) Abort(sp string) {
+	if mCtx, ok := a[sp]; ok {
+		mCtx.cancel()
+		delete(a, sp)
+	}
+}
+
+func (a ActiveMonitoring) Get(sp string) (MonitoringContext, bool) {
+	ctx, ok := a[sp]
+	return ctx, ok
+}
+
+func (a ActiveMonitoring) Start(sp string, freq int64, action func(), logger *zap.Logger) {
+	a.Abort(sp)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	mCtx := MonitoringContext{
+		ctx:       ctx,
+		cancel:    cancel,
+		Sp:        sp,
+		Frequency: freq,
+	}
+	a[sp] = mCtx
+	go func() {
+		log := logger
+		t := time.NewTicker(time.Duration(mCtx.Frequency) * time.Second)
+		defer t.Stop()
+		for {
+			go func() {
+				start := time.Now()
+				action()
+				elapsed := time.Since(start).Seconds()
+				if elapsed >= float64(mCtx.Frequency) {
+					log.Error("[ERROR][error] Monitoring took longer than expected",
+						zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
+				}
+				if elapsed >= float64(mCtx.Frequency)/2 {
+					log.Warn("[WARNING][warn] Monitoring took half of expected time (Maybe lower frequency?)",
+						zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
+				}
+			}()
+			select {
+			case <-mCtx.ctx.Done():
+				return
+			case <-t.C:
+			}
+		}
+	}()
+}
+
+var activeMonitoring = ActiveMonitoring{}
+
 func (s *InstancesServer) MonitoringRoutine(_ctx context.Context, wg *go_sync.WaitGroup) {
 	defer wg.Done()
 	ctx := context.WithoutCancel(_ctx)
-
 	log := s.log.Named("MonitoringRoutine")
-
 	log.Info("Fetching Monitoring Configuration")
 
 start:
 	upd := make(chan bool, 1)
 	conf := MakeConf(ctx, log, upd)
-
 	log.Info("Got Monitoring Configuration", zap.Any("conf", conf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
 	tick := time.Now()
 	for {
+		log.Info("Entering new Iteration", zap.Time("ts", tick), zap.Int("active", len(activeMonitoring)))
 		s.monitoring.Status.Status = health.Status_RUNNING
 
-		sp_pool, err := s.sp_ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
+		spPool, err := s.sp_ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
 		if err != nil {
 			log.Error("Failed to get ServicesProviders", zap.Error(err))
 			continue
 		}
-		log.Debug("Got ServicesProviders", zap.Int("length", len(sp_pool)))
 
-		for _, sp := range sp_pool {
+		for _, sp := range spPool {
+			spUuid := sp.GetUuid()
 			if sp.GetStatus() == stpb.NoCloudStatus_DEL {
+				activeMonitoring.Abort(spUuid)
 				continue
 			}
-
-			sp, err := s.sp_ctrl.Get(ctx, sp.Uuid)
-			if err != nil {
-				log.Error("Coudln't get ServicesProvider", zap.String("sp", sp.Uuid), zap.Error(err))
-				continue
+			var freq = int64(conf.Frequency)
+			if sp.MonitoringFrequency != nil && *sp.MonitoringFrequency > 0 {
+				freq = *sp.MonitoringFrequency
 			}
-
-			go func(sp *graph.ServicesProvider) {
-				log := log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
-				log.Debug("Starting MonitoringRoutine")
-				syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), 5)
-				defer syncer.Open()
-				_ = syncer.WaitUntilOpenedAndCloseAfter()
-
-				igroups, err := s.sp_ctrl.GetGroups(ctx, sp)
-				if err != nil {
-					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
-					return
-				}
-
-				var balance = make(map[string]float64, len(igroups))
-
-				for _, group := range igroups {
-					cur, err := s.db.Query(ctx, getAccsBalance, map[string]any{
-						"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group.GetUuid()),
-						"permissions": schema.PERMISSIONS_GRAPH.Name,
-						"@accounts":   schema.ACCOUNTS_COL,
-					})
-					if err != nil {
-						log.Error("Failed to get cursor", zap.Error(err), zap.String("uuid", group.GetUuid()))
-						continue
-					}
-
-					var result float64
-
-					_, err = cur.ReadDocument(ctx, &result)
-					if err != nil {
-						log.Error("Failed to get balance", zap.Error(err), zap.String("uuid", group.GetUuid()))
-						continue
-					}
-					balance[group.GetUuid()] = result
-					cur.Close()
-				}
-
-				var addons = map[string]*pb.Addon{}
-				for _, ig := range igroups {
-					cur, err := s.db.Query(ctx, getAddons, map[string]any{
-						"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.GetUuid()),
-						"addons":      schema.ADDONS_COL,
-						"@instances":  schema.INSTANCES_COL,
-						"permissions": schema.PERMISSIONS_GRAPH.Name,
-					})
-					if err != nil {
-						log.Error("Failed to get addons", zap.Error(err))
-						return
-					}
-					for cur.HasMore() {
-						var addon = &pb.Addon{}
-						_, err = cur.ReadDocument(ctx, addon)
-						if err != nil {
-							log.Error("Failed to get addons", zap.Error(err))
-							continue
-						}
-						addons[addon.Uuid] = addon
-					}
-				}
-
-				log.Debug("Got InstancesGroups", zap.Int("length", len(igroups)))
-				log.Debug("Got Addons", zap.Any("addons", addons))
-
-				client, ok := s.drivers[sp.GetType()]
-				if !ok {
-					log.Error("Driver is not registered", zap.String("sp", sp.GetUuid()), zap.String("type", sp.GetType()))
-					return
-				}
-
-				_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
-					Groups:           igroups,
-					ServicesProvider: sp.ServicesProvider,
-					Scheduled:        true,
-					Balance:          balance,
-					Addons:           addons,
-				})
-				if err != nil {
-					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
-				}
-
-				log.Debug("Finished MonitoringRoutine")
-			}(sp)
+			monitoring, ok := activeMonitoring.Get(spUuid)
+			if !ok || monitoring.Frequency != freq {
+				activeMonitoring.Start(spUuid, freq, func() {
+					s.monitoringAction(ctx, log, spUuid)
+				}, log)
+			}
 		}
 
 		s.monitoring.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
@@ -250,5 +234,133 @@ start:
 			log.Info("New Configuration Received, restarting Routine")
 			goto start
 		}
+
 	}
+}
+
+func (s *InstancesServer) monitoringAction(ctx context.Context, _log *zap.Logger, spUuid string) {
+	start := time.Now()
+	sp, err := s.sp_ctrl.Get(ctx, spUuid)
+	if err != nil {
+		_log.Error("Couldn't get sp", zap.String("sp", spUuid), zap.Error(err))
+		return
+	}
+	log := _log.With(zap.String("sp", sp.GetUuid()), zap.String("sp_title", sp.GetTitle()))
+	log.Debug("Starting monitoring for service provider")
+	syncer := sync.NewDataSyncer(log.With(zap.String("caller", "MonitoringRoutine")), s.rdb, sp.GetUuid(), 5)
+	defer syncer.Open()
+	_ = syncer.WaitUntilOpenedAndCloseAfter()
+
+	iGroups, err := s.sp_ctrl.GetGroups(ctx, sp)
+	if err != nil {
+		log.Error("Failed to get services deployed to sp", zap.String("sp", sp.GetUuid()), zap.Error(err))
+		return
+	}
+
+	var balance = make(map[string]float64, len(iGroups))
+	rates, err := s.curr_ctrl.GetExchangeRates(ctx)
+	if err != nil {
+		log.Error("Failed to get exchange rates", zap.Error(err))
+		return
+	}
+	for _, group := range iGroups {
+		cur, err := s.db.Query(ctx, getAccountBalance, map[string]any{
+			"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group.GetUuid()),
+			"permissions": schema.PERMISSIONS_GRAPH.Name,
+			"@accounts":   schema.ACCOUNTS_COL,
+		})
+		if err != nil {
+			log.Error("Failed to get cursor", zap.Error(err), zap.String("uuid", group.GetUuid()))
+			continue
+		}
+
+		var result struct {
+			Balance  float64
+			Currency int32
+		}
+		_, err = cur.ReadDocument(ctx, &result)
+		if err != nil {
+			log.Error("Failed to get balance", zap.Error(err), zap.String("uuid", group.GetUuid()))
+			continue
+		}
+		cur.Close()
+
+		convertedToDefault, ok := convertWithRate(rates, &bpb.Currency{Id: result.Currency}, &bpb.Currency{Id: 0}, result.Balance)
+		if !ok {
+			log.Error("Failed to convert account's balance to default", zap.Error(err), zap.String("ig_uuid", group.GetUuid()))
+			continue
+		}
+		balance[group.GetUuid()] = convertedToDefault
+	}
+
+	var addons = map[string]*pb.Addon{}
+	for _, ig := range iGroups {
+		cur, err := s.db.Query(ctx, getAddons, map[string]any{
+			"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.GetUuid()),
+			"addons":      schema.ADDONS_COL,
+			"@instances":  schema.INSTANCES_COL,
+			"permissions": schema.PERMISSIONS_GRAPH.Name,
+		})
+		if err != nil {
+			log.Error("Failed to get addons", zap.Error(err))
+			return
+		}
+		for cur.HasMore() {
+			var addon = &pb.Addon{}
+			_, err = cur.ReadDocument(ctx, addon)
+			if err != nil {
+				log.Error("Failed to get addons", zap.Error(err))
+				continue
+			}
+			addons[addon.Uuid] = addon
+		}
+	}
+	log.Debug("Got IGs for monitoring", zap.Int("length", len(iGroups)))
+	log.Debug("Got addons for monitoring", zap.Int("addons", len(addons)))
+
+	client, ok := s.drivers[sp.GetType()]
+	if !ok {
+		log.Error("Driver is not registered", zap.String("type", sp.GetType()))
+		return
+	}
+
+	elapsedOnPrep := time.Since(start)
+	_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
+		Groups:           iGroups,
+		ServicesProvider: sp.ServicesProvider,
+		Scheduled:        true,
+		Balance:          balance,
+		Addons:           addons,
+	})
+	if err != nil {
+		log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
+	}
+
+	elapsed := time.Since(start)
+	log.Debug("Finished monitoring", zap.Float64("duration_seconds", elapsed.Seconds()), zap.Float64("preparing_duration", elapsedOnPrep.Seconds()))
+}
+
+func convertWithRate(rates []*bpb.GetExchangeRateResponse, from *bpb.Currency, to *bpb.Currency, amount float64) (float64, bool) {
+	var fromId, toId int32
+	if from != nil {
+		fromId = from.Id
+	}
+	if to != nil {
+		toId = to.Id
+	}
+	if fromId == toId {
+		return amount, true
+	}
+	for _, r := range rates {
+		if r.To == nil {
+			r.To = &bpb.Currency{}
+		}
+		if r.From == nil {
+			r.From = &bpb.Currency{}
+		}
+		if r.To.Id == toId && r.From.Id == fromId {
+			return amount * r.Rate, true
+		}
+	}
+	return amount, false
 }

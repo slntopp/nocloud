@@ -243,6 +243,8 @@ func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb
 		return nil, fmt.Errorf("failed to change phone. Internal error")
 	}
 
+	oldPhone := fmt.Sprintf("+%s%s", old.CountryCode, old.Number)
+	newPhone := fmt.Sprintf("+%s%s", req.NewPhone.CountryCode, req.NewPhone.Number)
 	nocloud.Log(log, &elpb.Event{
 		Entity:    schema.ACCOUNTS_COL,
 		Uuid:      acc.GetUuid(),
@@ -252,7 +254,7 @@ func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb
 		Requestor: requester,
 		Ts:        time.Now().Unix(),
 		Snapshot: &elpb.Snapshot{
-			Diff: "",
+			Diff: fmt.Sprintf("Old: %s New: %s OldWasVerified: %t", oldPhone, newPhone, acc.IsPhoneVerified),
 		},
 	})
 
@@ -402,7 +404,7 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 				Requestor: requester,
 				Ts:        time.Now().Unix(),
 				Snapshot: &elpb.Snapshot{
-					Diff: "",
+					Diff: "Phone: " + accountPhone,
 				},
 			})
 			log.Info("Phone was successfully verified")
