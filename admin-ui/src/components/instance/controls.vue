@@ -708,31 +708,23 @@ export default {
         opensrs: [{ action: "dns", icon: "mdi-dns" }, ...this.baseVmControls],
         bots: [
           {
-            action: "start",
+            title: "Start",
+            action: "reboot",
             disabled: this.botsActions?.start,
             component: () => import("@/components/dialogs/startInstance.vue"),
           },
           {
-            action: "stop",
+            title: "Stop",
+            action: "poweroff",
             disabled: this.botsActions?.stop,
             icon: "mdi-stop",
-          },
-          {
-            action: "poweroff",
-            disabled: this.botsActions?.poweroff,
-            icon: "mdi-power-plug-off",
-          },
-          {
-            action: "reboot",
-            disabled: this.botsActions?.reboot,
-            icon: "mdi-restart",
           },
           {
             action: "suspend",
             disabled: this.botsActions?.suspend,
             icon: "mdi-power-sleep",
           },
-                    {
+          {
             action: "resume",
             title: "Unsuspend",
             disabled: this.botsActions?.resume,
