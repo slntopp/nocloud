@@ -705,7 +705,45 @@ export default {
           },
           ...this.baseVmControls,
         ],
-        opensrs: [{ action: "dns", icon: "mdi-dns", ...this.baseVmControls }],
+        opensrs: [{ action: "dns", icon: "mdi-dns" }, ...this.baseVmControls],
+        bots: [
+          {
+            action: "start",
+            disabled: this.botsActions?.start,
+            component: () => import("@/components/dialogs/startInstance.vue"),
+          },
+          {
+            action: "stop",
+            disabled: this.botsActions?.stop,
+            icon: "mdi-stop",
+          },
+          {
+            action: "poweroff",
+            disabled: this.botsActions?.poweroff,
+            icon: "mdi-power-plug-off",
+          },
+          {
+            action: "reboot",
+            disabled: this.botsActions?.reboot,
+            icon: "mdi-restart",
+          },
+          {
+            action: "suspend",
+            disabled: this.botsActions?.suspend,
+            icon: "mdi-power-sleep",
+          },
+                    {
+            action: "resume",
+            title: "Unsuspend",
+            disabled: this.botsActions?.resume,
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume", date),
+          },
+
+          ...this.baseVmControls,
+        ],
         cpanel: [
           {
             action: "start",
@@ -810,6 +848,30 @@ export default {
       return {
         stop: this.template.state.state === "INIT",
         suspend: this.template.state.state === "SUSPENDED",
+        start: this.template.state.state === "RUNNING",
+      };
+    },
+    botsActions() {
+      if (!this.template?.state || this.template.state.state === "PENDING")
+        return {
+          stop: true,
+          suspend: true,
+        };
+      if (this.template.state.state === "SUSPENDED") {
+        return {
+          stop: true,
+          suspend: true,
+          resume: false,
+          start: true,
+          poweroff: true,
+          reboot: true,
+        };
+      }
+
+      return {
+        stop: this.template.state.state === "INIT",
+        suspend: this.template.state.state === "SUSPENDED",
+        resume: true,
         start: this.template.state.state === "RUNNING",
       };
     },
