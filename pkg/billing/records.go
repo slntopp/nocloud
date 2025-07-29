@@ -93,8 +93,9 @@ func NewRecordsServiceServer(logger *zap.Logger, conn rabbitmq.Connection, db dr
 func (s *RecordsServiceServer) Consume(_ctx context.Context, pubsub *ps.PubSub[*pb.Record], wg *sync.WaitGroup) {
 	defer wg.Done()
 	ctx := context.WithoutCancel(_ctx)
-
 	log := s.log.Named("RecordsConsumer")
+
+start:
 	opt := ps.ConsumeOptions{
 		Durable:    true,
 		NoWait:     false,
@@ -119,7 +120,8 @@ func (s *RecordsServiceServer) Consume(_ctx context.Context, pubsub *ps.PubSub[*
 			return
 		case msg, ok := <-records:
 			if !ok {
-				log.Fatal("Messages channel is closed")
+				log.Warn("Messages channel is closed")
+				goto start
 			}
 
 			log.Debug("Received a message")
