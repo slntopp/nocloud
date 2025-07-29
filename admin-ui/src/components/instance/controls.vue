@@ -56,16 +56,6 @@
     </instance-control-btn>
 
     <instance-control-btn
-      :hint="isPending ? 'CREATE INVOICE' : 'Renewal invoice'"
-    >
-      <confirm-dialog @confirm="sendInvoice">
-        <v-btn class="ma-1" :loading="isInvoiceLoading">
-          <v-icon>mdi-invoice-text-outline</v-icon>
-        </v-btn>
-      </confirm-dialog>
-    </instance-control-btn>
-
-    <instance-control-btn
       :hint="template.data?.lock ? 'User unlock' : 'User lock'"
     >
       <confirm-dialog @confirm="lockInstance" :disabled="isDeleted">
@@ -422,22 +412,6 @@ export default {
     },
     unsuspendInstance(action, date) {
       this.sendAction({ action }, { date: date || undefined });
-    },
-    async sendInvoice() {
-      this.isInvoiceLoading = true;
-      try {
-        await fetch(
-          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-            `modules/addons/nocloud/api/index.php?run=create_renewal_invoice&account=${this.account.uuid}&instance=${this.template.uuid}`
-        );
-      } catch (e) {
-        this.$store.commit("snackbar/showSnackbarError", {
-          message:
-            e.response?.data?.message || "Error during create renewal invoice",
-        });
-      } finally {
-        this.isInvoiceLoading = false;
-      }
     },
   },
   computed: {
