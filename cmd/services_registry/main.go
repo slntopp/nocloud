@@ -227,7 +227,7 @@ func main() {
 	payments.RegisterGateways(whmcsData, graph.NewAccountsController(log, db), graph.NewCurrencyController(log, db), manager, whmcsTaxExcluded)
 
 	// Migrate
-	migrateToV2 := viper.GetBool("MIGRATE_TO_V2")
+	/*migrateToV2 := viper.GetBool("MIGRATE_TO_V2")
 	if migrateToV2 {
 		iCtrl := graph.NewInstancesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(conn))
 		sCtrl := graph.NewServicesController(log.Named("Main"), db, rabbitmq.NewRabbitMQConnection(conn))
@@ -237,7 +237,7 @@ func main() {
 		graph.MigrateInstancesToNewAddons(log, iCtrl, sCtrl, bpCtrl, addCtrl, descCtrl)
 	} else {
 		log.Debug("Need MIGRATE_TO_V2 set to 'true' to start instances migration to V2")
-	}
+	}*/
 
 	log.Debug("Opening every sp syncer")
 	ctrl := graph.NewServicesProvidersController(log.Named("Main"), db)
