@@ -428,9 +428,7 @@ FOR service IN @@services // Iterate over Services
     
     LET records = ( // Collect all unprocessed records
         FOR record IN @@records
-        FILTER record.priority == @priority
-        FILTER !record.processed
-        FILTER record.instance IN instances
+        FILTER !record.processed && record.instance IN instances && record.priority == @priority
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
