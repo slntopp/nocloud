@@ -167,8 +167,6 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 		transactions = append(transactions, transaction)
 	}
 
-	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-
 	resp := connect.NewResponse(&pb.Transactions{Pool: transactions})
 
 	return resp, nil
@@ -662,7 +660,6 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 		transactions = append(transactions, transaction)
 	}
 
-	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
 	resp := connect.NewResponse(&pb.Transactions{Pool: transactions})
 	return resp, nil
 }
