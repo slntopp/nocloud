@@ -224,7 +224,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			Uuid:      account,
 			Entity:    "Accounts",
 			Action:    "transaction_aborted",
-			Scope:     "database",
+			Scope:     "errors",
 			Rc:        0,
 			Ts:        time.Now().Unix(),
 			Snapshot:  &events_logging.Snapshot{Diff: string(logS)},
