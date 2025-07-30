@@ -864,70 +864,66 @@ FOR acc IN UNION_DISTINCT(global, local, extra, subs)
 `
 
 const generateTransactions = `
-FOR service IN @@services // Iterate over Services
-	LET instances = (
-        FOR i IN 2 OUTBOUND service
-        GRAPH @permissions
-        FILTER IS_SAME_COLLECTION(@@instances, i)
-            RETURN i._key 
-	)
-
-    LET account = LAST( // Find Service owner Account
-		FOR node, edge, path IN 2
-		INBOUND service
-		GRAPH @permissions
-		FILTER path.edges[*].role == ["owner","owner"]
-		FILTER IS_SAME_COLLECTION(node, @@accounts)
-			RETURN LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
-    )
-
-	// Prefer user currency to default if present
-	LET currency = account.currency != null ? account.currency : @currency
-
-    LET records = ( // Collect all unprocessed records
         FOR record IN @@records
-        FILTER record.exec <= @now
-        FILTER !record.processed
-        FILTER record.instance IN instances
+        FILTER !record.processed && record.instance && record.instance != "" && record.exec <= @now
 
         LET instance = DOCUMENT(@@instances, record.instance)
+        FILTER instance
+        LET account = LAST( // Find Instance owner Account
+    		FOR node, edge, path IN 4
+    		INBOUND instance
+    		GRAPH @permissions
+    		FILTER path.edges[*].role == ["owner","owner","owner","owner"]
+    		FILTER IS_SAME_COLLECTION(node, @@accounts)
+            RETURN LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
+        )
+        LET service = LAST( // Find Instance service
+    		FOR node, edge, path IN 2
+    		INBOUND instance
+    		GRAPH @permissions
+    		FILTER path.edges[*].role == ["owner","owner"]
+    		FILTER IS_SAME_COLLECTION(node, @@services)
+            RETURN node
+        )
+        LET currency = account.currency != null ? account.currency : @currency
+
+		LET rate = PRODUCT(
+			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+			// Cast to NCU if currency is not specified
+			DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency.id))) TO
+			DOCUMENT(CONCAT(@currencies, "/", currency.id)) GRAPH @graph
+			FILTER edge
+				RETURN edge.rate
+		)
+
         LET bp = DOCUMENT(@@billing_plans, instance.billing_plan.uuid)
         LET resources = bp.resources == null ? [] : bp.resources
         LET addon = DOCUMENT(@@addons, record.addon)
         LET product_period = bp.products[instance.product].period
         LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
-        LET final_price = record.cost > 0 ? record.cost : item_price
+        LET final_price = record.cost > 0 ? record.cost : item_price // If already defined when was created, then use this value. If not, then use calculated value
 
-		LET rate = PRODUCT(
-			FOR vertex, edge IN OUTBOUND
-			SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency.id)))
-			TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
-			GRAPH @graph
-			FILTER edge
-				RETURN edge.rate
-		)
         LET cost = record.total * rate * final_price
-            UPDATE record._key WITH { 
-				processed: true, 
-				cost: cost,
-				currency: currency,
-				service: service._key,
-				account: account._key
-			} IN @@records RETURN NEW
-    )
-    
-    FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)
-    INSERT {
-        exec: @now, // Timestamp in seconds
-		created: @now,
-        processed: false,
-		currency: currency,
-        account: account._key,
-        service: service._key,
-        records: records[*]._key,
-        total: SUM(records[*].cost), // Calculate Total
-		meta: {type: "transaction"},
-    } IN @@transactions RETURN NEW
+        UPDATE record._key WITH { 
+           processed: true, 
+           cost: cost,
+           currency: currency,
+           service: service._key,
+           account: account._key
+        } IN @@records
+
+        INSERT {
+            exec: @now, // Timestamp in seconds
+	    	created: @now,
+            processed: false,
+	    	currency: currency,
+            account: account._key,
+	    	priority: @priority,
+            service: service._key,
+            records: [record._key],
+            total: record.cost,
+	    	meta: {type: "transaction"},
+        } IN @@transactions RETURN NEW
 `
 
 const processTransactions = `
