@@ -920,7 +920,7 @@ const generateTransactions = `
             account: account._key,
             service: service._key,
             records: [record._key],
-            total: record.cost,
+            total: cost,
 	    	meta: {type: "transaction"},
         } IN @@transactions RETURN NEW
 `
