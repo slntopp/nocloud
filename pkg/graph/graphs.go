@@ -74,12 +74,32 @@ func BeginTransaction(ctx context.Context, db driver.Database, cols driver.Trans
 	if _, ok := driver.HasTransactionID(ctx); ok {
 		return context.WithValue(ctx, hasEmbeddedTransaction, true), nil
 	}
-	trID, err := db.BeginTransaction(ctx, cols, &driver.BeginTransactionOptions{})
+	trID, err := db.BeginTransaction(ctx, cols, &driver.BeginTransactionOptions{AllowImplicit: true})
 	if err != nil {
 		return ctx, fmt.Errorf("error while starting transaction: %w", err)
 	}
 	ctx = driver.WithTransactionID(ctx, trID)
 	return context.WithValue(ctx, hasEmbeddedTransaction, false), nil
+}
+
+func BeginTransactionEx(ctx context.Context, db driver.Database, cols driver.TransactionCollections) (context.Context, func(ctx context.Context) error,
+	func(ctx context.Context), error) {
+	if _, ok := driver.HasTransactionID(ctx); ok {
+		return context.WithValue(ctx, hasEmbeddedTransaction, true), func(context.Context) error { return nil }, func(context.Context) {}, nil
+	}
+	trID, err := db.BeginTransaction(ctx, cols, &driver.BeginTransactionOptions{AllowImplicit: true})
+	if err != nil {
+		return ctx, nil, nil, fmt.Errorf("error while starting transaction: %w", err)
+	}
+	ctx = driver.WithTransactionID(ctx, trID)
+	ctx = context.WithValue(ctx, hasEmbeddedTransaction, false)
+	return ctx, func(ctx context.Context) error {
+			return CommitTransaction(ctx, db)
+		}, func(ctx context.Context) {
+			if err := AbortTransaction(ctx, db); err != nil {
+				fmt.Printf("ERROR: Failed to abort transaction: %s\n", err.Error())
+			}
+		}, nil
 }
 
 func AbortTransaction(ctx context.Context, db driver.Database) error {

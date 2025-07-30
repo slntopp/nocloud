@@ -245,6 +245,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	log.Debug("Record created", zap.String("record_id", recordId.Key()))
 	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	if record.Priority != pb.Priority_NORMAL {
+		started := time.Now()
 		trCtx, err := graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
 			Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL, schema.INVOICES_COL},
 		})
@@ -285,6 +286,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			log.Error("Error Generating Transactions", zap.Error(err))
 			return err
 		}
+		sinceGeneration := time.Since(started)
 
 		var tr pb.Transaction
 		if cur.HasMore() {
@@ -313,6 +315,8 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		if err = commit(); err != nil {
 			return err
 		}
+		log.Debug("Processing complete", zap.Float64("generating_duration", sinceGeneration.Seconds()),
+			zap.Float64("sum_duration", time.Since(started).Seconds()), zap.String("record_id", recordId.Key()))
 	}
 
 	log.Info("Record processed", zap.String("record_id", recordId.Key()))

@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -55,7 +54,7 @@ func NewTransactionsController(logger *zap.Logger, db driver.Database) Transacti
 
 	records := NewRecordsController(log, db)
 
-	migrations.UpdateNumericCurrencyToDynamic(log, col)
+	//migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return &transactionsController{
 		log: log, col: col, records: records,
