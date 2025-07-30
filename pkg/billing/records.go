@@ -411,6 +411,8 @@ const generateUrgentTransactionsByRecord = `
         FOR record IN @@records
         FILTER !record.processed && record.instance && record.instance != "" && record.priority == @priority
 
+        LET instance = DOCUMENT(@@instances, record.instance)
+        FILTER instance
         LET account = LAST( // Find Instance owner Account
     		FOR node, edge, path IN 4
     		INBOUND instance
@@ -437,8 +439,6 @@ const generateUrgentTransactionsByRecord = `
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET instance = DOCUMENT(@@instances, record.instance)
-        FILTER instance
 
         LET bp = DOCUMENT(@@billing_plans, instance.billing_plan.uuid)
         LET resources = bp.resources == null ? [] : bp.resources
