@@ -918,7 +918,6 @@ const generateTransactions = `
             processed: false,
 	    	currency: currency,
             account: account._key,
-	    	priority: @priority,
             service: service._key,
             records: [record._key],
             total: record.cost,
