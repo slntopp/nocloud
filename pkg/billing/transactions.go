@@ -234,7 +234,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	trCtx, commit, abort, err := graph.BeginTransactionEx(ctx, s.db, driver.TransactionCollections{
 		Exclusive: []string{schema.RECORDS_COL, schema.TRANSACTIONS_COL},
 	})
-	rec := s.records.Create(ctx, recBody)
+	rec := s.records.Create(trCtx, recBody)
 	if rec == "" {
 		logError(recBody, t)
 		abort(trCtx)
@@ -245,7 +245,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	}
 	t.Records = append(t.Records, rec.Key())
 	t.Created = time.Now().Unix()
-	r, err := s.transactions.Create(ctx, t)
+	r, err := s.transactions.Create(trCtx, t)
 	if err != nil {
 		logError(recBody, t)
 		abort(trCtx)
