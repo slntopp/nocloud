@@ -383,8 +383,9 @@ func (s *InstancesServer) createWithAutoAssign(ctx context.Context, req *pb.Crea
 	log := s.log.Named("createWithAutoAssign")
 	log.Debug("Requester", zap.String("id", requester))
 	account := req.Account
-	if account == "" {
-		return nil, fmt.Errorf("unathorized")
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) ||
+		req.Account == "" {
+		account = requester
 	}
 
 	acc, err := s.acc_ctrl.Get(ctx, account)
