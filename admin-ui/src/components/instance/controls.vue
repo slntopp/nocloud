@@ -56,16 +56,6 @@
     </instance-control-btn>
 
     <instance-control-btn
-      :hint="isPending ? 'CREATE INVOICE' : 'Renewal invoice'"
-    >
-      <confirm-dialog @confirm="sendInvoice">
-        <v-btn class="ma-1" :loading="isInvoiceLoading">
-          <v-icon>mdi-invoice-text-outline</v-icon>
-        </v-btn>
-      </confirm-dialog>
-    </instance-control-btn>
-
-    <instance-control-btn
       :hint="template.data?.lock ? 'User unlock' : 'User lock'"
     >
       <confirm-dialog @confirm="lockInstance" :disabled="isDeleted">
@@ -423,22 +413,6 @@ export default {
     unsuspendInstance(action, date) {
       this.sendAction({ action }, { date: date || undefined });
     },
-    async sendInvoice() {
-      this.isInvoiceLoading = true;
-      try {
-        await fetch(
-          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-            `modules/addons/nocloud/api/index.php?run=create_renewal_invoice&account=${this.account.uuid}&instance=${this.template.uuid}`
-        );
-      } catch (e) {
-        this.$store.commit("snackbar/showSnackbarError", {
-          message:
-            e.response?.data?.message || "Error during create renewal invoice",
-        });
-      } finally {
-        this.isInvoiceLoading = false;
-      }
-    },
   },
   computed: {
     ...mapGetters("actions", ["isSendActionLoading"]),
@@ -705,7 +679,37 @@ export default {
           },
           ...this.baseVmControls,
         ],
-        opensrs: [{ action: "dns", icon: "mdi-dns", ...this.baseVmControls }],
+        opensrs: [{ action: "dns", icon: "mdi-dns" }, ...this.baseVmControls],
+        bots: [
+          {
+            title: "Start",
+            action: "reboot",
+            disabled: this.botsActions?.start,
+            component: () => import("@/components/dialogs/startInstance.vue"),
+          },
+          {
+            title: "Stop",
+            action: "poweroff",
+            disabled: this.botsActions?.stop,
+            icon: "mdi-stop",
+          },
+          {
+            action: "suspend",
+            disabled: this.botsActions?.suspend,
+            icon: "mdi-power-sleep",
+          },
+          {
+            action: "resume",
+            title: "Unsuspend",
+            disabled: this.botsActions?.resume,
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume", date),
+          },
+
+          ...this.baseVmControls,
+        ],
         cpanel: [
           {
             action: "start",
@@ -810,6 +814,30 @@ export default {
       return {
         stop: this.template.state.state === "INIT",
         suspend: this.template.state.state === "SUSPENDED",
+        start: this.template.state.state === "RUNNING",
+      };
+    },
+    botsActions() {
+      if (!this.template?.state || this.template.state.state === "PENDING")
+        return {
+          stop: true,
+          suspend: true,
+        };
+      if (this.template.state.state === "SUSPENDED") {
+        return {
+          stop: true,
+          suspend: true,
+          resume: false,
+          start: true,
+          poweroff: true,
+          reboot: true,
+        };
+      }
+
+      return {
+        stop: this.template.state.state === "INIT",
+        suspend: this.template.state.state === "SUSPENDED",
+        resume: true,
         start: this.template.state.state === "RUNNING",
       };
     },
