@@ -17,8 +17,10 @@ package billing
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	epb "github.com/slntopp/nocloud-proto/events"
+	"github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"strings"
 	"time"
@@ -208,11 +210,33 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		recBody.Previous = t.Previous
 	}
 
+	logError := func(r *pb.Record, t *pb.Transaction) {
+		var account string
+		if r != nil {
+			account = r.Account
+		}
+		logBody := struct {
+			R *pb.Record      `json:"record"`
+			T *pb.Transaction `json:"transaction"`
+		}{R: r, T: t}
+		logS, _ := json.Marshal(logBody)
+		nocloud.Log(log, &events_logging.Event{
+			Uuid:      account,
+			Entity:    "Accounts",
+			Action:    "transaction_aborted",
+			Scope:     "database",
+			Rc:        0,
+			Ts:        time.Now().Unix(),
+			Snapshot:  &events_logging.Snapshot{Diff: string(logS)},
+			Requestor: requester,
+		})
+	}
 	trCtx, commit, abort, err := graph.BeginTransactionEx(ctx, s.db, driver.TransactionCollections{
 		Exclusive: []string{schema.RECORDS_COL, schema.TRANSACTIONS_COL},
 	})
 	rec := s.records.Create(ctx, recBody)
 	if rec == "" {
+		logError(recBody, t)
 		abort(trCtx)
 		return nil, status.Error(codes.Internal, "Failed to create record")
 	}
@@ -223,11 +247,13 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	t.Created = time.Now().Unix()
 	r, err := s.transactions.Create(ctx, t)
 	if err != nil {
+		logError(recBody, t)
 		abort(trCtx)
 		log.Error("Failed to create transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
 	if err = commit(trCtx); err != nil {
+		logError(recBody, t)
 		log.Error("Failed to commit transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to commit transaction")
 	}
