@@ -8,7 +8,7 @@
         <v-switch
           hide-details
           dense
-          :input-value="template.meta.autoRenew"
+          :input-value="template.meta?.autoRenew"
           @change="updateAutomaticDebit"
           :disabled="isDeleted"
           label="Automatic debit"
