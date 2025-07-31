@@ -245,6 +245,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 	log.Debug("Record created", zap.String("record_id", recordId.Key()))
 	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	if record.Priority != pb.Priority_NORMAL {
+		started := time.Now()
 		trCtx, err := graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
 			Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL, schema.INVOICES_COL},
 		})
@@ -265,7 +266,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			return nil
 		}
 
-		cur, err := s.db.Query(trCtx, generateUrgentTransactions, map[string]interface{}{
+		cur, err := s.db.Query(trCtx, generateUrgentTransactionsByRecord, map[string]interface{}{
 			"@transactions":  schema.TRANSACTIONS_COL,
 			"@instances":     schema.INSTANCES_COL,
 			"@billing_plans": schema.BILLING_PLANS_COL,
@@ -285,6 +286,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			log.Error("Error Generating Transactions", zap.Error(err))
 			return err
 		}
+		sinceGeneration := time.Since(started)
 
 		var tr pb.Transaction
 		if cur.HasMore() {
@@ -313,6 +315,8 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		if err = commit(); err != nil {
 			return err
 		}
+		log.Debug("Processing complete", zap.Float64("generating_duration", sinceGeneration.Seconds()),
+			zap.Float64("sum_duration", time.Since(started).Seconds()), zap.String("record_id", recordId.Key()))
 	}
 
 	log.Info("Record processed", zap.String("record_id", recordId.Key()))
@@ -403,6 +407,69 @@ LET d = doc.billing_plan.products[@product]
 RETURN d.kind
 `
 
+const generateUrgentTransactionsByRecord = `
+        FOR record IN @@records
+        FILTER !record.processed && record.instance && record.instance != "" && record.priority == @priority
+
+        LET instance = DOCUMENT(@@instances, record.instance)
+        FILTER instance
+        LET account = LAST( // Find Instance owner Account
+    		FOR node, edge, path IN 4
+    		INBOUND instance
+    		GRAPH @permissions
+    		FILTER path.edges[*].role == ["owner","owner","owner","owner"]
+    		FILTER IS_SAME_COLLECTION(node, @@accounts)
+            RETURN LENGTH(node.account_owner) > 0 ? DOCUMENT(@@accounts, node.account_owner) : node
+        )
+        LET service = LAST( // Find Instance service
+    		FOR node, edge, path IN 2
+    		INBOUND instance
+    		GRAPH @permissions
+    		FILTER path.edges[*].role == ["owner","owner"]
+    		FILTER IS_SAME_COLLECTION(node, @@services)
+            RETURN node
+        )
+        LET currency = account.currency != null ? account.currency : @currency
+
+		LET rate = PRODUCT(
+			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+			// Cast to NCU if currency is not specified
+			DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency.id))) TO
+			DOCUMENT(CONCAT(@currencies, "/", currency.id)) GRAPH @graph
+			FILTER edge
+				RETURN edge.rate
+		)
+
+        LET bp = DOCUMENT(@@billing_plans, instance.billing_plan.uuid)
+        LET resources = bp.resources == null ? [] : bp.resources
+        LET addon = DOCUMENT(@@addons, record.addon)
+        LET product_period = bp.products[instance.product].period
+        LET item_price = record.product == null ? (record.resource == null ? addon.periods[product_period] : LAST(FOR res in resources FILTER res.key == record.resource return res).price) : bp.products[record.product].price
+        LET final_price = record.cost > 0 ? record.cost : item_price // If already defined when was created, then use this value. If not, then use calculated value
+
+        LET cost = record.total * rate * final_price
+        UPDATE record._key WITH { 
+           processed: true, 
+           cost: cost,
+           currency: currency,
+           service: service._key,
+           account: account._key
+        } IN @@records
+
+        INSERT {
+            exec: @now, // Timestamp in seconds
+	    	created: @now,
+            processed: false,
+	    	currency: currency,
+            account: account._key,
+	    	priority: @priority,
+            service: service._key,
+            records: [record._key],
+            total: cost,
+	    	meta: {type: "transaction"},
+        } IN @@transactions RETURN NEW
+`
+
 const generateUrgentTransactions = `
 FOR service IN @@services // Iterate over Services
 	LET instances = (
@@ -424,9 +491,7 @@ FOR service IN @@services // Iterate over Services
     
     LET records = ( // Collect all unprocessed records
         FOR record IN @@records
-        FILTER record.priority == @priority
-        FILTER !record.processed
-        FILTER record.instance IN instances
+        FILTER !record.processed && record.instance IN instances && record.priority == @priority
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND SHORTEST_PATH

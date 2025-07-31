@@ -382,12 +382,11 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 func (s *InstancesServer) createWithAutoAssign(ctx context.Context, req *pb.CreateRequest, requester string) (*connect.Response[pb.CreateResponse], error) {
 	log := s.log.Named("createWithAutoAssign")
 	log.Debug("Requester", zap.String("id", requester))
-
-	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
-		log.Warn("No root access")
-		return nil, status.Error(codes.PermissionDenied, "No access rights")
-	}
 	account := req.Account
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) ||
+		req.Account == "" {
+		account = requester
+	}
 
 	acc, err := s.acc_ctrl.Get(ctx, account)
 	if err != nil {

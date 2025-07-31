@@ -29,7 +29,6 @@ import (
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
@@ -336,10 +335,9 @@ func main() {
 	path, handler = healthconnect.NewInternalProbeServiceHandler(health)
 	router.PathPrefix(path).Handler(handler)
 
-	migrations.MigrateOldInvoicesInstancesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL))
-
-	migrations.MigrateOldInvoicesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL),
-		graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile, instancesFile)
+	//migrations.MigrateOldInvoicesInstancesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL))
+	//migrations.MigrateOldInvoicesToNew(log, graph.GetEnsureCollection(log, ctx, db, schema.INVOICES_COL),
+	//	graph.GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL), invoicesFile, instancesFile)
 
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 

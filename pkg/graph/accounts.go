@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
@@ -98,7 +97,7 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 
 	nsController := NewNamespacesController(log, col.Database())
 
-	migrations.UpdateNumericCurrencyToDynamic(log, col)
+	//migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return &accountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
 }
