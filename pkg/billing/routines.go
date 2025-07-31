@@ -702,6 +702,9 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 	ensure(&account.Meta.Notifications.SecondBalanceNotify.Invalidated)
 	ensure(&account.Meta.Notifications.FirstBalanceNotify.Base.Disabled)
 	ensure(&account.Meta.Notifications.SecondBalanceNotify.Base.Disabled)
+	if convertedBalance == 0 {
+		return
+	}
 	var (
 		eventKey     = "low_credits_first"
 		notification = account.Meta.Notifications.FirstBalanceNotify
