@@ -54,6 +54,7 @@ const chartOptions = computed(() => ({
     mode: store.getters["app/theme"],
   },
   chart: {
+    ...(options.value?.chart || {}),
     stacked: !!stacked.value,
   },
   xaxis: {
