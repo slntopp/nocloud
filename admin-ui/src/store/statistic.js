@@ -1,5 +1,6 @@
 import api from "@/api";
 import { formatToYYMMDD } from "@/functions";
+import qs from 'qs';
 
 const getCacheKey = (params) => JSON.stringify(params);
 
@@ -30,11 +31,14 @@ export default {
 
       try {
         commit("setLoading", true);
+        console.log(params.params);
 
         commit("setToCached", {
           key: cacheKey,
           value: api.get(`/statistic/${params.entity}`, {
             params: params.params,
+            paramsSerializer: (params) =>
+              qs.stringify(params, { arrayFormat: "repeat" }),
           }),
         });
 
@@ -59,16 +63,17 @@ export default {
         params: params.params,
       });
     },
-    async getForChart({ dispatch }, { periods, periodType, entity }) {
+    async getForChart({ dispatch }, { periods, periodType, entity, params }) {
       let interval = "1 day";
 
       if (periodType.split("-")[1]) {
         interval = periodType.split("-")[1].replace("_", " ");
       }
 
-      const params = {
+      const dataParams = {
         entity,
         params: {
+          ...(params || {}),
           with_timeseries: true,
           bucket_interval: interval,
         },
@@ -76,10 +81,10 @@ export default {
 
       const data = await Promise.all(
         periods.map((period) => {
-          params.params.start_date = formatToYYMMDD(period[0]);
-          params.params.end_date = formatToYYMMDD(period[1]);
+          dataParams.params.start_date = formatToYYMMDD(period[0]);
+          dataParams.params.end_date = formatToYYMMDD(period[1]);
 
-          return dispatch("fetch", params);
+          return dispatch("fetch", dataParams);
         })
       );
 
