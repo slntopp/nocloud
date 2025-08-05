@@ -269,13 +269,10 @@ function getValue(value) {
   const num = Number(value);
   if (isNaN(num)) return NaN;
 
-  const decimalPart = num.toString().split(".")[1];
+  const absNum = Math.abs(num);
 
-  if (decimalPart && decimalPart.length > 2) {
-    return Number(num.toFixed(2));
-  }
-
-  return num;
+  const precision = absNum < 1 ? 4 : 2;
+  return Number(num.toFixed(precision));
 }
 
 const onColumnClick = (...args) => {
