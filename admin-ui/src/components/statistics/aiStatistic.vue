@@ -36,7 +36,7 @@
       </template>
 
       <template v-slot:options>
-        <v-select
+        <v-autocomplete
           style="width: 250px; margin-left: 5px"
           item-text="label"
           item-value="value"
@@ -48,7 +48,7 @@
           v-model="selectedAccounts"
         />
 
-        <v-select
+        <v-autocomplete
           style="width: 250px; margin-left: 5px"
           item-text="label"
           item-value="value"
@@ -59,7 +59,7 @@
           v-model="selectedModels"
         />
 
-        <v-select
+        <v-autocomplete
           style="width: 120px; margin-left: 5px"
           item-text="label"
           item-value="value"
