@@ -108,15 +108,15 @@
     </statistic-item>
 
     <v-dialog v-model="isSelectedPointOpen" max-width="50vw">
-      <v-card class="data_point_menu">
+      <v-card v-for="point in selectedDataPoints" :key="point.series" class="data_point_menu">
         <v-card-title>{{
-          `${selectedDataPoint?.series}: ${selectedDataPoint?.category} - ${selectedDataPoint?.value}`
+          `${point?.series}: ${point?.category} - ${point?.value} ${defaultCurrency.code}`
         }}</v-card-title>
         <v-card-subtitle class="subtitle">Accounts:</v-card-subtitle>
         <v-list class="list">
           <v-list-item
             class="list_item"
-            v-for="account of selectedDataPoint?.meta.accounts || []"
+            v-for="account of point?.meta.accounts || []"
             :key="account"
           >
             <v-list-item-title>
@@ -130,7 +130,7 @@
         <v-list class="list">
           <v-list-item
             class="list_item"
-            v-for="model of selectedDataPoint?.meta.models || []"
+            v-for="model of point?.meta.models || []"
             :key="model"
           >
             <v-list-item-title>
@@ -143,7 +143,7 @@
         <v-list class="list">
           <v-list-item
             class="list_item"
-            v-for="agent of selectedDataPoint?.meta.agents || []"
+            v-for="agent of point?.meta.agents || []"
             :key="agent"
           >
             <v-list-item-title>
@@ -165,6 +165,7 @@ import DefaultChart from "@/components/statistics/defaultChart.vue";
 import { formatToYYMMDD } from "@/functions";
 import api from "@/api";
 import router from "../../router";
+import useCurrency from "@/hooks/useCurrency";
 
 const store = useStore();
 
@@ -188,6 +189,8 @@ const emit = defineEmits([
   "update:periods-first-offset",
   "update:periods-second-offset",
 ]);
+
+const { defaultCurrency } = useCurrency();
 
 const allFields = ref([
   { label: "Revenue", value: "revenue" },
@@ -224,7 +227,7 @@ const chartData = ref();
 const aiConfig = ref({ models: [] });
 
 const isSelectedPointOpen = ref(false);
-const selectedDataPoint = ref();
+const selectedDataPoints = ref([]);
 
 onMounted(async () => {
   try {
@@ -272,39 +275,36 @@ const chartOptions = computed(() => ({
     intersect: false,
     theme: store.getters["app/theme"],
     y: {
-      formatter: () => "",
+      formatter: (value) => `Total ${value} ${defaultCurrency.value.code}<br/>`,
       title: {
-        formatter: (date) => {
-          return `${date} `;
+        formatter: (date, opts) => {
+          const result = [`Date:${date} `];
+          const dataIndex = opts.dataPointIndex;
+          const seriesIndex = series.value.findIndex((s) => s.name === date);
+
+          const { accounts, agents, models } =
+            series.value[seriesIndex]?.meta?.[dataIndex];
+
+          result.push(
+            `Accounts: ${accounts
+              .map((id) => ({
+                label: fullAccounts.value.get(id)?.label || id,
+                id,
+              }))
+              .map(
+                ({ id, label }) =>
+                  `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`
+              )}`
+          );
+          result.push(`Models: ${models.join(", ")}`);
+
+          result.push(`Agents: ${agents.join(", ")}`);
+
+          return result.join("<br/>") + "<br/>";
         },
       },
     },
-    x: {
-      formatter: (val, opts) => {
-        const result = [`Date: ${val}`];
-        const dataIndex = opts.dataPointIndex;
-        const seriesIndex = opts.seriesIndex;
-        const { accounts, agents, models } =
-          series.value[seriesIndex].meta[dataIndex];
-
-        result.push(
-          `Accounts: ${accounts
-            .map((id) => ({
-              label: fullAccounts.value.get(id)?.label || id,
-              id,
-            }))
-            .map(
-              ({ id, label }) =>
-                `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`
-            )}`
-        );
-        result.push(`Models: ${models.join(", ")}`);
-
-        result.push(`Agents: ${agents.join(", ")}`);
-
-        return result.join("<br/>");
-      },
-    },
+    x: {},
     style: {
       fontSize: "14px",
       fontFamily: "Inter, sans-serif",
@@ -358,13 +358,14 @@ function getValue(value) {
 }
 
 const onColumnClick = (...args) => {
-  const { seriesIndex, dataPointIndex } = args[2];
-  selectedDataPoint.value = {
-    series: series.value[seriesIndex]?.name,
-    meta: series.value[seriesIndex].meta[dataPointIndex],
-    value: series.value[seriesIndex].data[dataPointIndex],
+  const { dataPointIndex } = args[2];
+  selectedDataPoints.value = series.value.map((serie) => ({
+    series: serie.name,
+    meta: serie.meta[dataPointIndex],
+    value: serie.data[dataPointIndex],
     category: categories.value[dataPointIndex],
-  };
+  }));
+
   isSelectedPointOpen.value = true;
 };
 

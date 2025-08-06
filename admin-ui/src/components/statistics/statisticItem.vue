@@ -2,8 +2,12 @@
   <div class="chart_container">
     <div class="chart_options">
       <div
-        class="d-flex align-start"
-        style="max-width: 250px; margin-top: 10px"
+        class="d-flex"
+        :style="{
+          'max-width': '250px',
+          'margin-top': '10px',
+          'align-items': comparable ? 'start' : 'center',
+        }"
       >
         <template v-if="!comparable">
           <span
