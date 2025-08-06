@@ -31,7 +31,6 @@ export default {
 
       try {
         commit("setLoading", true);
-        console.log(params.params);
 
         commit("setToCached", {
           key: cacheKey,

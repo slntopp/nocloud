@@ -36,39 +36,74 @@
       </template>
 
       <template v-slot:options>
-        <v-autocomplete
-          style="width: 250px; margin-left: 5px"
-          item-text="label"
-          item-value="value"
-          :loading="isAccountsLoading"
-          label="Accounts"
-          clearable
-          multiple
-          :items="!isAccountsLoading ? [...fullAccounts.values()] : []"
-          v-model="selectedAccounts"
-        />
+        <div style="display: flex; flex-wrap: wrap; width: 610px">
+          <div style="display: flex">
+            <v-autocomplete
+              style="width: 480px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              :loading="isAccountsLoading"
+              label="Accounts"
+              clearable
+              multiple
+              hide-details
+              :items="!isAccountsLoading ? [...fullAccounts.values()] : []"
+              v-model="selectedAccounts"
+            />
 
-        <v-autocomplete
-          style="width: 250px; margin-left: 5px"
-          item-text="label"
-          item-value="value"
-          label="Models"
-          clearable
-          multiple
-          :items="[...allModels.values()]"
-          v-model="selectedModels"
-        />
+            <v-autocomplete
+              style="width: 120px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              placeholder="All"
+              label="Agents"
+              clearable
+              hide-details
+              :items="agentTypes"
+              v-model="agentType"
+            />
+          </div>
+          <div style="display: flex">
+            <v-autocomplete
+              style="width: 300px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              label="Models"
+              clearable
+              multiple
+              hide-details
+              chips
+              small-chips
+              deletable-chips
+              :items="
+                selectedProviders.length
+                  ? currentModels
+                  : [...allModels.values()]
+              "
+              v-model="selectedModels"
+            />
 
-        <v-autocomplete
-          style="width: 120px; margin-left: 5px"
-          item-text="label"
-          item-value="value"
-          placeholder="All"
-          label="Agents"
-          clearable
-          :items="agentTypes"
-          v-model="agentType"
-        />
+            <v-autocomplete
+              style="width: 300px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              label="Providers"
+              clearable
+              multiple
+              chips
+              deletable-chips
+              small-chips
+              hide-details
+              :items="
+                Object.keys(modelsByProviders).map((a) => ({
+                  label: a,
+                  modelsByProviders: a,
+                }))
+              "
+              v-model="selectedProviders"
+            />
+          </div>
+        </div>
       </template>
     </statistic-item>
 
@@ -123,7 +158,7 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { computed, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
@@ -177,6 +212,8 @@ const allAccounts = ref([]);
 const fullAccounts = ref(new Map());
 const selectedAccounts = ref([]);
 
+const selectedProviders = ref([]);
+
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
@@ -184,8 +221,49 @@ const summary = ref({});
 const isDataLoading = ref(false);
 const chartData = ref();
 
+const aiConfig = ref({ models: [] });
+
 const isSelectedPointOpen = ref(false);
 const selectedDataPoint = ref();
+
+onMounted(async () => {
+  try {
+    const response = await api.get("/api/openai/get_config");
+    aiConfig.value = response.cfg;
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+const modelsByProviders = computed(() => {
+  const result = {};
+
+  Object.keys(aiConfig.value.models).map((key) => {
+    const model = aiConfig.value.models[key];
+
+    if (!result[model.provider]) {
+      result[model.provider] = [];
+    }
+
+    result[model.provider].push(key);
+  });
+  return result;
+});
+
+const providersModels = computed(() => {
+  return selectedProviders.value.reduce((acc, key) => {
+    acc.push(...modelsByProviders.value[key]);
+    return acc;
+  }, []);
+});
+
+const currentModels = computed(() => {
+  const accepted = [...providersModels.value];
+
+  return [...allModels.value.values()].filter((model) =>
+    accepted.includes(model.value)
+  );
+});
 
 const chartOptions = computed(() => ({
   tooltip: {
@@ -250,7 +328,11 @@ async function fetchData() {
         ? [period.value]
         : [periods.value.first, periods.value.second],
       params: {
-        models: selectedModels.value.length ? selectedModels.value : undefined,
+        models: selectedModels.value.length
+          ? selectedModels.value
+          : providersModels.value.length
+          ? providersModels.value
+          : undefined,
         accounts: selectedAccounts.value.length
           ? selectedAccounts.value
           : undefined,
@@ -328,7 +410,15 @@ async function fetchAccounts(accounts) {
 const fetchAccountsDebounced = debounce(fetchAccounts, 200);
 
 watch(
-  [period, periods, comparable, agentType, selectedModels, selectedAccounts],
+  [
+    period,
+    periods,
+    comparable,
+    agentType,
+    selectedModels,
+    selectedAccounts,
+    selectedProviders,
+  ],
   () => {
     if (!chartData.value) {
       fetchData();
