@@ -1,7 +1,14 @@
 <template>
   <div class="chart_container">
     <div class="chart_options">
-      <div class="d-flex align-center">
+      <div
+        class="d-flex"
+        :style="{
+          'max-width': '250px',
+          'margin-top': '10px',
+          'align-items': comparable ? 'start' : 'center',
+        }"
+      >
         <template v-if="!comparable">
           <span
             class="period_title mr-2"
@@ -92,51 +99,57 @@
       </div>
 
       <div class="d-flex alingn-center">
-        <v-switch
-          v-if="periods && !notComparable"
-          class="ml-2 mr-2"
-          label="Comparison"
-          :input-value="comparable"
-          @change="emit('input:comparable', $event)"
-        />
         <slot name="options" />
-        <v-select
-          v-if="allFields.length"
-          class="ml-2"
-          style="max-width: 240px"
-          label="Fields"
-          :multiple="fieldsMultiple"
-          :value="fields"
-          @input="emit('input:fields', $event)"
-          :items="allFields"
-          item-text="label"
-          item-value="value"
-        >
-          <template v-slot:selection="{ item, index }">
-            <span v-if="index === 0">{{ item.label }}</span>
-            <span v-if="index === 1" class="grey--text text-caption">
-              (+{{ fields?.length - 1 }} others)
-            </span>
-          </template>
-        </v-select>
-        <v-select
-          class="ml-2"
-          style="width: 150px"
-          :value="periodType"
-          @input="emit('input:period-type', $event)"
-          :items="durationOptions"
-          item-text="label"
-          item-value="value"
-        />
-        <v-select
-          class="ml-2"
-          style="width: 75px"
-          :value="type"
-          @input="emit('input:type', $event)"
-          :items="typeOptions"
-          item-text="label"
-          item-value="value"
-        />
+        <div style="display: flex; flex-wrap: wrap">
+          <v-select
+            v-if="allFields.length"
+            hide-details
+            class="ml-2"
+            style="max-width: 150px"
+            label="Fields"
+            :multiple="fieldsMultiple"
+            :value="fields"
+            @input="emit('input:fields', $event)"
+            :items="allFields"
+            item-text="label"
+            item-value="value"
+          >
+            <template v-slot:selection="{ item, index }">
+              <span v-if="index === 0">{{ item.label }}</span>
+              <span v-if="index === 1" class="grey--text text-caption">
+                (+{{ fields?.length - 1 }} others)
+              </span>
+            </template>
+          </v-select>
+          <v-select
+            class="ml-2"
+            style="width: 150px"
+            :value="periodType"
+            @input="emit('input:period-type', $event)"
+            :items="durationOptions"
+            item-text="label"
+            hide-details
+            item-value="value"
+          />
+          <v-select
+            class="ml-2"
+            style="width: 75px"
+            :value="type"
+            @input="emit('input:type', $event)"
+            :items="typeOptions"
+            item-text="label"
+            hide-details
+            item-value="value"
+          />
+          <v-switch
+            v-if="periods && !notComparable"
+            class="ml-2 mr-2"
+            label="Comparison"
+            hide-details
+            :input-value="comparable"
+            @change="emit('input:comparable', $event)"
+          />
+        </div>
       </div>
     </div>
     <div class="chart">
@@ -362,6 +375,7 @@ watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
   }
 
   .chart_options {
+    margin-bottom: 10px;
     display: flex;
     justify-content: space-between;
 

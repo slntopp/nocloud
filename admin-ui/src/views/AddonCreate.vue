@@ -55,8 +55,16 @@
             :suffix="defaultCurrency?.code"
           />
         </template>
+        <template v-slot:[`item.oneTime`]="{ item }">
+          <v-switch
+            :input-value="item.period === 0"
+            @change="changeOneTime(item, $event)"
+          />
+        </template>
+
         <template v-slot:[`item.period`]="{ item }">
           <date-field
+            v-if="item.period !== 0"
             class="mt-3"
             :period="item.period"
             @changeDate="item.period = $event"
@@ -107,11 +115,14 @@ const selected = ref([]);
 const addonCreateForm = ref(null);
 
 const headers = ref([
-  { text: "Period", value: "period", sortable: false },
+  { text: "Period", value: "period", sortable: false, width: "400px" },
+  { text: "One time", value: "oneTime", sortable: false },
   { text: "Price", value: "price", sortable: false },
 ]);
 
-const rules = ref({ required: (v) => !!v || "This field is required!" });
+const rules = ref({
+  required: (v) => !!v || v === 0 || "This field is required!",
+});
 
 onMounted(() => {
   if (isEdit.value) {
@@ -126,7 +137,7 @@ const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const addPeriod = () => {
   newAddon.value.periods.push({
     price: 0,
-    period: null,
+    period: 2592000,
     id: newAddon.value.periods.length + 1,
   });
 };
@@ -146,9 +157,9 @@ const saveAddon = async () => {
 
   try {
     const dto = Addon.fromJson({
-      public: newAddon.value.public,
-      title: newAddon.value.title,
-      group: newAddon.value.group,
+      public: !!newAddon.value.public,
+      title: newAddon.value.title || "",
+      group: newAddon.value.group || "",
       meta: newAddon.value.meta || {},
       system: !!newAddon.value.system,
       periods: newAddon.value.periods.reduce((acc, a) => {
@@ -166,11 +177,12 @@ const saveAddon = async () => {
       await store.getters["addons/addonsClient"].create(dto);
       router.push({ name: "Addons" });
     } else {
-      if (newAddon.value.descriptionId) {
+      if (addon.value.descriptionId) {
         store.dispatch("descriptions/update", {
-          uuid: newAddon.value.descriptionId,
+          uuid: addon.value.descriptionId,
           text: newAddon.value.description,
         });
+        dto.descriptionId = addon.value.descriptionId;
       } else {
         const description = await store.dispatch("descriptions/create", {
           text: newAddon.value.description,
@@ -192,13 +204,21 @@ const saveAddon = async () => {
 const setAddon = (val) => {
   newAddon.value = {
     ...val,
-    periods: Object.keys(val.periods).map((key, ind) => ({
+    periods: Object.keys(val.periods || {}).map((key, ind) => ({
       period: key,
       price: val.periods[key],
       id: ind,
     })),
   };
 };
+
+function changeOneTime(item, value) {
+  if (value) {
+    item.period = 0;
+  } else {
+    item.period = 2592000;
+  }
+}
 
 watch(addon, (val) => {
   setAddon(val);
