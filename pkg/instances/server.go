@@ -528,7 +528,7 @@ func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.U
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	err = s.ctrl.Update(ctx, "", req.GetInstance(), instance.Instance)
+	err = s.ctrl.UpdateWithPatch(ctx, "", req.GetInstance(), instance.Instance)
 	if err != nil {
 		log.Error("Failed to update instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
