@@ -36,52 +36,87 @@
       </template>
 
       <template v-slot:options>
-        <v-select
-          style="width: 250px; margin-left: 5px"
-          item-text="label"
-          item-value="value"
-          :loading="isAccountsLoading"
-          label="Accounts"
-          clearable
-          multiple
-          :items="!isAccountsLoading ? [...fullAccounts.values()] : []"
-          v-model="selectedAccounts"
-        />
+        <div style="display: flex; flex-wrap: wrap; width: 610px">
+          <div style="display: flex">
+            <v-autocomplete
+              style="width: 480px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              :loading="isAccountsLoading"
+              label="Accounts"
+              clearable
+              multiple
+              hide-details
+              :items="!isAccountsLoading ? [...fullAccounts.values()] : []"
+              v-model="selectedAccounts"
+            />
 
-        <v-select
-          style="width: 250px; margin-left: 5px"
-          item-text="label"
-          item-value="value"
-          label="Models"
-          clearable
-          multiple
-          :items="[...allModels.values()]"
-          v-model="selectedModels"
-        />
+            <v-autocomplete
+              style="width: 120px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              placeholder="All"
+              label="Agents"
+              clearable
+              hide-details
+              :items="agentTypes"
+              v-model="agentType"
+            />
+          </div>
+          <div style="display: flex">
+            <v-autocomplete
+              style="width: 300px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              label="Models"
+              clearable
+              multiple
+              hide-details
+              chips
+              small-chips
+              deletable-chips
+              :items="
+                selectedProviders.length
+                  ? currentModels
+                  : [...allModels.values()]
+              "
+              v-model="selectedModels"
+            />
 
-        <v-select
-          style="width: 120px; margin-left: 5px"
-          item-text="label"
-          item-value="value"
-          placeholder="All"
-          label="Agents"
-          clearable
-          :items="agentTypes"
-          v-model="agentType"
-        />
+            <v-autocomplete
+              style="width: 300px; margin-left: 5px"
+              item-text="label"
+              item-value="value"
+              label="Providers"
+              clearable
+              multiple
+              chips
+              deletable-chips
+              small-chips
+              hide-details
+              :items="
+                Object.keys(modelsByProviders).map((a) => ({
+                  label: a,
+                  modelsByProviders: a,
+                }))
+              "
+              v-model="selectedProviders"
+            />
+          </div>
+        </div>
       </template>
     </statistic-item>
 
     <v-dialog v-model="isSelectedPointOpen" max-width="50vw">
-      <v-card class="data_point_menu">
+      <v-card v-for="point in selectedDataPoints" :key="point.series" class="data_point_menu">
         <v-card-title>{{
-          `${selectedDataPoint?.series}: ${selectedDataPoint?.category} - ${selectedDataPoint?.value}`
+          `${point?.series}: ${point?.category} - ${point?.value} ${defaultCurrency.code}`
         }}</v-card-title>
         <v-card-subtitle class="subtitle">Accounts:</v-card-subtitle>
         <v-list class="list">
           <v-list-item
             class="list_item"
-            v-for="account of selectedDataPoint?.meta.accounts || []"
+            v-for="account of point?.meta.accounts || []"
             :key="account"
           >
             <v-list-item-title>
@@ -95,7 +130,7 @@
         <v-list class="list">
           <v-list-item
             class="list_item"
-            v-for="model of selectedDataPoint?.meta.models || []"
+            v-for="model of point?.meta.models || []"
             :key="model"
           >
             <v-list-item-title>
@@ -108,7 +143,7 @@
         <v-list class="list">
           <v-list-item
             class="list_item"
-            v-for="agent of selectedDataPoint?.meta.agents || []"
+            v-for="agent of point?.meta.agents || []"
             :key="agent"
           >
             <v-list-item-title>
@@ -123,13 +158,14 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { computed, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
 import { formatToYYMMDD } from "@/functions";
 import api from "@/api";
 import router from "../../router";
+import useCurrency from "@/hooks/useCurrency";
 
 const store = useStore();
 
@@ -154,6 +190,8 @@ const emit = defineEmits([
   "update:periods-second-offset",
 ]);
 
+const { defaultCurrency } = useCurrency();
+
 const allFields = ref([
   { label: "Revenue", value: "revenue" },
   { label: "Count", value: "count" },
@@ -177,6 +215,8 @@ const allAccounts = ref([]);
 const fullAccounts = ref(new Map());
 const selectedAccounts = ref([]);
 
+const selectedProviders = ref([]);
+
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
@@ -184,8 +224,49 @@ const summary = ref({});
 const isDataLoading = ref(false);
 const chartData = ref();
 
+const aiConfig = ref({ models: [] });
+
 const isSelectedPointOpen = ref(false);
-const selectedDataPoint = ref();
+const selectedDataPoints = ref([]);
+
+onMounted(async () => {
+  try {
+    const response = await api.get("/api/openai/get_config");
+    aiConfig.value = response.cfg;
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+const modelsByProviders = computed(() => {
+  const result = {};
+
+  Object.keys(aiConfig.value.models).map((key) => {
+    const model = aiConfig.value.models[key];
+
+    if (!result[model.provider]) {
+      result[model.provider] = [];
+    }
+
+    result[model.provider].push(key);
+  });
+  return result;
+});
+
+const providersModels = computed(() => {
+  return selectedProviders.value.reduce((acc, key) => {
+    acc.push(...modelsByProviders.value[key]);
+    return acc;
+  }, []);
+});
+
+const currentModels = computed(() => {
+  const accepted = [...providersModels.value];
+
+  return [...allModels.value.values()].filter((model) =>
+    accepted.includes(model.value)
+  );
+});
 
 const chartOptions = computed(() => ({
   tooltip: {
@@ -194,39 +275,36 @@ const chartOptions = computed(() => ({
     intersect: false,
     theme: store.getters["app/theme"],
     y: {
-      formatter: () => "",
+      formatter: (value) => `Total ${value} ${defaultCurrency.value.code}<br/>`,
       title: {
-        formatter: (date) => {
-          return `${date} `;
+        formatter: (date, opts) => {
+          const result = [`Date:${date} `];
+          const dataIndex = opts.dataPointIndex;
+          const seriesIndex = series.value.findIndex((s) => s.name === date);
+
+          const { accounts, agents, models } =
+            series.value[seriesIndex]?.meta?.[dataIndex];
+
+          result.push(
+            `Accounts: ${accounts
+              .map((id) => ({
+                label: fullAccounts.value.get(id)?.label || id,
+                id,
+              }))
+              .map(
+                ({ id, label }) =>
+                  `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`
+              )}`
+          );
+          result.push(`Models: ${models.join(", ")}`);
+
+          result.push(`Agents: ${agents.join(", ")}`);
+
+          return result.join("<br/>") + "<br/>";
         },
       },
     },
-    x: {
-      formatter: (val, opts) => {
-        const result = [`Date: ${val}`];
-        const dataIndex = opts.dataPointIndex;
-        const seriesIndex = opts.seriesIndex;
-        const { accounts, agents, models } =
-          series.value[seriesIndex].meta[dataIndex];
-
-        result.push(
-          `Accounts: ${accounts
-            .map((id) => ({
-              label: fullAccounts.value.get(id)?.label || id,
-              id,
-            }))
-            .map(
-              ({ id, label }) =>
-                `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`
-            )}`
-        );
-        result.push(`Models: ${models.join(", ")}`);
-
-        result.push(`Agents: ${agents.join(", ")}`);
-
-        return result.join("<br/>");
-      },
-    },
+    x: {},
     style: {
       fontSize: "14px",
       fontFamily: "Inter, sans-serif",
@@ -250,7 +328,11 @@ async function fetchData() {
         ? [period.value]
         : [periods.value.first, periods.value.second],
       params: {
-        models: selectedModels.value.length ? selectedModels.value : undefined,
+        models: selectedModels.value.length
+          ? selectedModels.value
+          : providersModels.value.length
+          ? providersModels.value
+          : undefined,
         accounts: selectedAccounts.value.length
           ? selectedAccounts.value
           : undefined,
@@ -276,13 +358,14 @@ function getValue(value) {
 }
 
 const onColumnClick = (...args) => {
-  const { seriesIndex, dataPointIndex } = args[2];
-  selectedDataPoint.value = {
-    series: series.value[seriesIndex]?.name,
-    meta: series.value[seriesIndex].meta[dataPointIndex],
-    value: series.value[seriesIndex].data[dataPointIndex],
+  const { dataPointIndex } = args[2];
+  selectedDataPoints.value = series.value.map((serie) => ({
+    series: serie.name,
+    meta: serie.meta[dataPointIndex],
+    value: serie.data[dataPointIndex],
     category: categories.value[dataPointIndex],
-  };
+  }));
+
   isSelectedPointOpen.value = true;
 };
 
@@ -328,7 +411,15 @@ async function fetchAccounts(accounts) {
 const fetchAccountsDebounced = debounce(fetchAccounts, 200);
 
 watch(
-  [period, periods, comparable, agentType, selectedModels, selectedAccounts],
+  [
+    period,
+    periods,
+    comparable,
+    agentType,
+    selectedModels,
+    selectedAccounts,
+    selectedProviders,
+  ],
   () => {
     if (!chartData.value) {
       fetchData();
