@@ -108,7 +108,11 @@
     </statistic-item>
 
     <v-dialog v-model="isSelectedPointOpen" max-width="50vw">
-      <v-card v-for="point in selectedDataPoints" :key="point.series" class="data_point_menu">
+      <v-card
+        v-for="point in selectedDataPoints"
+        :key="point.series"
+        class="data_point_menu"
+      >
         <v-card-title>{{
           `${point?.series}: ${point?.category} - ${point?.value} ${defaultCurrency.code}`
         }}</v-card-title>
@@ -194,9 +198,12 @@ const { defaultCurrency } = useCurrency();
 
 const allFields = ref([
   { label: "Revenue", value: "revenue" },
-  { label: "Count", value: "count" },
+  { label: "By Accounts", value: "accounts" },
+  { label: "By models", value: "models" },
+  { label: "By providers", value: "providers" },
 ]);
 const fields = ref("revenue");
+
 const comparable = ref(true);
 
 const agentTypes = ref([
@@ -282,8 +289,11 @@ const chartOptions = computed(() => ({
           const dataIndex = opts.dataPointIndex;
           const seriesIndex = series.value.findIndex((s) => s.name === date);
 
-          const { accounts, agents, models } =
-            series.value[seriesIndex]?.meta?.[dataIndex];
+          const {
+            accounts = [],
+            agents = [],
+            models = [],
+          } = series.value[seriesIndex]?.meta?.[dataIndex] || {};
 
           result.push(
             `Accounts: ${accounts
@@ -328,6 +338,7 @@ async function fetchData() {
         ? [period.value]
         : [periods.value.first, periods.value.second],
       params: {
+        raw: fields.value === "transactions",
         models: selectedModels.value.length
           ? selectedModels.value
           : providersModels.value.length
@@ -429,6 +440,12 @@ watch(
   }
 );
 
+watch(fields, () => {
+  if (fields.value !== "revenue") {
+    comparable.value = false;
+  }
+});
+
 watch([chartData, fields], () => {
   if (!chartData.value || !fields.value) {
     return;
@@ -440,99 +457,67 @@ watch([chartData, fields], () => {
 
   const tempData = JSON.parse(JSON.stringify(chartData.value));
 
-  if (!comparable.value) {
+  Object.keys(
+    comparable.value ? periods.value : { first: period.value }
+  ).forEach((key) => {
     newSeries.push({
-      name: allFields.value.find((field) => field.value === fields.value).label,
+      name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
+        periods.value[key][1]
+      )}`,
       data: [],
       meta: [],
-      id: fields.value,
     });
+  });
 
-    tempData[0].timeseries?.forEach((timeseries) => {
-      newCategories.push(timeseries.ts);
-      newSeries.forEach((serie) => {
-        serie.data.push(getValue(timeseries[serie.id] || 0));
-        serie.meta.push({
-          accounts: timeseries.accounts || [],
-          models: timeseries.models || [],
-          agents: timeseries.agents || ["api"],
-        });
-      });
-    });
+  for (
+    let index = 0;
+    index <
+    Math.max(
+      tempData[0]?.timeseries?.length || 0,
+      tempData[1]?.timeseries?.length || 0
+    );
+    index++
+  ) {
+    const first = tempData[0]?.timeseries?.[index];
+    const second = tempData[1]?.timeseries?.[index];
 
-    newSeries.forEach((serie) => {
-      tempData[0].summary?.models?.forEach((model) =>
-        allModels.value.add({ label: model, value: model })
-      );
-      const accounts = [];
-
-      tempData[0].summary?.accounts?.forEach((account) =>
-        accounts.push(account)
-      );
-      allAccounts.value = [
-        ...new Set([...allAccounts.value, ...accounts]).values(),
-      ];
-
-      summary.value[serie.name] = getValue(
-        tempData[0].summary?.[serie.id] || 0
-      );
-    });
-  } else {
-    Object.keys(periods.value).forEach((key) => {
-      newSeries.push({
-        name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
-          periods.value[key][1]
-        )}`,
-        data: [],
-        meta: [],
-      });
-    });
-
-    for (
-      let index = 0;
-      index <
-      Math.max(
-        tempData[0]?.timeseries?.length || 0,
-        tempData[1]?.timeseries?.length || 0
-      );
-      index++
-    ) {
-      const first = tempData[0]?.timeseries?.[index];
-      const second = tempData[1]?.timeseries?.[index];
-
-      if (!newCategories.includes(index + 1)) {
-        newCategories.push(index + 1);
-      }
-
-      [first, second].forEach((value, index) => {
-        newSeries[index].data.push(getValue(value?.[fields.value] || 0));
-        newSeries[index].meta.push({
-          accounts: value?.accounts || [],
-          models: value?.models || [],
-          agents: value?.agents || ["api"],
-        });
-      });
+    if (!tempData[1]) {
+      newCategories.push(first.ts);
+    } else if (!newCategories.includes(index + 1)) {
+      newCategories.push(index + 1);
     }
 
-    const accounts = [];
-    tempData.forEach((data) => {
-      data.summary?.models?.forEach((model) =>
-        allModels.value.add({ label: model, value: model })
-      );
-
-      data.summary?.accounts?.forEach((account) => accounts.push(account));
-    });
-
-    allAccounts.value = [
-      ...new Set([...allAccounts.value, ...accounts]).values(),
-    ];
-
-    newSeries.forEach((serie) => {
-      summary.value[serie.name] = getValue(
-        serie.data.reduce((acc, a) => acc + a, 0) || 0
-      );
+    [first, second].forEach((value, index) => {
+      if (!value) {
+        return;
+      }
+      newSeries[index].data.push(getValue(value?.[fields.value] || 0));
+      newSeries[index].meta.push({
+        accounts: value?.accounts || [],
+        models: value?.models || [],
+        agents: value?.agents || ["api"],
+      });
     });
   }
+
+  const accounts = [];
+  tempData.forEach((data) => {
+    data.summary?.models?.forEach((model) =>
+      allModels.value.add({ label: model, value: model })
+    );
+
+    data.summary?.accounts?.forEach((account) => accounts.push(account));
+  });
+
+  allAccounts.value = [
+    ...new Set([...allAccounts.value, ...accounts]).values(),
+  ];
+
+  newSeries.forEach((serie) => {
+    summary.value[serie.name] = getValue(
+      serie.data.reduce((acc, a) => acc + a, 0) || 0
+    );
+  });
 
   series.value = newSeries;
   categories.value = newCategories.map((c) => c.toString().split("T")[0]);
