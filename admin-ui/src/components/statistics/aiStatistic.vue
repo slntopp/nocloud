@@ -1,6 +1,7 @@
 <template>
   <div>
     <statistic-item
+      :duration-options="durationOptions"
       :period="period"
       :periodType="periodType"
       :periods="periods"
@@ -41,7 +42,7 @@
         <div style="display: flex; flex-wrap: wrap; width: 610px">
           <div style="display: flex">
             <v-autocomplete
-              style="width: 480px; margin-left: 5px"
+              style="width: 480px; margin-right: 15px"
               item-text="label"
               item-value="value"
               :loading="isAccountsLoading"
@@ -54,7 +55,7 @@
             />
 
             <v-autocomplete
-              style="width: 120px; margin-left: 5px"
+              style="width: 120px; margin-right: 15px"
               item-text="label"
               item-value="value"
               placeholder="All"
@@ -67,7 +68,7 @@
           </div>
           <div style="display: flex">
             <v-autocomplete
-              style="width: 300px; margin-left: 5px"
+              style="width: 300px; margin-right: 15px"
               item-text="label"
               item-value="value"
               label="Models"
@@ -86,7 +87,7 @@
             />
 
             <v-autocomplete
-              style="width: 300px; margin-left: 5px"
+              style="width: 300px; margin-right: 15px"
               item-text="label"
               item-value="value"
               label="Providers"
@@ -201,6 +202,8 @@ const emit = defineEmits([
   "update:periods-first-offset",
   "update:periods-second-offset",
 ]);
+
+const durationOptions = [{ label: "Month", value: "month" }];
 
 const { defaultCurrency } = useCurrency();
 

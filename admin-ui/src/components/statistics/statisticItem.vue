@@ -184,6 +184,16 @@ const props = defineProps({
   periodOffset: { type: Number, default: 0 },
   periodsFirstOffset: { type: Number, default: 0 },
   periodsSecondOffset: { type: Number, default: -1 },
+  durationOptions: {
+    type: Array,
+    default: () => [
+      { label: "Week", value: "week" },
+      { label: "Month", value: "month" },
+      { label: "Month by week", value: "month-7_days" },
+      { label: "Year", value: "year-7_days" },
+      { label: "Year by month", value: "year-1_month" },
+    ],
+  },
 });
 
 const {
@@ -199,6 +209,7 @@ const {
   periodOffset,
   periodsFirstOffset,
   periodsSecondOffset,
+  durationOptions
 } = toRefs(props);
 
 const emit = defineEmits([
@@ -212,14 +223,6 @@ const emit = defineEmits([
   "input:periods-first-offset",
   "input:periods-second-offset",
 ]);
-
-const durationOptions = [
-  { label: "Week", value: "week" },
-  { label: "Month", value: "month" },
-  { label: "Month by week", value: "month-7_days" },
-  { label: "Year", value: "year-7_days" },
-  { label: "Year by month", value: "year-1_month" },
-];
 
 const typeOptions = [
   { label: "Bar", value: "bar" },
