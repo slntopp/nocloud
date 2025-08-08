@@ -58,6 +58,7 @@ type InstancesController interface {
 	GetInstancePeriod(i *pb.Instance) (*int64, error)
 	Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error)
 	Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error
+	UpdateWithPatch(ctx context.Context, sp string, inst, oldInst *pb.Instance) error
 	Exists(ctx context.Context, uuid string) (bool, error)
 	UpdateNotes(ctx context.Context, inst *pb.Instance) error
 	Delete(ctx context.Context, group string, i *pb.Instance) error
@@ -855,6 +856,188 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 	return nil
 }
 
+func (ctrl *instancesController) UpdateWithPatch(ctx context.Context, _ string, inst, oldInst *pb.Instance) error {
+	log := ctrl.log.Named("UpdateWithPatch")
+	log.Debug("Updating Instance", zap.Any("instance", inst))
+	uuid := inst.GetUuid()
+
+	if oldInst.GetStatus() == spb.NoCloudStatus_DEL {
+		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
+		return nil
+	}
+	inst.Uuid = ""
+	inst.Status = spb.NoCloudStatus_INIT
+	inst.State = nil
+
+	err := hasher.SetHash(inst.ProtoReflect())
+	if err != nil {
+		return err
+	}
+
+	// Recalculate estimate price and period
+	// Values would change if plan was updated or replaced
+	estimate, err := ctrl.CalculateInstanceEstimatePrice(inst, false)
+	if err != nil {
+		log.Error("Failed to calculate estimate instance periodic price", zap.Error(err))
+		return err
+	}
+	period, err := ctrl.GetInstancePeriod(inst)
+	if err != nil {
+		log.Error("Failed to get instance period", zap.Error(err))
+		return err
+	}
+
+	mask := &pb.Instance{
+		Config:    inst.Config,
+		Resources: inst.Resources,
+		Hash:      inst.Hash,
+		Period:    period,
+		Estimate:  estimate,
+		Meta:      inst.Meta,
+	}
+	if inst.GetTitle() != oldInst.GetTitle() {
+		mask.Title = inst.GetTitle()
+	}
+	if !reflect.DeepEqual(inst.GetAddons(), oldInst.GetAddons()) {
+		mask.Addons = inst.GetAddons()
+	}
+	if inst.GetProduct() != oldInst.GetProduct() {
+		mask.Product = inst.Product
+	}
+	if inst.GetCreated() != oldInst.GetCreated() {
+		mask.Created = inst.GetCreated()
+	}
+
+	equalPlans := reflect.DeepEqual(inst.GetBillingPlan(), oldInst.GetBillingPlan())
+	if !equalPlans && inst.BillingPlan != nil {
+		log.Debug("Update plan")
+		_, err := ctrl.db.Query(ctx, removePlanQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+		})
+		if err != nil {
+			log.Error("Failed to remove plan")
+			return err
+		}
+
+		_, err = ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+			"billingPlan": inst.GetBillingPlan(),
+		})
+		if err != nil {
+			log.Error("Failed to update plan")
+			return err
+		}
+	}
+
+	equalDatas := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
+	if !equalDatas && inst.Data != nil {
+		_, err := ctrl.db.Query(ctx, removeDataQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+		})
+		if err != nil {
+			log.Error("Failed to remove data")
+			return err
+		}
+
+		_, err = ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+			"data":        inst.Data,
+		})
+		if err != nil {
+			log.Error("Failed to update data")
+			return err
+		}
+	}
+
+	if inst.Config != nil && !oldInst.GetConfig()["auto_start"].GetBoolValue() && inst.GetConfig()["auto_start"].GetBoolValue() {
+		if mask.Meta == nil {
+			mask.Meta = &pb.InstanceMeta{}
+		}
+		mask.Meta.Started = time.Now().Unix()
+	}
+
+	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, ToMapClean(mask))
+	if err != nil {
+		log.Error("Failed to update Instance", zap.Error(err))
+		return err
+	}
+
+	instMarshal, _ := json.Marshal(inst)
+	oldInstMarshal, _ := json.Marshal(oldInst)
+	diff, err := jsondiff.CompareJSON(oldInstMarshal, instMarshal)
+	if err != nil {
+		log.Error("Failed to calculate diff", zap.Error(err))
+		return err
+	}
+
+	var event = &elpb.Event{
+		Entity:    INSTANCES_COL,
+		Uuid:      uuid,
+		Scope:     "database",
+		Action:    "update",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: diff.String(),
+		},
+	}
+
+	nocloud.Log(log, event)
+
+	sp, err := ctrl.getSp(ctx, uuid)
+	if err != nil {
+		log.Error("Failed to get sp to publish ansible hook", zap.Error(err))
+		return nil
+	}
+
+	if oldInst.Config == nil {
+		oldInst.Config = make(map[string]*structpb.Value)
+	}
+	if inst.Config != nil && !oldInst.GetConfig()["auto_start"].GetBoolValue() && inst.GetConfig()["auto_start"].GetBoolValue() {
+		c := pb.Context{
+			Instance: uuid,
+			Sp:       sp,
+			Event:    "START",
+		}
+		if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+			log.Error("Failed to publish ansible hook", zap.Error(err))
+		}
+		for _, a := range inst.GetAddons() {
+			addon, err := ctrl.addons.Get(ctx, a)
+			if err != nil {
+				log.Error("Failed to get instance addon", zap.Error(err), zap.String("addon", a))
+				continue
+			}
+			if addon.Action != nil && addon.Action.GetPlaybook() != "" {
+				c := pb.Context{
+					Instance: inst.GetUuid(),
+					Sp:       sp,
+					Event:    "START",
+					Addon:    &a,
+				}
+				if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+					log.Error("Failed to publish ansible hook addon event", zap.Error(err))
+				}
+			}
+		}
+	}
+	c := pb.Context{
+		Instance: uuid,
+		Sp:       sp,
+		Event:    "UPDATE",
+	}
+	if err = ctrl.ansPs.Publish("hooks", services_registry.Topic("ansible_hooks"), &c); err != nil {
+		log.Error("Failed to publish ansible hook", zap.Error(err))
+	}
+
+	return nil
+}
+
 func (ctrl *instancesController) UpdateNotes(ctx context.Context, inst *pb.Instance) error {
 	log := ctrl.log.Named("UpdateNotes")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
@@ -1218,3 +1401,119 @@ GRAPH @permissions SORT path.edges[0].level
 	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
 	})
 `
+
+func ToMapClean(src any) map[string]any {
+	res := make(map[string]any)
+
+	val := reflect.ValueOf(src)
+	if !val.IsValid() {
+		return res
+	}
+	if val.Kind() == reflect.Pointer {
+		if val.IsNil() {
+			return res
+		}
+		val = val.Elem()
+	}
+	if val.Kind() != reflect.Struct {
+		return res
+	}
+
+	typ := val.Type()
+	for i := 0; i < val.NumField(); i++ {
+		field := val.Field(i)
+		name := typ.Field(i).Name
+
+		if !field.CanInterface() {
+			continue
+		}
+
+		add := func(v any) { res[name] = v }
+
+		switch field.Kind() {
+		case reflect.Pointer:
+			if field.IsNil() {
+				continue
+			}
+			if field.Elem().Kind() == reflect.Struct {
+				if ma := ToMapClean(field.Interface()); len(ma) != 0 {
+					add(ma)
+				}
+			} else if !isZero(field.Elem()) {
+				add(field.Elem().Interface())
+			}
+
+		case reflect.Struct:
+			if ma := ToMapClean(field.Interface()); len(ma) != 0 {
+				add(ma)
+			}
+
+		case reflect.Slice, reflect.Array:
+			if field.Len() == 0 {
+				continue
+			}
+			var out []any
+			for j := 0; j < field.Len(); j++ {
+				item := field.Index(j)
+				if item.Kind() == reflect.Struct ||
+					(item.Kind() == reflect.Pointer && item.Elem().Kind() == reflect.Struct) {
+					if ma := ToMapClean(item.Interface()); len(ma) != 0 {
+						out = append(out, ma)
+					}
+				} else if !isZero(item) {
+					out = append(out, item.Interface())
+				}
+			}
+			if len(out) != 0 {
+				add(out)
+			}
+
+		case reflect.Map:
+			if field.Len() == 0 {
+				continue
+			}
+			mp := make(map[string]any)
+			iter := field.MapRange()
+			for iter.Next() {
+				key := fmt.Sprint(iter.Key().Interface())
+				v := iter.Value()
+				if v.Kind() == reflect.Struct ||
+					(v.Kind() == reflect.Pointer && v.Elem().Kind() == reflect.Struct) {
+					if ma := ToMapClean(v.Interface()); len(ma) != 0 {
+						mp[key] = ma
+					}
+				} else if !isZero(v) {
+					mp[key] = v.Interface()
+				}
+			}
+			if len(mp) != 0 {
+				add(mp)
+			}
+
+		default:
+			if !isZero(field) {
+				add(field.Interface())
+			}
+		}
+	}
+	return res
+}
+
+func isZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Bool:
+		return false // Do not consider false as zero value
+	case reflect.String:
+		return v.Len() == 0
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return v.Float() == 0
+	case reflect.Pointer, reflect.Interface, reflect.Slice, reflect.Map:
+		return v.IsNil()
+	default:
+	}
+	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
+}
