@@ -17,7 +17,6 @@ const props = defineProps([
   "series",
   "categories",
   "summary",
-  "customLegendFormater",
   "type",
   "stacked",
   "description",
@@ -42,6 +41,7 @@ const chartOptions = computed(() => ({
             colors: Array(25).fill(() => "#262525"),
           }
         : {},
+    ...(options.value?.dataLabels || {}),
   },
   title: description.value
     ? {
@@ -66,15 +66,14 @@ const chartOptions = computed(() => ({
     },
     show: true,
     showForSingleSeries: true,
-    formatter: props.customLegendFormater
-      ? props.customLegendFormater
-      : function (val, opts) {
-          return `${val} ${
-            summary.value[series.value[opts.seriesIndex]?.name]
-              ? summary.value[series.value[opts.seriesIndex]?.name]
-              : ""
-          }`;
-        },
+    formatter: function (val, opts) {
+      return `${val} ${
+        summary.value[series.value[opts.seriesIndex]?.name]
+          ? summary.value[series.value[opts.seriesIndex]?.name]
+          : ""
+      }`;
+    },
+    ...(options.value?.legend || {}),
   },
 }));
 
