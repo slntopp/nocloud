@@ -1,6 +1,7 @@
 <template>
   <div>
     <statistic-item
+      :duration-options="durationOptions"
       :period="period"
       :periodType="periodType"
       :periods="periods"
@@ -21,6 +22,7 @@
       :all-fields="allFields"
       :fields="fields"
       @input:fields="fields = $event"
+      :not-comparable="fields !== 'revenue'"
       :comparable="comparable"
       @input:comparable="comparable = $event"
     >
@@ -32,6 +34,7 @@
           :categories="categories"
           :summary="summary"
           :options="chartOptions"
+          :stacked="fields !== 'revenue'"
         />
       </template>
 
@@ -39,7 +42,7 @@
         <div style="display: flex; flex-wrap: wrap; width: 610px">
           <div style="display: flex">
             <v-autocomplete
-              style="width: 480px; margin-left: 5px"
+              style="width: 480px; margin-right: 15px"
               item-text="label"
               item-value="value"
               :loading="isAccountsLoading"
@@ -52,7 +55,7 @@
             />
 
             <v-autocomplete
-              style="width: 120px; margin-left: 5px"
+              style="width: 120px; margin-right: 15px"
               item-text="label"
               item-value="value"
               placeholder="All"
@@ -65,7 +68,7 @@
           </div>
           <div style="display: flex">
             <v-autocomplete
-              style="width: 300px; margin-left: 5px"
+              style="width: 300px; margin-right: 15px"
               item-text="label"
               item-value="value"
               label="Models"
@@ -84,7 +87,7 @@
             />
 
             <v-autocomplete
-              style="width: 300px; margin-left: 5px"
+              style="width: 300px; margin-right: 15px"
               item-text="label"
               item-value="value"
               label="Providers"
@@ -108,42 +111,52 @@
     </statistic-item>
 
     <v-dialog v-model="isSelectedPointOpen" max-width="50vw">
-      <v-card v-for="point in selectedDataPoints" :key="point.series" class="data_point_menu">
+      <v-card
+        v-for="point in selectedDataPoints"
+        :key="point.series"
+        class="data_point_menu"
+      >
         <v-card-title>{{
           `${point?.series}: ${point?.category} - ${point?.value} ${defaultCurrency.code}`
         }}</v-card-title>
-        <v-card-subtitle class="subtitle">Accounts:</v-card-subtitle>
-        <v-list class="list">
-          <v-list-item
-            class="list_item"
-            v-for="account of point?.meta.accounts || []"
-            :key="account"
-          >
-            <v-list-item-title>
-              <a @click="openAccount(account)">{{
-                fullAccounts.get(account)?.label || account
-              }}</a>
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
-        <v-card-subtitle class="subtitle">Models:</v-card-subtitle>
-        <v-list class="list">
-          <v-list-item
-            class="list_item"
-            v-for="model of point?.meta.models || []"
-            :key="model"
-          >
-            <v-list-item-title>
-              {{ model }}
-            </v-list-item-title>
-          </v-list-item>
-        </v-list>
+
+        <template v-if="fields !== 'accounts'">
+          <v-card-subtitle class="subtitle">Accounts:</v-card-subtitle>
+          <v-list class="list">
+            <v-list-item
+              class="list_item"
+              v-for="account of point?.meta?.accounts || []"
+              :key="account"
+            >
+              <v-list-item-title>
+                <a @click="openAccount(account)">{{
+                  fullAccounts.get(account)?.label || account
+                }}</a>
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </template>
+
+        <template v-if="fields !== 'models'">
+          <v-card-subtitle class="subtitle">Models:</v-card-subtitle>
+          <v-list class="list">
+            <v-list-item
+              class="list_item"
+              v-for="model of point?.meta?.models || []"
+              :key="model"
+            >
+              <v-list-item-title>
+                {{ model }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </template>
 
         <v-card-subtitle class="subtitle">Agents:</v-card-subtitle>
         <v-list class="list">
           <v-list-item
             class="list_item"
-            v-for="agent of point?.meta.agents || []"
+            v-for="agent of point?.meta?.agents || []"
             :key="agent"
           >
             <v-list-item-title>
@@ -190,13 +203,18 @@ const emit = defineEmits([
   "update:periods-second-offset",
 ]);
 
+const durationOptions = [{ label: "Month", value: "month" }];
+
 const { defaultCurrency } = useCurrency();
 
 const allFields = ref([
   { label: "Revenue", value: "revenue" },
-  { label: "Count", value: "count" },
+  { label: "By Accounts", value: "accounts" },
+  { label: "By Models", value: "models" },
+  { label: "By Providers", value: "providers" },
 ]);
 const fields = ref("revenue");
+
 const comparable = ref(true);
 
 const agentTypes = ref([
@@ -268,54 +286,105 @@ const currentModels = computed(() => {
   );
 });
 
-const chartOptions = computed(() => ({
-  tooltip: {
-    enabled: true,
-    shared: true,
-    intersect: false,
-    theme: store.getters["app/theme"],
-    y: {
-      formatter: (value) => `Total ${value} ${defaultCurrency.value.code}<br/>`,
-      title: {
-        formatter: (date, opts) => {
-          const result = [`Date:${date} `];
-          const dataIndex = opts.dataPointIndex;
-          const seriesIndex = series.value.findIndex((s) => s.name === date);
+const chartOptions = computed(() => {
+  const options = {
+    tooltip: {
+      enabled: true,
+      shared: true,
+      intersect: false,
+      theme: store.getters["app/theme"],
+      custom: function ({ dataPointIndex, w }) {
+        const defaultCurrencyCode = defaultCurrency.value.code;
+        const fullAccountsMap = fullAccounts.value;
+        const categories = w.globals.labels;
+        const category = categories[dataPointIndex];
 
-          const { accounts, agents, models } =
-            series.value[seriesIndex]?.meta?.[dataIndex];
+        let html = `<div class="apexcharts-tooltip-title">Date: ${category}</div>`;
+        for (let i = 0; i < series.value.length; i++) {
+          const val = series.value[i].data?.[dataPointIndex];
+          if (val == null) continue;
 
-          result.push(
-            `Accounts: ${accounts
-              .map((id) => ({
-                label: fullAccounts.value.get(id)?.label || id,
-                id,
-              }))
-              .map(
-                ({ id, label }) =>
-                  `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`
-              )}`
-          );
-          result.push(`Models: ${models.join(", ")}`);
+          let seriesName = w.globals.seriesNames[i];
 
-          result.push(`Agents: ${agents.join(", ")}`);
+          const color = w.globals.colors[i];
 
-          return result.join("<br/>") + "<br/>";
+          const meta = series.value?.[i]?.meta?.[dataPointIndex] || {};
+
+          const { accounts = [], agents = [], models = [] } = meta;
+
+          let accountLinks = accounts
+            .map((id) => {
+              const label = fullAccountsMap.get(id)?.label || id;
+              return `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`;
+            })
+            .join(", ");
+
+          const agentsList = agents.join(", ");
+          let modelsList = models.join(", ");
+
+          if (fields.value === "accounts") {
+            seriesName =
+              fullAccounts.value.get(seriesName)?.label || seriesName;
+            accountLinks = null;
+          } else if (fields.value === "models") {
+            modelsList = null;
+          }
+
+          html += `
+        <div style="margin: 6px 0;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span style="background:${color};width:10px;height:10px;border-radius:50%;display:inline-block;"></span>
+            <span><strong>${seriesName}:</strong> ${val} ${defaultCurrencyCode}</span>
+          </div>
+          <div style="padding-left: 16px; font-size: 12px; white-space: normal; word-wrap: break-word;">
+            ${accountLinks ? `Accounts: ${accountLinks}<br/>` : ""}
+            ${modelsList ? `Models: ${modelsList}<br/>` : ""}
+            ${agentsList ? `Agents: ${agentsList}<br/>` : ""}
+          </div>
+        </div>
+      `;
+        }
+
+        return html;
+      },
+      style: {
+        fontSize: "14px",
+        fontFamily: "Inter, sans-serif",
+      },
+    },
+
+    yaxis: {
+      labels: {
+        formatter: function (val) {
+          return val?.toFixed(2);
         },
       },
     },
-    x: {},
-    style: {
-      fontSize: "14px",
-      fontFamily: "Inter, sans-serif",
+    chart: {
+      events: {
+        dataPointSelection: onColumnClick,
+      },
     },
-  },
-  chart: {
-    events: {
-      dataPointSelection: onColumnClick,
-    },
-  },
-}));
+  };
+
+  if (fields.value !== "revenue") {
+    options.legend = {
+      formatter: (val) => {
+        const total = summary.value[val];
+
+        if (fields.value === "accounts") {
+          return `${fullAccounts.value.get(val)?.label || val} ${total} ${
+            defaultCurrency.value.code
+          }`;
+        }
+
+        return `${val} ${total} ${defaultCurrency.value.code}`;
+      },
+    };
+  }
+
+  return options;
+});
 
 async function fetchData() {
   isDataLoading.value = true;
@@ -328,6 +397,7 @@ async function fetchData() {
         ? [period.value]
         : [periods.value.first, periods.value.second],
       params: {
+        raw: fields.value !== "revenue",
         models: selectedModels.value.length
           ? selectedModels.value
           : providersModels.value.length
@@ -359,12 +429,14 @@ function getValue(value) {
 
 const onColumnClick = (...args) => {
   const { dataPointIndex } = args[2];
-  selectedDataPoints.value = series.value.map((serie) => ({
-    series: serie.name,
-    meta: serie.meta[dataPointIndex],
-    value: serie.data[dataPointIndex],
-    category: categories.value[dataPointIndex],
-  }));
+  selectedDataPoints.value = series.value
+    .map((serie) => ({
+      series: serie.name,
+      meta: serie.meta[dataPointIndex],
+      value: serie.data[dataPointIndex],
+      category: categories.value[dataPointIndex],
+    }))
+    .filter((v) => !!v.value);
 
   isSelectedPointOpen.value = true;
 };
@@ -419,6 +491,7 @@ watch(
     selectedModels,
     selectedAccounts,
     selectedProviders,
+    fields,
   ],
   () => {
     if (!chartData.value) {
@@ -428,6 +501,12 @@ watch(
     }
   }
 );
+
+watch(fields, () => {
+  if (fields.value !== "revenue") {
+    comparable.value = false;
+  }
+});
 
 watch([chartData, fields], () => {
   if (!chartData.value || !fields.value) {
@@ -440,45 +519,10 @@ watch([chartData, fields], () => {
 
   const tempData = JSON.parse(JSON.stringify(chartData.value));
 
-  if (!comparable.value) {
-    newSeries.push({
-      name: allFields.value.find((field) => field.value === fields.value).label,
-      data: [],
-      meta: [],
-      id: fields.value,
-    });
-
-    tempData[0].timeseries?.forEach((timeseries) => {
-      newCategories.push(timeseries.ts);
-      newSeries.forEach((serie) => {
-        serie.data.push(getValue(timeseries[serie.id] || 0));
-        serie.meta.push({
-          accounts: timeseries.accounts || [],
-          models: timeseries.models || [],
-          agents: timeseries.agents || ["api"],
-        });
-      });
-    });
-
-    newSeries.forEach((serie) => {
-      tempData[0].summary?.models?.forEach((model) =>
-        allModels.value.add({ label: model, value: model })
-      );
-      const accounts = [];
-
-      tempData[0].summary?.accounts?.forEach((account) =>
-        accounts.push(account)
-      );
-      allAccounts.value = [
-        ...new Set([...allAccounts.value, ...accounts]).values(),
-      ];
-
-      summary.value[serie.name] = getValue(
-        tempData[0].summary?.[serie.id] || 0
-      );
-    });
-  } else {
-    Object.keys(periods.value).forEach((key) => {
+  if (fields.value === "revenue") {
+    Object.keys(
+      comparable.value ? periods.value : { first: period.value }
+    ).forEach((key) => {
       newSeries.push({
         name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
           periods.value[key][1]
@@ -500,11 +544,16 @@ watch([chartData, fields], () => {
       const first = tempData[0]?.timeseries?.[index];
       const second = tempData[1]?.timeseries?.[index];
 
-      if (!newCategories.includes(index + 1)) {
+      if (!tempData[1]) {
+        newCategories.push(first.ts);
+      } else if (!newCategories.includes(index + 1)) {
         newCategories.push(index + 1);
       }
 
       [first, second].forEach((value, index) => {
+        if (!value) {
+          return;
+        }
         newSeries[index].data.push(getValue(value?.[fields.value] || 0));
         newSeries[index].meta.push({
           accounts: value?.accounts || [],
@@ -514,25 +563,106 @@ watch([chartData, fields], () => {
       });
     }
 
-    const accounts = [];
-    tempData.forEach((data) => {
-      data.summary?.models?.forEach((model) =>
-        allModels.value.add({ label: model, value: model })
-      );
-
-      data.summary?.accounts?.forEach((account) => accounts.push(account));
-    });
-
-    allAccounts.value = [
-      ...new Set([...allAccounts.value, ...accounts]).values(),
-    ];
-
     newSeries.forEach((serie) => {
       summary.value[serie.name] = getValue(
         serie.data.reduce((acc, a) => acc + a, 0) || 0
       );
     });
+  } else {
+    const dataMap = {};
+    tempData[0].timeseries.forEach((timeserie) => {
+      const ts = timeserie.ts.split("T")[0];
+
+      let dataKey = "";
+
+      if (fields.value === "accounts") {
+        dataKey = timeserie.account;
+      } else if (fields.value === "models") {
+        dataKey = timeserie.model;
+      } else if (fields.value === "providers") {
+        dataKey = Object.keys(modelsByProviders.value).find((provider) =>
+          modelsByProviders.value[provider].includes(timeserie.model)
+        );
+      }
+
+      if (!dataMap[dataKey]) {
+        dataMap[dataKey] = [];
+      }
+
+      dataMap[dataKey][ts] = {
+        revenue: (dataMap[dataKey]?.[ts]?.revenue || 0) + timeserie.revenue,
+        accounts:
+          dataMap[dataKey]?.[ts]?.accounts &&
+          !dataMap[dataKey]?.[ts]?.accounts.includes(timeserie.account)
+            ? [...dataMap[dataKey]?.[ts]?.accounts, timeserie.account]
+            : dataMap[dataKey]?.[ts]?.accounts || [],
+        models:
+          dataMap[dataKey]?.[ts]?.models &&
+          !dataMap[dataKey]?.[ts]?.models.includes(timeserie.model)
+            ? [...dataMap[dataKey]?.[ts]?.models, timeserie.model]
+            : dataMap[dataKey]?.[ts]?.models || [],
+        agents:
+          dataMap[dataKey]?.[ts]?.agents &&
+          !dataMap[dataKey]?.[ts]?.agents.includes(timeserie.agent || "api")
+            ? [...dataMap[dataKey]?.[ts]?.agents, timeserie.agent || "api"]
+            : dataMap[dataKey]?.[ts]?.agents || [],
+      };
+    });
+
+    Object.keys(dataMap).forEach((account) => {
+      newSeries.push({ name: account, data: [], meta: [] });
+
+      const data = Array(period.value[1].getDate() - 1).fill(null);
+      const meta = Array(period.value[1].getDate() - 1).fill(null);
+
+      Object.keys(dataMap[account]).forEach((key) => {
+        const date = new Date(key);
+        data[date.getDate() - 1] = getValue(dataMap[account][key]?.revenue);
+
+        meta[date.getDate() - 1] = {
+          accounts: dataMap[account][key]?.accounts,
+          models: dataMap[account][key]?.models,
+          agents: dataMap[account][key]?.agents,
+        };
+      });
+
+      newSeries[newSeries.length - 1].data = data;
+      newSeries[newSeries.length - 1].meta = meta;
+    });
+
+    const current = new Date(period.value[0]);
+    const end = new Date(period.value[1]);
+
+    while (current <= end) {
+      const formatted = current.toISOString().slice(0, 10);
+      newCategories.push(formatted);
+      current.setDate(current.getDate() + 1);
+    }
+
+    newSeries.forEach((serie) => {
+      summary.value[serie.name] = getValue(
+        Object.keys(dataMap[serie.name]).reduce(
+          (acc, key) => acc + dataMap[serie.name][key]?.revenue,
+          0
+        ) || 0
+      );
+    });
+
+    console.log(summary.value);
   }
+
+  const accounts = [];
+  tempData.forEach((data) => {
+    data.summary?.models?.forEach((model) =>
+      allModels.value.add({ label: model, value: model })
+    );
+
+    data.summary?.accounts?.forEach((account) => accounts.push(account));
+  });
+
+  allAccounts.value = [
+    ...new Set([...allAccounts.value, ...accounts]).values(),
+  ];
 
   series.value = newSeries;
   categories.value = newCategories.map((c) => c.toString().split("T")[0]);

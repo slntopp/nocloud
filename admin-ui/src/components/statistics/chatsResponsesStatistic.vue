@@ -26,7 +26,6 @@
         :series="series"
         :categories="categories"
         :summary="summary"
-        :custom-legend-formater="legendFomatter"
         :options="chartOptions"
       />
     </template>
@@ -90,29 +89,31 @@ const comparable = ref(true);
 const isDataLoading = ref(false);
 
 const chartOptions = computed(() => {
+  const result = {
+    legend: {
+      formatter: (val, opts) => {
+        const account = accounts.value[val] ?? { title: val };
+
+        return `${account.title} ${
+          summary.value[series.value[opts.seriesIndex]?.name]
+            ? summary.value[series.value[opts.seriesIndex]?.name]
+            : ""
+        }`;
+      },
+    },
+  };
+
   if (seriesType.value === "users") {
-    return {
-      tooltip: {
-        y: {
-          title: {
-            formatter: (seriesName) => accounts.value[seriesName]?.title,
-          },
+    result['tooltip'] = {
+      y: {
+        title: {
+          formatter: (seriesName) => accounts.value[seriesName]?.title,
         },
       },
     };
   }
-  return {};
+  return result;
 });
-
-function legendFomatter(val, opts) {
-  const account = accounts.value[val] ?? { title: val };
-
-  return `${account.title} ${
-    summary.value[series.value[opts.seriesIndex]?.name]
-      ? summary.value[series.value[opts.seriesIndex]?.name]
-      : ""
-  }`;
-}
 
 async function fetchData() {
   isDataLoading.value = true;
