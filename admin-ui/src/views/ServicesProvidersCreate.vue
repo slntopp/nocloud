@@ -412,7 +412,9 @@ export default {
               ? "Service provider created successfully"
               : "Service provider updated successfully",
         });
-        this.$router.push({ name: "ServicesProviders" });
+        if (action === "create") {
+          this.$router.push({ name: "ServicesProviders" });
+        }
       } catch (err) {
         this.errorDisplay(err);
       } finally {

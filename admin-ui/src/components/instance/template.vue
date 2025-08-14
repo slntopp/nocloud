@@ -108,8 +108,8 @@ export default {
           this.showSnackbarSuccess({
             message: "Instance edited successfully",
           });
+          this.$router.go()
 
-          this.$router.push({ name: "Instances" });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

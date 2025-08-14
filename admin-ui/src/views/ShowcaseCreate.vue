@@ -321,7 +321,10 @@ const save = async () => {
     store.commit("snackbar/showSnackbarSuccess", {
       message: `Showcase successfully ${isEdit.value ? "saved" : "created"}`,
     });
-    router.push({ name: "Showcases" });
+
+    if (!isEdit.value) {
+      router.push({ name: "Showcases" });
+    }
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during save showcase",

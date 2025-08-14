@@ -410,8 +410,6 @@ const editAccount = async () => {
     store.commit("snackbar/showSnackbarSuccess", {
       message: "Account edited successfully",
     });
-
-    router.push({ name: "Accounts" });
   } finally {
     isEditLoading.value = false;
   }
@@ -447,8 +445,6 @@ const permanentLock = async () => {
     await Promise.all(servicesForDown.map((s) => api.services.down(s.uuid)));
     await Promise.all(accountServices.map((s) => api.services.delete(s.uuid)));
     await changeStatus(newStatus);
-
-    router.push({ name: "Accounts" });
   } catch {
     store.commit("snackbar/showSnackbarError", {
       message: "Error while change status",

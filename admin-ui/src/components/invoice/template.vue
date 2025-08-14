@@ -95,8 +95,8 @@ export default {
           this.showSnackbarSuccess({
             message: "Invoice edited successfully",
           });
+          this.$router.go()
 
-          this.$router.push({ name: "Invoices" });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

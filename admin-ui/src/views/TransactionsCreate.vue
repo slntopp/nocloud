@@ -332,7 +332,7 @@ export default {
             name: "Account",
             params: { accountId: this.$route.query.account },
           });
-        } else {
+        } else if (!this.isEdit) {
           this.$router.push({ name: "Transactions" });
         }
       } catch (err) {

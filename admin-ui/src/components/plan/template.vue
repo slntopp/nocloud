@@ -95,8 +95,8 @@ export default {
           this.showSnackbarSuccess({
             message: "Price model edited successfully",
           });
+          this.$router.go()
 
-          this.$router.push({ name: "Plans" });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

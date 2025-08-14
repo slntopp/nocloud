@@ -101,8 +101,8 @@ export default {
           this.showSnackbarSuccess({
             message: 'Service provider edited successfully'
           });
+          this.$router.go()
 
-          this.$router.push({ name: 'ServicesProviders' });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
