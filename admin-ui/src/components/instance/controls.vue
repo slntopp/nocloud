@@ -176,7 +176,7 @@ export default {
         }
 
         this.showSnackbarSuccess({ message: "Done!" });
-        this.$router.push({ name: "Instances" });
+        this.$emit("refresh");
       } catch (err) {
         this.showSnackbarError({
           message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
@@ -192,7 +192,7 @@ export default {
       try {
         await api.delete(`/instances/${action}/${this.template.uuid}`);
         this.showSnackbarSuccess({ message: "Done!" });
-        this.$router.push({ name: "Instances" });
+        this.$emit("refresh");
       } catch (err) {
         this.showSnackbarError({
           message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,

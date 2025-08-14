@@ -99,7 +99,7 @@ export default {
             message: 'Account edited successfully'
           });
 
-          this.$router.push({ name: 'Accounts' });
+          this.$router.go()
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

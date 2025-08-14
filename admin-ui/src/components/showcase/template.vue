@@ -93,8 +93,8 @@ export default {
           this.showSnackbarSuccess({
             message: "Showcase edited successfully",
           });
+          this.$router.go()
 
-          this.$router.push({ name: "Showcases" });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

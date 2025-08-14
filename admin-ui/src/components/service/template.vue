@@ -98,8 +98,8 @@ export default {
           this.showSnackbarSuccess({
             message: 'Service edited successfully'
           });
+          this.$router.go()
 
-          this.$router.push({ name: 'Services' });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
