@@ -295,7 +295,9 @@ const router = useRouter();
 const isValid = ref(false);
 const requiredRule = ref((val) => !!val || "Field required");
 const requiredNumberRule = ref((val) => +val >= 0 || "Field required");
-const codeRule = ref((val) => val.length === 6 || "Code must be 6 symbols");
+const codeRule = ref(
+  (val) => (val.length >= 4 && val.length <= 12) || "Code must be 4-12 symbols"
+);
 const promocodeValueRule = ref((val) =>
   isDiscountPercent.value
     ? (+val >= 0 && +val <= 100) || "Min 0% Max 100%"
