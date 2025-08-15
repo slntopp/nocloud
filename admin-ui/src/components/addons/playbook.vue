@@ -31,7 +31,7 @@
 import { useStore } from "@/store";
 import playbookItem from "@/components/ui/playbookItem.vue";
 import { computed, onMounted, ref, toRefs } from "vue";
-import { Action } from "nocloud-proto/proto/es/billing/addons/addons_pb";
+import { Action, Addon } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 const props = defineProps({
   addon: {},
@@ -63,7 +63,10 @@ const saveAddonAction = async (data) => {
   try {
     const dto = { ...addon.value };
     dto.action = Action.fromJson(data);
-    await store.getters["addons/addonsClient"].update(dto);
+
+    await store.getters["addons/addonsClient"].update(
+      Addon.fromJson(dto, { ignoreUnknownFields: true })
+    );
 
     store.commit("snackbar/showSnackbarSuccess", { message: "Done" });
   } catch (e) {
