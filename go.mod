@@ -20,7 +20,7 @@ require (
 	github.com/pkg/sftp v1.13.7
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/cors v1.10.1
-	github.com/slntopp/nocloud-proto v0.0.0-20250726223820-4c71aecacd7e
+	github.com/slntopp/nocloud-proto v0.0.0-20250820124850-d38243ef1add
 	github.com/spf13/viper v1.18.2
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.9.0
