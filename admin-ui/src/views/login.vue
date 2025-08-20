@@ -31,6 +31,7 @@
                   @keypress.enter="tryLogin"
                 ></v-text-field>
                 <v-select
+                  v-if="typesAccounts.length > 1"
                   v-model="type"
                   class="type-select"
                   :items="typesAccounts"
@@ -65,7 +66,7 @@ export default {
       username: "",
       password: "",
       type: "Standard",
-      typesAccounts: ["Standard", "WHMCS"],
+      typesAccounts: ["Standard"],
     };
   },
   methods: {
