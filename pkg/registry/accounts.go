@@ -220,7 +220,8 @@ func (s *AccountsServiceServer) ChangeLanguageCode(ctx context.Context, req *acc
 	log.Debug("ChangeLanguageCode request received")
 	var targetAccount = requester
 	if req.TargetAccount != nil {
-		if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		if *req.TargetAccount != targetAccount &&
+			!s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 			return nil, fmt.Errorf("no access rights")
 		}
 		targetAccount = *req.TargetAccount
