@@ -960,7 +960,9 @@ func (ctrl *instancesController) UpdateWithPatch(ctx context.Context, _ string, 
 		mask.Meta.Started = time.Now().Unix()
 	}
 
-	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, ToMapClean(mask))
+	toUpdate := ToMapClean(mask)
+	log.Debug("Instance patch", zap.Any("patch", toUpdate))
+	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, toUpdate)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
 		return err
