@@ -1434,7 +1434,7 @@ func ToMapClean(src any) map[string]any {
 				break
 			}
 			if fieldName != "" {
-				name = jsonTag
+				name = fieldName
 			}
 		}
 
