@@ -1430,7 +1430,7 @@ func ToMapClean(src any) map[string]any {
 				if v == "omitempty" || v == "-" {
 					continue
 				}
-				fieldName = vs
+				fieldName = v
 				break
 			}
 			if fieldName != "" {
