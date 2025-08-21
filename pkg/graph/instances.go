@@ -1422,7 +1422,10 @@ func ToMapClean(src any) map[string]any {
 	typ := val.Type()
 	for i := 0; i < val.NumField(); i++ {
 		field := val.Field(i)
-		name := typ.Field(i).Name
+		var name = typ.Field(i).Name
+		if jsonTag := typ.Field(i).Tag.Get("json"); jsonTag != "" {
+			name = jsonTag
+		}
 
 		if !field.CanInterface() {
 			continue
