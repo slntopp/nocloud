@@ -1427,10 +1427,10 @@ func ToMapClean(src any) map[string]any {
 			split := strings.Split(jsonTag, ",")
 			var fieldName string
 			for _, v := range split {
-				if v == "omitempty" {
+				if v == "omitempty" || v == "-" {
 					continue
 				}
-				fieldName = v
+				fieldName = vs
 				break
 			}
 			if fieldName != "" {
