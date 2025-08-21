@@ -1424,7 +1424,18 @@ func ToMapClean(src any) map[string]any {
 		field := val.Field(i)
 		var name = typ.Field(i).Name
 		if jsonTag := typ.Field(i).Tag.Get("json"); jsonTag != "" {
-			name = jsonTag
+			split := strings.Split(jsonTag, ",")
+			var fieldName string
+			for _, v := range split {
+				if v == "omitempty" {
+					continue
+				}
+				fieldName = v
+				break
+			}
+			if fieldName != "" {
+				name = jsonTag
+			}
 		}
 
 		if !field.CanInterface() {
