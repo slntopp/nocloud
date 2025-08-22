@@ -191,17 +191,18 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 	recBody := &pb.Record{
-		Start:     time.Now().Unix(),
-		End:       time.Now().Unix() + 1,
-		Exec:      time.Now().Unix(),
-		Processed: true,
-		Priority:  t.GetPriority(),
-		Total:     1,
-		Currency:  t.GetCurrency(),
-		Service:   t.GetService(),
-		Account:   t.GetAccount(),
-		Meta:      t.GetMeta(),
-		Cost:      t.GetTotal(),
+		Start:             time.Now().Unix(),
+		End:               time.Now().Unix() + 1,
+		Exec:              time.Now().Unix(),
+		Processed:         true,
+		Priority:          t.GetPriority(),
+		Total:             1,
+		Currency:          t.GetCurrency(),
+		Service:           t.GetService(),
+		Account:           t.GetAccount(),
+		Meta:              t.GetMeta(),
+		Cost:              t.GetTotal(),
+		IgnoreOverlapping: t.GetIgnoreOverlapping(),
 	}
 	if t.GetBase() != "" {
 		recBody.Base = t.Base
