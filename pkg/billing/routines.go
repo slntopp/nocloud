@@ -473,6 +473,9 @@ func (s *BillingServiceServer) AutoPayInvoices(ctx context.Context, log *zap.Log
 			// Send auto payment failure events
 			for _, id := range inv.GetInstances() {
 				d := instancesSearchMap[id]
+				if d == nil {
+					continue
+				}
 				inst := d.Instance
 				if inst == nil {
 					continue
