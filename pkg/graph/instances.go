@@ -866,7 +866,7 @@ func (ctrl *instancesController) UpdateWithPatch(ctx context.Context, _ string, 
 		return nil
 	}
 	inst.Uuid = ""
-	inst.Status = spb.NoCloudStatus_INIT
+	inst.Status = spb.NoCloudStatus_UNSPECIFIED
 	inst.State = nil
 
 	err := hasher.SetHash(inst.ProtoReflect())
@@ -960,9 +960,11 @@ func (ctrl *instancesController) UpdateWithPatch(ctx context.Context, _ string, 
 		mask.Meta.Started = time.Now().Unix()
 	}
 
-	toUpdate := ToMapClean(mask)
-	log.Debug("Instance patch", zap.Any("patch", toUpdate))
-	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, toUpdate)
+	if mask.Meta != nil && oldInst.Meta != nil {
+		mask.Meta.Started = oldInst.Meta.Started
+	}
+
+	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
 		return err
