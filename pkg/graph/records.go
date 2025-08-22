@@ -92,7 +92,7 @@ func (ctrl *recordsController) CheckOverlapping(ctx context.Context, r *pb.Recor
 }
 
 func (ctrl *recordsController) Create(ctx context.Context, r *pb.Record) driver.DocumentID {
-	if r.Priority != pb.Priority_ADDITIONAL {
+	if r.Priority != pb.Priority_ADDITIONAL && !r.IgnoreOverlapping {
 		ok := ctrl.CheckOverlapping(ctx, r)
 		ctrl.log.Debug("Pre-flight checks", zap.Bool("overlapping", ok))
 		if !ok {
