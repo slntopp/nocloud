@@ -206,6 +206,10 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 				break
 			}
 		}
+		if resType == "" {
+			log.Error("Invalid record. Resource not found in billing plan", zap.Any("record", &record))
+			return fmt.Errorf("resource not found in billing plan")
+		}
 	} else if record.Addon != "" {
 		if inst.Product == nil || *inst.Product == "" {
 			log.Error("Invalid record. Record is addon record but no product for instance", zap.Any("record", &record))
