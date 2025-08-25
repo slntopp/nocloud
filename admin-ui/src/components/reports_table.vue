@@ -38,11 +38,13 @@
         }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        <v-chip>{{
-          `${formatPrice(item.totalDefault || 0, item.currency)} ${
-            defaultCurrency?.code
-          }`
-        }}</v-chip>
+        <v-chip
+          >{{
+            `${formatPrice(item.totalDefault || 0, item.currency)} ${
+              defaultCurrency?.code
+            }`
+          }}
+        </v-chip>
       </template>
       <template v-slot:[`item.exec`]="{ value }">
         <span>{{ formatSecondsToDate(value, true) }}</span>

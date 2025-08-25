@@ -1,5 +1,6 @@
 import { computed } from "vue";
 import { useStore } from "@/store";
+import { Rounding } from "nocloud-proto/proto/es/billing/billing_pb";
 
 const useCurrency = () => {
   const store = useStore();
@@ -25,7 +26,27 @@ const useCurrency = () => {
       )?.rate;
     }
 
-    return rate ? (price * rate).toFixed(2) : 0;
+    const endPrice = rate ? price * rate : 0;
+
+    const precision = currency.precision || 0;
+    const rounding = currency.rounding || "ROUND_HALF";
+
+    if (endPrice == 0) {
+      return 0;
+    }
+
+    if (endPrice < 0.01 && endPrice > -1) {
+      return parseFloat(endPrice.toFixed(10));
+    }
+
+    if (Rounding.ROUND_HALF === Rounding[rounding]) {
+      return +endPrice.toFixed(precision).toString();
+    }
+
+    const fn =
+      Rounding[rounding] === Rounding.ROUND_DOWN ? Math.floor : Math.round;
+
+    return fn(endPrice * Math.pow(10, precision)) / Math.pow(10, precision);
   };
 
   const convertTo = (price, currency) => {
