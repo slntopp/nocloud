@@ -13,7 +13,7 @@
         readonly
         :dense="dense"
         :clearable="clearable"
-        @input="emits('input', $event)"
+        @input="updateInput"
         :label="label"
         :disabled="disabled"
         :append-icon="editIcon ? 'mdi-pencil' : undefined"
@@ -25,7 +25,7 @@
       :min="min"
       :range="range"
       :value="value"
-      @input="emits('input', $event)"
+      @input="updateInput"
     ></v-date-picker>
   </v-menu>
 </template>
@@ -47,6 +47,22 @@ const props = defineProps({
 const { value, min, label, dense } = toRefs(props);
 
 const emits = defineEmits(["input"]);
+
+const updateInput = (value) => {
+  if (props.range && Array.isArray(value) && value.length === 2) {
+    const [a, b] = value;
+    if (a && b) {
+      const ta = new Date(a).getTime();
+      const tb = new Date(b).getTime();
+      if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta > tb) {
+        emits("input", [b, a]);
+        return;
+      }
+    }
+  }
+
+  emits("input", value);
+};
 </script>
 
 <style scoped></style>

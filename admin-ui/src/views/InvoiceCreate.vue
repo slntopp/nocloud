@@ -212,7 +212,7 @@
             :disabled="isSaveDisabled"
             @click="saveInvoice(false, 'DRAFT')"
           >
-            Draft
+            {{ invoice?.uuid ? "Save" : "Draft" }}
           </v-btn>
           <v-btn
             class="mx-3"

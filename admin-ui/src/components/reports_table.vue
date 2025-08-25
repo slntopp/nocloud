@@ -38,12 +38,26 @@
         }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        <v-chip>{{
-          `${formatPrice(item.totalDefault || 0, item.currency)} ${
-            defaultCurrency?.code
-          }`
-        }}</v-chip>
+        <v-chip
+          >{{
+            `${formatPrice(item.totalDefault || 0, item.currency)} ${
+              defaultCurrency?.code
+            }`
+          }}
+        </v-chip>
       </template>
+
+      <template v-slot:[`item.meta`]="{ item }">
+        <v-chip
+          class="mr-1"
+          small
+          v-for="{ value } in getItemMeta(item)"
+          :key="value"
+        >
+          {{ value }}
+        </v-chip>
+      </template>
+
       <template v-slot:[`item.exec`]="{ value }">
         <span>{{ formatSecondsToDate(value, true) }}</span>
       </template>
@@ -167,6 +181,7 @@ const reportsHeaders = computed(() => {
       sortable: false,
     },
     { text: "Product or resource", value: "item", sortable: false },
+    { text: "Meta", value: "meta", sortable: false },
     { text: "Type", value: "meta.transactionType" },
     { text: "Actions", value: "actions", sortable: false },
   ];
@@ -329,6 +344,22 @@ const getStatusColor = (item) => {
     Draft: "blue",
     Cancelled: "warning",
   }[getStatus(item)];
+};
+
+const getItemMeta = (item) => {
+  const meta = JSON.parse(JSON.stringify(item.meta));
+
+  const ignoredKeys = [
+    "transaction",
+    "payment_date",
+    "transactionType",
+    "no_discount_price",
+    "type",
+  ];
+
+  ignoredKeys.forEach((key) => delete meta[key]);
+
+  return Object.keys(meta).map((key) => ({ key: key, value: meta[key] }));
 };
 
 const callAction = async (report, action) => {
