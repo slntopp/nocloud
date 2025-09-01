@@ -452,6 +452,39 @@ export default {
             },
       ];
     },
+    getPlanTitle() {
+      const type = this.template.type.includes("ovh")
+        ? "ovh"
+        : this.template.type;
+
+      switch (type) {
+        case "ovh": {
+          return (item) => {
+            let planTitle = `IND_${item.title}_${getTodayFullDate()}`;
+
+            if (item.billingPlan.title.startsWith("IND_")) {
+              const titleKeys = item.billingPlan.title.split("_");
+              titleKeys[2] = getTodayFullDate();
+              planTitle = titleKeys.join("_");
+            }
+            return planTitle;
+          };
+        }
+        default: {
+          return (item) => {
+            let planTitle = `IND_${this.sp.title}_${
+              item.billingPlan.title
+            }_${getTodayFullDate()}`;
+            if (item.billingPlan.title.startsWith("IND_")) {
+              const titleKeys = item.billingPlan.title.split("_");
+              titleKeys[3] = getTodayFullDate();
+              planTitle = titleKeys.join("_");
+            }
+            return planTitle;
+          };
+        }
+      }
+    },
     vmControlBtns() {
       const types = {
         ione: [
@@ -885,47 +918,6 @@ export default {
         }
       }
     },
-    getPlanTitle() {
-      const type = this.template.type.includes("ovh")
-        ? "ovh"
-        : this.template.type;
-
-      switch (type) {
-        case "empty":
-        case "openai":
-        case "cpanel":
-        case "keyweb":
-        case "opensrs":
-        case "ione": {
-          return (item) => {
-            let planTitle = `IND_${this.sp.title}_${
-              item.billingPlan.title
-            }_${getTodayFullDate()}`;
-            if (item.billingPlan.title.startsWith("IND_")) {
-              const titleKeys = item.billingPlan.title.split("_");
-              titleKeys[3] = getTodayFullDate();
-              planTitle = titleKeys.join("_");
-            }
-            return planTitle;
-          };
-        }
-        case "ovh": {
-          return (item) => {
-            let planTitle = `IND_${item.title}_${getTodayFullDate()}`;
-
-            if (item.billingPlan.title.startsWith("IND_")) {
-              const titleKeys = item.billingPlan.title.split("_");
-              titleKeys[2] = getTodayFullDate();
-              planTitle = titleKeys.join("_");
-            }
-            return planTitle;
-          };
-        }
-        default: {
-          return null;
-        }
-      }
-    },
     service() {
       return this.$store.getters["services/all"]?.find(
         (s) => s.uuid == this.template.service
@@ -961,16 +953,10 @@ export default {
             this.template.config.duration + " " + this.template.config.planCode
           );
         }
-        case "ione":
-        case "openai":
-        case "keyweb":
-        case "cpanel":
-        case "empty": {
+        default: {
           return this.template.product;
         }
       }
-
-      return null;
     },
     plugins() {
       return this.$store.getters["plugins/all"];
