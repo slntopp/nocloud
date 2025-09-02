@@ -19,15 +19,6 @@
       </v-col>
 
       <v-col>
-        <v-text-field
-          readonly
-          label="Price"
-          :value="price"
-          :suffix="account.currency"
-        />
-      </v-col>
-
-      <v-col>
         <date-picker
           label="Date (create)"
           :value="timestampToDateTimeLocal(template?.created)"
@@ -165,7 +156,7 @@ const emit = defineEmits(["refresh", "update"]);
 
 const { template, account, addons } = toRefs(props);
 
-const { convertTo, defaultCurrency } = useCurrency();
+const { defaultCurrency } = useCurrency();
 const { accountCurrency, toAccountPrice, fromAccountPrice } = useInstancePrices(
   template.value,
   account.value
@@ -204,13 +195,6 @@ const totalPrice = computed(() =>
   )
 );
 const totalAccountPrice = computed(() => toAccountPrice(totalPrice.value));
-
-const price = computed(() => {
-  return convertTo(
-    template.value.billingPlan.resources[0]?.price || 0,
-    account.value.currency
-  );
-});
 
 const updatePrice = (item, isAccount) => {
   if (isAccount) {
