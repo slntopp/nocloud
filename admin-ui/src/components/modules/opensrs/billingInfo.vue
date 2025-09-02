@@ -19,15 +19,6 @@
       </v-col>
 
       <v-col>
-        <v-text-field
-          readonly
-          label="Price"
-          :value="price"
-          :suffix="account.currency"
-        />
-      </v-col>
-
-      <v-col>
         <date-picker
           label="Date (create)"
           :value="timestampToDateTimeLocal(template?.created)"
@@ -204,13 +195,6 @@ const totalPrice = computed(() =>
   )
 );
 const totalAccountPrice = computed(() => toAccountPrice(totalPrice.value));
-
-const price = computed(() => {
-  return convertTo(
-    template.value.billingPlan.resources[0]?.price || 0,
-    account.value.currency
-  );
-});
 
 const updatePrice = (item, isAccount) => {
   if (isAccount) {
