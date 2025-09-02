@@ -29,25 +29,29 @@
 
       <v-col>
         <date-picker
-          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDateString(template.created, false, '-')"
-          :placeholder="formatSecondsToDate(template.created, true)"
+          :value="timestampToDateTimeLocal(template?.created)"
+          :clearable="false"
           @input="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
             })
           "
-          :clearable="false"
         />
       </v-col>
 
       <v-col>
-        <v-text-field
+        <date-picker
           label="Deleted date"
-          readonly
-          :value="formatSecondsToDate(template.deleted, true, '-')"
+          :value="timestampToDateTimeLocal(template?.deleted)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'deleted',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
 
@@ -69,6 +73,11 @@
         :show-select="false"
         hide-default-footer
       >
+        <template v-slot:[`item.name`]="{ item }">
+          <span v-html="item.name" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+        </template>
+
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
             <v-text-field
@@ -135,20 +144,26 @@ import {
   getBillingPeriod,
   formatDateToTimestamp,
   formatSecondsToDate,
-  formatSecondsToDateString,
 } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import routeTextField from "@/components/ui/routeTextField.vue";
 import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
-import DatePicker from "../../ui/datePicker.vue";
+import DatePicker from "../../ui/dateTimePicker.vue";
 import { formatPrice } from "../../../functions";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps([
+  "template",
+  "plans",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, account } = toRefs(props);
+const { template, account, addons } = toRefs(props);
 
 const { convertTo, defaultCurrency } = useCurrency();
 const { accountCurrency, toAccountPrice, fromAccountPrice } = useInstancePrices(
@@ -235,6 +250,22 @@ const getBillingItems = () => {
       period: getBillingPeriod(period),
     });
   }
+
+  addons.value.forEach((addon, index) => {
+    const { title, periods } = addon;
+    const { period, kind } =
+      template.value.billingPlan.products[template.value.product];
+    items.push({
+      name: title,
+      path: `${index}.periods.${period}`,
+      isAddon: true,
+      price: periods[period],
+      accountPrice: toAccountPrice(periods[period]),
+      kind,
+      period: getBillingPeriod(period),
+    });
+  });
+
   return items;
 };
 </script>

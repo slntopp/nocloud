@@ -401,17 +401,23 @@ export default {
     async sendAction(btn, data) {
       this.runningActionName = btn.action;
       try {
-        await this.sendVmAction({
+        const response = await this.sendVmAction({
           action: btn.action,
           template: { ...this.template, type: this.type },
           params: btn.data || data,
         });
+        return response;
       } finally {
         this.runningActionName = "";
       }
     },
     unsuspendInstance(action, date) {
       this.sendAction({ action }, { date: date || undefined });
+    },
+    async startCpanelSession() {
+      const data = await this.sendAction({ action: "session" });
+
+      window.open(data.meta.url, "_blank");
     },
   },
   computed: {
@@ -451,6 +457,39 @@ export default {
               method: () => this.attachInstance(true),
             },
       ];
+    },
+    getPlanTitle() {
+      const type = this.template.type.includes("ovh")
+        ? "ovh"
+        : this.template.type;
+
+      switch (type) {
+        case "ovh": {
+          return (item) => {
+            let planTitle = `IND_${item.title}_${getTodayFullDate()}`;
+
+            if (item.billingPlan.title.startsWith("IND_")) {
+              const titleKeys = item.billingPlan.title.split("_");
+              titleKeys[2] = getTodayFullDate();
+              planTitle = titleKeys.join("_");
+            }
+            return planTitle;
+          };
+        }
+        default: {
+          return (item) => {
+            let planTitle = `IND_${this.sp.title}_${
+              item.billingPlan.title
+            }_${getTodayFullDate()}`;
+            if (item.billingPlan.title.startsWith("IND_")) {
+              const titleKeys = item.billingPlan.title.split("_");
+              titleKeys[3] = getTodayFullDate();
+              planTitle = titleKeys.join("_");
+            }
+            return planTitle;
+          };
+        }
+      }
     },
     vmControlBtns() {
       const types = {
@@ -718,7 +757,12 @@ export default {
             method: this.startInstance,
             disabled: this.template.config.auto_start,
           },
-          { action: "session", icon: "mdi-console" },
+          {
+            type: "method",
+            action: "session",
+            icon: "mdi-console",
+            method: () => this.startCpanelSession(),
+          },
           ...this.baseVmControls,
         ],
       };
@@ -885,47 +929,6 @@ export default {
         }
       }
     },
-    getPlanTitle() {
-      const type = this.template.type.includes("ovh")
-        ? "ovh"
-        : this.template.type;
-
-      switch (type) {
-        case "empty":
-        case "openai":
-        case "cpanel":
-        case "keyweb":
-        case "opensrs":
-        case "ione": {
-          return (item) => {
-            let planTitle = `IND_${this.sp.title}_${
-              item.billingPlan.title
-            }_${getTodayFullDate()}`;
-            if (item.billingPlan.title.startsWith("IND_")) {
-              const titleKeys = item.billingPlan.title.split("_");
-              titleKeys[3] = getTodayFullDate();
-              planTitle = titleKeys.join("_");
-            }
-            return planTitle;
-          };
-        }
-        case "ovh": {
-          return (item) => {
-            let planTitle = `IND_${item.title}_${getTodayFullDate()}`;
-
-            if (item.billingPlan.title.startsWith("IND_")) {
-              const titleKeys = item.billingPlan.title.split("_");
-              titleKeys[2] = getTodayFullDate();
-              planTitle = titleKeys.join("_");
-            }
-            return planTitle;
-          };
-        }
-        default: {
-          return null;
-        }
-      }
-    },
     service() {
       return this.$store.getters["services/all"]?.find(
         (s) => s.uuid == this.template.service
@@ -961,16 +964,10 @@ export default {
             this.template.config.duration + " " + this.template.config.planCode
           );
         }
-        case "ione":
-        case "openai":
-        case "keyweb":
-        case "cpanel":
-        case "empty": {
+        default: {
           return this.template.product;
         }
       }
-
-      return null;
     },
     plugins() {
       return this.$store.getters["plugins/all"];

@@ -153,6 +153,16 @@ export default {
         return;
       }
 
+      if (
+        !instanceResponse.instance?.billingPlan?.products?.[
+          instanceResponse.instance.product
+        ]?.price
+      ) {
+        instanceResponse.instance.billingPlan.products[
+          instanceResponse.instance.product
+        ].price = 0;
+      }
+
       return {
         ...instanceResponse.instance,
         ...instanceResponse,

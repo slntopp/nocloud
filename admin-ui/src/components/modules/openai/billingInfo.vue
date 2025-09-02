@@ -23,10 +23,8 @@
       </v-col>
       <v-col cols="2">
         <date-picker
-          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDateString(template.created, false, '-')"
-          :placeholder="formatSecondsToDate(template.created, true)"
+          :value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
           @input="
             emit('update', {
@@ -37,11 +35,17 @@
         />
       </v-col>
 
-      <v-col>
-        <v-text-field
+      <v-col cols="2">
+        <date-picker
           label="Deleted date"
-          readonly
-          :value="formatSecondsToDate(template.deleted, true, '-')"
+          :value="timestampToDateTimeLocal(template?.deleted)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'deleted',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
     </v-row>
@@ -119,14 +123,11 @@ import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import api from "@/api";
-import {
-  formatDateToTimestamp,
-  formatSecondsToDate,
-  formatSecondsToDateString,
-} from "@/functions";
+import { formatDateToTimestamp } from "@/functions";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
-import DatePicker from "../../ui/datePicker.vue";
+import DatePicker from "../../ui/dateTimePicker.vue";
 import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
+import { timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);

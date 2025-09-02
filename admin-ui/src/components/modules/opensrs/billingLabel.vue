@@ -15,7 +15,7 @@ import { computed, onMounted, ref, toRefs } from "vue";
 import billingLabel from "@/components/ui/billingLabel.vue";
 import { formatSecondsToDate } from "@/functions";
 
-const props = defineProps(["template", "account"]);
+const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["update"]);
 
 const { template, account, addons } = toRefs(props);
@@ -40,7 +40,7 @@ onMounted(() => {
 });
 
 const dueDate = computed(() =>
-  formatSecondsToDate(template.value.data.next_payment_date)
+  formatSecondsToDate(template.value.data?.next_payment_date)
 );
 </script>
 

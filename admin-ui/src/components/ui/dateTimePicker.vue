@@ -1,6 +1,5 @@
 <template>
   <v-text-field
-    :prepend-inner-icon="!editIcon ? 'mdi-calendar' : undefined"
     :value="placeholder || value"
     :dense="dense"
     :clearable="clearable"

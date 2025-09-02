@@ -38,10 +38,8 @@
       </v-col>
       <v-col>
         <date-picker
-          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDateString(template.created, false, '-')"
-          :placeholder="formatSecondsToDate(template.created, true)"
+          :value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
           @input="
             emit('update', {
@@ -53,10 +51,16 @@
       </v-col>
 
       <v-col>
-        <v-text-field
+        <date-picker
           label="Deleted date"
-          readonly
-          :value="formatSecondsToDate(template.deleted, true, '-')"
+          :value="timestampToDateTimeLocal(template?.deleted)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'deleted',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
 
@@ -188,13 +192,12 @@ import {
   getBillingPeriod,
   formatDateToTimestamp,
   formatSecondsToDate,
-  formatSecondsToDateString,
 } from "@/functions";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
-import DatePicker from "../../ui/datePicker.vue";
+import DatePicker from "../../ui/dateTimePicker.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
-import { formatPrice } from "../../../functions";
+import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);
