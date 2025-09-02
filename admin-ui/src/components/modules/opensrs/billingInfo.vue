@@ -69,6 +69,11 @@
         :show-select="false"
         hide-default-footer
       >
+        <template v-slot:[`item.name`]="{ item }">
+          <span v-html="item.name" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+        </template>
+
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
             <v-text-field
@@ -145,10 +150,17 @@ import useInstancePrices from "@/hooks/useInstancePrices";
 import DatePicker from "../../ui/datePicker.vue";
 import { formatPrice } from "../../../functions";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps([
+  "template",
+  "plans",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, account } = toRefs(props);
+const { template, account, addons } = toRefs(props);
 
 const { convertTo, defaultCurrency } = useCurrency();
 const { accountCurrency, toAccountPrice, fromAccountPrice } = useInstancePrices(
@@ -235,6 +247,22 @@ const getBillingItems = () => {
       period: getBillingPeriod(period),
     });
   }
+
+  addons.value.forEach((addon, index) => {
+    const { title, periods } = addon;
+    const { period, kind } =
+      template.value.billingPlan.products[template.value.product];
+    items.push({
+      name: title,
+      path: `${index}.periods.${period}`,
+      isAddon: true,
+      price: periods[period],
+      accountPrice: toAccountPrice(periods[period]),
+      kind,
+      period: getBillingPeriod(period),
+    });
+  });
+
   return items;
 };
 </script>
