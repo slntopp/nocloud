@@ -29,25 +29,29 @@
 
       <v-col>
         <date-picker
-          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDateString(template.created, false, '-')"
-          :placeholder="formatSecondsToDate(template.created, true)"
+          :value="timestampToDateTimeLocal(template?.created)"
+          :clearable="false"
           @input="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
             })
           "
-          :clearable="false"
         />
       </v-col>
 
       <v-col>
-        <v-text-field
+        <date-picker
           label="Deleted date"
-          readonly
-          :value="formatSecondsToDate(template.deleted, true, '-')"
+          :value="timestampToDateTimeLocal(template?.deleted)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'deleted',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
 
@@ -140,14 +144,13 @@ import {
   getBillingPeriod,
   formatDateToTimestamp,
   formatSecondsToDate,
-  formatSecondsToDateString,
 } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import routeTextField from "@/components/ui/routeTextField.vue";
 import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
-import DatePicker from "../../ui/datePicker.vue";
+import DatePicker from "../../ui/dateTimePicker.vue";
 import { formatPrice } from "../../../functions";
 
 const props = defineProps([

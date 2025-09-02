@@ -37,10 +37,8 @@
       </v-col>
       <v-col>
         <date-picker
-          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDateString(template.created, false, '-')"
-          :placeholder="formatSecondsToDate(template.created, true)"
+          :value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
           @input="
             emit('update', {
@@ -52,10 +50,16 @@
       </v-col>
 
       <v-col>
-        <v-text-field
+        <date-picker
           label="Deleted date"
-          readonly
-          :value="formatSecondsToDate(template.deleted, true, '-')"
+          :value="timestampToDateTimeLocal(template?.deleted)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'deleted',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
 
@@ -65,7 +69,7 @@
           label="Due to date/next payment"
           :value="!isDynamicPlan ? dueDate : 'PAYG'"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
-          @click:append="changeDatesDialog = true"
+          @click="changeDatesDialog = true"
         />
       </v-col>
     </v-row>
@@ -197,7 +201,6 @@ import {
 import {
   formatSecondsToDate,
   getBillingPeriod,
-  formatSecondsToDateString,
   formatDateToTimestamp,
 } from "@/functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
@@ -208,8 +211,8 @@ import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
-import DatePicker from "../../ui/datePicker.vue";
-import { formatPrice } from "../../../functions";
+import DatePicker from "../../ui/dateTimePicker.vue";
+import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh", "update"]);

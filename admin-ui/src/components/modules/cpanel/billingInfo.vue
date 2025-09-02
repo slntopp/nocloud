@@ -33,10 +33,8 @@
       </v-col>
       <v-col>
         <date-picker
-          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDateString(template.created, false, '-')"
-          :placeholder="formatSecondsToDate(template.created, true)"
+          :value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
           @input="
             emit('update', {
@@ -48,10 +46,16 @@
       </v-col>
 
       <v-col>
-        <v-text-field
+        <date-picker
           label="Deleted date"
-          readonly
-          :value="formatSecondsToDate(template.deleted, true, '-')"
+          :value="timestampToDateTimeLocal(template?.deleted)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'deleted',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
 
@@ -66,7 +70,7 @@
           label="Due to date/next payment"
           :value="dueDate"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
-          @click:append="changeDatesDialog = true"
+          @click="changeDatesDialog = true"
         />
       </v-col>
     </v-row>
@@ -180,17 +184,16 @@ import {
   getBillingPeriod,
   formatDateToTimestamp,
   formatSecondsToDate,
-  formatSecondsToDateString,
 } from "@/functions";
 import NocloudTable from "@/components/table.vue";
 import InstancesPricesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import { useStore } from "@/store";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
-import DatePicker from "../../ui/datePicker.vue";
+import DatePicker from "../../ui/dateTimePicker.vue";
 import changeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
-import { formatPrice } from "../../../functions";
+import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
 const emit = defineEmits(["refresh"]);

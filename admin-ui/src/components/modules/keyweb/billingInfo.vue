@@ -32,10 +32,8 @@
       </v-col>
       <v-col>
         <date-picker
-          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDateString(template.created, false, '-')"
-          :placeholder="formatSecondsToDate(template.created, true)"
+          :value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
           @input="
             emit('update', {
@@ -47,10 +45,16 @@
       </v-col>
 
       <v-col>
-        <v-text-field
+        <date-picker
           label="Deleted date"
-          readonly
-          :value="formatSecondsToDate(template.deleted, true, '-')"
+          :value="timestampToDateTimeLocal(template?.deleted)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'deleted',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
 
@@ -60,7 +64,7 @@
           label="Due to date/next payment"
           :value="dueDate"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
-          @click:append="changeDatesDialog = true"
+          @click="changeDatesDialog = true"
         />
       </v-col>
     </v-row>
@@ -176,16 +180,15 @@ import {
   formatSecondsToDate,
   getBillingPeriod,
   formatDateToTimestamp,
-  formatSecondsToDateString,
 } from "@/functions";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
-import DatePicker from "../../ui/datePicker.vue";
+import DatePicker from "../../ui/dateTimePicker.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
-import { formatPrice } from "../../../functions";
+import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
