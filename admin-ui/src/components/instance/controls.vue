@@ -401,17 +401,23 @@ export default {
     async sendAction(btn, data) {
       this.runningActionName = btn.action;
       try {
-        await this.sendVmAction({
+        const response = await this.sendVmAction({
           action: btn.action,
           template: { ...this.template, type: this.type },
           params: btn.data || data,
         });
+        return response;
       } finally {
         this.runningActionName = "";
       }
     },
     unsuspendInstance(action, date) {
       this.sendAction({ action }, { date: date || undefined });
+    },
+    async startCpanelSession() {
+      const data = await this.sendAction({ action: "session" });
+
+      window.open(data.meta.url, "_blank");
     },
   },
   computed: {
@@ -751,7 +757,12 @@ export default {
             method: this.startInstance,
             disabled: this.template.config.auto_start,
           },
-          { action: "session", icon: "mdi-console" },
+          {
+            type: "method",
+            action: "session",
+            icon: "mdi-console",
+            method: () => this.startCpanelSession(),
+          },
           ...this.baseVmControls,
         ],
       };
