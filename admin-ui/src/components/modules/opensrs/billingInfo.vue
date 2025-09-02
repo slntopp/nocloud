@@ -156,7 +156,7 @@ const emit = defineEmits(["refresh", "update"]);
 
 const { template, account, addons } = toRefs(props);
 
-const { convertTo, defaultCurrency } = useCurrency();
+const { defaultCurrency } = useCurrency();
 const { accountCurrency, toAccountPrice, fromAccountPrice } = useInstancePrices(
   template.value,
   account.value
