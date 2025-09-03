@@ -206,14 +206,19 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	return nil
 }
 
-func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice) error {
+func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldStatus pb.BillingStatus) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
 	}
+	newStatus := inv.Status
 
 	id, ok := inv.GetMeta()[invoiceIdField]
 	if !ok || int(id.GetNumberValue()) <= 0 {
+		if (oldStatus == pb.BillingStatus_DRAFT || oldStatus == pb.BillingStatus_TERMINATED) &&
+			(newStatus == pb.BillingStatus_UNPAID || newStatus == pb.BillingStatus_PAID || newStatus == pb.BillingStatus_RETURNED) {
+			return g.CreateInvoice(ctx, inv)
+		}
 		return fmt.Errorf("no whmcs_invoice_id or zero value")
 	}
 
