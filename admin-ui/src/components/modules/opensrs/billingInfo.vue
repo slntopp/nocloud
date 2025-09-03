@@ -142,7 +142,7 @@ import routeTextField from "@/components/ui/routeTextField.vue";
 import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import DatePicker from "../../ui/dateTimePicker.vue";
-import { formatPrice } from "../../../functions";
+import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps([
   "template",
