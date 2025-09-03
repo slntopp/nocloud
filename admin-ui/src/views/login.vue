@@ -51,56 +51,60 @@
   </div>
 </template>
 
-<script>
-import snackbar from "@/mixins/snackbar";
+<script setup>
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router/composables";
+import { useStore } from "../store";
 
+const loginFormRules = ref([(v) => !!v || "Required"]);
+const loginLoading = ref(false);
+const isLoginFailed = ref(false);
+const username = ref("");
+const password = ref("");
+const type = ref("Standard");
+const typesAccounts = ref(["Standard", "WHMCS"]);
+
+const router = useRouter();
+const store = useStore();
+
+const tryLogin = async () => {
+  loginLoading.value = true;
+
+  try {
+    const { token } = await store.dispatch("auth/login", {
+      login: username.value,
+      password: password.value,
+      type: type.value.toLowerCase(),
+    });
+    store.commit("auth/setToken", "");
+
+    await store.dispatch("namespaces/fetchById", 0);
+
+    store.commit("auth/setToken", token);
+
+    await router.push({ name: "Home" });
+    store.dispatch("auth/fetchUserData");
+  } catch (error) {
+    store.dispatch("auth/logout");
+    store.commit("snackbar/showSnackbarError", {
+      message: error.response.data.message || "Error during login",
+    });
+    if (error.response && error.response.status == 401) {
+      isLoginFailed.value = true;
+    }
+  } finally {
+    loginLoading.value = false;
+  }
+};
+
+const getErrorMessages = computed(() => {
+  return isLoginFailed.value ? ["username or password is not correct"] : [];
+});
+</script>
+
+<script>
 export default {
-  name: "login-view",
-  mixins: [snackbar],
-  data() {
-    return {
-      loginFormRules: [(v) => !!v || "Required"],
-      loginLoading: false,
-      isLoginFailed: false,
-      username: "",
-      password: "",
-      type: "Standard",
-      typesAccounts: ["Standard", "WHMCS"],
-    };
-  },
-  methods: {
-    tryLogin() {
-      this.loginLoading = true;
-      (this.isLoginFailed = false),
-        this.$store
-          .dispatch("auth/login", {
-            login: this.username,
-            password: this.password,
-            type: this.type.toLowerCase(),
-          })
-          .then(() => {
-            this.$router.push({ name: "Home" });
-            this.$store.dispatch("auth/fetchUserData");
-          })
-          .catch((error) => {
-            console.log(error);
-            this.showSnackbarError({
-              message: error.response.data.message || "Error during login",
-            });
-            if (error.response && error.response.status == 401) {
-              this.isLoginFailed = true;
-            }
-          })
-          .finally(() => {
-            this.loginLoading = false;
-          });
-    },
-  },
-  computed: {
-    getErrorMessages() {
-      return this.isLoginFailed ? ["username or password is not correct"] : [];
-    },
-  },
+  name: "LoginView",
 };
 </script>
 
