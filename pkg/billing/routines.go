@@ -683,8 +683,8 @@ func (s *BillingServiceServer) SendLowCreditsNotifications(ctx context.Context, 
 			log.Error("Failed to convert client balance to default currency", zap.Any("client_currency", account.Currency))
 			return fmt.Errorf("cannot convert client's balance")
 		}
-		s.processLowCreditEvent(ctx, log, &account, balanceInDefault, 5, defaultCurrency.Code, 1)
-		s.processLowCreditEvent(ctx, log, &account, balanceInDefault, 2, defaultCurrency.Code, 2)
+		s.processLowCreditEvent(ctx, log, &account, balanceInDefault, 5, defaultCurrency.Code, 1, defaultCurrency)
+		s.processLowCreditEvent(ctx, log, &account, balanceInDefault, 2, defaultCurrency.Code, 2, defaultCurrency)
 	}
 
 	log.Info("Finished Send Low Credits Notify Routine")
@@ -693,7 +693,7 @@ func (s *BillingServiceServer) SendLowCreditsNotifications(ctx context.Context, 
 
 func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *zap.Logger,
 	account *graph.Account, convertedBalance float64,
-	limit float64, defaultCurrencyCode string, eventNum int) {
+	limit float64, defaultCurrencyCode string, eventNum int, defaultCurrency *pb.Currency) {
 	ensure(&account.Balance)
 	ensure(&account.Meta)
 	ensure(&account.Meta.Notifications)
@@ -725,11 +725,15 @@ func (s *BillingServiceServer) processLowCreditEvent(ctx context.Context, log *z
 	}
 
 	var code = defaultCurrencyCode
+	var precision = defaultCurrency.Precision
+	var mode = defaultCurrency.Rounding
 	if account.Currency != nil {
 		code = account.Currency.Code
+		precision = account.Currency.Precision
+		mode = account.Currency.Rounding
 	}
 	eventData := map[string]*structpb.Value{
-		"balance_amount": structpb.NewNumberValue(*account.Balance),
+		"balance_amount": structpb.NewNumberValue(graph.Round(*account.Balance, precision, mode)),
 		"currency_code":  structpb.NewStringValue(code),
 	}
 	if _, err := s.eventsClient.Publish(ctx, &events.Event{
