@@ -488,6 +488,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Meta["creator"] = structpb.NewStringValue(requester)
 	}
 	if acc.GetPaymentsGateway() == "whmcs" || acc.GetPaymentsGateway() == "" {
+		delete(t.Meta, "whmcs_invoice_id")
 		t.Meta["whmcs_sync_required"] = structpb.NewBoolValue(true)
 	}
 
