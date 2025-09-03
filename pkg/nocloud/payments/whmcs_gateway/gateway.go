@@ -206,13 +206,12 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	return nil
 }
 
-func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, old string) error {
+func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldStatus pb.BillingStatus) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
 	}
 	newStatus := inv.Status
-	oldStatus := pb.BillingStatus(pb.BillingEvent_value[old])
 
 	id, ok := inv.GetMeta()[invoiceIdField]
 	if !ok || int(id.GetNumberValue()) <= 0 {

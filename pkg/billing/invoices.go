@@ -639,7 +639,7 @@ quit:
 		Data: map[string]*structpb.Value{
 			"paid-with-balance": structpb.NewBoolValue(paidWithBalance),
 			"gw-callback":       structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
-			"old_status":        structpb.NewStringValue(oldStatus.String()),
+			"old_status":        structpb.NewNumberValue(float64(oldStatus)),
 		},
 	}); err != nil {
 		log.Error("Failed to publish invoice status update", zap.Error(err))
@@ -1152,7 +1152,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		Key:  billing.InvoiceUpdated,
 		Data: map[string]*structpb.Value{
 			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, r.Header())),
-			"old_status":  structpb.NewStringValue(old.Status.String()),
+			"old_status":  structpb.NewNumberValue(float64(old.Status)),
 		},
 	}); err != nil {
 		log.Error("Failed to publish invoice update", zap.Error(err))
