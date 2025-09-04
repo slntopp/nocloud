@@ -76,6 +76,7 @@ import {
   UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import confirmDialog from "@/components/confirmDialog.vue";
+import { useRouter } from "vue-router/composables";
 
 const selectedInvoices = ref([]);
 const refetch = ref(false);
@@ -86,6 +87,7 @@ const isUpdateStatusLoading = ref(false);
 const updateStatusName = ref("");
 
 const store = useStore();
+const router = useRouter();
 
 const isLoading = computed(() => store.getters["invoices/isLoading"]);
 const invoices = computed(() => store.getters["invoices/all"]);
@@ -189,7 +191,11 @@ const handleCopyInvoice = async () => {
   isCopyLoading.value = true;
 
   try {
-    await store.dispatch("invoices/copy", selectedInvoices.value[0]);
+    const data = await store.dispatch(
+      "invoices/copy",
+      selectedInvoices.value[0]
+    );
+    router.push({ name: "Invoice page", params: { uuid: data.uuid } });
 
     refetchInvoices();
     selectedInvoices.value = [];
