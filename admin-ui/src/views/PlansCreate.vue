@@ -397,7 +397,12 @@ export default {
         return this.showSnackbarError({ message: "Validation failed!" });
       }
 
-      if (action === "create") delete this.plan.uuid;
+      let lastUuid = "";
+
+      if (action === "create") {
+        lastUuid = this.plan.uuid;
+        delete this.plan.uuid;
+      }
       if (this.plan.type === "custom") {
         this.plan.type = this.customTitle;
       }
@@ -434,7 +439,7 @@ export default {
         } else {
           request = api.plans.create({
             ...this.plan,
-            title: `${this.plan.title} COPY`,
+            title: `${this.plan.title} ${lastUuid ? "COPY" : ""}`.trim(),
           });
         }
 
