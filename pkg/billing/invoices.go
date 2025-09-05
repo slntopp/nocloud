@@ -1153,6 +1153,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		Data: map[string]*structpb.Value{
 			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, r.Header())),
 			"old_status":  structpb.NewNumberValue(float64(old.Status)),
+			"send_email":  structpb.NewBoolValue(r.Msg.GetIsSendEmail()),
 		},
 	}); err != nil {
 		log.Error("Failed to publish invoice update", zap.Error(err))

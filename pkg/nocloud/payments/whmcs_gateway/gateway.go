@@ -206,7 +206,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 	return nil
 }
 
-func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldStatus pb.BillingStatus) error {
+func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldStatus pb.BillingStatus, sendEmail bool) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -244,8 +244,9 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 	}
 
 	body.Status = nil
+	invoiceWasPaid := inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID))
 	if inv.Status != statusToNoCloud(whmcsInv.Status) {
-		if inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID)) {
+		if invoiceWasPaid {
 			paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
 			if err = g.PayInvoice(ctx, int(id.GetNumberValue()), paidWithBalance); err != nil {
 				return fmt.Errorf("failed to pay invoice: %w", err)
@@ -309,6 +310,14 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 	if err != nil {
 		return err
 	}
+
+	if !invoiceWasPaid && sendEmail {
+		gType := "invoice"
+		if err = g.SendEmail(ctx, "Invoice Created", whmcsInv.InvoiceId, &gType); err != nil {
+			fmt.Printf("Whmcs Gateway Error: failed to send email after invoice update: %s", err.Error())
+		}
+	}
+
 	return nil
 }
 
