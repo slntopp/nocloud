@@ -595,11 +595,7 @@ func (g *WhmcsGateway) SendEmail(_ context.Context, template string, relatedID i
 		return err
 	}
 
-	q, err := query.Values(body)
-	if err != nil {
-		return err
-	}
-	_, err = sendRequestToWhmcs[SendEmailResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	_, err = sendRequestToWhmcs[SendEmailResponse](http.MethodPost, reqUrl.String()+"?"+body.Encode(), nil)
 	if err != nil {
 		return err
 	}
