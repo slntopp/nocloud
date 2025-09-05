@@ -312,8 +312,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 	}
 
 	if !invoiceWasPaid && sendEmail {
-		gType := "invoice"
-		if err = g.SendEmail(ctx, "Invoice Created", whmcsInv.InvoiceId, &gType); err != nil {
+		if err = g.SendEmail(ctx, "Invoice Created", whmcsInv.InvoiceId, nil); err != nil {
 			fmt.Printf("Whmcs Gateway Error: failed to send email after invoice update: %s\n", err.Error())
 		}
 		fmt.Printf("Whmcs Gateway Info: email was sent after invoice update\n")
