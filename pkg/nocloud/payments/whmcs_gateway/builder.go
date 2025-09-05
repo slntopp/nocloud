@@ -205,3 +205,20 @@ func (g *WhmcsGateway) buildGetPaymentMethodsQueryBase() (url.Values, error) {
 
 	return res, nil
 }
+
+func (g *WhmcsGateway) buildSendEmailQueryBase(tmplName string, relatedID int, customType *string) (url.Values, error) {
+	res, err := query.Values(SendEmailQuery{
+		Action:       "SendEmail",
+		ResponseType: "json",
+		Username:     g.apiUsername,
+		Password:     g.apiPassword,
+		MessageName:  &tmplName,
+		RelatedID:    &relatedID,
+		CustomType:   customType,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

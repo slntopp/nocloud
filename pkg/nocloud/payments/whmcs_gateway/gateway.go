@@ -574,6 +574,29 @@ func (g *WhmcsGateway) GetInvoices(_ context.Context) ([]InvoiceInList, error) {
 	return res, nil
 }
 
+func (g *WhmcsGateway) SendEmail(_ context.Context, template string, relatedID int, customType *string) error {
+	reqUrl, err := url.Parse(g.baseUrl)
+	if err != nil {
+		return err
+	}
+
+	body, err := g.buildSendEmailQueryBase(template, relatedID, customType)
+	if err != nil {
+		return err
+	}
+
+	q, err := query.Values(body)
+	if err != nil {
+		return err
+	}
+	_, err = sendRequestToWhmcs[SendEmailResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {
 	return g.syncWhmcsInvoice(ctx, invoiceId)
 }
