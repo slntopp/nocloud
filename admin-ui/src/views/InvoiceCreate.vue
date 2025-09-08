@@ -728,7 +728,11 @@ const onChangeInstance = () => {
 const sendEmail = async () => {
   isSendEmailLoading.value = true;
   try {
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await store.getters["invoices/invoicesClient"].sendInvoiceEmail({
+      invoiceUuid: invoice.value.uuid,
+    });
+
+    store.commit("snackbar/showSnackbarSuccess", { message: "Done" });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
