@@ -1320,7 +1320,7 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 	log := s.log.Named("SendInvoiceEmail")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := _req.Msg
-	log.Debug("Request received")
+	log.Debug("Request received", zap.String("invoice", req.InvoiceUuid))
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
