@@ -136,7 +136,8 @@ func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx cont
 	if oldStatus <= 0 || oldStatus > 6 {
 		log.Error("old_status not in valid range", zap.Int32("status", int32(oldStatus)))
 	}
-	if err = gw.UpdateInvoice(ctx, inv.Invoice, oldStatus); err != nil {
+	var sendEmail = event.GetData()["send_email"].GetBoolValue()
+	if err = gw.UpdateInvoice(ctx, inv.Invoice, oldStatus, sendEmail); err != nil {
 		return fmt.Errorf("failed to update invoice on whmcs: %w", err)
 	}
 	return nil

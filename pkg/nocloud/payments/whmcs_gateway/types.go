@@ -315,6 +315,26 @@ type GetPaymentMethodsQuery struct {
 	Password     string `url:"password"` // md5 hash
 }
 
+type SendEmailQuery struct {
+	Action       string `url:"action"`
+	ResponseType string `url:"responsetype"`
+	Username     string `url:"username"`
+	Password     string `url:"password"` // md5 hash
+
+	MessageName   *string `url:"messagename,omitempty"`
+	RelatedID     *int    `url:"id,omitempty"`
+	CustomType    *string `url:"customtype,omitempty"`
+	CustomMessage *string `url:"custommessage,omitempty"`
+	CustomSubject *string `url:"customsubject,omitempty"`
+	//CustomVars    *string `url:"customvars,omitempty"` must be array
+}
+
+type SendEmailResponse struct {
+	Status  string `json:"status"`
+	Result  string `json:"result"`
+	Message string `json:"message"`
+}
+
 type InvoicePaid struct {
 	InvoiceId IntOrString `json:"invoiceid"`
 }

@@ -1153,6 +1153,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		Data: map[string]*structpb.Value{
 			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, r.Header())),
 			"old_status":  structpb.NewNumberValue(float64(old.Status)),
+			"send_email":  structpb.NewBoolValue(r.Msg.GetIsSendEmail()),
 		},
 	}); err != nil {
 		log.Error("Failed to publish invoice update", zap.Error(err))
@@ -1313,6 +1314,28 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		IsSendEmail: true,
 		Invoice:     ivnToCreate,
 	}))
+}
+
+func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *connect.Request[pb.SendInvoiceEmailRequest]) (*connect.Response[pb.SendInvoiceEmailResponse], error) {
+	log := s.log.Named("SendInvoiceEmail")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := _req.Msg
+	log.Debug("Request received", zap.String("invoice", req.InvoiceUuid))
+
+	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
+	if !rootAccess && !hasInternalAccess(ctx) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+	inv, err := s.invoices.Get(ctx, req.InvoiceUuid)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	_ = inv
+	// Implement
+
+	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil
 }
 
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
