@@ -33,7 +33,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import config from "@/config.js";
@@ -54,11 +54,15 @@ const invoiceTitle = computed(() =>
 onMounted(() => {
   store.commit("reloadBtn/setCallback", {
     type: "invoices/get",
-    params: route.params?.uuid,
+    params: invoiceId.value,
   });
   selectedTab.value = route.query.tab || 0;
 
   refreshInvoice();
+});
+
+const invoiceId = computed(() => {
+  return route.params.uuid;
 });
 
 const isInvoiceLoading = computed(() => {
@@ -86,12 +90,16 @@ function navTitle(title) {
 
 const refreshInvoice = async () => {
   try {
-    await store.dispatch("invoices/get", route.params.uuid);
+    await store.dispatch("invoices/get", invoiceId.value);
     document.title = `${invoiceTitle.value} | NoCloud`;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   }
 };
+
+watch(invoiceId, () => {
+  refreshInvoice();
+});
 </script>
 
 <script>
