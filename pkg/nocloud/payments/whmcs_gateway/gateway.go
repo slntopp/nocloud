@@ -423,31 +423,31 @@ func (g *WhmcsGateway) AddNote(_ context.Context, clientId int, notes string, st
 func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string, error) {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse base url: %w", err)
 	}
 
 	acc, err := g.accounts.Get(ctx, inv.GetAccount())
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get nocloud account: %w", err)
 	}
 
 	userId, ok := g.getWhmcsUser(acc.Account)
 	if !ok {
-		return "", fmt.Errorf("failed to get whmcs user")
+		return "", fmt.Errorf("failed to get whmcs user: no whmcs client id")
 	}
 	invId, ok := g.getWhmcsInvoice(inv)
 	if !ok {
-		return "", fmt.Errorf("failed to get whmcs invoice")
+		return "", fmt.Errorf("failed to get whmcs invoice: no whmcs invoice id")
 	}
 
 	body := g.buildPaymentURIQueryBase(userId, invId)
 	q, err := query.Values(body)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to parse url query: %w", err)
 	}
 	resp, err := sendRequestToWhmcs[PaymentURIResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to obtain payment uri by API: %w", err)
 	}
 
 	return g.buildPaymentURI(invId, resp), nil

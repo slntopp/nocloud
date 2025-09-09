@@ -1,6 +1,7 @@
 package whmcs_gateway
 
 import (
+	pb "github.com/slntopp/nocloud-proto/billing"
 	"math"
 	"time"
 )
@@ -21,4 +22,15 @@ func compareFloat(a, b float64, precisionDigits int) bool {
 
 func isDateEqualWithoutTime(a, b time.Time) bool {
 	return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
+}
+
+func GetWhmcsInvoiceId(inv *pb.Invoice) (int, bool) {
+	if inv == nil || inv.Meta == nil {
+		return 0, false
+	}
+	idVal, ok := inv.GetMeta()[invoiceIdField]
+	if !ok {
+		return 0, false
+	}
+	return int(idVal.GetNumberValue()), true
 }
