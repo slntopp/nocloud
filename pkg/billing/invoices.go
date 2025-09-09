@@ -1332,8 +1332,18 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	_ = inv
-	// Implement
+	// For now email work only with whmcs email templates
+	whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
+	if !ok {
+		return nil, status.Error(codes.Internal, "no whmcs gateway")
+	}
+	whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
+	if !ok {
+		return nil, status.Error(codes.Internal, "no whmcs invoice id")
+	}
+	if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+	}
 
 	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil
 }
