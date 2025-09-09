@@ -226,6 +226,8 @@ export default {
       vars: { console: {} },
       meta: {},
     },
+
+    originalSecrets: {},
     providerKey: "",
 
     isPassed: false,
@@ -275,6 +277,8 @@ export default {
           this.customTitle = res.type;
           res.type = "custom";
         }
+        this.originalSecrets = JSON.parse(JSON.stringify(res.secrets));
+
         this.provider = res;
       });
     }
@@ -358,6 +362,11 @@ export default {
     },
     async tryToSend() {
       const action = this.$route.params.uuid ? "edit" : "create";
+
+      this.serviceProviderBody.secrets = {
+        ...this.originalSecrets,
+        ...this.serviceProviderBody.secrets,
+      };
 
       if (
         !this.isPassed ||
