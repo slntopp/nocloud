@@ -52,6 +52,8 @@ export default {
       }
     },
     copy({ getters }, invoice) {
+
+      delete invoice.meta.whmcs_invoice_id;
       const data = {
         items: invoice.items,
         total: invoice.total,

@@ -488,7 +488,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		t.Meta["creator"] = structpb.NewStringValue(requester)
 	}
 	if acc.GetPaymentsGateway() == "whmcs" || acc.GetPaymentsGateway() == "" {
-		delete(t.Meta, "whmcs_invoice_id")
 		t.Meta["whmcs_sync_required"] = structpb.NewBoolValue(true)
 	}
 
@@ -1153,6 +1152,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		Data: map[string]*structpb.Value{
 			"gw-callback": structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, r.Header())),
 			"old_status":  structpb.NewNumberValue(float64(old.Status)),
+			"send_email":  structpb.NewBoolValue(r.Msg.GetIsSendEmail()),
 		},
 	}); err != nil {
 		log.Error("Failed to publish invoice update", zap.Error(err))
@@ -1313,6 +1313,38 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		IsSendEmail: true,
 		Invoice:     ivnToCreate,
 	}))
+}
+
+func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *connect.Request[pb.SendInvoiceEmailRequest]) (*connect.Response[pb.SendInvoiceEmailResponse], error) {
+	log := s.log.Named("SendInvoiceEmail")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := _req.Msg
+	log.Debug("Request received", zap.String("invoice", req.InvoiceUuid))
+
+	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
+	if !rootAccess && !hasInternalAccess(ctx) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+	inv, err := s.invoices.Get(ctx, req.InvoiceUuid)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	// For now email work only with whmcs email templates
+	whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
+	if !ok {
+		return nil, status.Error(codes.Internal, "no whmcs gateway")
+	}
+	whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
+	if !ok {
+		return nil, status.Error(codes.Internal, "no whmcs invoice id")
+	}
+	if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+	}
+
+	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil
 }
 
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
