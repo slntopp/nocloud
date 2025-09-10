@@ -629,7 +629,9 @@ const copyInvoice = async () => {
   isCopyLoading.value = true;
 
   try {
-    await store.dispatch("invoices/copy", invoice.value);
+    const data = await store.dispatch("invoices/copy", invoice.value);
+    router.push({ name: "Invoice page", params: { uuid: data.uuid } });
+
     store.commit("snackbar/showSnackbarSuccess", { message: "Done" });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });

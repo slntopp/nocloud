@@ -52,7 +52,6 @@ export default {
       }
     },
     copy({ getters }, invoice) {
-
       delete invoice.meta.whmcs_invoice_id;
       const data = {
         items: invoice.items,
@@ -62,6 +61,7 @@ export default {
         deadline: Math.round(Date.now() / 1000 + 86400 * 30),
         meta: invoice.meta,
         status: "DRAFT",
+        currency: invoice.currency,
       };
 
       return getters["invoicesClient"].createInvoice(
