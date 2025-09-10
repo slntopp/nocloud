@@ -227,7 +227,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 			return connect.NewResponse(invoke), connect.NewError(connErr.Code(), connErr)
 		}
 		if grpcErr, ok := status.FromError(err); ok {
-			return connect.NewResponse(invoke), connect.NewError(connect.Code(grpcErr.Code()), connErr)
+			return connect.NewResponse(invoke), connect.NewError(connect.Code(grpcErr.Code()), grpcErr.Err())
 		}
 		return connect.NewResponse(invoke), err
 	}
