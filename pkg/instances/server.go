@@ -18,6 +18,7 @@ package instances
 import (
 	"connectrpc.com/connect"
 	"context"
+	"errors"
 	"fmt"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/health"
@@ -221,6 +222,13 @@ func (s *InstancesServer) Invoke(ctx context.Context, _req *connect.Request[pb.I
 	if err != nil {
 		event.Rc = 1
 		nocloud.Log(log, event)
+		var connErr *connect.Error
+		if errors.As(err, &connErr) {
+			return connect.NewResponse(invoke), connect.NewError(connErr.Code(), connErr)
+		}
+		if grpcErr, ok := status.FromError(err); ok {
+			return connect.NewResponse(invoke), connect.NewError(connect.Code(grpcErr.Code()), grpcErr.Err())
+		}
 		return connect.NewResponse(invoke), err
 	}
 

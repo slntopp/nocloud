@@ -41,8 +41,8 @@
             v-model="serviceProviderId"
             :items="servicesProviders"
             :loading="isLoading"
-            readonly
-            disabled
+            :readonly="!instance.billing_plan?.uuid"
+            :disabled="!instance.billing_plan?.uuid"
           />
         </v-col>
         <v-col v-if="type === 'custom'" cols="4" md="3" lg="2">

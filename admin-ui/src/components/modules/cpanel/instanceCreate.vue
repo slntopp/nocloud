@@ -57,6 +57,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
+            v-if="!existing"
             label="Password"
             :rules="rules.req"
             :value="instance.config.password"
@@ -76,12 +77,34 @@
           />
         </v-col>
       </v-row>
+
+      <v-row>
+        <v-col cols="2">
+          <v-switch label="Existing" v-model="existing" />
+        </v-col>
+        <template v-if="existing">
+          <v-col>
+            <v-text-field
+              label="Username"
+              :value="instance.data?.username"
+              @change="(newVal) => setValue('data.username', newVal)"
+            />
+          </v-col>
+          <v-col>
+            <v-text-field
+              label="Password"
+              :value="instance.data?.password"
+              @change="changePassword"
+            />
+          </v-col>
+        </template>
+      </v-row>
     </v-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import useInstanceAddons from "@/hooks/useInstanceAddons";
 import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
@@ -97,6 +120,8 @@ const rules = ref({
   req: [(v) => !!v || "required field"],
 });
 
+const existing = ref(false);
+
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
@@ -108,6 +133,7 @@ const getDefaultInstance = () => ({
   resources: {
     plan: "",
   },
+  data: {},
   billing_plan: {},
 });
 
@@ -116,7 +142,7 @@ onMounted(() => {
 });
 
 const billingPlanId = computed(() => {
-  return instance.value.billing_plan.uuid;
+  return instance.value.billing_plan?.uuid;
 });
 const products = computed(() => {
   const plan = instance.value.billing_plan;
@@ -138,6 +164,18 @@ const setValue = (key, value) => {
 
   emit("set-value", { key, value });
 };
+
+const changePassword = (newVal) => {
+  setValue("data.password", newVal);
+  setValue("config.password", newVal);
+};
+
+watch(existing, () => {
+  setValue("config.auto_start", existing.value);
+  setValue("data.existing", existing.value);
+  setValue("data.username", null);
+  setValue("data.password", null);
+});
 </script>
 
 <script>
