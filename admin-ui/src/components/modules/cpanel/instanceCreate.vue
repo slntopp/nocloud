@@ -76,12 +76,34 @@
           />
         </v-col>
       </v-row>
+
+      <v-row>
+        <v-col cols="2">
+          <v-switch label="Existing" v-model="existing" />
+        </v-col>
+        <template v-if="existing">
+          <v-col>
+            <v-text-field
+              label="Username"
+              :value="instance.data?.username"
+              @change="(newVal) => setValue('data.username', newVal)"
+            />
+          </v-col>
+          <v-col>
+            <v-text-field
+              label="Password"
+              :value="instance.data?.password"
+              @change="(newVal) => setValue('data.password', newVal)"
+            />
+          </v-col>
+        </template>
+      </v-row>
     </v-card>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import useInstanceAddons from "@/hooks/useInstanceAddons";
 import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
@@ -97,6 +119,8 @@ const rules = ref({
   req: [(v) => !!v || "required field"],
 });
 
+const existing = ref(false);
+
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
@@ -108,6 +132,7 @@ const getDefaultInstance = () => ({
   resources: {
     plan: "",
   },
+  data: {},
   billing_plan: {},
 });
 
@@ -138,6 +163,13 @@ const setValue = (key, value) => {
 
   emit("set-value", { key, value });
 };
+
+watch(existing, () => {
+  setValue("config.auto_start", existing.value);
+  setValue("data.existing", existing.value);
+  setValue("data.username", null);
+  setValue("data.password", null);
+});
 </script>
 
 <script>
