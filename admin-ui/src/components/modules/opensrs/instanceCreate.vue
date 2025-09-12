@@ -196,7 +196,7 @@ const changeBilling = (val) => {
 watch(
   () => instance.value.resources.price,
   () => {
-    if (instance.value.billing_plan.uuid) {
+    if (instance.value.billing_plan?.uuid) {
       const planCopy = JSON.parse(JSON.stringify(instance.value.billing_plan));
 
       const domain = instance.value.resources.domain;

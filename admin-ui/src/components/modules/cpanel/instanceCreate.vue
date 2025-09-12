@@ -141,7 +141,7 @@ onMounted(() => {
 });
 
 const billingPlanId = computed(() => {
-  return instance.value.billing_plan.uuid;
+  return instance.value.billing_plan?.uuid;
 });
 const products = computed(() => {
   const plan = instance.value.billing_plan;
