@@ -57,6 +57,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
+            v-if="!existing"
             label="Password"
             :rules="rules.req"
             :value="instance.config.password"
@@ -93,7 +94,7 @@
             <v-text-field
               label="Password"
               :value="instance.data?.password"
-              @change="(newVal) => setValue('data.password', newVal)"
+              @change="changePassword"
             />
           </v-col>
         </template>
@@ -162,6 +163,11 @@ const setValue = (key, value) => {
   }
 
   emit("set-value", { key, value });
+};
+
+const changePassword = (newVal) => {
+  setValue("data.password", newVal);
+  setValue("config.password", newVal);
 };
 
 watch(existing, () => {
