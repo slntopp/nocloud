@@ -193,7 +193,8 @@
                 class="pt-4"
                 label="Image link"
                 v-if="type === 'empty'"
-                v-model="item.meta.image"
+                :value="item.meta.image"
+                @input="changeImageLink($event, item.id)"
               />
 
               <v-subheader class="px-0"> Description: </v-subheader>
@@ -208,7 +209,7 @@
                   :rules="rules"
                   :resources="item.meta.resources ?? []"
                   @update:resource="
-                    changeMeta($event, item.id, item.meta?.resources)
+                    changeResources($event, item.id, item.meta?.resources)
                   "
                 />
               </template>
@@ -390,7 +391,7 @@ function changeResource(data) {
   emits("change:resource", data);
 }
 
-function changeMeta(data, id, resources) {
+function changeResources(data, id, resources) {
   const value =
     data.key === "resources"
       ? data.value
@@ -407,6 +408,10 @@ function changeMeta(data, id, resources) {
   }
 
   emits("change:meta", { key: "resources", value, id });
+}
+
+function changeImageLink(value, id) {
+  emits("change:meta", { key: "image", value, id });
 }
 
 function changeOneTime(item, value) {
