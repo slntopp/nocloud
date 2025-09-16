@@ -10,7 +10,7 @@ const useInstanceAddons = (instance, setValue) => {
 
   const setTariffAddons = () => {
     const addons = [];
-    if (instance.value.billing_plan) {
+    if (instance.value.billing_plan && instance.value.billing_plan.addons) {
       instance.value.billing_plan.addons.forEach((key) => addons.push(key));
       if (instance.value.product) {
         (instance.value.billing_plan.products[
