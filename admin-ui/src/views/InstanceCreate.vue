@@ -92,7 +92,7 @@
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import api from "@/api";
 import { computed, onMounted, watch, ref } from "vue";
-import { defaultFilterObject } from "@/functions";
+import { defaultFilterObject, replaceNullWithUndefined } from "@/functions";
 import { useStore } from "@/store";
 
 const store = useStore();
@@ -300,15 +300,16 @@ const save = async () => {
       ...service.value.instancesGroups[igIndex],
       ...instanceGroup.value,
     };
+    const resultInstance = replaceNullWithUndefined(instance.value);
 
     if (isEdit.value) {
       const instanceIndex = service.value.instancesGroups[
         igIndex
       ].instances.findIndex((i) => i.uuid === instance.value.uuid);
       service.value.instancesGroups[igIndex].instances[instanceIndex] =
-        instance.value;
+        resultInstance;
     } else {
-      service.value.instancesGroups[igIndex].instances.push(instance.value);
+      service.value.instancesGroups[igIndex].instances.push(resultInstance);
     }
 
     if (service.value.instancesGroups[igIndex].type === "ione") {

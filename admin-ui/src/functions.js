@@ -829,3 +829,17 @@ export function timestampToDateTimeLocal(timestamp) {
 
   return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 }
+
+export function replaceNullWithUndefined(obj) {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => replaceNullWithUndefined(item));
+  } else if (typeof obj === "object" && obj !== null) {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        key,
+        value === null ? undefined : replaceNullWithUndefined(value),
+      ])
+    );
+  }
+  return obj;
+}
