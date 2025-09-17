@@ -66,6 +66,16 @@
             :loading="isLoading"
           />
         </v-col>
+
+        <v-col cols="4" md="3" lg="2">
+          <date-picker
+            :loading="isLoading"
+            label="Next payment date"
+            :value="timestampToDateTimeLocal(nextPaymentDate)"
+            clearable
+            @input="nextPaymentDate = formatDateToTimestamp($event)"
+          />
+        </v-col>
       </v-row>
       <component
         :is-edit="isEdit || route.query.instanceId"
@@ -92,8 +102,14 @@
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import api from "@/api";
 import { computed, onMounted, watch, ref } from "vue";
-import { defaultFilterObject, replaceNullWithUndefined } from "@/functions";
+import {
+  defaultFilterObject,
+  replaceNullWithUndefined,
+  formatDateToTimestamp,
+  timestampToDateTimeLocal,
+} from "@/functions";
 import { useStore } from "@/store";
+import DatePicker from "@/components/ui/dateTimePicker.vue";
 
 const store = useStore();
 const route = useRoute();
@@ -119,6 +135,8 @@ const form = ref(null);
 const rules = ref({
   req: [(v) => !!v || "required field"],
 });
+
+const nextPaymentDate = ref();
 
 const servicesProviders = computed(() =>
   store.getters["servicesProviders/all"].filter((el) => el.type === type.value)
@@ -256,6 +274,36 @@ const save = async () => {
     )?.title;
   } else {
     instance.value.config.location = fullSp.locations[0]?.title;
+  }
+  if (nextPaymentDate.value) {
+    const period =
+      instance.value.billing_plan.products[instance.value.product]?.period;
+    const next_payment_date = nextPaymentDate.value;
+    const last_monitoring = next_payment_date - period;
+
+    if (!instance.value.data) {
+      instance.value.data = {};
+    }
+
+    instance.value.data.next_payment_date = next_payment_date;
+    instance.value.data.last_monitoring = last_monitoring;
+
+    Object.keys(instance.value.resources || {}).forEach((key) => {
+      if (key === "drive_size" && instance.value.resources.drive_type) {
+        key = "drive_" + instance.value.resources.drive_type.toLowerCase();
+      }
+
+      if (instance.value.billing_plan.resources.find((r) => r.key === key)) {
+        instance.value.data[`${key}_last_monitoring`] = last_monitoring;
+        instance.value.data[`${key}_next_payment_date`] = next_payment_date;
+      }
+    });
+
+    (instance.value.addons || []).forEach((addon) => {
+      instance.value.data[`addon_${addon}_last_monitoring`] = last_monitoring;
+      instance.value.data[`addon_${addon}_next_payment_date`] =
+        next_payment_date;
+    });
   }
 
   isCreateLoading.value = true;
