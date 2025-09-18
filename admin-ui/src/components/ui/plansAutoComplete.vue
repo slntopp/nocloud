@@ -59,11 +59,13 @@ onMounted(() => {
   }, 0);
 });
 
-const updatePlans = async (param, clean) => {
+const updatePlans = async (param) => {
+  param = (param || "").trim();
+
   const params = {
     ...customParams.value,
     page: 1,
-    limit: 5,
+    limit: 10,
     filters: {
       ...(customParams.value.filters || {}),
       search_param: param,
@@ -73,7 +75,6 @@ const updatePlans = async (param, clean) => {
   if (
     isEqualObjects(params, lastParams.value) ||
     allPlans.value.find((plan) => plan.title === param) ||
-    param === null ||
     param === value.value ||
     param === value.value?.title
   ) {
@@ -87,10 +88,7 @@ const updatePlans = async (param, clean) => {
     const data = await store.getters["plans/plansClient"].listPlans(
       ListRequest.fromJson(params)
     );
-    if (clean) {
-      allPlans.value = [];
-    }
-    allPlans.value.push(...(data.toJson().pool || []));
+    allPlans.value = data.toJson().pool || [];
   } finally {
     isLoading.value = false;
   }
@@ -114,14 +112,6 @@ const onSearchInput = async (e) => {
   }
 
   isLoading.value = true;
-
-  allPlans.value = allPlans.value.filter(
-    (plan) =>
-      value.value?.includes?.(plan) ||
-      value.value?.includes?.(plan.uuid) ||
-      value.value === plan ||
-      value.value?.uuid === plan.uuid
-  );
 
   updatePlansDebounce(e);
 };
@@ -167,7 +157,7 @@ watch(loading, () => {
 watch(customParams, () => {
   if (!isEqualObjects(lastCustomParams.value, customParams.value)) {
     lastCustomParams.value = JSON.parse(JSON.stringify(customParams.value));
-    updatePlansDebounce("", true);
+    updatePlansDebounce("");
   }
 });
 </script>

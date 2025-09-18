@@ -385,6 +385,10 @@ export default {
         (product) => product.id === id
       );
 
+      if (!product.meta) {
+        this.$set(product, "meta", {});
+      }
+
       this.$set(product.meta, key, value);
       this.plan.meta = Object.assign({}, this.plan.meta);
     },
