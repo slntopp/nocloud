@@ -325,11 +325,6 @@ export default {
     });
   },
   mounted() {
-    //break reactivity
-    if (this.template.config?.regular_payment === undefined) {
-      this.$set(this.template.config, "regular_payment", true);
-    }
-
     this.copyInstance = JSON.parse(JSON.stringify(this.template));
     this.copyAddons = JSON.parse(JSON.stringify(this.addons));
   },

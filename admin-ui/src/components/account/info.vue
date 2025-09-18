@@ -34,33 +34,6 @@
           </v-btn>
         </hint-btn>
 
-        <hint-btn hint="Invoice based">
-          <v-dialog v-model="isChangeRegularPaymentOpen" max-width="500">
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                :disabled="isChangeRegularPaymentLoading"
-                :loading="isChangeRegularPaymentLoading"
-                :small="viewport < 600"
-                :class="viewport < 600 ? 'ma-4' : 'ma-1'"
-                v-bind="attrs"
-                v-on="on"
-              >
-                <v-icon>mdi-invoice-check-outline</v-icon>
-              </v-btn>
-            </template>
-            <v-card color="background-light pa-5">
-              <v-card-actions class="d-flex justify-center">
-                <v-btn class="mr-2" @click="changeRegularPayment(false)">
-                  Disable to all
-                </v-btn>
-                <v-btn class="mr-2" @click="changeRegularPayment(true)">
-                  Enable to all</v-btn
-                >
-              </v-card-actions>
-            </v-card>
-          </v-dialog>
-        </hint-btn>
-
         <hint-btn
           v-for="button in stateButtons"
           :key="button.title"
@@ -296,8 +269,6 @@ const keys = ref([]);
 const selected = ref([]);
 const isVisible = ref(false);
 const isEditLoading = ref(false);
-const isChangeRegularPaymentLoading = ref(false);
-const isChangeRegularPaymentOpen = ref(false);
 const showDeletedInstances = ref(false);
 const statusChangeValue = ref("");
 const viewport = ref(window.innerWidth);
@@ -323,13 +294,6 @@ onUnmounted(() => {
 const services = computed(() => store.getters["services/all"]);
 const currencies = computed(() =>
   store.getters["currencies/all"].filter((c) => c.title !== "NCU")
-);
-
-const instances = computed(() => store.getters["services/getInstances"]);
-const accountsByInstance = computed(() =>
-  instances.value.filter(
-    (i) => i.access.namespace === accountNamespace.value?.uuid
-  )
 );
 
 const isCurrencyReadonly = computed(
@@ -453,48 +417,7 @@ const permanentLock = async () => {
     statusChangeValue.value = "";
   }
 };
-//need remake to instances api
-const changeRegularPayment = async (value) => {
-  isChangeRegularPaymentLoading.value = true;
-  isChangeRegularPaymentOpen.value = false;
-  try {
-    const services = [];
 
-    accountsByInstance.value.forEach((instance) => {
-      const tempService =
-        services.find((s) => s.uuid === instance.service) ||
-        JSON.parse(
-          JSON.stringify(
-            services.value.find((s) => s.uuid === instance.service)
-          )
-        );
-      const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === instance.uuid)
-      );
-      const instanceIndex = tempService.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === instance.uuid);
-
-      instance.config.regular_payment = value;
-
-      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-
-      const sIndex = services.findIndex((s) => s.uuid === instance.service);
-      if (sIndex !== -1) {
-        services[sIndex] = tempService;
-      } else {
-        services.push(tempService);
-      }
-    });
-    await Promise.all(services.map((s) => api.services._update(s)));
-  } catch {
-    store.commit("snackbar/showSnackbarError", {
-      message: "Error while change invoice based",
-    });
-  } finally {
-    isChangeRegularPaymentLoading.value = false;
-  }
-};
 const openInvoice = async () => {
   router.push({
     name: "Invoice create",

@@ -28,7 +28,7 @@
     </template>
 
     <template v-slot:[`item.config.auto_renew`]="{ item }">
-      <div class="d-flex justify-center align-center regular_payment">
+      <div class="d-flex justify-center align-center table-switch">
         <v-switch
           dense
           hide-details
@@ -46,24 +46,12 @@
       }}
     </template>
 
-    <template v-slot:[`item.config.regular_payment`]="{ item }">
-      <div class="d-flex justify-center align-center regular_payment">
-        <v-switch
-          dense
-          hide-details
-          :disabled="isChangeRegularPaymentLoading"
-          :input-value="item.config?.regular_payment"
-          @change="changeRegularPayment(item, $event)"
-        />
-      </div>
-    </template>
-
     <template v-slot:[`item.meta.autoRenew`]="{ item }">
-      <div class="d-flex justify-center align-center regular_payment">
+      <div class="d-flex justify-center align-center table-switch">
         <v-switch
           dense
           hide-details
-          :disabled="isChangeRegularPaymentLoading"
+          :disabled="isUpdateActionLoading"
           :input-value="item.meta?.autoRenew"
           @change="changeAutoRenew(item, $event)"
         />
@@ -265,7 +253,7 @@ const instancesTypes = ref([]);
 const isAccountsLoading = ref(false);
 const accounts = ref({});
 
-const isChangeRegularPaymentLoading = ref(false);
+const isUpdateActionLoading = ref(false);
 
 onMounted(() => {
   store.commit("reloadBtn/setCallback", {
@@ -321,11 +309,6 @@ const headers = computed(() => {
     { text: "Domain", value: "config.domain" },
     { text: "DCV", value: "resources.dcv" },
     { text: "Approver email", value: "resources.approver_email" },
-    {
-      text: "Invoice based",
-      value: "config.regular_payment",
-      editable: { type: "logic-select" },
-    },
     {
       text: "Automatic debit",
       value: "meta.autoRenew",
@@ -599,26 +582,8 @@ const getServiceProvider = (uuid) => {
   return servicesProviders.value.find((sp) => sp.uuid === uuid);
 };
 
-const changeRegularPayment = async (instance, value) => {
-  isChangeRegularPaymentLoading.value = true;
-  try {
-    instance.config.regular_payment = value;
-
-    const data = store.getters["instances/all"].find(
-      (data) => data.uuid === instance.uuid
-    );
-    data.config.regular_payment = value;
-
-    await store.getters["instances/instancesClient"].update(
-      UpdateRequest.fromJson({ instance: data })
-    );
-  } finally {
-    isChangeRegularPaymentLoading.value = false;
-  }
-};
-
 const changeAutoRenew = async (instance, value) => {
-  isChangeRegularPaymentLoading.value = true;
+  isUpdateActionLoading.value = true;
 
   try {
     if (!instance.meta) {
@@ -637,7 +602,7 @@ const changeAutoRenew = async (instance, value) => {
       UpdateRequest.fromJson({ instance: data }, { ignoreUnknownFields: true })
     );
   } finally {
-    isChangeRegularPaymentLoading.value = false;
+    isUpdateActionLoading.value = false;
   }
 };
 
@@ -648,7 +613,6 @@ const updateEditValues = async (values) => {
         (data) => data.instance.uuid === instance.uuid
       ).instance;
 
-      data.config.regular_payment = values["config.regular_payment"] === "True";
       data.created = formatDateToTimestamp(values["date"]);
       if (["ione", "empty"].includes(data.type)) {
         Object.keys(data.data).forEach((nextPaymentDateKey) => {
