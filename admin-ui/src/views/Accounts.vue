@@ -98,40 +98,7 @@
           </v-form>
         </v-card>
       </v-menu>
-      <confirm-dialog
-        :disabled="selected.length < 1"
-        @confirm="changeInvoiceBased(true)"
-      >
-        <v-btn
-          color="background-light"
-          class="mr-2 mt-2"
-          :disabled="
-            selected.length < 1 ||
-            changeInvoiceBasedAction === false ||
-            !!changeAccountStatusAction
-          "
-          :loading="changeInvoiceBasedAction === true"
-        >
-          Enabled invoice based
-        </v-btn>
-      </confirm-dialog>
-      <confirm-dialog
-        :disabled="selected.length < 1"
-        @confirm="changeInvoiceBased(false)"
-      >
-        <v-btn
-          color="background-light"
-          class="mr-2 mt-2"
-          :disabled="
-            selected.length < 1 ||
-            changeInvoiceBasedAction === true ||
-            !!changeAccountStatusAction
-          "
-          :loading="changeInvoiceBasedAction === false"
-        >
-          Disabled invoice based
-        </v-btn>
-      </confirm-dialog>
+
       <confirm-dialog
         v-for="btn in changeStateButtons"
         :key="btn.value"
@@ -181,7 +148,6 @@ export default {
       createMenuVisible: false,
       selected: [],
       newAccount: {},
-      changeInvoiceBasedAction: undefined,
       rules: {
         title: [
           (value) => !!value || "Title is required",
@@ -320,27 +286,6 @@ export default {
       } finally {
         this.changeAccountStatusAction = "";
         this.selected = [];
-      }
-    },
-    async changeInvoiceBased(value) {
-      this.changeInvoiceBasedAction = value;
-      try {
-        await Promise.all(
-          this.selected.map((el) => {
-            if (el.data?.regular_payment === value) {
-              return Promise.resolve();
-            }
-            if (!el.data) {
-              el.data = {};
-            }
-            el.data.regular_payment = value;
-            return api.accounts.update(el.uuid, el);
-          })
-        );
-        this.$store.dispatch("reloadBtn/onclick");
-        this.showSnackbarSuccess({ message: "Success" });
-      } finally {
-        this.changeInvoiceBasedAction = undefined;
       }
     },
   },

@@ -73,22 +73,6 @@
         {{ item.access.level }}
       </v-chip>
     </template>
-    <template v-slot:[`item.data.regular_payment`]="{ value, item }">
-      <div class="d-flex justify-center align-center regular_payment">
-        <v-switch
-          dense
-          hide-details
-          :disabled="
-            !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
-          "
-          :loading="
-            !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
-          "
-          @change="changeRegularPayment(item, $event)"
-          :input-value="value"
-        />
-      </div>
-    </template>
   </nocloud-table>
 </template>
 
@@ -96,7 +80,6 @@
 import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
-import api from "@/api";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
@@ -134,7 +117,6 @@ const selected = ref([]);
 const loading = ref(false);
 const fetchError = ref("");
 const options = ref({});
-const changeRegularPaymentUuid = ref("");
 const headers = ref([
   { text: "Title", value: "title" },
   { text: "UUID", value: "uuid" },
@@ -149,7 +131,6 @@ const headers = ref([
   { text: "Access level", value: "access.level" },
   { text: "WHMCS ID", value: "data.whmcs_id" },
   { text: "Tax rate", value: "data.tax_rate" },
-  { text: "Invoice based", value: "data.regular_payment" },
 ]);
 const levelColorMap = ref({
   ROOT: "info",
@@ -216,9 +197,6 @@ const accounts = computed(() =>
       currency,
       data: {
         ...a.data,
-        regular_payment:
-          a.data?.regular_payment === undefined ||
-          a.data?.regular_payment === true,
       },
     };
   })
@@ -294,11 +272,6 @@ const searchFields = computed(() => [
       { id: 3, title: "ADMIN" },
     ],
   },
-  {
-    title: "Invoice based",
-    key: "data.regular_payment",
-    type: "logic-select",
-  },
 ]);
 
 const setOptions = (newOptions) => {
@@ -337,23 +310,6 @@ const colorChip = (level) => {
 const goToBalance = (uuid) => {
   router.push({ name: "Transactions", query: { account: uuid } });
 };
-const changeRegularPayment = async (item, value) => {
-  changeRegularPaymentUuid.value = item.uuid;
-  try {
-    if (!item.data) {
-      item.data = {};
-    }
-    item.data.regular_payment = value;
-    await api.accounts.update(item.uuid, item);
-    store.commit("accounts/pushAccount", item);
-  } catch {
-    store.commit("snackbar/showSnackbarError", {
-      message: "Error while change invoice based",
-    });
-  } finally {
-    changeRegularPaymentUuid.value = "";
-  }
-};
 
 watch(accounts, () => {
   fetchError.value = "";
@@ -380,8 +336,4 @@ export default {
 };
 </script>
 
-<style>
-.regular_payment .v-input {
-  margin-top: 0px !important;
-}
-</style>
+<style></style>

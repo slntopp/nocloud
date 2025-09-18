@@ -121,7 +121,7 @@ const isRenewDisabled = computed(() => {
 });
 
 const isAutoRenewDisabled = computed(() => {
-  return renewDisabled.value || template.value.config.regular_payment;
+  return renewDisabled.value 
 });
 
 const isDeleted = computed(() => {
