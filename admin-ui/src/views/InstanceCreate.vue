@@ -276,10 +276,8 @@ const save = async () => {
     instance.value.config.location = fullSp.locations[0]?.title;
   }
   if (nextPaymentDate.value) {
-    const period =
-      instance.value.billing_plan.products[instance.value.product]?.period;
     const next_payment_date = nextPaymentDate.value;
-    const last_monitoring = next_payment_date - period;
+    const last_monitoring = next_payment_date;
 
     if (!instance.value.data) {
       instance.value.data = {};
