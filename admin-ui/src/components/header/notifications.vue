@@ -9,7 +9,7 @@
         v-bind="attrs"
         v-on="on"
       >
-        <v-icon dark>
+        <v-icon :color="isUnseenNotification ? 'red' : ''" dark>
           {{ !isUnseenNotification ? "mdi-bell" : "mdi-bell-badge" }}
         </v-icon>
       </v-btn>
