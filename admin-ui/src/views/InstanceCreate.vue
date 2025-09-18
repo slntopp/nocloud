@@ -293,7 +293,9 @@ const save = async () => {
         key = "drive_" + instance.value.resources.drive_type.toLowerCase();
       }
 
-      if (instance.value.billing_plan.resources.find((r) => r.key === key)) {
+      if (
+        (instance.value.billing_plan.resources || []).find((r) => r.key === key)
+      ) {
         instance.value.data[`${key}_last_monitoring`] = last_monitoring;
         instance.value.data[`${key}_next_payment_date`] = next_payment_date;
       }
