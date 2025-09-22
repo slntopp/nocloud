@@ -13,6 +13,7 @@
     >
       <v-tab>Info</v-tab>
       <v-tab>Promo</v-tab>
+      <v-tab>Category</v-tab>
       <v-tab>Promocodes</v-tab>
       <v-tab>Template</v-tab>
     </v-tabs>
@@ -35,6 +36,10 @@
       </v-tab-item>
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
+        <category-tab :template="showcase" />
+      </v-tab-item>
+      <v-tab-item>
+        <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <promocodes-tab :template="showcase" />
       </v-tab-item>
       <v-tab-item>
@@ -48,13 +53,14 @@
 
 <script setup>
 import config from "@/config.js";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import ShowcaseCreate from "@/views/ShowcaseCreate.vue";
 import PromoTab from "@/components/showcase/promo.vue";
 import PromocodesTab from "@/components/showcase/promocodes.vue";
 import ShowcaseTemplate from "@/components/showcase/template.vue";
+import CategoryTab from "../components/showcase/category.vue";
 
 const route = useRoute();
 const store = useStore();
@@ -62,7 +68,6 @@ const store = useStore();
 const navTitles = ref(config.navTitles ?? {});
 const isFetchLoading = ref(false);
 const tabs = ref(0);
-const showcase = ref({});
 
 const navTitle = (title) => {
   if (title && navTitles.value[title]) {
@@ -83,10 +88,16 @@ const showcaseTitle = computed(() => {
   return showcase.value.title;
 });
 
+const showcase = computed(() =>
+  showcases.value?.find((n) => n.uuid == showcaseId.value)
+);
+
 onMounted(async () => {
   try {
     isFetchLoading.value = true;
     await store.dispatch("showcases/fetchById", showcaseId.value);
+    console.log(showcase.value);
+    
   } catch (e) {
     console.log(e);
     store.commit("snackbar/showSnackbarError", {
@@ -95,9 +106,12 @@ onMounted(async () => {
   } finally {
     isFetchLoading.value = false;
   }
+});
 
-  showcase.value = showcases.value?.find((n) => n.uuid == showcaseId.value);
-  document.title = `${showcase.value.title} | NoCloud`;
+watch(showcase, (newVal) => {
+  if (newVal && newVal.title) {
+    document.title = `${newVal.title} | NoCloud`;
+  }
 });
 </script>
 

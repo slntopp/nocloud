@@ -23,6 +23,10 @@
       </router-link>
     </template>
 
+    <template v-slot:[`item.category`]="{ item }">
+      {{ item.meta.category?.name || "No category" }}
+    </template>
+
     <template v-slot:[`item.sorter`]="{ item }">
       <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
       <v-text-field
@@ -73,6 +77,7 @@ const updatedShowcase = ref("");
 const headers = ref([
   { text: "UUID", value: "uuid" },
   { text: "Title", value: "title" },
+  { text: "Category", value: "category" },
   { text: "Preview", value: "preview" },
   { text: "Enabled", value: "public" },
   { text: "Sorter", value: "sorter" },
