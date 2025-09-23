@@ -398,12 +398,6 @@ func (ctrl *instancesController) CalculateInstanceEstimatePrice(i *pb.Instance, 
 			}
 			count := i.GetResources()["drive_size"].GetNumberValue() / 1024
 			cost += res.GetPrice() * count
-		} else if res.GetKey() == "who_is_privacy" {
-			value := float64(0)
-			if i.GetResources()["who_is_privacy"].GetBoolValue() {
-				value = 1
-			}
-			cost += value * res.GetPrice()
 		} else {
 			count := i.GetResources()[res.GetKey()].GetNumberValue()
 			cost += res.GetPrice() * count
