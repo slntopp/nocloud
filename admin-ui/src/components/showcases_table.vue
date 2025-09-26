@@ -24,7 +24,16 @@
     </template>
 
     <template v-slot:[`item.category`]="{ item }">
-      {{ item.meta.category?.name || "No category" }}
+      <router-link
+        v-if="item.meta.category"
+        :to="{
+          name: 'CategoriesPage',
+          params: { uuid: item.meta.category?.name },
+        }"
+      >
+        {{ getShortName(item.meta.category?.name, 45) }}
+      </router-link>
+      <span v-else> No category </span>
     </template>
 
     <template v-slot:[`item.sorter`]="{ item }">
