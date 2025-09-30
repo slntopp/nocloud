@@ -28,21 +28,22 @@
         </template>
       </v-text-field>
     </v-col>
-    <v-col cols="3">
-      <password-text-field
-        @input="emit('update', { key: 'data.password', value: $event })"
-        :value="template.config?.password || template.data?.password"
-        copy
-        :readonly="false"
-      />
-    </v-col>
-
+    
     <v-col cols="3">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'data.username', value: $event })"
         :value="template.config?.username || template.data?.username"
         label="Username"
+      />
+    </v-col>
+
+    <v-col cols="3">
+      <password-text-field
+        @input="emit('update', { key: 'data.password', value: $event })"
+        :value="template.config?.password || template.data?.password"
+        copy
+        :readonly="false"
       />
     </v-col>
 
