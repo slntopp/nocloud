@@ -28,28 +28,6 @@
         </template>
       </v-text-field>
     </v-col>
-
-    <v-col cols="2">
-      <v-text-field
-        @input="emit('update', { key: 'data.username', value: $event })"
-        :value="template.config?.username || template.data?.username"
-        label="Username"
-      >
-        <template v-slot:append>
-          <v-icon>mdi-pencil</v-icon>
-          <v-icon
-            class="ml-1"
-            @click="
-              addToClipboard(
-                template.config?.username || template.data?.username
-              )
-            "
-            >mdi-content-copy</v-icon
-          >
-        </template>
-      </v-text-field>
-    </v-col>
-
     <v-col cols="2">
       <password-text-field
         @input="emit('update', { key: 'config.password', value: $event })"
@@ -68,7 +46,7 @@
       />
     </v-col>
 
-    <v-col cols="2">
+    <v-col cols="1">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.ssd', value: $event })"
@@ -77,7 +55,7 @@
       />
     </v-col>
 
-    <v-col cols="2">
+    <v-col cols="1">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.email', value: $event })"
@@ -86,7 +64,7 @@
       />
     </v-col>
 
-    <v-col cols="2">
+    <v-col cols="1">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.mysql', value: $event })"
@@ -95,7 +73,7 @@
       />
     </v-col>
 
-    <v-col cols="2">
+    <v-col cols="1">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.websites', value: $event })"
