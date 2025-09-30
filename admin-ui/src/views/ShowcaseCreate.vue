@@ -161,7 +161,6 @@ const types = [
   "domains",
   "acronis",
   "ssl",
-  "b24-apps",
 ];
 
 const showcase = ref({
@@ -248,8 +247,7 @@ const allLocations = computed(() =>
   )
 );
 
-const setShowcase = () => {
-  if (!realShowcase.value) return;
+watch(realShowcase, () => {
   defaultLocation.value = realShowcase.value.main?.default ?? "";
   showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
@@ -262,14 +260,9 @@ const setShowcase = () => {
     showcase.value.items = [];
   }
   showcase.value.items.push({ plan: "", servicesProvider: "", locations: [] });
-};
-
-watch(realShowcase, () => {
-  setShowcase();
 });
 
 onMounted(async () => {
-  setShowcase();
   try {
     isLoading.value = true;
     await Promise.all([
