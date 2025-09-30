@@ -1,6 +1,6 @@
 <template>
   <v-row>
-    <v-col cols="2">
+    <v-col cols="3">
       <v-text-field
         :value="template.config.domain"
         label="Domain"
@@ -14,7 +14,7 @@
         </template>
       </v-text-field>
     </v-col>
-    <v-col cols="2">
+    <v-col cols="3">
       <v-text-field
         @input="emit('update', { key: 'config.email', value: $event })"
         :value="template.config.email"
@@ -28,12 +28,22 @@
         </template>
       </v-text-field>
     </v-col>
-    <v-col cols="2">
+    
+    <v-col cols="3">
+      <v-text-field
+        append-icon="mdi-pencil"
+        @input="emit('update', { key: 'data.username', value: $event })"
+        :value="template.config?.username || template.data?.username"
+        label="Username"
+      />
+    </v-col>
+
+    <v-col cols="3">
       <password-text-field
-        @input="emit('update', { key: 'config.password', value: $event })"
-        :readonly="false"
+        @input="emit('update', { key: 'data.password', value: $event })"
         :value="template.config?.password || template.data?.password"
         copy
+        :readonly="false"
       />
     </v-col>
 
@@ -46,7 +56,7 @@
       />
     </v-col>
 
-    <v-col cols="1">
+    <v-col cols="2">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.ssd', value: $event })"
@@ -55,7 +65,7 @@
       />
     </v-col>
 
-    <v-col cols="1">
+    <v-col cols="2">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.email', value: $event })"
@@ -64,7 +74,7 @@
       />
     </v-col>
 
-    <v-col cols="1">
+    <v-col cols="2">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.mysql', value: $event })"
@@ -73,7 +83,7 @@
       />
     </v-col>
 
-    <v-col cols="1">
+    <v-col cols="2">
       <v-text-field
         append-icon="mdi-pencil"
         @input="emit('update', { key: 'resources.websites', value: $event })"
