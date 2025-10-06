@@ -59,6 +59,10 @@
             <v-btn :loading="isFillLoading" @click="fillConfig"
               >Fill config</v-btn
             >
+
+            <v-btn :loading="isExportLoading" @click="exportToXlsx"
+              >Export to XLSX</v-btn
+            >
           </div>
           <nocloud-table
             :headers="newPricesHeaders"
@@ -341,6 +345,8 @@ import { useStore } from "@/store";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import { getMarginedValue, getShortName } from "@/functions";
 import confirmDialog from "@/components/confirmDialog.vue";
+import XlsxService from "@/services/XlsxService";
+import { getTodayFullDate } from "../../functions";
 
 const props = defineProps(["template"]);
 const { template } = toRefs(props);
@@ -351,6 +357,7 @@ const tabs = ref(["Prices", "Old prices", "Addons"]);
 const tabsIndex = ref(0);
 
 const isFillLoading = ref(false);
+const isExportLoading = ref(false);
 
 const isValid = ref(false);
 const fee = ref(template.value.fee || {});
@@ -839,6 +846,99 @@ const fillConfig = async () => {
     });
   } finally {
     isFillLoading.value = false;
+  }
+};
+
+const exportToXlsx = async () => {
+  try {
+    isExportLoading.value = true;
+
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Export success",
+    });
+    const baseHeaders = [
+      { title: "Name", key: "name" },
+      { title: "Price per 1M input tokens", key: "tokens.text_input" },
+      { title: "Price per 1M output tokens", key: "tokens.text_output" },
+      { title: "Price per 1M image input tokens", key: "tokens.image_input" },
+      { title: "Price per 1M image output tokens", key: "tokens.image_output" },
+      { title: "Price per generation step", key: "other.sampling_step_price" },
+      { title: "Price per 1M input characters", key: "other.characters_price" },
+      {
+        title: "Price per 60 seconds of content",
+        key: "media_duration.duration_price",
+      },
+      { title: "Price for 1000 pages", key: "other.pages_count_price" },
+      { title: "Price for 1000 Web Searches", key: "other.web_search_price" },
+      { title: "Price per image", key: "images.res_to_quality" },
+    ];
+          
+
+    const allowedModels = newPricesResourcesFiltred.value.filter(
+      (r) => !r.disabled && r.state?.state !== "broken"
+    );
+
+    return XlsxService.downloadXlsx(template.value.title + getTodayFullDate(), [
+      {
+        name: template.value.title,
+        headers: baseHeaders,
+        items: allowedModels.map((model) => {
+          const result = {};
+
+          baseHeaders.forEach(({ key }) => {
+            if (key === "name") {
+              result[key] = model.name;
+              return;
+            }
+
+            const [mainKey, subKey] = key.split(".");
+
+            if (model.billing[mainKey] == null) {
+              result[key] = "";
+              return;
+            }
+
+            if (subKey == null) {
+              result[key] = JSON.stringify(model.billing[mainKey]);
+              return;
+            }
+
+            if (model.billing[mainKey][subKey] == null) {
+              result[key] = "";
+              return;
+            }
+
+            if (subKey === "res_to_quality") {
+              result[key] = Object.keys(model.billing[mainKey][subKey])
+                .map((key) =>
+                  Object.keys(model.billing[mainKey][subKey][key])
+                    .map(
+                      (subkey) =>
+                        `${key} ${subkey} ${model.billing[mainKey][subKey][key][subkey].amount} ${defaultCurrency.value.code}`
+                    )
+                    .join(", ")
+                )
+                .join(", ");
+              return;
+            }
+
+            result[key] = [
+              model.billing[mainKey][subKey].price.amount,
+              defaultCurrency.value.code,
+            ].join(" ");
+          });
+          return result;
+        }),
+      },
+    ]);
+  } catch (e) {
+    console.log(e);
+
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during export config",
+    });
+  } finally {
+    isExportLoading.value = false;
   }
 };
 
