@@ -567,7 +567,7 @@ export default {
         }
 
         if (matched[1] === "empty") {
-          this.types.push("empty", "vpn");
+          this.types.push("empty", "vpn", "bitrix24");
         } else {
           this.types.push(matched[1]);
         }
@@ -627,6 +627,7 @@ export default {
         case "ovh cloud":
         case "opensrs":
         case "empty":
+        case "bitrix24":
         case "vpn":
         case "ione-vpn":
         case "cpanel": {
@@ -646,7 +647,7 @@ export default {
       );
     },
     spType() {
-      if (this.plan.type == "vpn") {
+      if (["vpn"].includes(this.plan.type)) {
         return "empty";
       }
 

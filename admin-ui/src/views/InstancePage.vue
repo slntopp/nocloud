@@ -156,7 +156,10 @@ export default {
       if (
         !instanceResponse.instance?.billingPlan?.products?.[
           instanceResponse.instance.product
-        ]?.price
+        ]?.price &&
+        instanceResponse.instance?.billingPlan?.products?.[
+          instanceResponse.instance.product
+        ] !== undefined
       ) {
         instanceResponse.instance.billingPlan.products[
           instanceResponse.instance.product
