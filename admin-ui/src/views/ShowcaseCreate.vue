@@ -161,6 +161,7 @@ const types = [
   "domains",
   "acronis",
   "ssl",
+  "b24-apps",
 ];
 
 const showcase = ref({

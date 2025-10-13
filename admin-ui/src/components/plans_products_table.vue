@@ -192,7 +192,7 @@
                 dense
                 class="pt-4"
                 label="Image link"
-                v-if="type === 'empty'"
+                v-if="type === 'empty' || type == 'bitrix24'"
                 :value="item.meta.image"
                 @input="changeImageLink($event, item.id)"
               />

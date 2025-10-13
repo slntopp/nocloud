@@ -267,6 +267,7 @@ export default {
           import(`@/components/modules/${type}/serviceProviders.vue`);
       }
     });
+    this.types.push("bitrix24");
 
     this.providerKey = this.generateComponentId();
     this.fetchExtentions();
