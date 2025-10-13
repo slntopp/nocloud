@@ -290,6 +290,10 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		log.Error("Failed to get instance", zap.Error(err))
 		return err
 	}
+	config := instance.GetConfig()
+	if config == nil {
+		config = map[string]*structpb.Value{}
+	}
 
 	// Create promocode on newly created instance if it was passed on creation
 	if promo, ok := event.GetData()["promocode"]; ok {
@@ -301,6 +305,12 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 				return fmt.Errorf("failed to link promocode: %w", err)
 			}
 		}
+	}
+
+	started, ok := config["auto_start"]
+	if ok && started.GetBoolValue() {
+		log.Info("Skipping creation of start invoice for auto_start instance")
+		return nil
 	}
 
 	// Find owner account
