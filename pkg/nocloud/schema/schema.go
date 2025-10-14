@@ -51,10 +51,11 @@ const (
 	CUR2CUR              = CUR_COL + "2" + CUR_COL
 )
 const (
-	SERVICES_PROVIDERS_COL = "ServicesProviders"
-	SHOWCASES_COL          = "Showcases"
-	IG2SP                  = INSTANCES_GROUPS_COL + "2" + SERVICES_PROVIDERS_COL
-	SP2BP                  = SERVICES_PROVIDERS_COL + "2" + BILLING_PLANS_COL
+	SERVICES_PROVIDERS_COL  = "ServicesProviders"
+	SHOWCASES_COL           = "Showcases"
+	SHOWCASE_CATEGORIES_COL = "ShowcaseCategories"
+	IG2SP                   = INSTANCES_GROUPS_COL + "2" + SERVICES_PROVIDERS_COL
+	SP2BP                   = SERVICES_PROVIDERS_COL + "2" + BILLING_PLANS_COL
 )
 
 const (
