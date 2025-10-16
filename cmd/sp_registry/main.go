@@ -29,6 +29,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
+	"github.com/slntopp/nocloud/pkg/showcase_categories"
 	"github.com/slntopp/nocloud/pkg/showcases"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -117,6 +118,7 @@ func main() {
 
 	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
+	scCatServer := showcase_categories.NewCategoriesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
 	for _, driver := range drivers {
@@ -151,6 +153,7 @@ func main() {
 	}
 	sppb.RegisterServicesProvidersServiceServer(s, server)
 	sppb.RegisterShowcasesServiceServer(s, s_server)
+	sppb.RegisterShowcaseCategoriesServiceServer(s, scCatServer)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 

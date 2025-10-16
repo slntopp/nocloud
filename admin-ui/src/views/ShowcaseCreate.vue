@@ -248,7 +248,8 @@ const allLocations = computed(() =>
   )
 );
 
-watch(realShowcase, () => {
+const setShowcase = () => {
+  if (!realShowcase.value) return;
   defaultLocation.value = realShowcase.value.main?.default ?? "";
   showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
@@ -261,9 +262,14 @@ watch(realShowcase, () => {
     showcase.value.items = [];
   }
   showcase.value.items.push({ plan: "", servicesProvider: "", locations: [] });
+};
+
+watch(realShowcase, () => {
+  setShowcase();
 });
 
 onMounted(async () => {
+  setShowcase();
   try {
     isLoading.value = true;
     await Promise.all([

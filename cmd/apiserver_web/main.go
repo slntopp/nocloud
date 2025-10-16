@@ -177,6 +177,18 @@ func main() {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
 
+	// ShowcaseCategoriesService
+	log.Info("Registering ShowcaseCategoriesService Gateway")
+	err = sppb.RegisterShowcaseCategoriesServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register ShowcaseCategoriesService gateway", zap.Error(err))
+	}
+
 	// ServicesService
 	log.Info("Registering ServicesService Gateway")
 	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(
