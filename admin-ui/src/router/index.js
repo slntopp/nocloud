@@ -384,6 +384,30 @@ const routes = [
     },
   },
   {
+    path: "/categories",
+    name: "Categories",
+    component: () => import("../views/Categories.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+   {
+    path: "/categories/create",
+    name: "CategoriesCreate",
+    component: () => import("../views/CategoriesCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/categories/:uuid",
+    name: "CategoriesPage",
+    component: () => import("../views/CategoriesPage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/addons",
     name: "Addons",
     component: () => import("../views/Addons.vue"),
