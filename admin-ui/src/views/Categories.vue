@@ -35,11 +35,11 @@
       :items="categories"
       :loading="isCategoriesLoading"
     >
-      <template v-slot:[`item.name`]="{ item }">
+      <template v-slot:[`item.title`]="{ item }">
         <router-link
-          :to="{ name: 'CategoriesPage', params: { uuid: item.name } }"
+          :to="{ name: 'CategoriesPage', params: { uuid: item.uuid } }"
         >
-          {{ getShortName(item.name, 45) }}
+          {{ getShortName(item.title, 45) }}
         </router-link>
       </template>
 
@@ -48,7 +48,7 @@
       </template>
 
       <template v-slot:[`item.sorter`]="{ item }">
-        <v-skeleton-loader v-if="updatedCategory === item.name" type="text" />
+        <v-skeleton-loader v-if="updatedCategory === item.uuid" type="text" />
         <v-text-field
           v-else
           dense
@@ -65,78 +65,48 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useStore } from "../store";
 import NocloudTable from "@/components/table.vue";
 import api from "../api";
 import ConfirmDialog from "../components/confirmDialog.vue";
 import { getShortName } from "../functions";
 
-const SHOWCASE_CATEGORIES_SETTINGS_KEY = "showcase-categories";
-
 const store = useStore();
 
-const categories = ref([]);
 const selectedCategories = ref([]);
-const isCategoriesLoading = computed(() => store.getters["settings/isLoading"]);
+const isCategoriesLoading = computed(
+  () => store.getters["showcases/isLoading"]
+);
 const updatedCategory = ref(null);
 const isDeleteLoading = ref(false);
 
 const headers = ref([
   { text: "UUID", value: "uuid" },
-  { text: "Name", value: "name" },
+  { text: "Title", value: "title" },
   { text: "Type", value: "type" },
   { text: "Sorter", value: "sorter" },
 ]);
 
-const originalSettings = computed(() =>
-  store.getters["settings/all"].find(
-    (v) => v.key === SHOWCASE_CATEGORIES_SETTINGS_KEY
-  )
-);
+const categories = computed(() => store.getters["showcases/categories"]);
 
 onMounted(() => {
-  setCategoriesFromSettings();
+  store.dispatch("showcases/fetch");
 });
-
-const setCategoriesFromSettings = () => {
-  try {
-    const settings =
-      originalSettings.value && JSON.parse(originalSettings.value.value);
-
-    if (Array.isArray(settings)) {
-      categories.value = settings.map((c) => ({ ...c, uuid: c.name }));
-    } else {
-      categories.value = [];
-    }
-  } catch (e) {
-    categories.value = [];
-  }
-};
 
 const updateCategory = async (category, { key, value }) => {
   if (updatedCategory.value) {
     return;
   }
 
-  updatedCategory.value = category.name;
-
-  const newCategories = categories.value.map((c) => {
-    if (c.name === category.name) {
-      return { ...c, [key]: value };
-    }
-
-    return c;
-  });
+  updatedCategory.value = category.uuid;
 
   try {
-    let data = JSON.parse(JSON.stringify(originalSettings.value));
+    const newCategoryData = { ...category, [key]: value };
+    await api.patch(`showcase_categories/${category.uuid}`, newCategoryData);
 
-    data.value = JSON.stringify(newCategories);
+    category[key] = value;
 
-    await api.settings.addKey(SHOWCASE_CATEGORIES_SETTINGS_KEY, data);
-
-    categories.value = newCategories;
     store.commit("snackbar/showSnackbarSuccess", {
       message: "Done",
     });
@@ -156,19 +126,16 @@ const deleteSelectedCategories = async () => {
 
   isDeleteLoading.value = true;
 
-  const newCategories = categories.value.filter(
-    (c) => !selectedCategories.value.find((s) => s.name === c.name)
-  );
-
   try {
-    let data = JSON.parse(JSON.stringify(originalSettings.value));
+    await Promise.all(
+      selectedCategories.value.map((category) =>
+        api.delete(`showcase_categories/${category.uuid}`)
+      )
+    );
 
-    data.value = JSON.stringify(newCategories);
-
-    await api.settings.addKey(SHOWCASE_CATEGORIES_SETTINGS_KEY, data);
-
-    categories.value = newCategories;
+    store.dispatch("showcases/fetch");
     selectedCategories.value = [];
+
     store.commit("snackbar/showSnackbarSuccess", {
       message: "Done",
     });
@@ -180,10 +147,6 @@ const deleteSelectedCategories = async () => {
     isDeleteLoading.value = false;
   }
 };
-
-watch(originalSettings, () => {
-  setCategoriesFromSettings();
-});
 </script>
 
 <script>

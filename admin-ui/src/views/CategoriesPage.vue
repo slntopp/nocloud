@@ -44,57 +44,31 @@ import { useStore } from "@/store";
 import CategoriesCreate from "@/views/CategoriesCreate.vue";
 import CategoriesShowcases from "../components/categories/showcases.vue";
 
-const SHOWCASE_CATEGORIES_SETTINGS_KEY = "showcase-categories";
-
 const route = useRoute();
 const store = useStore();
 
 const navTitles = ref(config.navTitles ?? {});
-const isFetchLoading = ref(false);
-const categories = ref([]);
 const categorie = ref(null);
 const tabs = ref(0);
 
 onMounted(() => {
-  setCategoriesFromSettings();
+  store.dispatch("showcases/fetch");
 });
 
-const originalSettings = computed(() =>
-  store.getters["settings/all"].find(
-    (v) => v.key === SHOWCASE_CATEGORIES_SETTINGS_KEY
-  )
-);
+const isFetchLoading = computed(() => store.getters["showcases/isLoading"]);
+const categories = computed(() => store.getters["showcases/categories"]);
 
 const categorieId = computed(() => {
   return route.params.uuid;
 });
 
 const categorieTitle = computed(() => {
-  if (!categorie.value || !categorie.value?.name) {
+  if (!categorie.value || !categorie.value?.title) {
     return "...";
   }
 
-  return categorie.value.name;
+  return categorie.value.title;
 });
-
-const setCategoriesFromSettings = () => {
-  try {
-    const settings =
-      originalSettings.value && JSON.parse(originalSettings.value.value);
-
-    if (Array.isArray(settings)) {
-      categories.value = settings;
-    } else {
-      categories.value = [];
-    }
-
-    categorie.value = categories.value.find(
-      (c) => c.name === categorieId.value
-    );
-  } catch (e) {
-    categories.value = [];
-  }
-};
 
 const navTitle = (title) => {
   if (title && navTitles.value[title]) {
@@ -104,14 +78,16 @@ const navTitle = (title) => {
   return title;
 };
 
-watch(originalSettings, () => {
-  setCategoriesFromSettings();
-});
-
 watch(categorie, (newVal) => {
   if (newVal && newVal.title) {
     document.title = `${newVal.title} | NoCloud`;
   }
+});
+
+watch(categories, () => {
+  categorie.value = categories.value.find(
+    (cat) => cat.uuid === categorieId.value
+  );
 });
 </script>
 

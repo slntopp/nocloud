@@ -6,8 +6,8 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            v-model="categoryData.name"
-            label="Category Name"
+            v-model="categoryData.title"
+            label="Category Title"
             :rules="nameRules"
             prepend-icon="mdi-tag"
             required
@@ -19,6 +19,7 @@
             v-model="categoryData.type"
             label="Category Type"
             :items="categoryTypes"
+            clearable
             prepend-icon="mdi-shape"
           />
         </v-col>
@@ -80,10 +81,10 @@
 
           <v-divider class="mb-4" />
 
-          <div v-if="Object.keys(categoryData.i18n).length > 0">
+          <div v-if="Object.keys(categoryData.promo).length > 0">
             <h4 class="mb-3">Current Translations:</h4>
             <div
-              v-for="(translation, locale) in categoryData.i18n"
+              v-for="(translation, locale) in categoryData.promo"
               :key="locale"
               class="mb-2"
             >
@@ -96,7 +97,7 @@
                 <v-col cols="10">
                   <v-text-field
                     dense
-                    v-model="categoryData.i18n[locale]"
+                    v-model="categoryData.promo[locale]"
                     :label="`Translation (${locale})`"
                     density="compact"
                     hide-details
@@ -130,7 +131,7 @@
 
           <v-btn
             color="primary"
-            :disabled="!formValid || !categoryData.name"
+            :disabled="!formValid || !categoryData.title"
             :loading="isSaveLoading"
             @click="saveCategory"
           >
@@ -172,13 +173,13 @@ const props = defineProps({
 const store = useStore();
 const router = useRouter();
 
-const SHOWCASE_CATEGORIES_SETTINGS_KEY = "showcase-categories";
-
 const categoryData = ref({
-  name: "",
-  sorter: 0,
+  title: "",
   type: "",
-  i18n: {},
+  sorter: 0,
+  promo: {},
+  showcases: [],
+  public: true,
 });
 
 const formValid = ref(false);
@@ -192,8 +193,8 @@ const newTranslation = ref("");
 const categoryTypes = ["others", "hosting", "vds", "domains", "ai"];
 
 const nameRules = [
-  (v) => !!v || "Category name is required",
-  (v) => v.length >= 2 || "Name must be at least 2 characters",
+  (v) => !!v || "Category title is required",
+  (v) => v.length >= 2 || "Title must be at least 2 characters",
 ];
 
 const localeRules = [
@@ -204,32 +205,30 @@ const localeRules = [
     "Language code must contain only lowercase letters",
 ];
 
-const existingCategories = computed(() => {
-  const settings = store.getters["settings/all"].find(
-    (v) => v.key === SHOWCASE_CATEGORIES_SETTINGS_KEY
-  );
-
-  try {
-    return settings ? JSON.parse(settings.value) : [];
-  } catch (e) {
-    return [];
-  }
-});
+const existingCategories = computed(
+  () => store.getters["showcases/categories"]
+);
 
 const initializeForm = () => {
   if (props.isEdit && props.category) {
     categoryData.value = {
-      name: props.category.name || "",
+      uuid: props.category.uuid || "",
+      title: props.category.title || "",
       sorter: props.category.sorter || 0,
       type: props.category.type || "",
-      i18n: { ...props.category.i18n } || {},
+      promo: { ...props.category.promo } || {},
+      showcases: [...props.category.showcases] || [],
+      public:
+        props.category.public !== undefined ? props.category.public : true,
     };
   } else {
     categoryData.value = {
-      name: "",
+      title: "",
       sorter: 0,
       type: "",
-      i18n: {},
+      promo: {},
+      showcases: [],
+      public: true,
     };
   }
 };
@@ -251,22 +250,22 @@ const addTranslation = () => {
     return;
   }
 
-  if (categoryData.value.i18n[newLocale.value]) {
+  if (categoryData.value.promo[newLocale.value]) {
     store.commit("snackbar/showSnackbarError", {
       message: `Translation for "${newLocale.value}" already exists. Use the existing field to edit it.`,
     });
     return;
   }
 
-  categoryData.value.i18n[newLocale.value] = newTranslation.value;
+  categoryData.value.promo[newLocale.value] = newTranslation.value;
 
   newLocale.value = "";
   newTranslation.value = "";
 };
 
 const removeTranslation = (locale) => {
-  delete categoryData.value.i18n[locale];
-  categoryData.value.i18n = { ...categoryData.value.i18n };
+  delete categoryData.value.promo[locale];
+  categoryData.value.promo = { ...categoryData.value.promo };
 };
 
 const resetForm = () => {
@@ -289,12 +288,13 @@ const saveCategory = async () => {
 
   if (!props.isEdit) {
     const existingCategory = existingCategories.value.find(
-      (cat) => cat.name.toLowerCase() === categoryData.value.name.toLowerCase()
+      (cat) =>
+        cat.title.toLowerCase() === categoryData.value.title.toLowerCase()
     );
 
     if (existingCategory) {
       store.commit("snackbar/showSnackbarError", {
-        message: "Category with this name already exists",
+        message: "Category with this title already exists",
       });
       return;
     }
@@ -304,31 +304,27 @@ const saveCategory = async () => {
 
   try {
     const newCategoryData = {
-      name: categoryData.value.name,
+      uuid: categoryData.value.uuid || "",
+      title: categoryData.value.title,
       sorter: categoryData.value.sorter || 0,
-      type: categoryData.value.type || "others",
-      i18n: { ...categoryData.value.i18n },
+      type: categoryData.value.type,
+      promo: { ...categoryData.value.promo },
+      showcases: [...categoryData.value.showcases],
+      public: true,
     };
 
-    let updatedCategories;
+    console.log(newCategoryData);
 
     if (props.isEdit) {
-      updatedCategories = existingCategories.value.map((cat) =>
-        cat.name === props.category.name ? newCategoryData : cat
+      await api.patch(
+        `showcase_categories/${categoryData.value.uuid}`,
+        newCategoryData
       );
     } else {
-      updatedCategories = [...existingCategories.value, newCategoryData];
+      await api.post("showcase_categories", newCategoryData);
     }
 
-    const settingsData = {
-      key: SHOWCASE_CATEGORIES_SETTINGS_KEY,
-      description: "Showcase categories",
-      value: JSON.stringify(updatedCategories),
-    };
-
-    await api.settings.addKey(SHOWCASE_CATEGORIES_SETTINGS_KEY, settingsData);
-
-    await store.dispatch("settings/fetch");
+    store.dispatch("showcases/fetch");
 
     store.commit("snackbar/showSnackbarSuccess", {
       message: props.isEdit
@@ -356,19 +352,7 @@ const deleteCategory = async () => {
   isDeleteLoading.value = true;
 
   try {
-    const updatedCategories = existingCategories.value.filter(
-      (cat) => cat.name !== props.category.name
-    );
-
-    const settingsData = {
-      key: SHOWCASE_CATEGORIES_SETTINGS_KEY,
-      description: "Showcase categories",
-      value: JSON.stringify(updatedCategories),
-    };
-
-    await api.settings.addKey(SHOWCASE_CATEGORIES_SETTINGS_KEY, settingsData);
-
-    await store.dispatch("settings/fetch");
+    await api.delete(`showcase_categories/${props.category.uuid}`);
 
     store.commit("snackbar/showSnackbarSuccess", {
       message: "Category deleted successfully!",
@@ -394,7 +378,9 @@ watch(
 
 onMounted(async () => {
   try {
-    await store.dispatch("settings/fetch");
+    if (existingCategories.value.length === 0) {
+      await store.dispatch("showcases/fetch");
+    }
     initializeForm();
   } catch (error) {
     store.commit("snackbar/showSnackbarError", {
