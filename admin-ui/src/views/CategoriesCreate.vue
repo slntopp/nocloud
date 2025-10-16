@@ -20,6 +20,7 @@
             label="Category Type"
             :items="categoryTypes"
             clearable
+            multiple
             prepend-icon="mdi-shape"
           />
         </v-col>
@@ -175,7 +176,7 @@ const router = useRouter();
 
 const categoryData = ref({
   title: "",
-  type: "",
+  type: [],
   sorter: 0,
   promo: {},
   showcases: [],
