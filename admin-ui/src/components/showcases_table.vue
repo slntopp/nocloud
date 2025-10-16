@@ -23,6 +23,21 @@
       </router-link>
     </template>
 
+    <template v-slot:[`item.categories`]="{ item }">
+      <router-link
+        v-for="(category,index) in item.categories"
+        :key="category?.uuid"
+        :to="{
+          name: 'CategoriesPage',
+          params: { uuid: category?.uuid },
+        }"
+        :style="index !== 0 ? 'margin-left: 10px' : ''"
+      >
+        {{ getShortName(category?.title, 45) }}
+      </router-link>
+      <span v-if="item.categories?.length == 0"> No category </span>
+    </template>
+
     <template v-slot:[`item.sorter`]="{ item }">
       <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
       <v-text-field
@@ -73,6 +88,7 @@ const updatedShowcase = ref("");
 const headers = ref([
   { text: "UUID", value: "uuid" },
   { text: "Title", value: "title" },
+  { text: "Categories", value: "categories" },
   { text: "Preview", value: "preview" },
   { text: "Enabled", value: "public" },
   { text: "Sorter", value: "sorter" },
