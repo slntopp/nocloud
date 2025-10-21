@@ -543,11 +543,15 @@ export default {
                   `option-windows-${plan.planCode.replace("vps-", "")}`
               );
 
-              const { price: priceObject } = product.prices.find(
+              if (!product || !product?.prices) return;
+
+              const data = product.prices.find(
                 (price) =>
                   price.duration === duration &&
                   ["upfront12", "default"].includes(price.pricingMode)
               );
+              if (!data) return;
+              const { price: priceObject } = data;
               tariff = product.planCode;
               const newPrice = this.convertPrice(priceObject.value);
               price = newPrice;
@@ -559,7 +563,7 @@ export default {
                 (os) =>
                   os.id === key &&
                   os.duration === duration &&
-                  (!os.tariff || os.tariff === product.planCode)
+                  (!os.tariff || os.tariff === product?.planCode)
               )
             ) {
               return;
