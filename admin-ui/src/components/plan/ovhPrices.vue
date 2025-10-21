@@ -77,6 +77,7 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
+import { replaceNullWithUndefined } from "../../functions";
 
 export default {
   name: "plan-prices",
@@ -105,12 +106,12 @@ export default {
   methods: {
     async tryToSend(action) {
       if (!this.testConfig()) return;
-      const newPlan = {
+      const newPlan = replaceNullWithUndefined({
         ...this.template,
         fee: this.fee,
         resources: [],
         products: {},
-      };
+      });
       const isEdit = action === "edit";
       if (isEdit) {
         this.isEditLoading = true;
