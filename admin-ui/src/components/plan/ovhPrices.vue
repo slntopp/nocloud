@@ -106,27 +106,28 @@ export default {
   methods: {
     async tryToSend(action) {
       if (!this.testConfig()) return;
-      const newPlan = replaceNullWithUndefined({
+      const newPlan = {
         ...this.template,
         fee: this.fee,
         resources: [],
         products: {},
-      });
+      };
+
       const isEdit = action === "edit";
       if (isEdit) {
         this.isEditLoading = true;
       } else {
         this.isCreateLoading = true;
       }
-
       try {
         const result = await this.$refs.table.changePlan(newPlan);
 
         if (result === "error") return;
         if (!isEdit) delete newPlan.uuid;
+
         const request = isEdit
-          ? api.plans.update(newPlan.uuid, newPlan)
-          : api.plans.create(newPlan);
+          ? api.plans.update(newPlan.uuid, replaceNullWithUndefined(newPlan))
+          : api.plans.create(replaceNullWithUndefined(newPlan));
 
         await request;
 
