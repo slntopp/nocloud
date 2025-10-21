@@ -118,7 +118,6 @@ export default {
       } else {
         this.isCreateLoading = true;
       }
-
       try {
         const result = await this.$refs.table.changePlan(newPlan);
 
