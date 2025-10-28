@@ -189,6 +189,18 @@ func main() {
 		log.Fatal("Failed to register ShowcaseCategoriesService gateway", zap.Error(err))
 	}
 
+	// AccountGroupsService
+	log.Info("Registering AccountGroupsService Gateway")
+	err = registrypb.RegisterAccountGroupsServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register AccountGroupsService gateway", zap.Error(err))
+	}
+
 	// ServicesService
 	log.Info("Registering ServicesService Gateway")
 	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(

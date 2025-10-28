@@ -16,9 +16,10 @@ limitations under the License.
 package schema
 
 const (
-	ACCOUNTS_COL = "Accounts"
-	ACC2NS       = ACCOUNTS_COL + "2" + NAMESPACES_COL
-	ACC2CRED     = ACCOUNTS_COL + "2" + CREDENTIALS_COL
+	ACCOUNTS_COL       = "Accounts"
+	ACCOUNT_GROUPS_COL = "AccountGroups"
+	ACC2NS             = ACCOUNTS_COL + "2" + NAMESPACES_COL
+	ACC2CRED           = ACCOUNTS_COL + "2" + CREDENTIALS_COL
 
 	ROOT_ACCOUNT_KEY = "0"
 )

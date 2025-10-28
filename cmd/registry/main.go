@@ -19,6 +19,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"github.com/slntopp/nocloud/pkg/account_groups"
 	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
 	"github.com/slntopp/nocloud/pkg/nocloud/ssh"
 	"github.com/spf13/viper"
@@ -175,7 +176,9 @@ func main() {
 	pb.RegisterAccountsServiceServer(s, accounts_server)
 
 	namespaces_server := accounting.NewNamespacesServer(log, db)
+	groups_server := account_groups.NewAccountGroupsServer(log, db)
 	pb.RegisterNamespacesServiceServer(s, namespaces_server)
+	pb.RegisterAccountGroupsServiceServer(s, groups_server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
