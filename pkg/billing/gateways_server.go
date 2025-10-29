@@ -114,7 +114,7 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 		rawHtml := gw.CheckoutPanelHtml
 		rawHtml = strings.ReplaceAll(rawHtml, "$ACTION_URL", os.Getenv("BASE_HOST")+"/billing/payments/"+gw.Key+"/"+invoice.Uuid+"/action")
 		token, _ := auth.MakeToken(invoice.Account)
-		rawHtml = strings.ReplaceAll(rawHtml, "$ACCESS_TOKEN", token)
+		rawHtml = strings.ReplaceAll(rawHtml, "$ACCESS_TOKEN", url.QueryEscape(token))
 		gw.CheckoutPanelHtml = rawHtml
 	}
 
