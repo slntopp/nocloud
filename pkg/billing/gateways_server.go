@@ -5,18 +5,24 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/gorilla/mux"
+	"github.com/jung-kurt/gofpdf"
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"html"
+	"io"
 	"math"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -103,6 +109,14 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 		http.Error(writer, "Failed to list payment gateways: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Prepare Gateways HTMLs
+	for _, gw := range gateways {
+		rawHtml := gw.CheckoutPanelHtml
+		rawHtml = strings.ReplaceAll(rawHtml, "$ACTION_URL", os.Getenv("BASE_HOST")+"/billing/payments/"+gw.Key+"/"+invoice.Uuid+"/action")
+		token, _ := auth.MakeToken(invoice.Account)
+		rawHtml = strings.ReplaceAll(rawHtml, "$ACCESS_TOKEN", token)
+		gw.CheckoutPanelHtml = rawHtml
+	}
 
 	var (
 		Supplier    string
@@ -155,18 +169,374 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 		http.Error(writer, "Access denied to perform action on this invoice", http.StatusForbidden)
 		return
 	}
+	account, err := s.accountsCtrl.Get(request.Context(), invoice.Account)
+	if err != nil {
+		http.Error(writer, "Failed to get account: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	group, err := s.accountsCtrl.GetAccountClientGroupAlwaysFound(request.Context(), invoice.Account)
+	if err != nil {
+		http.Error(writer, "Failed to get account group: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	invConf := MakeInvoicesConf(s.log, &s.settingsClient)
+
+	var (
+		Supplier    string
+		Buyer       = "Email: "
+		LogoURL     string
+		InvoiceBody = invoice.Invoice
+	)
+
+	if group.HasOwnInvoiceBase && group.InvoiceParametersCustom != nil {
+		Supplier = group.InvoiceParametersCustom.InvoiceFrom
+		LogoURL = group.InvoiceParametersCustom.LogoUrl
+	} else {
+		Supplier = invConf.InvoiceFrom
+		LogoURL = invConf.LogoURL
+	}
+
+	if account.Data != nil {
+		dataMap := account.Data.AsMap()
+		if email, ok := dataMap["email"].(string); ok {
+			Buyer += email
+		} else {
+			Buyer += "N/A"
+		}
+	}
 
 	switch PaymentGatewayType(pgKey) {
 	case PaymentGatewayFacture:
 		s.log.Debug("Handling Facture Payment Action", zap.String("invoice_uuid", invoiceUuid))
-		// Generate PDF facture and send back to client to download it
+		gw, err := s.ctrl.Get(request.Context(), string(PaymentGatewayFacture))
+		if err != nil {
+			http.Error(writer, "Failed to get payment gateway: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		pdfBytes, err := generateInvoicePDF(InvoiceBody, gw.CheckoutExtraText, Supplier, Buyer, LogoURL)
+		if err != nil {
+			http.Error(writer, "Failed to generate invoice PDF: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writer.Header().Set("Content-Type", "application/pdf")
+		writer.Header().Set("Content-Disposition", `attachment; filename="invoice-`+InvoiceBody.GetNumber()+`.pdf"`)
+		_, _ = writer.Write(pdfBytes)
+		return
 
 	default:
 		http.Error(writer, "Unsupported Payment Gateway Key", http.StatusBadRequest)
 		return
 	}
+}
 
-	writer.WriteHeader(http.StatusOK)
+func generateInvoicePDF(invoiceBody *pb.Invoice, gwExtraText string, supplier string, buyer string, logoURL string) ([]byte, error) {
+	if invoiceBody == nil {
+		return nil, fmt.Errorf("invoiceBody is nil")
+	}
+
+	tsToTime := func(ts int64) time.Time {
+		if ts <= 0 {
+			return time.Time{}
+		}
+		if ts > 1_000_000_000_000 {
+			return time.UnixMilli(ts)
+		}
+		return time.Unix(ts, 0)
+	}
+	formatDate := func(t time.Time) string {
+		if t.IsZero() {
+			return ""
+		}
+		return t.Format("02/01/2006")
+	}
+	intOrDefault := func(v, d int32) int32 {
+		if v <= 0 {
+			return d
+		}
+		return v
+	}
+	formatMoney := func(cur *pb.Currency, amount float64) string {
+		precision := int(intOrDefault(cur.GetPrecision(), 2))
+		pow := math.Pow(10, float64(precision))
+		amount = math.Round(amount*pow) / pow
+
+		num := fmt.Sprintf("%.*f", precision, amount)
+
+		format := "{amount}"
+		if cur != nil && strings.TrimSpace(cur.GetFormat()) != "" {
+			format = cur.GetFormat()
+		} else if cur != nil && strings.TrimSpace(cur.GetCode()) != "" {
+			format = "{amount} " + cur.GetCode()
+		}
+		return strings.ReplaceAll(format, "{amount}", num)
+	}
+	statusText := func(st pb.BillingStatus) string {
+		switch st {
+		case pb.BillingStatus_PAID:
+			return "PAID"
+		case pb.BillingStatus_UNPAID:
+			return "UNPAID"
+		case pb.BillingStatus_CANCELED:
+			return "CANCELED"
+		case pb.BillingStatus_TERMINATED:
+			return "TERMINATED"
+		case pb.BillingStatus_DRAFT:
+			return "DRAFT"
+		case pb.BillingStatus_RETURNED:
+			return "RETURNED"
+		default:
+			return "UNKNOWN"
+		}
+	}
+	loadLogo := func(pdf *gofpdf.Fpdf, loc string) (name string, w float64, err error) {
+		if strings.TrimSpace(loc) == "" {
+			return "", 0, nil
+		}
+		u, _ := url.Parse(loc)
+		if u != nil && (u.Scheme == "http" || u.Scheme == "https") {
+			resp, err := http.Get(loc)
+			if err != nil {
+				return "", 0, nil
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode >= 300 {
+				return "", 0, nil
+			}
+			b, _ := io.ReadAll(resp.Body)
+			if len(b) == 0 {
+				return "", 0, nil
+			}
+			name = "logo" + filepath.Ext(u.Path)
+			opt := gofpdf.ImageOptions{ImageType: strings.TrimPrefix(strings.ToUpper(filepath.Ext(u.Path)), "."), ReadDpi: true}
+			pdf.RegisterImageOptionsReader(name, opt, bytes.NewReader(b))
+			return name, 40, nil
+		}
+		return loc, 40, nil
+	}
+
+	var (
+		subtotal    float64
+		totalTax    float64
+		grandTotal  float64
+		taxRate     = 0.0
+		taxIncluded = false
+	)
+	if to := invoiceBody.GetTaxOptions(); to != nil {
+		taxRate = to.GetTaxRate()
+		taxIncluded = to.GetTaxIncluded()
+	}
+
+	type row struct {
+		idx, item, qty, unit, unitPrice, vat, amount, total string
+	}
+	var rows []row
+
+	for i, it := range invoiceBody.GetItems() {
+		qty := float64(it.GetAmount())
+		unitPrice := it.GetPrice()
+		line := unitPrice * qty
+
+		applyTax := it.GetApplyTax() && taxRate > 0
+		var taxAmt, lineSubtotal, lineTotal float64
+		var vatLabel string
+
+		if applyTax {
+			if taxIncluded {
+				base := line / (1.0 + taxRate)
+				taxAmt = line - base
+				lineSubtotal = base
+				lineTotal = line
+			} else {
+				taxAmt = line * taxRate
+				lineSubtotal = line
+				lineTotal = line + taxAmt
+			}
+			vatLabel = fmt.Sprintf("%.0f%%", taxRate*100)
+		} else {
+			taxAmt = 0
+			lineSubtotal = line
+			lineTotal = line
+			vatLabel = "NP"
+		}
+
+		subtotal += lineSubtotal
+		totalTax += taxAmt
+		grandTotal += lineTotal
+
+		rows = append(rows, row{
+			idx:       fmt.Sprintf("%d", i+1),
+			item:      it.GetDescription(),
+			qty:       fmt.Sprintf("%d", it.GetAmount()),
+			unit:      it.GetUnit(),
+			unitPrice: formatMoney(invoiceBody.GetCurrency(), unitPrice),
+			vat:       vatLabel,
+			amount:    formatMoney(invoiceBody.GetCurrency(), lineSubtotal),
+			total:     formatMoney(invoiceBody.GetCurrency(), lineTotal),
+		})
+	}
+
+	if invoiceBody.GetSubtotal() > 0 {
+		subtotal = invoiceBody.GetSubtotal()
+	}
+	if invoiceBody.GetTotal() > 0 {
+		grandTotal = invoiceBody.GetTotal()
+		if subtotal > 0 && grandTotal >= subtotal {
+			totalTax = grandTotal - subtotal
+		}
+	}
+	amountDue := grandTotal
+	if invoiceBody.GetStatus() == pb.BillingStatus_PAID {
+		amountDue = 0
+	}
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.SetMargins(15, 15, 15)
+	pdf.AddPage()
+
+	if name, w, _ := loadLogo(pdf, logoURL); name != "" {
+		pdf.ImageOptions(name, 15, 15, w, 0, false, gofpdf.ImageOptions{ReadDpi: true}, 0, "")
+	}
+
+	pdf.SetFont("Helvetica", "B", 18)
+	pdf.SetXY(15, 18)
+	pdf.CellFormat(0, 10, fmt.Sprintf("Invoice # %s", nonEmpty(invoiceBody.GetNumber(), invoiceBody.GetUuid())), "", 1, "", false, 0, "")
+
+	pdf.SetFont("Helvetica", "", 10)
+	// Status + dates
+	pdf.SetTextColor(80, 80, 80)
+	pdf.CellFormat(35, 5, "Status:", "", 0, "", false, 0, "")
+	pdf.SetTextColor(0, 0, 0)
+	pdf.CellFormat(40, 5, statusText(invoiceBody.GetStatus()), "", 0, "", false, 0, "")
+	pdf.Ln(6)
+
+	pdf.SetTextColor(80, 80, 80)
+	pdf.CellFormat(35, 5, "Issue date:", "", 0, "", false, 0, "")
+	pdf.SetTextColor(0, 0, 0)
+	pdf.CellFormat(40, 5, formatDate(tsToTime(invoiceBody.GetCreated())), "", 0, "", false, 0, "")
+	if t := tsToTime(invoiceBody.GetPayment()); !t.IsZero() {
+		pdf.SetTextColor(80, 80, 80)
+		pdf.CellFormat(35, 5, "Payment date:", "", 0, "", false, 0, "")
+		pdf.SetTextColor(0, 0, 0)
+		pdf.CellFormat(40, 5, formatDate(t), "", 0, "", false, 0, "")
+	}
+	pdf.Ln(10)
+
+	pdf.SetFillColor(248, 250, 252)
+	pdf.SetDrawColor(229, 231, 235)
+	pdf.SetLineWidth(0.2)
+
+	startY := pdf.GetY()
+	wFull := 180.0
+	wCol := (wFull - 5) / 2
+
+	pdf.SetFont("Helvetica", "B", 12)
+	pdf.CellFormat(wCol, 6, "Supplier:", "1", 0, "", true, 0, "")
+	pdf.CellFormat(5, 6, "", "", 0, "", false, 0, "")
+	pdf.CellFormat(wCol, 6, "Buyer:", "1", 1, "", true, 0, "")
+
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.MultiCell(wCol, 5, unescapeBR(supplier), "1", "L", false)
+	x := 15 + wCol + 5
+	pdf.SetXY(x, startY+6)
+	pdf.MultiCell(wCol, 5, unescapeBR(buyer), "1", "L", false)
+	pdf.Ln(2)
+
+	pdf.SetFont("Helvetica", "B", 11)
+	pdf.CellFormat(wCol, 6, "Due date", "1", 0, "", true, 0, "")
+	pdf.CellFormat(5, 6, "", "", 0, "", false, 0, "")
+	pdf.CellFormat(wCol, 6, "Account:", "1", 1, "", true, 0, "")
+	pdf.SetFont("Helvetica", "", 10)
+	pdf.CellFormat(wCol, 8, formatDate(tsToTime(invoiceBody.GetDeadline())), "1", 0, "", false, 0, "")
+	pdf.CellFormat(5, 8, "", "", 0, "", false, 0, "")
+	pdf.MultiCell(wCol, 8, strings.TrimSpace(gwExtraText), "1", "L", false)
+	pdf.Ln(2)
+
+	colW := []float64{8, 76, 12, 14, 22, 12, 18, 18}
+	align := []string{"C", "L", "C", "C", "R", "C", "R", "R"}
+
+	pdf.SetFont("Helvetica", "B", 10)
+	headers := []string{"#", "Item", "Qty", "Unit", "Unit price", "VAT", "Amount", "Total"}
+	for i, h := range headers {
+		pdf.CellFormat(colW[i], 7, h, "1", 0, align[i], true, 0, "")
+	}
+	pdf.Ln(-1)
+
+	pdf.SetFont("Helvetica", "", 10)
+	for _, r := range rows {
+		data := []string{r.idx, r.item, r.qty, r.unit, r.unitPrice, r.vat, r.amount, r.total}
+		lineCounts := make([]int, len(data))
+		hMax := 0.0
+		for i, txt := range data {
+			lines := pdf.SplitLines([]byte(txt), colW[i]-1)
+			lineCounts[i] = len(lines)
+			if float64(lineCounts[i])*6 > hMax {
+				hMax = float64(lineCounts[i]) * 6
+			}
+		}
+		y := pdf.GetY()
+		x := 15.0
+		for i, txt := range data {
+			pdf.SetXY(x, y)
+			pdf.MultiCell(colW[i], 6, txt, "1", align[i], false)
+			x += colW[i]
+		}
+		if pdf.GetY() < y+hMax {
+			pdf.SetY(y + hMax)
+		}
+	}
+
+	pdf.Ln(2)
+	rightBoxW := 90.0
+	pdf.SetX(15 + 180 - rightBoxW)
+	pdf.SetFont("Helvetica", "", 10)
+	type totalRow struct{ label, val string }
+	tRows := []totalRow{
+		{"Subtotal", formatMoney(invoiceBody.GetCurrency(), subtotal)},
+		{"Tax", formatMoney(invoiceBody.GetCurrency(), totalTax)},
+		{"Grand Total", formatMoney(invoiceBody.GetCurrency(), grandTotal)},
+	}
+	for i, tr := range tRows {
+		style := ""
+		if i == len(tRows)-1 {
+			style = "B"
+		}
+		pdf.SetFont("Helvetica", style, 10)
+		pdf.CellFormat(rightBoxW*0.55, 7, tr.label, "1", 0, "L", false, 0, "")
+		pdf.CellFormat(rightBoxW*0.45, 7, tr.val, "1", 1, "R", false, 0, "")
+	}
+
+	pdf.Ln(2)
+	pdf.SetFont("Helvetica", "B", 12)
+	pdf.CellFormat(0, 7, "Amount Due: "+formatMoney(invoiceBody.GetCurrency(), amountDue), "", 1, "L", false, 0, "")
+	pdf.SetFont("Helvetica", "", 11)
+	pdf.CellFormat(0, 6, "To pay: "+formatMoney(invoiceBody.GetCurrency(), grandTotal), "", 1, "L", false, 0, "")
+
+	pdf.Ln(4)
+	pdf.SetFont("Helvetica", "", 9)
+	pdf.SetTextColor(120, 120, 120)
+	pdf.CellFormat(0, 5, "Invoice ID: "+nonEmpty(invoiceBody.GetUuid(), invoiceBody.GetNumber()), "", 1, "L", false, 0, "")
+
+	var out bytes.Buffer
+	if err := pdf.Output(&out); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
+
+func nonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func unescapeBR(s string) string {
+	s = strings.ReplaceAll(s, "<br>", "\n")
+	s = strings.ReplaceAll(s, "<br/>", "\n")
+	s = strings.ReplaceAll(s, "<br />", "\n")
+	return html.UnescapeString(s)
 }
 
 type pg struct {
