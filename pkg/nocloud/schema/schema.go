@@ -60,13 +60,14 @@ const (
 )
 
 const (
-	BILLING_PLANS_COL = "BillingPlans"
-	ADDONS_COL        = "Addons"
-	DESCRIPTIONS_COL  = "Descriptions"
-	TRANSACTIONS_COL  = "Transactions"
-	INVOICES_COL      = "Invoices"
-	RECORDS_COL       = "Records"
-	PROMOCODES_COL    = "Promocodes"
+	BILLING_PLANS_COL    = "BillingPlans"
+	ADDONS_COL           = "Addons"
+	DESCRIPTIONS_COL     = "Descriptions"
+	TRANSACTIONS_COL     = "Transactions"
+	INVOICES_COL         = "Invoices"
+	RECORDS_COL          = "Records"
+	PROMOCODES_COL       = "Promocodes"
+	PAYMENT_GATEWAYS_COL = "PaymentGateways"
 )
 
 type NoCloudGraphSchema struct {
