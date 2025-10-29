@@ -29,6 +29,7 @@ import (
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
+	nocloud_auth "github.com/slntopp/nocloud/pkg/nocloud/auth"
 	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
@@ -155,6 +156,8 @@ func main() {
 	if res := rdb.Ping(context.Background()); res.Err() != nil {
 		log.Fatal("Failed to connect to Redis", zap.Error(res.Err()))
 	}
+
+	nocloud_auth.SetContext(log, rdb, SIGNING_KEY)
 
 	conn, err := amqp.Dial(RabbitMQConn)
 	if err != nil {
