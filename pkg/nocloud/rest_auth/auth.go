@@ -33,20 +33,28 @@ func (i *interceptor) JwtMiddleWare(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		i.log.Debug("Invoked")
 
+		var token string
 		header := r.Header.Get("Authorization")
-
-		segments := strings.Split(header, " ")
-		if len(segments) != 2 {
-			segments = []string{"", ""}
-		}
-
-		if strings.ToLower(segments[0]) != "bearer" {
+		if header != "" {
+			segments := strings.Split(header, " ")
+			if len(segments) != 2 {
+				segments = []string{"", ""}
+			}
+			if strings.ToLower(segments[0]) != "bearer" {
+				w.WriteHeader(http.StatusUnauthorized)
+				_, _ = w.Write([]byte("wrong auth type"))
+				return
+			}
+			token = segments[1]
+		} else if queryToken, ok := r.URL.Query()["access_token"]; ok && len(queryToken) > 0 {
+			token = queryToken[0]
+		} else {
 			w.WriteHeader(http.StatusUnauthorized)
-			_, _ = w.Write([]byte("wrong auth type"))
+			_, _ = w.Write([]byte("no auth token provided"))
 			return
 		}
 
-		ctx, err := i.jwtAuthMiddleware(r.Context(), segments[1])
+		ctx, err := i.jwtAuthMiddleware(r.Context(), token)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			_, _ = w.Write([]byte(err.Error()))
