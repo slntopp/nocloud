@@ -423,6 +423,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 			<div>
 				<select id="paymentMethod"></select>
 			</div>
+            <div id="gatewayPanel"></div>
 		</div>
 	</div>
 
@@ -470,7 +471,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	</div>
 
 	<div class="totals">
-		<div id="gatewayPanel"></div>
 		<div class="summary">
 			<div class="row"><span>Subtotal</span><span>%s</span></div>
 			<div class="row"><span>Tax</span><span>%s</span></div>
