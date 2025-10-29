@@ -66,7 +66,7 @@ func (s *PaymentGatewayServer) RegisterRoutes(router *mux.Router) {
 	interceptor := rest_auth.NewInterceptor(s.log, s.rdb, s.sk)
 	subRouter := router.PathPrefix(gatewaysBase).Subrouter()
 	subRouter.Handle("/{key}/{invoice_uuid}/action", interceptor.JwtMiddleWare(http.HandlerFunc(s.HandlePaymentAction))).Methods("POST")
-	subRouter.Handle("/{invoice_uuid}/view", interceptor.JwtMiddleWare(http.HandlerFunc(s.HandlePaymentAction))).Methods("GET")
+	subRouter.Handle("/{invoice_uuid}/view", interceptor.JwtMiddleWare(http.HandlerFunc(s.HandleViewInvoice))).Methods("GET")
 }
 
 func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, request *http.Request) {
