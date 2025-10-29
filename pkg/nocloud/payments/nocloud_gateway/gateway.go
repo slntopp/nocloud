@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 )
 
 type NcGateway struct {
@@ -29,5 +30,6 @@ func (g *NcGateway) PaymentURI(_ context.Context, inv *pb.Invoice) (string, erro
 	if inv == nil {
 		return "", fmt.Errorf("invoice is nil")
 	}
-	return g.baseHost + "/billing/payments" + fmt.Sprintf("/%s/view", inv.Uuid), nil
+	token, _ := auth.MakeToken(inv.Account)
+	return g.baseHost + "/billing/payments" + fmt.Sprintf("/%s/view?access_token=%s", inv.Uuid, token), nil
 }
