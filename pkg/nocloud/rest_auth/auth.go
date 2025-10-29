@@ -54,6 +54,7 @@ func (i *interceptor) JwtMiddleWare(handler http.Handler) http.Handler {
 			return
 		}
 
+		i.log.Info("Authenticating request", zap.String("token", token))
 		ctx, err := i.jwtAuthMiddleware(r.Context(), token)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
