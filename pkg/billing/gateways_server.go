@@ -89,15 +89,21 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 		http.Error(writer, "Invoice UUID is required", http.StatusBadRequest)
 		return
 	}
+	invoice, err := s.invoicesCtrl.Get(request.Context(), invoiceUuid)
+	if err != nil {
+		http.Error(writer, "Failed to get invoice: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	requester, _ := request.Context().Value(nocloud.NoCloudAccount).(string)
+	if !s.caCtrl.HasAccess(request.Context(), requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) &&
+		requester != invoice.Account {
+		http.Error(writer, "Access denied to perform action on this invoice", http.StatusForbidden)
+		return
+	}
 
 	switch PaymentGatewayType(pgKey) {
 	case PaymentGatewayFacture:
 		s.log.Debug("Handling Facture Payment Action", zap.String("invoice_uuid", invoiceUuid))
-		_, err := s.invoicesCtrl.Get(request.Context(), invoiceUuid)
-		if err != nil {
-			http.Error(writer, "Failed to get invoice: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 		// Generate PDF facture and send back to client to download it
 
 	default:
