@@ -424,10 +424,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 				<select id="paymentMethod"></select>
 			</div>
 		</div>
-
-		<div class="h-actions">
-			<button class="primary" onclick="window.print()">PDF</button>
-		</div>
 	</div>
 
 	<div class="grid-2">
