@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -55,6 +56,7 @@ func (i *interceptor) JwtMiddleWare(handler http.Handler) http.Handler {
 		}
 
 		i.log.Info("Authenticating request", zap.String("token", token))
+		token, _ = url.QueryUnescape(token)
 		ctx, err := i.jwtAuthMiddleware(r.Context(), token)
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
