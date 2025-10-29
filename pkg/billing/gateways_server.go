@@ -444,7 +444,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 			<div>%s</div>
 		</div>
 		<div class="block">
-			<h4>Account:</h4>
 			<div id="gatewayExtra" class="small">—</div>
 		</div>
 	</div>
