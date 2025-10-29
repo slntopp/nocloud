@@ -1,16 +1,24 @@
 package billing
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/gorilla/mux"
 	accesspb "github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"html"
+	"math"
 	"net/http"
+	"strings"
+	"time"
 )
 
 type PaymentGatewayType string
@@ -27,24 +35,30 @@ type PaymentGatewayServer struct {
 	ctrl         graph.PaymentGatewaysController
 	invoicesCtrl graph.InvoicesController
 	caCtrl       graph.CommonActionsController
+	accountsCtrl graph.AccountsController
 
 	rdb redisdb.Client
 	sk  []byte
+
+	settingsClient settingspb.SettingsServiceClient
 }
 
-func NewPaymentGatewayServer(_log *zap.Logger, db driver.Database, rdb redisdb.Client, sighingKey []byte) *PaymentGatewayServer {
+func NewPaymentGatewayServer(_log *zap.Logger, db driver.Database, rdb redisdb.Client, sighingKey []byte, sc settingspb.SettingsServiceClient) *PaymentGatewayServer {
 	log := _log.Named("PaymentGatewayServer")
 	ctrl := graph.NewPaymentGatewaysController(log, db)
 	invoicesCtrl := graph.NewInvoicesController(log, db)
 	caCtrl := graph.NewCommonActionsController(log, db)
+	accountsCtrl := graph.NewAccountsController(log, db)
 	return &PaymentGatewayServer{
-		log:          log,
-		db:           db,
-		ctrl:         ctrl,
-		invoicesCtrl: invoicesCtrl,
-		caCtrl:       caCtrl,
-		rdb:          rdb,
-		sk:           sighingKey,
+		log:            log,
+		db:             db,
+		ctrl:           ctrl,
+		invoicesCtrl:   invoicesCtrl,
+		caCtrl:         caCtrl,
+		rdb:            rdb,
+		sk:             sighingKey,
+		accountsCtrl:   accountsCtrl,
+		settingsClient: sc,
 	}
 }
 
@@ -72,10 +86,51 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 		http.Error(writer, "Access denied to view this invoice", http.StatusForbidden)
 		return
 	}
+	account, err := s.accountsCtrl.Get(request.Context(), invoice.Account)
+	if err != nil {
+		http.Error(writer, "Failed to get account: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	group, err := s.accountsCtrl.GetAccountClientGroupAlwaysFound(request.Context(), invoice.Account)
+	if err != nil {
+		http.Error(writer, "Failed to get account group: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	invConf := MakeInvoicesConf(s.log, &s.settingsClient)
 
-	// Generate and send invoice html
+	gateways, err := s.ctrl.List(request.Context(), true)
+	if err != nil {
+		http.Error(writer, "Failed to list payment gateways: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		Supplier    string
+		Buyer       = "Email: "
+		LogoURL     string
+		InvoiceBody = invoice.Invoice
+		Gateways    = gateways
+	)
+
+	if group.HasOwnInvoiceBase && group.InvoiceParametersCustom != nil {
+		Supplier = group.InvoiceParametersCustom.InvoiceFrom
+		LogoURL = group.InvoiceParametersCustom.LogoUrl
+	} else {
+		Supplier = invConf.InvoiceFrom
+		LogoURL = invConf.LogoURL
+	}
+
+	if account.Data != nil {
+		dataMap := account.Data.AsMap()
+		if email, ok := dataMap["email"].(string); ok {
+			Buyer += email
+		} else {
+			Buyer += "N/A"
+		}
+	}
 
 	writer.WriteHeader(http.StatusOK)
+	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL)))
 }
 
 func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, request *http.Request) {
@@ -112,4 +167,415 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 	}
 
 	writer.WriteHeader(http.StatusOK)
+}
+
+type pg struct {
+	Key   string
+	Name  string
+	Extra string
+	HTML  string
+}
+
+func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier string, buyer string, logoURL string) string {
+	if invoiceBody == nil {
+		return "<!doctype html><html><head><meta charset='utf-8'><title>Invoice</title></head><body><p>No invoice data</p></body></html>"
+	}
+
+	tsToTime := func(ts int64) time.Time {
+		if ts <= 0 {
+			return time.Time{}
+		}
+		if ts > 1_000_000_000_000 {
+			return time.UnixMilli(ts)
+		}
+		return time.Unix(ts, 0)
+	}
+	formatDate := func(t time.Time) string {
+		if t.IsZero() {
+			return ""
+		}
+		return t.Format("02/01/2006")
+	}
+	intOrDefault := func(v, d int32) int32 {
+		if v <= 0 {
+			return d
+		}
+		return v
+	}
+	formatMoney := func(cur *pb.Currency, amount float64) string {
+		precision := int(intOrDefault(cur.GetPrecision(), 2))
+		pow := math.Pow(10, float64(precision))
+		amount = math.Round(amount*pow) / pow
+
+		num := fmt.Sprintf("%.*f", precision, amount)
+
+		format := "{amount}"
+		if cur != nil && strings.TrimSpace(cur.GetFormat()) != "" {
+			format = cur.GetFormat()
+		} else if cur != nil && strings.TrimSpace(cur.GetCode()) != "" {
+			format = "{amount} " + cur.GetCode()
+		}
+		return strings.ReplaceAll(format, "{amount}", num)
+	}
+	escapeWithBR := func(s string) string {
+		if s == "" {
+			return ""
+		}
+		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br>")
+	}
+	statusText := func(st pb.BillingStatus) string {
+		switch st {
+		case pb.BillingStatus_PAID:
+			return "PAID"
+		case pb.BillingStatus_UNPAID:
+			return "UNPAID"
+		case pb.BillingStatus_CANCELED:
+			return "CANCELED"
+		case pb.BillingStatus_TERMINATED:
+			return "TERMINATED"
+		case pb.BillingStatus_DRAFT:
+			return "DRAFT"
+		case pb.BillingStatus_RETURNED:
+			return "RETURNED"
+		default:
+			return "UNKNOWN"
+		}
+	}
+
+	var (
+		rowsBuf     bytes.Buffer
+		subtotal    float64
+		totalTax    float64
+		grandTotal  float64
+		taxRate     = 0.0
+		taxIncluded = false
+	)
+	if to := invoiceBody.GetTaxOptions(); to != nil {
+		taxRate = to.GetTaxRate()
+		taxIncluded = to.GetTaxIncluded()
+	}
+
+	for i, it := range invoiceBody.GetItems() {
+		qty := float64(it.GetAmount())
+		unitPrice := it.GetPrice()
+		line := unitPrice * qty
+
+		applyTax := it.GetApplyTax() && taxRate > 0
+		var taxAmt, lineSubtotal, lineTotal float64
+		var vatLabel string
+
+		if applyTax {
+			if taxIncluded {
+				base := line / (1.0 + taxRate)
+				taxAmt = line - base
+				lineSubtotal = base
+				lineTotal = line
+			} else {
+				taxAmt = line * taxRate
+				lineSubtotal = line
+				lineTotal = line + taxAmt
+			}
+			vatLabel = fmt.Sprintf("%.0f%%", taxRate*100)
+		} else {
+			taxAmt = 0
+			lineSubtotal = line
+			lineTotal = line
+			vatLabel = "NP"
+		}
+
+		subtotal += lineSubtotal
+		totalTax += taxAmt
+		grandTotal += lineTotal
+
+		rowsBuf.WriteString(fmt.Sprintf(
+			`<tr>
+				<td class="c">%d</td>
+				<td class="item"><div class="descr">%s</div></td>
+				<td class="c">%d</td>
+				<td class="c">%s</td>
+				<td class="r">%s</td>
+				<td class="r">%s</td>
+				<td class="c">%s</td>
+				<td class="r">%s</td>
+				<td class="r">%s</td>
+			</tr>`,
+			i+1,
+			html.EscapeString(it.GetDescription()),
+			it.GetAmount(),
+			html.EscapeString(it.GetUnit()),
+			formatMoney(invoiceBody.GetCurrency(), unitPrice),
+			formatMoney(invoiceBody.GetCurrency(), unitPrice),
+			vatLabel,
+			formatMoney(invoiceBody.GetCurrency(), lineSubtotal),
+			formatMoney(invoiceBody.GetCurrency(), lineTotal),
+		))
+	}
+
+	if invoiceBody.GetSubtotal() > 0 {
+		subtotal = invoiceBody.GetSubtotal()
+	}
+	if invoiceBody.GetTotal() > 0 {
+		grandTotal = invoiceBody.GetTotal()
+		if subtotal > 0 && grandTotal >= subtotal {
+			totalTax = grandTotal - subtotal
+		}
+	}
+
+	amountDue := grandTotal
+	if invoiceBody.GetStatus() == pb.BillingStatus_PAID {
+		amountDue = 0
+	}
+
+	var enabled []pg
+	for _, g := range paymentGateways {
+		if g.GetEnabled() {
+			enabled = append(enabled, pg{
+				Key:   g.GetKey(),
+				Name:  g.GetDisplayName(),
+				Extra: g.GetCheckoutExtraText(),
+				HTML:  g.GetCheckoutPanelHtml(),
+			})
+		}
+	}
+	if len(enabled) == 0 {
+		for _, g := range paymentGateways {
+			enabled = append(enabled, pg{
+				Key:   g.GetKey(),
+				Name:  g.GetDisplayName(),
+				Extra: g.GetCheckoutExtraText(),
+				HTML:  g.GetCheckoutPanelHtml(),
+			})
+		}
+	}
+
+	var b strings.Builder
+	_, _ = fmt.Fprintf(&b, `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Invoice %s</title>
+<style>
+:root{
+	--fg:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#ffffff;--accent:#2563eb;--soft:#f9fafb;
+	--chip:#f3f4f6;--ok:#16a34a;--warn:#ef4444;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--soft);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
+.wrapper{max-width:960px;margin:24px auto;padding:16px}
+.card{background:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.04);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;min-width:220px}
+.brand img{height:40px;object-fit:contain}
+.h-meta{display:grid;gap:4px 16px;grid-template-columns:auto auto;align-items:center}
+.h-meta .k{color:var(--muted)}
+.h-actions{display:flex;gap:8px;align-items:center}
+select,button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;font:inherit}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.badge{padding:2px 8px;border-radius:999px;background:var(--chip);font-size:12px}
+.badge.paid{background:#dcfce7;color:#065f46}
+.badge.unpaid{background:#fee2e2;color:#991b1b}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px 20px;border-bottom:1px solid var(--line)}
+@media (max-width:700px){.grid-2{grid-template-columns:1fr}}
+.box h4{margin:0 0 6px 0}
+.box .muted{color:var(--muted);font-size:12px}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 20px 12px;border-bottom:1px solid var(--line)}
+@media (max-width:700px){.info{grid-template-columns:1fr}}
+.info .block{padding:12px;background:#fff}
+.info .block h4{margin:0 0 8px 0}
+.table{width:100%%;border-collapse:collapse;margin:0;padding:0}
+.table-wrap{padding:12px 20px}
+th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top}
+th{background:#f8fafc;text-align:left;font-weight:600}
+td.c{text-align:center}
+td.r{text-align:right}
+td.item .descr{white-space:pre-wrap}
+tfoot td{font-weight:600}
+.totals{display:grid;grid-template-columns:2fr 1fr;gap:16px;padding:8px 20px;border-top:1px solid var(--line);align-items:end}
+@media (max-width:700px){.totals{grid-template-columns:1fr}}
+.summary{display:grid;gap:8px}
+.summary .row{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:8px 0}
+.pay{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px}
+.pay .due{font-weight:700}
+.small{font-size:12px;color:var(--muted)}
+footer{padding:10px 20px}
+hr.sep{border:0;border-top:1px solid var(--line);margin:0}
+.note{padding:12px 20px}
+</style>
+</head>
+<body>
+<div class="wrapper">
+<div class="card">
+
+	<div class="header">
+		<div class="brand">
+			<img src="%s" alt="Logo" />
+			<div>
+				<div style="font-weight:700;font-size:18px;">Invoice # %s</div>
+				<div class="small">Status: <span class="badge %s">%s</span></div>
+			</div>
+		</div>
+
+		<div class="h-meta">
+			<div class="k">Issue date:</div><div>%s</div>
+			%s
+			<div class="k">Payment method:</div>
+			<div>
+				<select id="paymentMethod"></select>
+			</div>
+		</div>
+
+		<div class="h-actions">
+			<button class="primary" onclick="window.print()">PDF</button>
+		</div>
+	</div>
+
+	<div class="grid-2">
+		<div class="box">
+			<h4>Supplier:</h4>
+			<div>%s</div>
+		</div>
+		<div class="box">
+			<h4>Buyer:</h4>
+			<div>%s</div>
+		</div>
+	</div>
+
+	<div class="info">
+		<div class="block">
+			<h4>Due date</h4>
+			<div>%s</div>
+		</div>
+		<div class="block">
+			<h4>Account:</h4>
+			<div id="gatewayExtra" class="small">—</div>
+		</div>
+	</div>
+
+	<div class="table-wrap">
+		<table class="table">
+			<thead>
+				<tr>
+					<th class="c" style="width:36px">#</th>
+					<th>Item</th>
+					<th class="c" style="width:64px">Qty</th>
+					<th class="c" style="width:64px">Unit</th>
+					<th class="r" style="width:120px">Price</th>
+					<th class="r" style="width:120px">Unit Price</th>
+					<th class="c" style="width:80px">VAT</th>
+					<th class="r" style="width:120px">Amount</th>
+					<th class="r" style="width:120px">Total</th>
+				</tr>
+			</thead>
+			<tbody>
+				%s
+			</tbody>
+		</table>
+	</div>
+
+	<div class="totals">
+		<div id="gatewayPanel"></div>
+		<div class="summary">
+			<div class="row"><span>Subtotal</span><span>%s</span></div>
+			<div class="row"><span>Tax</span><span>%s</span></div>
+			<div class="row"><span>Grand Total</span><span>%s</span></div>
+		</div>
+	</div>
+
+	<div class="pay">
+		<div class="due">Amount Due: %s</div>
+		<div>To pay: <strong>%s</strong></div>
+	</div>
+
+	<footer class="small">
+		Invoice ID: %s
+	</footer>
+</div>
+</div>
+
+<script>
+(function(){
+	const currency = %q;
+	const gateways = %s;
+
+	function byId(id){return document.getElementById(id)}
+	const sel = byId('paymentMethod');
+	gateways.forEach(function(g,i){
+		const opt = document.createElement('option');
+		opt.value = g.key; opt.textContent = g.name || g.key;
+		sel.appendChild(opt);
+	});
+	function renderGateway(key){
+		const g = gateways.find(x=>x.key===key) || gateways[0];
+		if(!g) return;
+		byId('gatewayExtra').innerHTML = g.extra ? g.extra : '—';
+		byId('gatewayPanel').innerHTML = g.html || '';
+	}
+	sel.addEventListener('change', function(){ renderGateway(this.value); });
+	// init
+	if(gateways.length>0){ sel.value = gateways[0].key; renderGateway(sel.value); }
+})();
+</script>
+
+</body>
+</html>`,
+		"Title TODO",
+		html.EscapeString(coalesce(logoURL, "")),
+		html.EscapeString(coalesce(invoiceBody.GetNumber(), invoiceBody.GetUuid())),
+		statusClass(invoiceBody.GetStatus()), statusText(invoiceBody.GetStatus()),
+		formatDate(tsToTime(invoiceBody.GetCreated())),
+		paymentDateHTML(invoiceBody.GetPayment(), tsToTime, formatDate),
+		escapeWithBR(supplier),
+		escapeWithBR(buyer),
+		formatDate(tsToTime(invoiceBody.GetDeadline())),
+		rowsBuf.String(),
+		formatMoney(invoiceBody.GetCurrency(), subtotal),
+		formatMoney(invoiceBody.GetCurrency(), totalTax),
+		formatMoney(invoiceBody.GetCurrency(), grandTotal),
+		formatMoney(invoiceBody.GetCurrency(), amountDue),
+		formatMoney(invoiceBody.GetCurrency(), grandTotal),
+		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),
+		// JS data
+		invoiceBody.GetCurrency().GetCode(),
+		jsGateways(enabled),
+	)
+
+	return b.String()
+}
+
+func coalesce(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func statusClass(st pb.BillingStatus) string {
+	switch st {
+	case pb.BillingStatus_PAID:
+		return "badge paid"
+	case pb.BillingStatus_UNPAID, pb.BillingStatus_DRAFT:
+		return "badge unpaid"
+	default:
+		return "badge"
+	}
+}
+
+func paymentDateHTML(ts int64, tsToTime func(int64) time.Time, formatDate func(time.Time) string) string {
+	t := tsToTime(ts)
+	if t.IsZero() {
+		return ""
+	}
+	return `<div class="k">Payment date:</div><div>` + formatDate(t) + `</div>`
+}
+
+func jsGateways(gws []pg) string {
+	var parts []string
+	for _, g := range gws {
+		parts = append(parts, fmt.Sprintf(`{"key":%q,"name":%q,"extra":%q,"html":%q}`,
+			g.Key, g.Name, g.Extra, g.HTML))
+	}
+	return "[" + strings.Join(parts, ",") + "]"
 }

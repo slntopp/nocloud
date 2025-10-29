@@ -199,11 +199,6 @@ func main() {
 		})
 	})
 
-	log.Info("Registering Payment Gateway Server")
-	pgServer := billing.NewPaymentGatewayServer(log, db, rdb, SIGNING_KEY)
-	pgServer.RegisterRoutes(router)
-	log.Info("Payment Gateway Server registered")
-
 	// Register payments gateways (nocloud, whmcs)
 	bClient := cc.NewBillingServiceClient(http.DefaultClient, "http://billing:8000")
 	whmcsData, err := whmcs_gateway.GetWhmcsCredentials(rdb)
@@ -251,6 +246,11 @@ func main() {
 		registeredDrivers[driver_type.GetType()] = client
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
+
+	log.Info("Registering Payment Gateway Server")
+	pgServer := billing.NewPaymentGatewayServer(log, db, rdb, SIGNING_KEY, settingsClient)
+	pgServer.RegisterRoutes(router)
+	log.Info("Payment Gateway Server registered")
 
 	// Create root context with cancel
 	token, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
