@@ -793,8 +793,9 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 			<div>
 				<select id="paymentMethod"></select>
 			</div>
-            <div class="h-actions" id="gatewayPanel"></div>
 		</div>
+
+        <div class="h-actions" id="gatewayPanel"></div>
 	</div>
 
 	<div class="grid-2">
