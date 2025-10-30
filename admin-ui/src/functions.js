@@ -837,7 +837,9 @@ export function replaceNullWithUndefined(obj) {
     return Object.fromEntries(
       Object.entries(obj).map(([key, value]) => [
         key,
-        value === null ? undefined : replaceNullWithUndefined(value),
+        value === null || (!value && isNaN(value))
+          ? undefined
+          : replaceNullWithUndefined(value),
       ])
     );
   }

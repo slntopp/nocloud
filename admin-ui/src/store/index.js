@@ -28,6 +28,7 @@ import instances from "./instances";
 import promocodes from "./promocodes";
 import playbooks from "./playbooks";
 import statistic from "./statistic";
+import accountGroups from "./accountGroups";
 
 Vue.use(Vuex);
 
@@ -40,6 +41,7 @@ const store = new Vuex.Store({
     auth,
     namespaces,
     accounts,
+    accountGroups,
     servicesProviders,
     dns,
     settings,
