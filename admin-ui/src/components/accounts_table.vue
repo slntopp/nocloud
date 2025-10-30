@@ -17,6 +17,11 @@
         <router-link
           :to="{ name: 'Account', params: { accountId: item.uuid } }"
         >
+          <div
+            class="color-box"
+            :style="{ backgroundColor: getColorByGroup(item) }"
+          ></div>
+
           {{ getShortName(item.title) }}
         </router-link>
         <div>
@@ -145,6 +150,8 @@ onMounted(() => {
   store.commit("reloadBtn/setCallback", {
     event: fetchAccounts,
   });
+
+  store.dispatch("accountGroups/fetch");
 });
 
 const searchParam = computed(() => store.getters["appSearch/param"]);
@@ -202,6 +209,8 @@ const accounts = computed(() =>
   })
 );
 const total = computed(() => store.getters["accounts/total"]);
+
+const accountGroups = computed(() => store.getters["accountGroups/all"]);
 
 const requestOptions = computed(() => ({
   filters: !noSearch.value
@@ -307,6 +316,12 @@ const handleSelect = (item) => {
 const colorChip = (level) => {
   return levelColorMap.value[level];
 };
+const getColorByGroup = (account) => {
+  const group = accountGroups.value.find(
+    (g) => g.uuid == account.accountGroup
+  );
+  return group?.color || "#CCCCCC";
+};
 const goToBalance = (uuid) => {
   router.push({ name: "Transactions", query: { account: uuid } });
 };
@@ -336,4 +351,12 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped lang="scss">
+.color-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-right: 6px;
+}
+</style>
