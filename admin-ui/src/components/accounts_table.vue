@@ -320,7 +320,7 @@ const getColorByGroup = (account) => {
   const group = accountGroups.value.find(
     (g) => g.uuid == account.accountGroup
   );
-  return group?.color || "#CCCCCC";
+  return group?.color || null;
 };
 const goToBalance = (uuid) => {
   router.push({ name: "Transactions", query: { account: uuid } });
