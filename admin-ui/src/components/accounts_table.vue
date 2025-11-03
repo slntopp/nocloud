@@ -270,6 +270,15 @@ const searchFields = computed(() => [
       .map((c) => ({ text: c.code, value: c.id })),
   },
   {
+    title: "Account group",
+    key: "account_groups",
+    type: "select",
+    items: store.getters["accountGroups/all"].map((g) => ({
+      text: g.title,
+      value: g.uuid,
+    })),
+  },
+  {
     title: "Access level",
     key: "access.level",
     type: "select",
@@ -317,9 +326,7 @@ const colorChip = (level) => {
   return levelColorMap.value[level];
 };
 const getColorByGroup = (account) => {
-  const group = accountGroups.value.find(
-    (g) => g.uuid == account.accountGroup
-  );
+  const group = accountGroups.value.find((g) => g.uuid == account.accountGroup);
   return group?.color || null;
 };
 const goToBalance = (uuid) => {
