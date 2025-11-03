@@ -77,6 +77,7 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
+import { replaceNullWithUndefined } from "../../functions";
 
 export default {
   name: "plan-prices",
@@ -111,21 +112,22 @@ export default {
         resources: [],
         products: {},
       };
+
       const isEdit = action === "edit";
       if (isEdit) {
         this.isEditLoading = true;
       } else {
         this.isCreateLoading = true;
       }
-
       try {
         const result = await this.$refs.table.changePlan(newPlan);
 
         if (result === "error") return;
         if (!isEdit) delete newPlan.uuid;
+
         const request = isEdit
-          ? api.plans.update(newPlan.uuid, newPlan)
-          : api.plans.create(newPlan);
+          ? api.plans.update(newPlan.uuid, replaceNullWithUndefined(newPlan))
+          : api.plans.create(replaceNullWithUndefined(newPlan));
 
         await request;
 

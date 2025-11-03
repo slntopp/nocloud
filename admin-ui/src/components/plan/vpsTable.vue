@@ -171,6 +171,7 @@ import {
 } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 import planAddonsTable from "@/components/planAddonsTable.vue";
 import useCurrency from "@/hooks/useCurrency";
+import { replaceNullWithUndefined } from "../../functions";
 
 export default {
   name: "vps-table",
@@ -289,7 +290,7 @@ export default {
             title: addon.name,
             group: this.template.uuid,
             periods: { [this.getPeriod(addon.duration)]: addon.value },
-            public: addon.public,
+            public: !!addon.public,
             kind: "PREPAID",
             meta: {
               basePrices: {
@@ -330,7 +331,7 @@ export default {
             title: addon.name,
             group: this.template.uuid,
             periods: { [this.getPeriod(addon.duration)]: addon.value },
-            public: addon.public,
+            public: !!addon.public,
             kind: "PREPAID",
             meta: {
               basePrices: {
@@ -358,14 +359,14 @@ export default {
         .filter((a) => a.type === "create")
         .map((a) => {
           delete a.type;
-          return a;
+          return replaceNullWithUndefined(a);
         });
 
       const addonsForUpdate = addons
         .filter((a) => a.type === "update")
         .map((a) => {
           delete a.type;
-          return a;
+          return replaceNullWithUndefined(a);
         });
 
       if (addonsForCreate.length) {
@@ -543,11 +544,15 @@ export default {
                   `option-windows-${plan.planCode.replace("vps-", "")}`
               );
 
-              const { price: priceObject } = product.prices.find(
+              if (!product || !product?.prices) return;
+
+              const data = product.prices.find(
                 (price) =>
                   price.duration === duration &&
                   ["upfront12", "default"].includes(price.pricingMode)
               );
+              if (!data) return;
+              const { price: priceObject } = data;
               tariff = product.planCode;
               const newPrice = this.convertPrice(priceObject.value);
               price = newPrice;
@@ -559,7 +564,7 @@ export default {
                 (os) =>
                   os.id === key &&
                   os.duration === duration &&
-                  (!os.tariff || os.tariff === product.planCode)
+                  (!os.tariff || os.tariff === product?.planCode)
               )
             ) {
               return;
