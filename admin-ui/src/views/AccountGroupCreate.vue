@@ -122,7 +122,7 @@
                   <v-subheader>Invoice From</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-text-field
+                  <v-textarea
                     label="Invoice From"
                     v-model="newGroup.invoice_parameters_custom.invoice_from"
                     :disabled="!newGroup.has_own_invoice_base"
