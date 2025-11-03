@@ -211,6 +211,38 @@ func parseDevices(content string) ([]Record, error) {
 	return records, nil
 }
 
+func (s *AccountsServiceServer) ChangeAccountGroup(ctx context.Context, req *accountspb.ChangeAccountGroupRequest) (*accountspb.ChangeAccountGroupResponse, error) {
+	log := s.log.Named("ChangeAccountGroup")
+
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("requester", requester))
+	log = log.With(zap.String("account", requester))
+	log.Debug("ChangeAccountGroup request received")
+	var targetAccount = requester
+	if req.TargetAccount != nil {
+		if *req.TargetAccount != targetAccount &&
+			!s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+			return nil, fmt.Errorf("no access rights")
+		}
+		targetAccount = *req.TargetAccount
+	}
+	log = log.With(zap.String("account", targetAccount))
+
+	acc, err := s.ctrl.Get(ctx, targetAccount)
+	if err != nil {
+		log.Error("error obtaining account", zap.Error(err))
+		return nil, err
+	}
+	if err = s.ctrl.Update(ctx, acc, map[string]interface{}{
+		"account_group": req.AccountGroup,
+	}); err != nil {
+		log.Error("Failed to update account's account group", zap.Error(err))
+		return nil, fmt.Errorf("failed to change account group. Internal error")
+	}
+
+	return &accountspb.ChangeAccountGroupResponse{}, nil
+}
+
 func (s *AccountsServiceServer) ChangeLanguageCode(ctx context.Context, req *accountspb.ChangeLanguageCodeRequest) (*accountspb.ChangeLanguageCodeResponse, error) {
 	log := s.log.Named("ChangeLanguageCode")
 
