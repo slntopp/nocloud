@@ -218,12 +218,11 @@ func (s *AccountsServiceServer) ChangeAccountGroup(ctx context.Context, req *acc
 	log = log.With(zap.String("requester", requester))
 	log = log.With(zap.String("account", requester))
 	log.Debug("ChangeAccountGroup request received")
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, fmt.Errorf("no access rights")
+	}
 	var targetAccount = requester
 	if req.TargetAccount != nil {
-		if *req.TargetAccount != targetAccount &&
-			!s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-			return nil, fmt.Errorf("no access rights")
-		}
 		targetAccount = *req.TargetAccount
 	}
 	log = log.With(zap.String("account", targetAccount))
