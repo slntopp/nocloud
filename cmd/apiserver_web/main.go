@@ -98,8 +98,8 @@ func main() {
 	}
 	opts = append(opts,
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(100*1024*1024),
-			grpc.MaxCallSendMsgSize(100*1024*1024),
+			grpc.MaxCallRecvMsgSize(500*1024*1024),
+			grpc.MaxCallSendMsgSize(500*1024*1024),
 		),
 	)
 

@@ -105,6 +105,8 @@ func main() {
 			grpc_zap.UnaryServerInterceptor(log),
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
+		grpc.MaxRecvMsgSize(500*1024*1024),
+		grpc.MaxSendMsgSize(500*1024*1024),
 	)
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
