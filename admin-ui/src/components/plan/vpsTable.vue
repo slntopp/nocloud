@@ -94,7 +94,7 @@
               v-model="item.value"
             />
           </template>
-          <template v-slot:[`item.sell`]="{ item }">
+          <template v-slot:[`item.public`]="{ item }">
             <v-switch v-model="item.public" />
           </template>
         </nocloud-table>
@@ -121,7 +121,7 @@
               v-model="item.value"
             />
           </template>
-          <template v-slot:[`item.sell`]="{ item }">
+          <template v-slot:[`item.public`]="{ item }">
             <v-switch v-model="item.public" />
           </template>
         </nocloud-table>
@@ -145,7 +145,7 @@
               v-model="item.value"
             />
           </template>
-          <template v-slot:[`item.sell`]="{ item }">
+          <template v-slot:[`item.public`]="{ item }">
             <v-switch v-model="item.public" />
           </template>
         </nocloud-table>
@@ -202,7 +202,7 @@ export default {
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
-        value: "sell",
+        value: "public",
         width: 100,
       },
     ],
@@ -218,7 +218,7 @@ export default {
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
-        value: "sell",
+        value: "public",
         width: 100,
       },
     ],
@@ -232,7 +232,7 @@ export default {
       { text: "Payment", value: "duration" },
       {
         text: "Sell",
-        value: "sell",
+        value: "public",
         width: 100,
       },
     ],
@@ -431,6 +431,7 @@ export default {
     },
     changePlans({ plans, catalog }) {
       const result = [];
+      console.log(plans, catalog);
 
       plans.forEach(({ prices, planCode, productName }) => {
         prices.forEach(({ pricingMode, price, duration }) => {
