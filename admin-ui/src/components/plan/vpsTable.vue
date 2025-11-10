@@ -1,14 +1,30 @@
 <template>
   <div>
-    <v-row class="my-4" v-if="!isPlansLoading" align="center">
-      <v-btn class="ml-3" @click="refreshPlans" :loading="isRefreshLoading"
-        >Fetch plans</v-btn
-      >
-      <v-btn class="ml-3" :disabled="!newPlans" @click="setRefreshedPlans"
-        >Set api plans</v-btn
-      >
-      <v-btn class="ml-3" @click="setSellToTab(true)">Enable all</v-btn>
-      <v-btn class="ml-3" @click="setSellToTab(false)">Disable all</v-btn>
+    <v-row
+      class="my-4"
+      v-if="!isPlansLoading"
+      align="center"
+      justify="space-between"
+    >
+      <div>
+        <v-btn class="ml-3" @click="refreshPlans" :loading="isRefreshLoading"
+          >Fetch plans</v-btn
+        >
+        <v-btn class="ml-3" :disabled="!newPlans" @click="setRefreshedPlans"
+          >Set api plans</v-btn
+        >
+        <v-btn class="ml-3" @click="setSellToTab(true)">Enable all</v-btn>
+        <v-btn class="ml-3" @click="setSellToTab(false)">Disable all</v-btn>
+      </div>
+      <div class="mr-10">
+        <v-text-field
+          v-model="searchParam"
+          append-icon="mdi-magnify"
+          label="Search"
+          single-line
+          hide-details
+        ></v-text-field>
+      </div>
     </v-row>
     <v-tabs
       class="rounded-t-lg"
@@ -31,7 +47,7 @@
           v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
-          :items="plans"
+          :items="filtredPlans"
           :headers="headers"
           :expanded.sync="expanded"
           :loading="isPlansLoading"
@@ -102,7 +118,7 @@
         <nocloud-table
           v-else-if="tab === 'Addons'"
           :show-select="false"
-          :items="addons"
+          :items="filtredAddons"
           :headers="addonsHeaders"
           :loading="isPlansLoading"
           :footer-error="fetchError"
@@ -129,7 +145,7 @@
         <nocloud-table
           v-else-if="tab === 'OS'"
           :show-select="false"
-          :items="images"
+          :items="filtredImages"
           :headers="imagesHeaders"
           :loading="isPlansLoading"
           :footer-error="fetchError"
@@ -139,6 +155,7 @@
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
+              v-if="item"
               dense
               style="width: 200px"
               :suffix="defaultCurrency?.code"
@@ -187,6 +204,8 @@ const emit = defineEmits(["changeFee", "change:addons"]);
 
 const store = useStore();
 const { convertFrom } = useCurrency();
+
+const searchParam = ref("");
 
 const groups = ref([]);
 const expanded = ref([]);
@@ -259,9 +278,41 @@ const planAddons = ref([]);
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const addonsClient = computed(() => store.getters["addons/addonsClient"]);
 
+const filtredPlans = computed(() => {
+  if (!searchParam.value) return plans.value;
+
+  return plans.value.filter(
+    (plan) =>
+      plan.name.toLowerCase().includes(searchParam.value.toLowerCase()) ||
+      plan.apiName.toLowerCase().includes(searchParam.value.toLowerCase()) ||
+      plan.group.toLowerCase().includes(searchParam.value.toLowerCase())
+  );
+});
+
+const filtredAddons = computed(() => {
+  if (!searchParam.value) return addons.value;
+
+  return addons.value.filter((addon) =>
+    addon.name.toLowerCase().includes(searchParam.value.toLowerCase())
+  );
+});
+
+const filtredImages = computed(() => {
+  if (!searchParam.value) return images.value;
+  console.log(images.value);
+
+  return images.value.filter((image) =>
+    image.name.toLowerCase().includes(searchParam.value.toLowerCase())
+  );
+});
+
 const testConfig = () => {
-  console.log(plans.value.filter(({ group }) => !groups.value.includes(group)).map(({ group }) => group));
-  
+  console.log(
+    plans.value
+      .filter(({ group }) => !groups.value.includes(group))
+      .map(({ group }) => group)
+  );
+
   if (!plans.value.every(({ group }) => groups.value.includes(group))) {
     return "You must select a group for the tariff!";
   }
@@ -578,8 +629,7 @@ const changeImages = ({ windows }) => {
         }
 
         const realAddon = images.value.find(
-          (a) =>
-            a.id === key && tariff === a.tariff && a.duration === duration
+          (a) => a.id === key && tariff === a.tariff && a.duration === duration
         );
 
         newImagesArray.push({
@@ -820,6 +870,10 @@ watch(
   },
   { deep: true }
 );
+
+watch(tabsIndex, () => {
+  searchParam.value = "";
+});
 
 onMounted(() => {
   emit("changeFee", props.template.fee);
