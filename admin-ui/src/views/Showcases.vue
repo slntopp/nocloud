@@ -1,23 +1,38 @@
 <template>
   <div class="namespaces pa-4 flex-wrap">
-    <div class="buttons__inline pb-8 pt-4">
-      <v-btn
-        color="background-light"
-        class="mr-2"
-        :to="{ name: 'CreateShowcase' }"
-      >
-        create
-      </v-btn>
-      <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelected">
+    <div class="d-flex justify-space-between align-center pb-8 pt-4">
+      <div class="buttons__inline">
         <v-btn
           color="background-light"
-          class="mr-8"
-          :disabled="selected.length < 1"
-          :loading="isDeleteLoading"
+          class="mr-2"
+          :to="{ name: 'CreateShowcase' }"
         >
-          delete
+          create
         </v-btn>
-      </confirm-dialog>
+        <confirm-dialog
+          :disabled="selected.length < 1"
+          @confirm="deleteSelected"
+        >
+          <v-btn
+            color="background-light"
+            class="mr-8"
+            :disabled="selected.length < 1"
+            :loading="isDeleteLoading"
+          >
+            delete
+          </v-btn>
+        </confirm-dialog>
+      </div>
+
+      <div>
+        <v-btn
+          color="background-light"
+          class="mr-2"
+          :to="{ name: 'Categories' }"
+        >
+          Categories
+        </v-btn>
+      </div>
     </div>
     <showcases_table
       :loading="isLoading"
