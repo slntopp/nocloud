@@ -9,6 +9,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"google.golang.org/grpc/metadata"
 	"net/http"
+	"os"
 )
 
 type PaymentGateway interface {
@@ -77,7 +78,7 @@ func GetPaymentGateway(t string) PaymentGateway {
 	}
 	switch t {
 	case "nocloud":
-		return nocloud_gateway.NewNoCloudGateway()
+		return nocloud_gateway.NewNoCloudGateway(os.Getenv("BASE_HOST"))
 	case "whmcs":
 		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, currencyController, invoicesManager, whmcsTaxExcluded)
 	default:

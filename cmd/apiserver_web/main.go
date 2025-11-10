@@ -98,8 +98,8 @@ func main() {
 	}
 	opts = append(opts,
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(100*1024*1024),
-			grpc.MaxCallSendMsgSize(100*1024*1024),
+			grpc.MaxCallRecvMsgSize(500*1024*1024),
+			grpc.MaxCallSendMsgSize(500*1024*1024),
 		),
 	)
 
@@ -175,6 +175,30 @@ func main() {
 	)
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
+	}
+
+	// ShowcaseCategoriesService
+	log.Info("Registering ShowcaseCategoriesService Gateway")
+	err = sppb.RegisterShowcaseCategoriesServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register ShowcaseCategoriesService gateway", zap.Error(err))
+	}
+
+	// AccountGroupsService
+	log.Info("Registering AccountGroupsService Gateway")
+	err = registrypb.RegisterAccountGroupsServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register AccountGroupsService gateway", zap.Error(err))
 	}
 
 	// ServicesService

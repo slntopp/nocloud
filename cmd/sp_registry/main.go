@@ -29,6 +29,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
+	"github.com/slntopp/nocloud/pkg/showcase_categories"
 	"github.com/slntopp/nocloud/pkg/showcases"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -104,6 +105,8 @@ func main() {
 			grpc_zap.UnaryServerInterceptor(log),
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
+		grpc.MaxRecvMsgSize(500*1024*1024),
+		grpc.MaxSendMsgSize(500*1024*1024),
 	)
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
@@ -117,11 +120,17 @@ func main() {
 
 	server := sp.NewServicesProviderServer(log, db, rabbitmq.NewRabbitMQConnection(conn), rdb)
 	s_server := showcases.NewShowcasesServer(log, db)
+	scCatServer := showcase_categories.NewCategoriesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
-		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithDefaultCallOptions(
+				grpc.MaxCallRecvMsgSize(500*1024*1024),
+				grpc.MaxCallSendMsgSize(500*1024*1024),
+			),
+		)
 		if err != nil {
 			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
 		}
@@ -151,6 +160,7 @@ func main() {
 	}
 	sppb.RegisterServicesProvidersServiceServer(s, server)
 	sppb.RegisterShowcasesServiceServer(s, s_server)
+	sppb.RegisterShowcaseCategoriesServiceServer(s, scCatServer)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 
