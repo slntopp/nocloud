@@ -56,6 +56,17 @@
           <template v-slot:[`item.name`]="{ item }">
             <v-text-field dense style="width: 200px" v-model="item.name" />
           </template>
+
+          <template v-slot:[`item.resources`]="{ item }">
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <span color="primary" dark v-bind="attrs" v-on="on">
+                  CPU:{{ item.resources.cpu || "N/A" }}
+                </span>
+              </template>
+              <pre style="color: black;">{{ item.resources }}</pre>
+            </v-tooltip>
+          </template>
           <template v-slot:[`item.group`]="{ item }">
             <template v-if="mode === 'edit' && planId === item.id">
               <v-text-field
@@ -217,6 +228,7 @@ const headers = ref([
   { text: "Title", value: "name" },
   { text: "API title", value: "apiName" },
   { text: "Group", value: "group" },
+  { text: "Resources", value: "resources", width: 50 },
   {
     text: "Payment",
     value: "duration",
@@ -299,7 +311,6 @@ const filtredAddons = computed(() => {
 
 const filtredImages = computed(() => {
   if (!searchParam.value) return images.value;
-  console.log(images.value);
 
   return images.value.filter((image) =>
     image.name.toLowerCase().includes(searchParam.value.toLowerCase())
@@ -307,12 +318,6 @@ const filtredImages = computed(() => {
 });
 
 const testConfig = () => {
-  console.log(
-    plans.value
-      .filter(({ group }) => !groups.value.includes(group))
-      .map(({ group }) => group)
-  );
-
   if (!plans.value.every(({ group }) => groups.value.includes(group))) {
     return "You must select a group for the tariff!";
   }
@@ -439,7 +444,6 @@ const changePlan = async (plan) => {
   }
 
   plans.value.forEach((el) => {
-    const [, , cpu, ram, disk] = el.planCode.split("-");
     const meta = {
       datacenter: el.datacenter,
     };
@@ -470,7 +474,7 @@ const changePlan = async (plan) => {
       group: el.group,
       addons: addonsForProduct,
       period: props.getPeriod(el.duration),
-      resources: { cpu: +cpu, ram: ram * 1024, drive_size: disk * 1024 },
+      resources: el.resources,
       meta: {
         ...meta,
         basePrice: el.price.value,
@@ -486,9 +490,12 @@ const changePlan = async (plan) => {
 
 const changePlans = ({ plans: plansData, catalog }) => {
   const result = [];
-  console.log(plansData, catalog);
 
   plansData.forEach(({ prices, planCode, productName }) => {
+    if (!catalog.products.find((p) => planCode === p.name)) {
+      return;
+    }
+
     prices.forEach(({ pricingMode, price, duration }) => {
       const isMonthly = duration === "P1M" && pricingMode === "default";
       const isYearly = duration === "P1Y" && pricingMode === "upfront12";
@@ -503,6 +510,24 @@ const changePlans = ({ plans: plansData, catalog }) => {
         const { configurations, addonFamilies } = catalog.plans.find(
           ({ planCode }) => planCode.includes(code)
         );
+
+        const product = catalog.products.find((p) => planCode === p.name);
+        const technical = product?.blobs?.technical || {};
+
+        let cpu, ram, drive_size, drive_type;
+        if (technical.cpu) {
+          cpu = technical.cpu.cores || 0;
+        }
+
+        if (technical.memory) {
+          ram = (technical.memory.size || 0) * 1024;
+        }
+
+        if (technical.storage) {
+          drive_size = (technical.storage.disks || [])[0].capacity * 1024;
+          drive_type = (technical.storage.disks || [])[0].technology;
+        }
+
         const os = configurations.find((c) => c.name === "vps_os")?.values;
         const datacenter = configurations.find(
           (c) => c.name === "vps_datacenter"
@@ -529,6 +554,7 @@ const changePlans = ({ plans: plansData, catalog }) => {
           price: { value: newPrice },
           name: realProduct.name || productName,
           apiName: productName,
+          resources: { cpu, ram, drive_size, drive_type },
           group:
             realProduct.group ||
             productName.replace(/VPS[\W0-9]/, "").split(/[\W0-9]/)[0],
@@ -540,15 +566,13 @@ const changePlans = ({ plans: plansData, catalog }) => {
     });
   });
   result.sort((a, b) => {
-    const resA = a.planCode.split("-");
-    const resB = b.planCode.split("-");
+    const isCpuEqual = b.resources.cpu === a.resources.cpu;
+    const isRamEqual = b.resources.ram === a.resources.ram;
 
-    const isCpuEqual = resB.at(-3) === resA.at(-3);
-    const isRamEqual = resB.at(-2) === resA.at(-2);
-
-    if (isCpuEqual && isRamEqual) return resA.at(-1) - resB.at(-1);
-    if (isCpuEqual) return resA.at(-2) - resB.at(-2);
-    return resA.at(-3) - resB.at(-3);
+    if (isCpuEqual && isRamEqual)
+      return a.resources.drive_size - b.resources.drive_size;
+    if (isCpuEqual) return a.resources.ram - b.resources.ram;
+    return a.resources.cpu - b.resources.cpu;
   });
 
   return result;
