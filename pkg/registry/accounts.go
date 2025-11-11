@@ -1205,6 +1205,7 @@ func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddN
 		Admin:   requestor,
 		Msg:     request.GetMsg(),
 		Created: time.Now().Unix(),
+		Pinned:  request.Pinned,
 	})
 
 	patch := map[string]any{
@@ -1252,6 +1253,7 @@ func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.Pa
 		note.Admin = requestor
 		note.Msg = request.GetMsg()
 		note.Updated = time.Now().Unix()
+		note.Pinned = request.Pinned
 
 		patch := map[string]any{
 			"admin_notes": acc.GetAdminNotes(),
