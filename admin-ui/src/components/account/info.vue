@@ -1,5 +1,9 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
+    <div style="position: relative">
+      <admin-notes-pinned :notes="account.adminNotes" />
+    </div>
+
     <div class="actions">
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <hint-btn hint="Create transaction">
@@ -247,6 +251,7 @@ import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 import { computed, onMounted, onUnmounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
+import AdminNotesPinned from "@/components/adminNotesPinned.vue";
 
 const props = defineProps(["account"]);
 const { account } = toRefs(props);
@@ -259,6 +264,7 @@ const headers = ref([
   { text: "Title", value: "title" },
   { text: "Key", value: "value" },
 ]);
+
 const generalRule = ref([(v) => !!v || "Required field"]);
 const accountNamespace = ref(null);
 const uuid = ref("");
