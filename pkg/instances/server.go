@@ -886,6 +886,7 @@ func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[not
 		Admin:   requestor,
 		Msg:     req.GetMsg(),
 		Created: time.Now().Unix(),
+		Pinned:  req.GetPinned(),
 	})
 
 	err = s.ctrl.UpdateNotes(ctx, instance.Instance)
@@ -927,6 +928,7 @@ func (s *InstancesServer) PatchNote(ctx context.Context, _req *connect.Request[n
 		note.Admin = requestor
 		note.Msg = req.GetMsg()
 		note.Updated = time.Now().Unix()
+		note.Pinned = req.GetPinned()
 
 		err = s.ctrl.UpdateNotes(ctx, instance.Instance)
 		if err != nil {
