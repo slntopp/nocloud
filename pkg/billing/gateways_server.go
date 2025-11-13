@@ -397,7 +397,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 		if s == "" {
 			return ""
 		}
-		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br>")
+		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br/>")
 	}
 
 	var (
@@ -739,10 +739,16 @@ func paymentDateHTML(ts int64, tsToTime func(int64) time.Time, formatDate func(t
 }
 
 func jsGateways(gws []pg) string {
+	escapeWithBR := func(s string) string {
+		if s == "" {
+			return ""
+		}
+		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br/>")
+	}
 	var parts []string
 	for _, g := range gws {
 		parts = append(parts, fmt.Sprintf(`{"key":%q,"name":%q,"extra":%q,"html":%q}`,
-			g.Key, g.Name, g.Extra, g.HTML))
+			g.Key, g.Name, escapeWithBR(g.Extra), g.HTML))
 	}
 	return "[" + strings.Join(parts, ",") + "]"
 }
