@@ -1,5 +1,5 @@
 {
-  "invoice.title": "Счёт",
+  "invoice.title": "Счёт-проформа",
   "invoice.no_data": "Нет данных по счёту",
   "invoice.status_label": "Статус:",
   "invoice.payment_method": "Способ оплаты:",
