@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/arangodb/go-driver"
 	"github.com/gorilla/mux"
 	accesspb "github.com/slntopp/nocloud-proto/access"
@@ -21,7 +20,9 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 	"html"
+	"io"
 	"math"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -251,28 +252,57 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 
 func GenerateInvoicePDF(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier, buyer, logoURL, lang string) ([]byte, error) {
 	htmlRaw := generateViewInvoiceHTML(invoiceBody, paymentGateways, supplier, buyer, logoURL, lang)
+	gotenbergHost := viper.GetString("GOTENBERG_HOST")
+	if gotenbergHost == "" {
+		return nil, fmt.Errorf("GOTENBERG_HOST is empty")
+	}
 
-	pdfGen, err := wkhtmltopdf.NewPDFGenerator()
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+
+	part, err := writer.CreateFormFile("files", "index.html")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create multipart file field: %w", err)
+	}
+	if _, err = io.Copy(part, strings.NewReader(htmlRaw)); err != nil {
+		return nil, fmt.Errorf("failed to write HTML to multipart: %w", err)
 	}
 
-	page := wkhtmltopdf.NewPageReader(strings.NewReader(htmlRaw))
-	pdfGen.AddPage(page)
-	pdfGen.PageSize.Set(wkhtmltopdf.PageSizeA4)
-
-	pdfGen.Dpi.Set(300)
-	pdfGen.NoCollate.Set(false)
-	pdfGen.MarginLeft.Set(10)
-	pdfGen.MarginRight.Set(10)
-	pdfGen.MarginTop.Set(10)
-	pdfGen.MarginBottom.Set(10)
-
-	if err := pdfGen.Create(); err != nil {
-		return nil, err
+	if err = writer.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close multipart writer: %w", err)
 	}
 
-	return pdfGen.Bytes(), nil
+	urlPath := strings.TrimRight(gotenbergHost, "/") + "/forms/chromium/convert/html"
+	req, err := http.NewRequest(http.MethodPost, urlPath, &buf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request to Gotenberg: %w", err)
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	client := &http.Client{
+		Timeout: 60 * time.Second,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to call Gotenberg: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Gotenberg response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		errText := strings.TrimSpace(string(body))
+		if errText == "" {
+			errText = fmt.Sprintf("gotenberg returned status %d with empty body", resp.StatusCode)
+		}
+		return nil, fmt.Errorf("gotenberg error: %s", errText)
+	}
+
+	return body, nil
 }
 
 func nonEmpty(vals ...string) string {

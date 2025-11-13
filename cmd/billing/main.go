@@ -103,6 +103,7 @@ func init() {
 	viper.SetDefault("INVOICES_MIGRATIONS_FILE", "./whmcs_invoices.csv")
 	viper.SetDefault("INSTANCES_MIGRATIONS_FILE", "./instances_invoices.csv")
 	viper.SetDefault("PRIMARY_LANGUAGE_CODE", "en")
+	viper.SetDefault("GOTENBERG_HOST", "gotenberg:3000")
 
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
