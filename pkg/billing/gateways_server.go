@@ -256,6 +256,9 @@ func GenerateInvoicePDF(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGa
 	if gotenbergHost == "" {
 		return nil, fmt.Errorf("GOTENBERG_HOST is empty")
 	}
+	if !strings.HasPrefix(gotenbergHost, "http") {
+		gotenbergHost = fmt.Sprintf("http://%s", gotenbergHost)
+	}
 
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
