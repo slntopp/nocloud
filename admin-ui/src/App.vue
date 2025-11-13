@@ -103,6 +103,21 @@
                 </v-list-item-content>
               </v-list-item>
 
+              <v-list-item
+                v-bind="listItemBind"
+                :to="{ name: 'AccountGroups' }"
+              >
+                <v-list-item-icon>
+                  <v-icon>mdi-account-group-outline</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Account Groups")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
               <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
                 <v-list-item-icon>
                   <v-icon>mdi-server</v-icon>

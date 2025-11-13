@@ -58,6 +58,11 @@ type AccountsController interface {
 	Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool)
 	EnsureRootExists(passwd string) (err error)
 	InvalidateBalanceEvents(ctx context.Context, acc string) error
+
+	// GetAccountClientGroup gets the account group assigned to the account or error if no group or unexpected error
+	GetAccountClientGroup(ctx context.Context, accountID string) (*pb.AccountGroup, error)
+	// GetAccountClientGroupAlwaysFound gets the account group assigned to the account or default group if no group assigned
+	GetAccountClientGroupAlwaysFound(ctx context.Context, accountID string) (*pb.AccountGroup, error)
 }
 
 type Account struct {
@@ -66,10 +71,11 @@ type Account struct {
 }
 
 type accountsController struct {
-	col     driver.Collection // Accounts Collection
-	cred    driver.Collection // Credentials Collection
-	ns_ctrl NamespacesController
-	log     *zap.Logger
+	col        driver.Collection // Accounts Collection
+	cred       driver.Collection // Credentials Collection
+	ns_ctrl    NamespacesController
+	groupsCtrl AccountGroupsController
+	log        *zap.Logger
 }
 
 type Phone struct {
@@ -96,10 +102,11 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 	GraphGetEdgeEnsure(log, ctx, graph, schema.CREDENTIALS_EDGE_COL, schema.ACCOUNTS_COL, schema.CREDENTIALS_COL)
 
 	nsController := NewNamespacesController(log, col.Database())
+	groupsCtrl := NewAccountGroupsController(log, col.Database())
 
 	//migrations.UpdateNumericCurrencyToDynamic(log, col)
 
-	return &accountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
+	return &accountsController{log: log, col: col, cred: cred, ns_ctrl: nsController, groupsCtrl: groupsCtrl}
 }
 
 func (acc *Account) GetTaxRate() float64 {
@@ -144,6 +151,36 @@ func (acc *Account) SetPhone(phone Phone) {
 	}
 	newData, _ := structpb.NewStruct(data)
 	acc.Data = newData
+}
+
+func (ctrl *accountsController) GetAccountClientGroupAlwaysFound(ctx context.Context, accountID string) (*pb.AccountGroup, error) {
+	account, err := ctrl.Get(ctx, accountID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Error getting account: "+err.Error())
+	}
+	if account.AccountGroup == "" {
+		return &pb.AccountGroup{}, nil
+	}
+	group, err := ctrl.groupsCtrl.Get(ctx, account.AccountGroup)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Error getting account group: "+err.Error())
+	}
+	return group, nil
+}
+
+func (ctrl *accountsController) GetAccountClientGroup(ctx context.Context, accountID string) (*pb.AccountGroup, error) {
+	account, err := ctrl.Get(ctx, accountID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Error getting account: "+err.Error())
+	}
+	if account.AccountGroup == "" {
+		return nil, status.Error(codes.NotFound, "Account has no group assigned")
+	}
+	group, err := ctrl.groupsCtrl.Get(ctx, account.AccountGroup)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Error getting account group: "+err.Error())
+	}
+	return group, nil
 }
 
 func (ctrl *accountsController) Get(ctx context.Context, id string) (Account, error) {

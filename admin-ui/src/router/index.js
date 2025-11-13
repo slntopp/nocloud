@@ -58,6 +58,30 @@ const routes = [
     },
   },
   {
+    path: "/account-groups",
+    name: "AccountGroups",
+    component: () => import("../views/AccountGroups.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/account-groups/create",
+    name: "AccountGroupCreate",
+    component: () => import("../views/AccountGroupCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/account-groups/:uuid",
+    name: "AccountGroupPage",
+    component: () => import("../views/AccountGroupPage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/sp",
     name: "ServicesProviders",
     component: () => import("../views/ServicesProviders.vue"),

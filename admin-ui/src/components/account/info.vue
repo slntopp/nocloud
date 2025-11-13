@@ -81,6 +81,31 @@
       </v-col>
       <v-col lg="2" md="4" sm="6" cols="12">
         <v-select
+          :items="accountGroups"
+          v-model="accountGroup"
+          item-text="title"
+          item-value="uuid"
+          label="Account Group"
+        >
+          <template v-slot:item="{ item }">
+            <div
+              :style="{ backgroundColor: item.color }"
+              class="box-color"
+            ></div>
+            {{ item.title }}
+          </template>
+
+          <template v-slot:selection="{ item }">
+            <div
+              :style="{ backgroundColor: item.color }"
+              class="box-color"
+            ></div>
+            {{ item.title }}
+          </template>
+        </v-select>
+      </v-col>
+      <v-col lg="2" md="4" sm="6" cols="12">
+        <v-select
           :readonly="isCurrencyReadonly"
           :items="currencies"
           v-model="currency"
@@ -278,13 +303,16 @@ const isEditLoading = ref(false);
 const showDeletedInstances = ref(false);
 const statusChangeValue = ref("");
 const viewport = ref(window.innerWidth);
+const accountGroup = ref(null);
 
 onMounted(() => {
   title.value = account.value.title;
   currency.value = account.value.currency;
   uuid.value = account.value.uuid;
+  accountGroup.value = account.value.accountGroup;
   keys.value = account.value.data?.ssh_keys || [];
   store.dispatch("services/fetch", { showDeleted: true });
+  store.dispatch("accountGroups/fetch");
   store.dispatch("servicesProviders/fetch", { anonymously: true });
   fetchNamespace();
 
@@ -301,6 +329,7 @@ const services = computed(() => store.getters["services/all"]);
 const currencies = computed(() =>
   store.getters["currencies/all"].filter((c) => c.title !== "NCU")
 );
+const accountGroups = computed(() => store.getters["accountGroups/all"]);
 
 const isCurrencyReadonly = computed(
   () => account.value.currency && account.value.currency.code !== "NCU"
@@ -359,6 +388,15 @@ const updateAccount = (newAccount) => {
     });
   });
 };
+
+const updateAccountGroup = () => {
+  if (accountGroup.value !== account.value.accountGroup) {
+    return api.post("/accounts/change_account_group", {
+      target_account: account.value.uuid,
+      account_group: accountGroup.value,
+    });
+  }
+};
 const editAccount = async () => {
   const newAccount = {
     ...account.value,
@@ -376,7 +414,10 @@ const editAccount = async () => {
 
   isEditLoading.value = true;
   try {
-    await updateAccount(newAccount);
+    const promises = [updateAccount(newAccount), updateAccountGroup()];
+
+    await promises;
+
     store.commit("snackbar/showSnackbarSuccess", {
       message: "Account edited successfully",
     });
@@ -488,5 +529,13 @@ export default {
   @media (max-width: 1250px) {
     margin-top: 0;
   }
+}
+
+.box-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+  margin-right: 6px;
 }
 </style>
