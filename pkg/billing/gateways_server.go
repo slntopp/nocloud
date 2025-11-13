@@ -514,7 +514,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 </div>`
 	if omitPmPanel {
 		pmHtml = `<div style="display:none" class="k">$invoice.payment_method</div>
-<div>
+<div style="display:none">
 <select id="paymentMethod"></select>
 </div>`
 	}
