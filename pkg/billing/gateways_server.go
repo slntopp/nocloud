@@ -506,14 +506,17 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 
 	gwPanelHtml := `<div class="h-actions" id="gatewayPanel"></div>`
 	if omitGwPanel {
-		gwPanelHtml = ``
+		gwPanelHtml = `<div style="display:none" class="h-actions" id="gatewayPanel"></div>`
 	}
 	pmHtml := `<div class="k">$invoice.payment_method</div>
 <div>
 <select id="paymentMethod"></select>
 </div>`
 	if omitPmPanel {
-		pmHtml = ``
+		pmHtml = `<div style="display:none" class="k">$invoice.payment_method</div>
+<div>
+<select id="paymentMethod"></select>
+</div>`
 	}
 
 	var b strings.Builder
