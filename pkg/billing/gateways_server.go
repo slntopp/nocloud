@@ -155,7 +155,7 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	}
 
 	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode)))
+	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false)))
 }
 
 func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, request *http.Request) {
@@ -251,7 +251,7 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 }
 
 func GenerateInvoicePDF(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier, buyer, logoURL, lang string) ([]byte, error) {
-	htmlRaw := generateViewInvoiceHTML(invoiceBody, paymentGateways, supplier, buyer, logoURL, lang)
+	htmlRaw := generateViewInvoiceHTML(invoiceBody, paymentGateways, supplier, buyer, logoURL, lang, true, true)
 	gotenbergHost := viper.GetString("GOTENBERG_HOST")
 	if gotenbergHost == "" {
 		return nil, fmt.Errorf("GOTENBERG_HOST is empty")
@@ -331,7 +331,7 @@ type pg struct {
 	HTML  string
 }
 
-func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier string, buyer string, logoURL string, lang string) string {
+func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier string, buyer string, logoURL string, lang string, omitPmPanel bool, omitGwPanel bool) string {
 	l := invoicei18n.Lang(lang)
 
 	statusKey := func(st pb.BillingStatus) string {
@@ -504,6 +504,18 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 		}
 	}
 
+	gwPanelHtml := `<div class="h-actions" id="gatewayPanel"></div>`
+	if omitGwPanel {
+		gwPanelHtml = ``
+	}
+	pmHtml := `<div class="k">$invoice.payment_method</div>
+<div>
+<select id="paymentMethod"></select>
+</div>`
+	if omitPmPanel {
+		pmHtml = ``
+	}
+
 	var b strings.Builder
 	_, _ = fmt.Fprintf(&b, `<!doctype html>
 <html lang="%s">
@@ -575,13 +587,10 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<div class="h-meta">
 			<div class="k">$invoice.issue_date</div><div>%s</div>
 			%s
-			<div class="k">$invoice.payment_method</div>
-			<div>
-				<select id="paymentMethod"></select>
-			</div>
+			%s
 		</div>
 
-        <div class="h-actions" id="gatewayPanel"></div>
+        %s
 	</div>
 
 	<div class="grid-2">
@@ -678,6 +687,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		statusClass(invoiceBody.GetStatus()), statusKey(invoiceBody.GetStatus()),
 		formatDate(tsToTime(invoiceBody.GetCreated())),
 		paymentDateHTML(invoiceBody.GetPayment(), tsToTime, formatDate),
+		pmHtml,
+		gwPanelHtml,
 		escapeWithBR(supplier),
 		escapeWithBR(buyer),
 		formatDate(tsToTime(invoiceBody.GetDeadline())),
@@ -721,7 +732,7 @@ func paymentDateHTML(ts int64, tsToTime func(int64) time.Time, formatDate func(t
 	if t.IsZero() {
 		return ""
 	}
-	return `<div class="k">Payment date:</div><div>` + formatDate(t) + `</div>`
+	return `<div class="k">$invoice.payment_date:</div><div>` + formatDate(t) + `</div>`
 }
 
 func jsGateways(gws []pg) string {
