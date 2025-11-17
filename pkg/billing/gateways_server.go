@@ -685,7 +685,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 
     const defaultGwKey = "%s";
     const defaultGw = gateways.find(x=>x.key===defaultGwKey) || gateways[0];
-    let gwName = byId('gatewayName');
+    let gwName = byId('gatewayName') ? byId('gatewayName') : {};
     gwName.value = defaultGw.name;
 
 	const sel = byId('paymentMethod');
