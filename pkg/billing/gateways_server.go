@@ -514,7 +514,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 <select id="paymentMethod"></select>
 </div>`
 	if omitPmPanel {
-		pmHtml = `<div style="display:none" class="k">
+		pmHtml = `<div class="k">
 <span>$invoice.payment_method: </span><span id="gatewayName"></span>
 </div>`
 	}
@@ -681,7 +681,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	const currency = %q;
 	const gateways = %s;
 
-    function byId(id){return document.getElementById(id)}
+    function byId(id){return document.getElementById(id)};
 
     const defaultGwKey = %s;
     const defaultGw = gateways.find(x=>x.key===defaultGwKey) || gateways[0];
