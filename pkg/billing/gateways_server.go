@@ -515,9 +515,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 <select id="paymentMethod"></select>
 </div>`
 	if omitPmPanel {
-		pmHtml = `<div class="k">
-<div>$invoice.payment_method</div><div id="gatewayName"></div>
-</div>
+		pmHtml = `<div class="k">$invoice.payment_method</div><div id="gatewayName"></div>
 <div style="display:none">
 <select id="paymentMethod"></select>
 </div>`
@@ -587,6 +585,7 @@ tfoot td{font-weight:600}
 .summary .row{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:8px 0}
 .pay{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px}
 .pay .due{font-weight:700}
+.pay-words{display:flex;justify-content:flex-end;align-items:center;padding:12px 20px;flex-wrap:wrap;gap:8px}
 .small{font-size:12px;color:var(--muted)}
 footer{padding:10px 20px}
 hr.sep{border:0;border-top:1px solid var(--line);margin:0}
@@ -670,8 +669,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<div>$summary.to_pay: <strong>%s</strong></div>
 	</div>
 
-    <div>
-		<div>%s</div>
+    <div class="pay-words">
+		<div><strong>%s</strong></div>
 	</div>
 
 	<footer class="small">
