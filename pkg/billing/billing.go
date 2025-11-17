@@ -93,6 +93,7 @@ type BillingServiceServer struct {
 	promocodes   graph.PromocodesController
 	ca           graph.CommonActionsController
 	pgs          graph.PaymentGatewaysController
+	accGroups    graph.AccountGroupsController
 
 	db  driver.Database
 	rdb redisdb.Client
@@ -128,7 +129,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController, pgs graph.PaymentGatewaysController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub, syncCreatedDate bool) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, pgs graph.PaymentGatewaysController, accGroups graph.AccountGroupsController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub, syncCreatedDate bool) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:                conn,
@@ -147,6 +148,8 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		addons:              addons,
 		promocodes:          promocodes,
 		ca:                  ca,
+		pgs:                 pgs,
+		accGroups:           accGroups,
 		db:                  db,
 		rdb:                 rdb,
 		drivers:             drivers,

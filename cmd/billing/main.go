@@ -193,6 +193,7 @@ func main() {
 	_ = graph.NewShowcasesController(log, db)
 	transactCtrl := graph.NewTransactionsController(log, db)
 	pgsCtrl := graph.NewPaymentGatewaysController(log, db)
+	accGroupsCtrl := graph.NewAccountGroupsController(log, db)
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
@@ -278,7 +279,7 @@ func main() {
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 
