@@ -12,6 +12,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/invoicei18n"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/aswords"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
@@ -513,10 +514,24 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 <select id="paymentMethod"></select>
 </div>`
 	if omitPmPanel {
-		pmHtml = `<div style="display:none" class="k">$invoice.payment_method</div>
-<div style="display:none">
-<select id="paymentMethod"></select>
+		pmHtml = `<div style="display:none" class="k">
+<span>$invoice.payment_method: </span><span id="gatewayName"></span>
 </div>`
+	}
+
+	var titleKey = "$invoice.title"
+	if invoiceBody.GetStatus() == pb.BillingStatus_PAID || invoiceBody.GetStatus() == pb.BillingStatus_RETURNED {
+		titleKey = "$invoice.title_paid"
+	}
+
+	format := func(x float64) string {
+		floored := math.Floor(x*100) / 100
+		return fmt.Sprintf("%.2f", floored)
+	}
+	var totalAsWords string
+	totalAsWords, err := aswords.AmountToWords(format(invoiceBody.Total), aswords.Language(lang), aswords.FractionStylePoint)
+	if err != nil {
+		fmt.Printf("ERROR: Formatting total as words: %s\n", err.Error())
 	}
 
 	var b strings.Builder
@@ -525,7 +540,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>$invoice.title%s</title>
+<title>%s</title>
 <style>
 :root{
 	--fg:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#ffffff;--accent:#2563eb;--soft:#f9fafb;
@@ -651,6 +666,10 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<div>$summary.to_pay: <strong>%s</strong></div>
 	</div>
 
+    <div class="pay">
+		<div><strong>%s</strong></div>
+	</div>
+
 	<footer class="small">
 		$footer.invoice_id: %s
 	</footer>
@@ -662,7 +681,13 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	const currency = %q;
 	const gateways = %s;
 
-	function byId(id){return document.getElementById(id)}
+    function byId(id){return document.getElementById(id)}
+
+    const defaultGwKey = %s;
+    const defaultGw = gateways.find(x=>x.key===defaultGwKey) || gateways[0];
+    let gwName = byId('gatewayName');
+    gwName.value = defaultGw.name;
+
 	const sel = byId('paymentMethod');
 	gateways.forEach(function(g,i){
 		const opt = document.createElement('option');
@@ -684,7 +709,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 </body>
 </html>`,
 		l,
-		"",
+		titleKey,
 		html.EscapeString(coalesce(logoURL, "")),
 		html.EscapeString(coalesce(invoiceBody.GetNumber(), invoiceBody.GetUuid())),
 		statusClass(invoiceBody.GetStatus()), statusKey(invoiceBody.GetStatus()),
@@ -701,10 +726,12 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
 		formatMoney(invoiceBody.GetCurrency(), amountDue),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
+		totalAsWords,
 		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),
 		// JS data
 		invoiceBody.GetCurrency().GetCode(),
 		jsGateways(enabled),
+		invoiceBody.GetPaymentGateway(),
 	)
 
 	return invoicei18n.Replace(l, b.String())

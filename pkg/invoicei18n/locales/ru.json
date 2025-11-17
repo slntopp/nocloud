@@ -1,5 +1,6 @@
 {
-  "invoice.title": "Счёт-проформа",
+  "invoice.title": "СЧЁТ-ПРОФОРМА",
+  "invoice.title_paid": "СЧЁТ",
   "invoice.no_data": "Нет данных по счёту",
   "invoice.status_label": "Статус:",
   "invoice.payment_method": "Способ оплаты:",
