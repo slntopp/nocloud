@@ -481,6 +481,32 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}
 	}
 
+	var pgKey string
+	gws, err := s.pgs.List(ctx, true)
+	if err != nil {
+		log.Error("Failed to list payment gateways", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to list payment gateways. "+err.Error())
+	}
+	if t.PaymentGateway != "" {
+		// Find existing
+		var found bool
+		for _, gw := range gws {
+			if gw.GetKey() == t.PaymentGateway && gw.GetEnabled() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, status.Error(codes.Internal, "Provided payment gateways not found or disabled")
+		}
+	} else {
+		if len(gws) > 0 {
+			pgKey = gws[0].GetKey()
+		} else {
+			log.Warn("Zero active payment gateways")
+		}
+	}
+
 	if t.Meta == nil {
 		t.Meta = make(map[string]*structpb.Value)
 	}
@@ -497,6 +523,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 	t.Processed = 0
 	t.Returned = 0
+	t.PaymentGateway = pgKey
 	r, err := s.invoices.Create(ctx, &graph.Invoice{
 		Invoice: t,
 		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
@@ -1093,6 +1120,25 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 		t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 		t.Subtotal = graph.Round(newSubtotal, cur.Precision, cur.Rounding)
+	}
+
+	if req.PaymentGateway != "" && req.PaymentGateway != t.PaymentGateway {
+		gws, err := s.pgs.List(ctx, true)
+		if err != nil {
+			log.Error("Failed to list payment gateways", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to list payment gateways. "+err.Error())
+		}
+		var found bool
+		for _, gw := range gws {
+			if gw.GetKey() == req.PaymentGateway && gw.GetEnabled() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, status.Error(codes.Internal, "Provided payment gateways not found or disabled")
+		}
+		t.PaymentGateway = req.PaymentGateway
 	}
 
 	vars := map[string]interface{}{}
