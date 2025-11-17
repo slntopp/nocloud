@@ -687,7 +687,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
     const defaultGwKey = "%s";
     const defaultGw = gateways.find(x=>x.key===defaultGwKey) || gateways[0];
     let gwName = byId('gatewayName') ? byId('gatewayName') : {};
-    gwName.value = defaultGw.name;
+    gwName.textContent = defaultGw.name;
 
 	const sel = byId('paymentMethod');
 	gateways.forEach(function(g,i){
@@ -775,7 +775,7 @@ func paymentDateHTML(ts int64, tsToTime func(int64) time.Time, formatDate func(t
 	if t.IsZero() {
 		return ""
 	}
-	return `<div class="k">$invoice.payment_date:</div><div>` + formatDate(t) + `</div>`
+	return `<div class="k">$invoice.payment_date</div><div>` + formatDate(t) + `</div>`
 }
 
 func jsGateways(gws []pg) string {
