@@ -29,6 +29,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type PaymentGatewayType string
@@ -726,7 +727,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
 		formatMoney(invoiceBody.GetCurrency(), amountDue),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
-		totalAsWords,
+		CapitalizeWords(totalAsWords),
 		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),
 		// JS data
 		invoiceBody.GetCurrency().GetCode(),
@@ -735,6 +736,18 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	)
 
 	return invoicei18n.Replace(l, b.String())
+}
+
+func CapitalizeWords(s string) string {
+	words := strings.Fields(s)
+	for i, w := range words {
+		runes := []rune(w)
+		if len(runes) > 0 {
+			runes[0] = unicode.ToUpper(runes[0])
+		}
+		words[i] = string(runes)
+	}
+	return strings.Join(words, " ")
 }
 
 func coalesce(vals ...string) string {
