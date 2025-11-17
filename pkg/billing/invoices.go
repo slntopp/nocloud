@@ -152,7 +152,6 @@ RETURN account`
 
 const invoicesByPaymentDate = `
 FOR invoice IN @@invoices
-%s
 FILTER invoice.payment && invoice.payment > 0
 FILTER invoice.payment >= @date_from
 FILTER invoice.payment < @date_to
