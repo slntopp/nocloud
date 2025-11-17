@@ -8,7 +8,6 @@ require (
 	connectrpc.com/connect v1.14.0
 	connectrpc.com/grpchealth v1.3.0
 	github.com/Pallinder/go-randomdata v1.2.0
-	github.com/SebastiaanKlippert/go-wkhtmltopdf v1.9.3
 	github.com/arangodb/go-driver v1.6.2
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.5.0
@@ -21,7 +20,7 @@ require (
 	github.com/pkg/sftp v1.13.7
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/cors v1.10.1
-	github.com/slntopp/nocloud-proto v0.0.0-20251113103113-204268128a2d
+	github.com/slntopp/nocloud-proto v0.0.0-20251117100038-d2d2b6d0d7f9
 	github.com/spf13/viper v1.18.2
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.9.0
