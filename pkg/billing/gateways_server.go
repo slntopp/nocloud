@@ -156,6 +156,10 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 		languageCode = account.GetLanguageCode()
 	}
 
+	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+	writer.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	writer.Header().Set("Pragma", "no-cache")
+	writer.Header().Set("Expires", "0")
 	writer.WriteHeader(http.StatusOK)
 	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false)))
 }
