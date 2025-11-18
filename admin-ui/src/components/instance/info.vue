@@ -1,5 +1,9 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
+    <div style="position: relative">
+      <admin-notes-pinned :notes="template.adminNotes" />
+    </div>
+
     <v-row>
       <v-col>
         <instance-actions
@@ -195,6 +199,7 @@ import MoveInstance from "@/components/dialogs/moveInstance.vue";
 import { addToClipboard } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import AdminNotesPinned from "@/components/adminNotesPinned.vue";
 
 export default {
   name: "instance-info",
@@ -207,6 +212,7 @@ export default {
     nocloudTable,
     instanceActions,
     JsonTextarea,
+    AdminNotesPinned
   },
   mixins: [snackbar],
   props: {
@@ -268,7 +274,6 @@ export default {
       }
       this.copyInstance = { ...this.copyInstance };
       console.log(this.copyInstance);
-      
     },
     goToPlan() {
       this.$router.push({

@@ -56,6 +56,18 @@
             >
               <v-icon>mdi-delete</v-icon>
             </v-btn>
+
+            <v-btn
+              :loading="isPinLoading && pinNoteIndex === index"
+              :disabled="isPinLoading && pinNoteIndex !== index"
+              @click="pinNote(index, !note.pinned)"
+              class="mx-1"
+              icon
+              color="primary"
+            >
+              <v-icon v-if="!note.pinned">mdi-pin</v-icon>
+              <v-icon v-else>mdi-pin-off</v-icon>
+            </v-btn>
           </div>
         </div>
         <EditorContainer
@@ -96,7 +108,9 @@ const newNote = ref({ msg: "" });
 
 const isAddLoading = ref(false);
 const isRemoveLoading = ref(false);
+const isPinLoading = ref(false);
 const removedNoteIndex = ref("");
+const pinNoteIndex = ref("");
 const isEditMode = ref(false);
 const isEditLoading = ref(false);
 const accounts = ref([]);
@@ -171,6 +185,31 @@ const removeNote = async (index) => {
   }
 };
 
+const pinNote = async (index, value = true) => {
+  try {
+    isPinLoading.value = true;
+    pinNoteIndex.value = index;
+
+    const note = filteredNotes.value[index];
+    note.pinned = value;
+
+    const { adminNotes } = await onUpdate.value(template.value.uuid, {
+      msg: note.msg,
+      pinned: note.pinned,
+      index: index,
+    });
+
+    setNotes(adminNotes);
+  } catch (err) {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Error during pin note",
+    });
+  } finally {
+    pinNoteIndex.value = "";
+    isPinLoading.value = false;
+  }
+};
+
 const startEdit = (index) => {
   isEditMode.value = true;
   editedNoteIndex.value = index;
@@ -194,6 +233,7 @@ const saveEditedNote = async () => {
 
     const { adminNotes } = await onUpdate.value(template.value.uuid, {
       msg: note.msg,
+      pinned: note.pinned,
       index: editedNoteIndex.value,
     });
     setNotes(adminNotes);
