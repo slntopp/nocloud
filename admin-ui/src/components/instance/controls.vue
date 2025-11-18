@@ -668,6 +668,30 @@ export default {
           },
           ...this.baseVmControls,
         ],
+        bitrix24: [
+          {
+            action: "change_state",
+            data: { state: 3 },
+            title: "start",
+            component: () => import("@/components/dialogs/startInstance.vue"),
+            disabled: this.emptyActions?.start,
+          },
+          {
+            action: "change_state",
+            data: { state: 2 },
+            title: "stop",
+            icon: "mdi-stop",
+            disabled: this.emptyActions?.stop,
+          },
+          {
+            action: "change_state",
+            data: { state: 6 },
+            title: "suspend",
+            icon: "mdi-power-sleep",
+            disabled: this.emptyActions?.suspend,
+          },
+          ...this.baseVmControls,
+        ],
         keyweb: [
           {
             action: "auto_start",
