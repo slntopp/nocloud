@@ -156,6 +156,10 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 		languageCode = account.GetLanguageCode()
 	}
 
+	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
+	writer.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	writer.Header().Set("Pragma", "no-cache")
+	writer.Header().Set("Expires", "0")
 	writer.WriteHeader(http.StatusOK)
 	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false)))
 }
@@ -600,7 +604,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<div class="brand">
 			<img src="%s" alt="Logo" />
 			<div>
-				<div style="font-weight:700;font-size:18px;">$invoice.title # %s</div>
+				<div style="font-weight:700;font-size:18px;">%s # %s</div>
 				<div class="small">$invoice.status_label <span class="badge %s">%s</span></div>
 			</div>
 		</div>
@@ -714,6 +718,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		l,
 		titleKey,
 		html.EscapeString(coalesce(logoURL, "")),
+		titleKey,
 		html.EscapeString(coalesce(invoiceBody.GetNumber(), invoiceBody.GetUuid())),
 		statusClass(invoiceBody.GetStatus()), statusKey(invoiceBody.GetStatus()),
 		formatDate(tsToTime(invoiceBody.GetCreated())),
@@ -738,8 +743,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	)
 
 	prepared := b.String()
-	formatted := invoicei18n.Replace(l, b.String())
-	fmt.Printf("\nINVOICE HTML PREPARED: %s\n\n\n\nINVOICE HTML FORMATTED: %s\n\n\n\n", prepared, formatted)
+	formatted := invoicei18n.Replace(l, prepared)
 	return formatted
 }
 
