@@ -1,0 +1,37 @@
+{
+  "invoice.title": "СЧЁТ-ПРОФОРМА",
+  "invoice.title_paid": "СЧЁТ",
+  "invoice.no_data": "Нет данных по счёту",
+  "invoice.status_label": "Статус:",
+  "invoice.payment_method": "Способ оплаты:",
+  "invoice.issue_date": "Дата выставления:",
+  "invoice.payment_date": "Дата оплаты:",
+  "invoice.supplier": "Поставщик:",
+  "invoice.buyer": "Покупатель:",
+  "invoice.due_date": "Срок оплаты",
+
+  "table.item": "Товар/услуга",
+  "table.qty": "Кол-во",
+  "table.unit": "Ед.",
+  "table.price": "Цена",
+  "table.unit_price": "Цена за ед.",
+  "table.vat": "НДС",
+  "table.amount": "Сумма",
+  "table.total": "Итого",
+
+  "summary.subtotal": "Подытог",
+  "summary.tax": "Налог",
+  "summary.grand_total": "Итого",
+  "summary.amount_due": "Сумма к оплате",
+  "summary.to_pay": "К оплате",
+
+  "footer.invoice_id": "ID счёта",
+
+  "invoice.status.paid": "ОПЛАЧЕН",
+  "invoice.status.unpaid": "НЕ ОПЛАЧЕН",
+  "invoice.status.canceled": "ОТМЕНЁН",
+  "invoice.status.terminated": "ЗАКРЫТ",
+  "invoice.status.draft": "ЧЕРНОВИК",
+  "invoice.status.returned": "ВОЗВРАТ",
+  "invoice.status.unknown": "НЕИЗВЕСТЕН"
+}

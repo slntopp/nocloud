@@ -29,6 +29,7 @@ import (
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
+	nocloud_auth "github.com/slntopp/nocloud/pkg/nocloud/auth"
 	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
@@ -101,6 +102,8 @@ func init() {
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("INVOICES_MIGRATIONS_FILE", "./whmcs_invoices.csv")
 	viper.SetDefault("INSTANCES_MIGRATIONS_FILE", "./instances_invoices.csv")
+	viper.SetDefault("PRIMARY_LANGUAGE_CODE", "en")
+	viper.SetDefault("GOTENBERG_HOST", "gotenberg:3000")
 
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
@@ -156,6 +159,8 @@ func main() {
 		log.Fatal("Failed to connect to Redis", zap.Error(res.Err()))
 	}
 
+	nocloud_auth.SetContext(log, rdb, SIGNING_KEY)
+
 	conn, err := amqp.Dial(RabbitMQConn)
 	if err != nil {
 		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
@@ -187,6 +192,8 @@ func main() {
 	spCtrl := graph.NewServicesProvidersController(log, db)
 	_ = graph.NewShowcasesController(log, db)
 	transactCtrl := graph.NewTransactionsController(log, db)
+	pgsCtrl := graph.NewPaymentGatewaysController(log, db)
+	accGroupsCtrl := graph.NewAccountGroupsController(log, db)
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
@@ -247,6 +254,11 @@ func main() {
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
+	log.Info("Registering Payment Gateway Server")
+	pgServer := billing.NewPaymentGatewayServer(log, db, rdb, SIGNING_KEY, settingsClient)
+	pgServer.RegisterRoutes(router)
+	log.Info("Payment Gateway Server registered")
+
 	// Create root context with cancel
 	token, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
@@ -267,7 +279,7 @@ func main() {
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 

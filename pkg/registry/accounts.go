@@ -211,6 +211,37 @@ func parseDevices(content string) ([]Record, error) {
 	return records, nil
 }
 
+func (s *AccountsServiceServer) ChangeAccountGroup(ctx context.Context, req *accountspb.ChangeAccountGroupRequest) (*accountspb.ChangeAccountGroupResponse, error) {
+	log := s.log.Named("ChangeAccountGroup")
+
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("requester", requester))
+	log = log.With(zap.String("account", requester))
+	log.Debug("ChangeAccountGroup request received")
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, fmt.Errorf("no access rights")
+	}
+	var targetAccount = requester
+	if req.TargetAccount != nil {
+		targetAccount = *req.TargetAccount
+	}
+	log = log.With(zap.String("account", targetAccount))
+
+	acc, err := s.ctrl.Get(ctx, targetAccount)
+	if err != nil {
+		log.Error("error obtaining account", zap.Error(err))
+		return nil, err
+	}
+	if err = s.ctrl.Update(ctx, acc, map[string]interface{}{
+		"account_group": req.AccountGroup,
+	}); err != nil {
+		log.Error("Failed to update account's account group", zap.Error(err))
+		return nil, fmt.Errorf("failed to change account group. Internal error")
+	}
+
+	return &accountspb.ChangeAccountGroupResponse{}, nil
+}
+
 func (s *AccountsServiceServer) ChangeLanguageCode(ctx context.Context, req *accountspb.ChangeLanguageCodeRequest) (*accountspb.ChangeLanguageCodeResponse, error) {
 	log := s.log.Named("ChangeLanguageCode")
 
@@ -765,6 +796,11 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	log := s.log.Named("CreateAccount")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
 
+	var stdSettings SignUpSettings
+	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -831,6 +867,12 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.AlreadyExists, "Such username also exists")
 	}
 
+	if request.Data != nil {
+		m := request.Data.AsMap()
+		m["tax_rate"] = stdSettings.BaseTaxRate
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	}
 	creationAccount := accountspb.Account{
 		Title:        request.Title,
 		Currency:     request.Currency,
@@ -958,6 +1000,12 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 		accStatus = accountspb.AccountStatus_LOCK
 	}
 
+	if request.Data != nil {
+		m := request.Data.AsMap()
+		m["tax_rate"] = stdSettings.BaseTaxRate
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	}
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: request.Currency,

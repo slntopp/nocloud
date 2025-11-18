@@ -105,6 +105,8 @@ func main() {
 			grpc_zap.UnaryServerInterceptor(log),
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
+		grpc.MaxRecvMsgSize(500*1024*1024),
+		grpc.MaxSendMsgSize(500*1024*1024),
 	)
 
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
@@ -123,7 +125,12 @@ func main() {
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
-		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithDefaultCallOptions(
+				grpc.MaxCallRecvMsgSize(500*1024*1024),
+				grpc.MaxCallSendMsgSize(500*1024*1024),
+			),
+		)
 		if err != nil {
 			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
 		}

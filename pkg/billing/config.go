@@ -62,6 +62,9 @@ type InvoicesConf struct {
 	TopUpItemMessage              string  `json:"top_up_item_message"`
 	TaxIncluded                   bool    `json:"tax_included"`
 	ForceRequirePhoneVerification bool    `json:"require_phone_verification"`
+
+	InvoiceFrom string `json:"invoice_from"`
+	LogoURL     string `json:"logo_url"`
 }
 
 var (
@@ -103,6 +106,9 @@ var (
 			TopUpItemMessage:              "Пополнение баланса (услуги хостинга, оплата за сервисы)",
 			TaxIncluded:                   false,
 			ForceRequirePhoneVerification: false,
+
+			InvoiceFrom: "NoCloud LLC\n123 Cloud St.\nCloud City, CC 12345\nTax ID: 123-456-789",
+			LogoURL:     "https://nocloud.com/logo.png",
 		},
 		Description: "Invoices configuration",
 		Level:       access.Level_ADMIN,

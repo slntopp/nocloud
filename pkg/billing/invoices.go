@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	epb "github.com/slntopp/nocloud-proto/events"
+	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	per "github.com/slntopp/nocloud/pkg/nocloud/periods"
@@ -154,6 +155,7 @@ FOR invoice IN @@invoices
 FILTER invoice.payment && invoice.payment > 0
 FILTER invoice.payment >= @date_from
 FILTER invoice.payment < @date_to
+%s
 RETURN invoice
 `
 
@@ -162,10 +164,11 @@ FOR invoice IN @@invoices
 FILTER invoice.payment == null || invoice.payment == 0
 FILTER invoice.created >= @date_from
 FILTER invoice.created < @date_to
+%s
 RETURN invoice
 `
 
-func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery string, date time.Time, template string, resetMode string) (string, int, error) {
+func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery string, date time.Time, template string, resetMode string, boundGroup string) (string, int, error) {
 	log = log.Named("GetNewNumber")
 	var dateFrom, dateTo int64
 	switch resetMode {
@@ -187,11 +190,18 @@ func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery strin
 	}
 
 	bindVars := map[string]interface{}{
-		"@invoices": schema.INVOICES_COL,
-		"date_from": dateFrom,
-		"date_to":   dateTo,
+		"@accounts":   schema.ACCOUNTS_COL,
+		"@invoices":   schema.INVOICES_COL,
+		"date_from":   dateFrom,
+		"date_to":     dateTo,
+		"bound_group": boundGroup,
 	}
 
+	invoicesQuery = fmt.Sprintf(invoicesQuery, `
+LET account_raw = DOCUMENT(@@accounts, invoice.account)
+LET account = account_raw == null ? {} : account_raw
+FILTER @bound_group == "" || account.account_group == @bound_group
+`)
 	cur, err := s.db.Query(context.Background(), invoicesQuery, bindVars)
 	if err != nil {
 		log.Error("Failed to get invoices to define number", zap.Error(err))
@@ -463,21 +473,64 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 	now := time.Now()
 
+	accGroup, err := s.accounts.GetAccountClientGroupAlwaysFound(ctx, acc.GetUuid())
+	if err != nil {
+		log.Error("Failed to get account group", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account group")
+	}
+	var (
+		boundGroup  string
+		template    = invConf.Template
+		newTemplate = invConf.NewTemplate
+		resetMode   = invConf.ResetCounterMode
+	)
+	if accGroup.HasOwnInvoiceOrder {
+		boundGroup = accGroup.GetUuid()
+		template = accGroup.InvoiceOrderSettings.Template
+		newTemplate = accGroup.InvoiceOrderSettings.NewTemplate
+		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
+	}
 	var (
 		strNum string
 		num    int
 	)
 	if t.Status == pb.BillingStatus_PAID {
-		strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, now, invConf.Template, invConf.ResetCounterMode)
+		strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, now, template, resetMode, boundGroup)
 		if err != nil {
 			log.Error("Failed to get next paid number", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get next number")
 		}
 	} else {
-		strNum, num, err = s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, invConf.NewTemplate, "NONE")
+		strNum, num, err = s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, newTemplate, "NONE", boundGroup)
 		if err != nil {
 			log.Error("Failed to get new number for invoice", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
+		}
+	}
+
+	var pgKey string
+	gws, err := s.pgs.List(ctx, true)
+	if err != nil {
+		log.Error("Failed to list payment gateways", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to list payment gateways. "+err.Error())
+	}
+	if t.PaymentGateway != "" {
+		// Find existing
+		var found bool
+		for _, gw := range gws {
+			if gw.GetKey() == t.PaymentGateway && gw.GetEnabled() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, status.Error(codes.Internal, "Provided payment gateways not found or disabled")
+		}
+	} else {
+		if len(gws) > 0 {
+			pgKey = gws[0].GetKey()
+		} else {
+			log.Warn("Zero active payment gateways")
 		}
 	}
 
@@ -497,6 +550,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 	t.Processed = 0
 	t.Returned = 0
+	t.PaymentGateway = pgKey
 	r, err := s.invoices.Create(ctx, &graph.Invoice{
 		Invoice: t,
 		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
@@ -549,6 +603,16 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	t := req.Msg
 	log.Debug("UpdateInvoiceStatus request received")
 
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+	var (
+		acc        graph.Account
+		accGroup   *accpb.AccountGroup
+		boundGroup string
+		template   = invConf.Template
+		_          = invConf.NewTemplate
+		resetMode  = invConf.ResetCounterMode
+	)
+
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
 		t.Status = pb.BillingStatus_DRAFT
 	}
@@ -588,7 +652,6 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	var strNum string
 	var num int
-	invConf := MakeInvoicesConf(log, &s.settingsClient)
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -606,7 +669,23 @@ payment:
 		newInv.Payment = nowBeforeActions
 	}
 
-	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), invConf.Template, invConf.ResetCounterMode)
+	acc, err = s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, old.Account)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+	accGroup, err = s.accounts.GetAccountClientGroupAlwaysFound(ctx, acc.GetUuid())
+	if err != nil {
+		log.Error("Failed to get account group", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account group")
+	}
+	if accGroup.HasOwnInvoiceOrder {
+		boundGroup = accGroup.GetUuid()
+		template = accGroup.InvoiceOrderSettings.Template
+		_ = accGroup.InvoiceOrderSettings.NewTemplate
+		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
+	}
+	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
 	if err != nil {
 		log.Error("Failed to get next number", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get next number")
@@ -1093,6 +1172,25 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		}
 		t.Total = graph.Round(newTotal, cur.Precision, cur.Rounding)
 		t.Subtotal = graph.Round(newSubtotal, cur.Precision, cur.Rounding)
+	}
+
+	if req.PaymentGateway != "" && req.PaymentGateway != t.PaymentGateway {
+		gws, err := s.pgs.List(ctx, true)
+		if err != nil {
+			log.Error("Failed to list payment gateways", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to list payment gateways. "+err.Error())
+		}
+		var found bool
+		for _, gw := range gws {
+			if gw.GetKey() == req.PaymentGateway && gw.GetEnabled() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, status.Error(codes.Internal, "Provided payment gateways not found or disabled")
+		}
+		t.PaymentGateway = req.PaymentGateway
 	}
 
 	vars := map[string]interface{}{}
