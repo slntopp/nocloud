@@ -738,8 +738,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	)
 
 	prepared := b.String()
-	formatted := invoicei18n.Replace(l, b.String())
-	fmt.Printf("\nINVOICE HTML PREPARED: %s\n\n\n\nINVOICE HTML FORMATTED: %s\n\n\n\n", prepared, formatted)
+	formatted := invoicei18n.Replace(l, prepared)
 	return formatted
 }
 
