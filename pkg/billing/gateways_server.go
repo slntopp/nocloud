@@ -600,7 +600,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<div class="brand">
 			<img src="%s" alt="Logo" />
 			<div>
-				<div style="font-weight:700;font-size:18px;">$invoice.title # %s</div>
+				<div style="font-weight:700;font-size:18px;">%s # %s</div>
 				<div class="small">$invoice.status_label <span class="badge %s">%s</span></div>
 			</div>
 		</div>
@@ -714,6 +714,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		l,
 		titleKey,
 		html.EscapeString(coalesce(logoURL, "")),
+		titleKey,
 		html.EscapeString(coalesce(invoiceBody.GetNumber(), invoiceBody.GetUuid())),
 		statusClass(invoiceBody.GetStatus()), statusKey(invoiceBody.GetStatus()),
 		formatDate(tsToTime(invoiceBody.GetCreated())),
