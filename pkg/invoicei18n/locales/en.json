@@ -1,0 +1,37 @@
+{
+  "invoice.title": "PROFORMA INVOICE",
+  "invoice.title_paid": "INVOICE",
+  "invoice.no_data": "No invoice data",
+  "invoice.status_label": "Status:",
+  "invoice.payment_method": "Payment method:",
+  "invoice.issue_date": "Issue date:",
+  "invoice.payment_date": "Payment date:",
+  "invoice.supplier": "Supplier:",
+  "invoice.buyer": "Buyer:",
+  "invoice.due_date": "Due date",
+
+  "table.item": "Item",
+  "table.qty": "Qty",
+  "table.unit": "Unit",
+  "table.price": "Price",
+  "table.unit_price": "Unit Price",
+  "table.vat": "VAT",
+  "table.amount": "Amount",
+  "table.total": "Total",
+
+  "summary.subtotal": "Subtotal",
+  "summary.tax": "Tax",
+  "summary.grand_total": "Grand Total",
+  "summary.amount_due": "Amount Due",
+  "summary.to_pay": "To pay",
+
+  "footer.invoice_id": "Invoice ID",
+
+  "invoice.status.paid": "PAID",
+  "invoice.status.unpaid": "UNPAID",
+  "invoice.status.canceled": "CANCELED",
+  "invoice.status.terminated": "TERMINATED",
+  "invoice.status.draft": "DRAFT",
+  "invoice.status.returned": "RETURNED",
+  "invoice.status.unknown": "UNKNOWN"
+}

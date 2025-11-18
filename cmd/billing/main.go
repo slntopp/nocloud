@@ -102,6 +102,8 @@ func init() {
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("INVOICES_MIGRATIONS_FILE", "./whmcs_invoices.csv")
 	viper.SetDefault("INSTANCES_MIGRATIONS_FILE", "./instances_invoices.csv")
+	viper.SetDefault("PRIMARY_LANGUAGE_CODE", "en")
+	viper.SetDefault("GOTENBERG_HOST", "gotenberg:3000")
 
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
@@ -190,6 +192,8 @@ func main() {
 	spCtrl := graph.NewServicesProvidersController(log, db)
 	_ = graph.NewShowcasesController(log, db)
 	transactCtrl := graph.NewTransactionsController(log, db)
+	pgsCtrl := graph.NewPaymentGatewaysController(log, db)
+	accGroupsCtrl := graph.NewAccountGroupsController(log, db)
 
 	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
 	interceptors := connect.WithInterceptors(authInterceptor)
@@ -275,7 +279,7 @@ func main() {
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 

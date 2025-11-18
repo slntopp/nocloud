@@ -796,6 +796,11 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	log := s.log.Named("CreateAccount")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
 
+	var stdSettings SignUpSettings
+	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -862,11 +867,18 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.AlreadyExists, "Such username also exists")
 	}
 
+	if request.Data != nil {
+		m := request.Data.AsMap()
+		m["tax_rate"] = stdSettings.BaseTaxRate
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	}
 	creationAccount := accountspb.Account{
 		Title:        request.Title,
 		Currency:     request.Currency,
 		Data:         request.GetData(),
 		AccountOwner: request.GetAccountOwner(),
+		AccountGroup: request.GetAccountGroup(),
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
@@ -989,11 +1001,18 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 		accStatus = accountspb.AccountStatus_LOCK
 	}
 
+	if request.Data != nil {
+		m := request.Data.AsMap()
+		m["tax_rate"] = stdSettings.BaseTaxRate
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	}
 	creationAccount := accountspb.Account{
-		Title:    request.Title,
-		Currency: request.Currency,
-		Data:     request.GetData(),
-		Status:   accStatus,
+		Title:        request.Title,
+		Currency:     request.Currency,
+		Data:         request.GetData(),
+		Status:       accStatus,
+		AccountGroup: request.AccountGroup,
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
@@ -1236,6 +1255,7 @@ func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddN
 		Admin:   requestor,
 		Msg:     request.GetMsg(),
 		Created: time.Now().Unix(),
+		Pinned:  request.Pinned,
 	})
 
 	patch := map[string]any{
@@ -1283,6 +1303,7 @@ func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.Pa
 		note.Admin = requestor
 		note.Msg = request.GetMsg()
 		note.Updated = time.Now().Unix()
+		note.Pinned = request.Pinned
 
 		patch := map[string]any{
 			"admin_notes": acc.GetAdminNotes(),

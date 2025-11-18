@@ -57,6 +57,7 @@ type SignUpSettings struct {
 	AllowedTypes   []string `json:"allowed_types"`
 	Enabled        bool     `json:"enabled"`
 	EnabledAccount bool     `json:"enabled_account"`
+	BaseTaxRate    float64  `json:"base_tax_rate"`
 }
 
 var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
@@ -71,6 +72,7 @@ var standartSettings = &sc.Setting[SignUpSettings]{
 		AllowedTypes:   []string{},
 		Enabled:        false,
 		EnabledAccount: false,
+		BaseTaxRate:    0,
 	},
 	Description: "Signup Settings",
 	Level:       access.Level_ADMIN,

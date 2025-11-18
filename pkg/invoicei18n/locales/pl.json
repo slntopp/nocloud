@@ -1,0 +1,37 @@
+{
+  "invoice.title": "PROFORMA INVOICE",
+  "invoice.title_paid": "INVOICE",
+  "invoice.no_data": "Brak danych faktury",
+  "invoice.status_label": "Status:",
+  "invoice.payment_method": "Metoda płatności:",
+  "invoice.issue_date": "Data wystawienia:",
+  "invoice.payment_date": "Data płatności:",
+  "invoice.supplier": "Dostawca:",
+  "invoice.buyer": "Odbiorca:",
+  "invoice.due_date": "Termin płatności",
+
+  "table.item": "Towar/usługa",
+  "table.qty": "Ilość",
+  "table.unit": "J.m.",
+  "table.price": "Cena",
+  "table.unit_price": "Cena jedn.",
+  "table.vat": "VAT",
+  "table.amount": "Kwota",
+  "table.total": "Razem",
+
+  "summary.subtotal": "Suma częściowa",
+  "summary.tax": "Podatek",
+  "summary.grand_total": "Suma całkowita",
+  "summary.amount_due": "Kwota do zapłaty",
+  "summary.to_pay": "Do zapłaty",
+
+  "footer.invoice_id": "ID faktury",
+
+  "invoice.status.paid": "OPŁACONA",
+  "invoice.status.unpaid": "NIEOPŁACONA",
+  "invoice.status.canceled": "ANULOWANA",
+  "invoice.status.terminated": "ZAMKNIĘTA",
+  "invoice.status.draft": "SZKIC",
+  "invoice.status.returned": "ZWROT",
+  "invoice.status.unknown": "NIEZNANY"
+}
