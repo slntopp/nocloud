@@ -878,6 +878,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		Currency:     request.Currency,
 		Data:         request.GetData(),
 		AccountOwner: request.GetAccountOwner(),
+		AccountGroup: request.GetAccountGroup(),
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
@@ -1007,10 +1008,11 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 		request.Data = structMap
 	}
 	creationAccount := accountspb.Account{
-		Title:    request.Title,
-		Currency: request.Currency,
-		Data:     request.GetData(),
-		Status:   accStatus,
+		Title:        request.Title,
+		Currency:     request.Currency,
+		Data:         request.GetData(),
+		Status:       accStatus,
+		AccountGroup: request.AccountGroup,
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
