@@ -18,8 +18,14 @@
         <v-col cols="1" class="align-center d-flex">
           <v-subheader>Group</v-subheader>
         </v-col>
-        <v-col cols="3" class="align-center d-flex">
+        <v-col cols="2" class="align-center d-flex">
           <v-text-field label="Group" v-model="newAddon.group" />
+        </v-col>
+          <v-col cols="1" class="align-center d-flex">
+          <v-subheader>Tag</v-subheader>
+        </v-col>
+        <v-col cols="2" class="align-center d-flex">
+          <v-text-field label="Tag" v-model="newAddon.meta.tag" />
         </v-col>
         <v-col cols="2" class="align-center d-flex">
           <v-switch label="Public" v-model="newAddon.public" />
@@ -105,6 +111,7 @@ const router = useRouter();
 const newAddon = ref({
   title: "",
   periods: [],
+  meta: {},
   group: "",
   public: true,
   description: "",
@@ -204,6 +211,7 @@ const saveAddon = async () => {
 const setAddon = (val) => {
   newAddon.value = {
     ...val,
+    meta: val.meta || {},
     periods: Object.keys(val.periods || {}).map((key, ind) => ({
       period: key,
       price: val.periods[key],
