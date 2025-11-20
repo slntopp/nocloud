@@ -185,23 +185,13 @@ func buildBuyerSection(name string, dataMap map[string]any) string {
 	}
 	const addrTemplate = `{{- $hasHeader := or .Company .Name .Address -}}
 {{- $hasFooter := or .Country .VAT -}}
-{{- if .Company}}
-{{.Company}}
-{{end -}}
-{{- if .Name}}
-{{.Name}}
-{{end -}}
-{{- if .Address}}
-{{.Address}}
-{{end -}}
-{{- if and $hasHeader $hasFooter}}
+{{- if .Company}}{{.Company}}
+{{end}}{{- if .Name}}{{.Name}}
+{{end}}{{- if .Address}}{{.Address}}
+{{end}}{{- if and $hasHeader $hasFooter}}
 
-{{end -}}
-{{- if .Country}}
-{{.Country}}
-{{end -}}
-{{- if .VAT}}
-VAT: {{.VAT}}
+{{end}}{{- if .Country}}{{.Country}}
+{{end}}{{- if .VAT}}VAT: {{.VAT}}
 {{end -}}`
 	type AddrData struct {
 		Name    string
