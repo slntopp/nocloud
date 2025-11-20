@@ -28,6 +28,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 	"unicode"
 )
@@ -127,8 +128,9 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	}
 
 	var (
-		Supplier    string
-		Buyer       = "Email: "
+		Supplier string
+		Buyer    = "N/A"
+
 		LogoURL     string
 		InvoiceBody = invoice.Invoice
 		Gateways    = gateways
@@ -143,12 +145,7 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	}
 
 	if account.Data != nil {
-		dataMap := account.Data.AsMap()
-		if email, ok := dataMap["email"].(string); ok {
-			Buyer += email
-		} else {
-			Buyer += "N/A"
-		}
+		Buyer = buildBuyerSection(account.GetTitle(), account.Data.AsMap())
 	}
 
 	languageCode := viper.GetString("PRIMARY_LANGUAGE_CODE")
@@ -162,6 +159,70 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	writer.Header().Set("Expires", "0")
 	writer.WriteHeader(http.StatusOK)
 	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false)))
+}
+
+func buildBuyerSection(name string, dataMap map[string]any) string {
+	var (
+		company string
+		address string
+		country string
+		vatID   string
+	)
+	if dataMap != nil {
+		company, _ = dataMap["company"].(string)
+		city, _ := dataMap["city"].(string)
+		address, _ = dataMap["address"].(string)
+		country, _ = dataMap["country"].(string)
+		vatID, _ = dataMap["tax_id"].(string)
+		var addrParts []string
+		if city = strings.TrimSpace(city); city != "" {
+			addrParts = append(addrParts, city)
+		}
+		if address = strings.TrimSpace(address); address != "" {
+			addrParts = append(addrParts, address)
+		}
+		address = strings.Join(addrParts, ", ")
+	}
+	const addrTemplate = `{{- $hasHeader := or .Company .Name .Address -}}
+{{- $hasFooter := or .Country .VAT -}}
+{{- if .Company}}
+{{.Company}}
+{{end -}}
+{{- if .Name}}
+{{.Name}}
+{{end -}}
+{{- if .Address}}
+{{.Address}}
+{{end -}}
+{{- if and $hasHeader $hasFooter}}
+
+{{end -}}
+{{- if .Country}}
+{{.Country}}
+{{end -}}
+{{- if .VAT}}
+VAT: {{.VAT}}
+{{end -}}`
+	type AddrData struct {
+		Name    string
+		Company string
+		Address string
+		Country string
+		VAT     string
+	}
+	data := AddrData{
+		Name:    strings.TrimSpace(name),
+		Company: strings.TrimSpace(company),
+		Address: strings.TrimSpace(address),
+		Country: strings.TrimSpace(country),
+		VAT:     strings.TrimSpace(vatID),
+	}
+	tmpl := template.Must(template.New("addr").Parse(addrTemplate))
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "N/A"
+	}
+	return buf.String()
 }
 
 func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, request *http.Request) {
@@ -200,7 +261,7 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 
 	var (
 		Supplier    string
-		Buyer       = "Email: "
+		Buyer       = "N/A"
 		LogoURL     string
 		InvoiceBody = invoice.Invoice
 	)
@@ -214,12 +275,7 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 	}
 
 	if account.Data != nil {
-		dataMap := account.Data.AsMap()
-		if email, ok := dataMap["email"].(string); ok {
-			Buyer += email
-		} else {
-			Buyer += "N/A"
-		}
+		Buyer = buildBuyerSection(account.GetTitle(), account.Data.AsMap())
 	}
 
 	languageCode := viper.GetString("PRIMARY_LANGUAGE_CODE")
