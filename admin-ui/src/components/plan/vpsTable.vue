@@ -64,7 +64,7 @@
                   CPU:{{ item.resources.cpu || "N/A" }}
                 </span>
               </template>
-              <pre style="color: black;">{{ item.resources }}</pre>
+              <pre style="color: black">{{ item.resources }}</pre>
             </v-tooltip>
           </template>
           <template v-slot:[`item.group`]="{ item }">
@@ -504,11 +504,11 @@ const changePlans = ({ plans: plansData, catalog }) => {
         const id = `${duration} ${planCode}`;
         const realProduct = plans.value.find((p) => p.id === id) || {};
 
-        const code = planCode.split("-").slice(1).join("-");
+        const code = planCode;
         const newPrice = convertPrice(price.value);
 
         const { configurations, addonFamilies } = catalog.plans.find(
-          ({ planCode }) => planCode.includes(code)
+          ({ planCode }) => planCode === code
         );
 
         const product = catalog.products.find((p) => planCode === p.name);
