@@ -11,6 +11,7 @@ import (
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/invoicei18n"
+	"github.com/slntopp/nocloud/pkg/locales"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/aswords"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
@@ -144,13 +145,13 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 		LogoURL = invConf.LogoURL
 	}
 
-	if account.Data != nil {
-		Buyer = buildBuyerSection(account.GetTitle(), account.Data.AsMap())
-	}
-
 	languageCode := viper.GetString("PRIMARY_LANGUAGE_CODE")
 	if account.GetLanguageCode() != "" {
 		languageCode = account.GetLanguageCode()
+	}
+
+	if account.Data != nil {
+		Buyer = buildBuyerSection(account.GetTitle(), account.Data.AsMap(), languageCode)
 	}
 
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -161,7 +162,7 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false)))
 }
 
-func buildBuyerSection(name string, dataMap map[string]any) string {
+func buildBuyerSection(name string, dataMap map[string]any, languageCode string) string {
 	var (
 		company string
 		address string
@@ -204,7 +205,7 @@ func buildBuyerSection(name string, dataMap map[string]any) string {
 		Name:    strings.TrimSpace(name),
 		Company: strings.TrimSpace(company),
 		Address: strings.TrimSpace(address),
-		Country: strings.TrimSpace(country),
+		Country: strings.TrimSpace(strings.ToUpper(locales.TranslateCountryMust(country, languageCode))),
 		VAT:     strings.TrimSpace(vatID),
 	}
 	tmpl := template.Must(template.New("addr").Parse(addrTemplate))
@@ -264,13 +265,13 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 		LogoURL = invConf.LogoURL
 	}
 
-	if account.Data != nil {
-		Buyer = buildBuyerSection(account.GetTitle(), account.Data.AsMap())
-	}
-
 	languageCode := viper.GetString("PRIMARY_LANGUAGE_CODE")
 	if account.GetLanguageCode() != "" {
 		languageCode = account.GetLanguageCode()
+	}
+
+	if account.Data != nil {
+		Buyer = buildBuyerSection(account.GetTitle(), account.Data.AsMap(), languageCode)
 	}
 
 	switch PaymentGatewayType(pgKey) {
