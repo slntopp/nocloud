@@ -191,7 +191,7 @@ func buildBuyerSection(name string, dataMap map[string]any) string {
 {{end}}{{- if and $hasHeader $hasFooter}}
 
 {{end}}{{- if .Country}}{{.Country}}
-{{end}}{{- if .VAT}}VAT: {{.VAT}}
+{{end}}{{- if .VAT}}VAT (NIP): {{.VAT}}
 {{end -}}`
 	type AddrData struct {
 		Name    string
