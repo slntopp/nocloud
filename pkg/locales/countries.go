@@ -49,6 +49,13 @@ func TranslateCountry(countryOrCode, languageCode string) (string, error) {
 		return tr.Common, nil
 	}
 
+	if strings.ToLower(languageCode) == strings.ToLower(c.Alpha2) {
+		for _, tr := range c.Name.Native {
+			if tr.Common != "" {
+				return tr.Common, nil
+			}
+		}
+	}
 	return c.Name.Common, nil
 }
 
