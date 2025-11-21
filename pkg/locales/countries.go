@@ -49,13 +49,17 @@ func TranslateCountry(countryOrCode, languageCode string) (string, error) {
 		return tr.Common, nil
 	}
 
+	for _, tr := range c.Name.Native {
+		if tr.Common != "" {
+			return tr.Common, nil
+		}
+	}
 	return c.Name.Common, nil
 }
 
 func TranslateCountryMust(countryOrCode, languageCode string) string {
 	name, err := TranslateCountry(countryOrCode, languageCode)
 	if err != nil {
-		fmt.Printf("ERROR IN COUNTRY TRANSLATION: %v\n", err)
 		return countryOrCode
 	}
 	return name
