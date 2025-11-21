@@ -55,6 +55,7 @@ func TranslateCountry(countryOrCode, languageCode string) (string, error) {
 func TranslateCountryMust(countryOrCode, languageCode string) string {
 	name, err := TranslateCountry(countryOrCode, languageCode)
 	if err != nil {
+		fmt.Printf("ERROR IN COUNTRY TRANSLATION: %v\n", err)
 		return countryOrCode
 	}
 	return name
