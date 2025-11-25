@@ -170,6 +170,9 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		groupType := group.GetType()
 
 		for _, instance := range group.GetInstances() {
+			if instance.Status == statuspb.NoCloudStatus_DEL {
+				continue
+			}
 			log.Debug("Instance BillingPlan is", zap.Bool("provided", instance.BillingPlan != nil))
 			if ibps.Required && instance.BillingPlan == nil {
 				response.Result = false
