@@ -634,7 +634,7 @@ tfoot td{font-weight:600}
 @media (max-width:700px){.totals{grid-template-columns:1fr}}
 .summary{display:grid;gap:8px}
 .summary .row{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:8px 0}
-.pay{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px}
+.pay{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px;background-color:#92D050;color:#fff}
 .pay .due{font-weight:700}
 .pay-words{display:flex;justify-content:flex-end;align-items:center;padding:12px 20px;flex-wrap:wrap;gap:8px}
 .small{font-size:12px;color:var(--muted)}
@@ -651,7 +651,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<div class="brand">
 			<img src="%s" alt="Logo" />
 			<div>
-				<div style="font-weight:700;font-size:18px;">%s # %s</div>
+				<div style="font-weight:700;font-size:18px;color:#CCE67F;">%s # %s</div>
 				<div class="small">$invoice.status_label <span class="badge %s">%s</span></div>
 			</div>
 		</div>
