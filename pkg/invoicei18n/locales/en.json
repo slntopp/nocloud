@@ -20,7 +20,7 @@
   "table.total": "Total",
 
   "summary.subtotal": "Subtotal",
-  "summary.tax": "Tax",
+  "summary.tax": "VAT",
   "summary.grand_total": "Grand Total",
   "summary.amount_due": "Amount Due",
   "summary.to_pay": "To pay",
