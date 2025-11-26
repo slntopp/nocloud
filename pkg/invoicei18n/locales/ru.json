@@ -16,7 +16,7 @@
   "table.price": "Цена",
   "table.unit_price": "Цена за ед.",
   "table.vat": "НДС",
-  "table.amount": "Сумма",
+  "table.amount": "Сумма НДС",
   "table.total": "Итого",
 
   "summary.subtotal": "Подытог",

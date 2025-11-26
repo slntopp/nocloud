@@ -514,10 +514,10 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 			html.EscapeString(it.GetDescription()),
 			it.GetAmount(),
 			html.EscapeString(it.GetUnit()),
-			formatMoney(invoiceBody.GetCurrency(), unitPrice),
+			formatMoney(invoiceBody.GetCurrency(), unitPrice*qty),
 			formatMoney(invoiceBody.GetCurrency(), unitPrice),
 			vatLabel,
-			formatMoney(invoiceBody.GetCurrency(), lineSubtotal),
+			formatMoney(invoiceBody.GetCurrency(), lineTotal-lineSubtotal),
 			formatMoney(invoiceBody.GetCurrency(), lineTotal),
 		))
 	}

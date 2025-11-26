@@ -16,7 +16,7 @@
   "table.price": "Price",
   "table.unit_price": "Unit Price",
   "table.vat": "VAT",
-  "table.amount": "Amount",
+  "table.amount": "Amount VAT",
   "table.total": "Total",
 
   "summary.subtotal": "Subtotal",

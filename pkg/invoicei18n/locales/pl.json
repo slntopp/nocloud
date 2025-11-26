@@ -16,7 +16,7 @@
   "table.price": "Cena",
   "table.unit_price": "Cena jedn.",
   "table.vat": "VAT",
-  "table.amount": "Kwota",
+  "table.amount": "Kwota VAT",
   "table.total": "Razem",
 
   "summary.subtotal": "Suma częściowa",
