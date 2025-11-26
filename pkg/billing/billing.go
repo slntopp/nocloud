@@ -117,11 +117,51 @@ type BillingServiceServer struct {
 
 	invoicesPublisher   func(event *epb.Event) error
 	instanceCommandsPub func(event *epb.Event) error
+	eventsPublisher     func(event *epb.Event) error
 	ps                  *ps.PubSub[*epb.Event]
 
 	topicsPs *pubsub.PubSub
 
 	syncCreatedDate bool
+}
+
+func SetupEventPublisher(log *zap.Logger, rbmq rabbitmq.Connection) func(event *epb.Event) error {
+	return func(event *epb.Event) error {
+		ch, err := rbmq.Channel()
+		if err != nil {
+			log.Error("Failed to open a events channel", zap.Error(err))
+			return err
+		}
+		defer ch.Close()
+		qName := "events"
+		body, err := proto.Marshal(event)
+		if err != nil {
+			log.Error("Error while marshalling events record", zap.Error(err))
+			return err
+		}
+		if err = ch.PublishWithContext(context.Background(), "", qName, false, false, amqp.Publishing{
+			ContentType: "text/plain", Body: body,
+		}); err != nil {
+			log.Error("Failed to publish events event", zap.Error(err))
+			return err
+		}
+		return nil
+	}
+}
+
+func (s *BillingServiceServer) SendEmailEvent(templateKey string, account string, data map[string]*structpb.Value) error {
+	event := &epb.Event{
+		Uuid: account,
+		Key:  templateKey,
+		Type: "email",
+		Data: data,
+		Ts:   time.Now().Unix(),
+	}
+	err := s.eventsPublisher(event)
+	if err != nil {
+		s.log.Error("Failed to publish email event", zap.Error(err))
+	}
+	return err
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbitmq.Connection, rdb redisdb.Client, drivers map[string]driverpb.DriverServiceClient, token string,
@@ -163,6 +203,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		instanceCommandsPub: instPub,
 		ps:                  ps,
 		topicsPs:            tps,
+		eventsPublisher:     SetupEventPublisher(log, conn),
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{

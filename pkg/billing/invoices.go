@@ -584,6 +584,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Requestor: requester,
 	})
 
+	if acc.PaymentsGateway == "nocloud" {
+		if t.Status != pb.BillingStatus_DRAFT && t.Status != pb.BillingStatus_TERMINATED {
+			_ = s.SendEmailEvent("invoice_published", t.Account, map[string]*structpb.Value{}) // TODO data
+		}
+	}
+
 	if t.Total <= 0 {
 		if _, err = s.UpdateInvoiceStatus(ctx, connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 			Uuid:   r.GetUuid(),
@@ -734,6 +740,12 @@ quit:
 		Snapshot:  &elpb.Snapshot{Diff: diff.String()},
 		Requestor: requester,
 	})
+
+	if acc.PaymentsGateway == "nocloud" {
+		if newStatus == pb.BillingStatus_PAID {
+			_ = s.SendEmailEvent("invoice_paid", old.Account, map[string]*structpb.Value{}) // TODO data
+		}
+	}
 
 	log.Info("Finished invoice update status")
 	return connect.NewResponse(_newInv), nil
