@@ -514,13 +514,41 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 			html.EscapeString(it.GetDescription()),
 			it.GetAmount(),
 			html.EscapeString(it.GetUnit()),
-			formatMoney(invoiceBody.GetCurrency(), unitPrice*qty),
 			formatMoney(invoiceBody.GetCurrency(), unitPrice),
+			formatMoney(invoiceBody.GetCurrency(), unitPrice*qty),
 			vatLabel,
 			formatMoney(invoiceBody.GetCurrency(), lineTotal-lineSubtotal),
 			formatMoney(invoiceBody.GetCurrency(), lineTotal),
 		))
 	}
+
+	// Total row
+	var vatLabel = "NP"
+	if invoiceBody.GetTaxOptions().GetTaxRate() > 0 {
+		vatLabel = fmt.Sprintf("%.0f%%", taxRate*100)
+	}
+	rowsBuf.WriteString(fmt.Sprintf(
+		`<tr>
+				<td class="c">%s</td>
+				<td class="item"><div class="descr">%s</div></td>
+				<td class="c">%s</td>
+				<td class="c">%s</td>
+				<td class="r">%s:</td>
+				<td class="r">%s</td>
+				<td class="c">%s</td>
+				<td class="r">%s</td>
+				<td class="r">%s</td>
+			</tr>`,
+		"",
+		"",
+		"",
+		"",
+		"$table.total_title",
+		formatMoney(invoiceBody.GetCurrency(), invoiceBody.GetSubtotal()),
+		vatLabel,
+		formatMoney(invoiceBody.GetCurrency(), invoiceBody.GetTotal()-invoiceBody.GetSubtotal()),
+		formatMoney(invoiceBody.GetCurrency(), invoiceBody.GetTotal()),
+	))
 
 	if invoiceBody.GetSubtotal() > 0 {
 		subtotal = invoiceBody.GetSubtotal()
@@ -530,11 +558,6 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 		if subtotal > 0 && grandTotal >= subtotal {
 			totalTax = grandTotal - subtotal
 		}
-	}
-
-	amountDue := grandTotal
-	if invoiceBody.GetStatus() == pb.BillingStatus_PAID {
-		amountDue = 0
 	}
 
 	var enabled []pg
@@ -635,7 +658,7 @@ tfoot td{font-weight:600}
 .summary{display:grid;gap:8px}
 .summary .row{display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:8px 0}
 .pay{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--line);flex-wrap:wrap;gap:8px;background-color:#92D050;color:#fff}
-.pay .due{font-weight:700}
+.pay .due{font-weight:700;display:flex;justify-content:flex-end;align-items:center;padding:12px 20px;flex-wrap:wrap;gap:8px;}
 .pay-words{display:flex;justify-content:flex-end;align-items:center;padding:12px 20px;flex-wrap:wrap;gap:8px}
 .small{font-size:12px;color:var(--muted)}
 footer{padding:10px 20px}
@@ -694,8 +717,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 					<th>$table.item</th>
 					<th class="c" style="width:64px">$table.qty</th>
 					<th class="c" style="width:64px">$table.unit</th>
-					<th class="r" style="width:120px">$table.price</th>
 					<th class="r" style="width:120px">$table.unit_price</th>
+					<th class="r" style="width:120px">$table.price</th>
 					<th class="c" style="width:80px">$table.vat</th>
 					<th class="r" style="width:120px">$table.amount</th>
 					<th class="r" style="width:120px">$table.total</th>
@@ -707,17 +730,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		</table>
 	</div>
 
-	<div class="totals">
-		<div class="summary">
-			<div class="row"><span>$summary.subtotal</span><span>%s</span></div>
-			<div class="row"><span>$summary.tax</span><span>%s</span></div>
-			<div class="row"><span>$summary.grand_total</span><span>%s</span></div>
-		</div>
-	</div>
-
 	<div class="pay">
 		<div class="due">$summary.amount_due: %s</div>
-		<div>$summary.to_pay: <strong>%s</strong></div>
 	</div>
 
     <div class="pay-words">
@@ -776,10 +790,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		escapeWithBR(buyer),
 		formatDate(tsToTime(invoiceBody.GetDeadline())),
 		rowsBuf.String(),
-		formatMoney(invoiceBody.GetCurrency(), subtotal),
-		formatMoney(invoiceBody.GetCurrency(), totalTax),
-		formatMoney(invoiceBody.GetCurrency(), grandTotal),
-		formatMoney(invoiceBody.GetCurrency(), amountDue),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
 		CapitalizeWords(totalAsWords),
 		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),

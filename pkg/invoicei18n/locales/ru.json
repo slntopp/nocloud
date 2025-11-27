@@ -18,6 +18,7 @@
   "table.vat": "НДС",
   "table.amount": "Сумма НДС",
   "table.total": "Итого",
+  "table.total_title": "Итого",
 
   "summary.subtotal": "Подытог",
   "summary.tax": "Налог",

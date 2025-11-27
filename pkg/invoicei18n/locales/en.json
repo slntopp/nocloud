@@ -18,6 +18,7 @@
   "table.vat": "VAT",
   "table.amount": "Amount VAT",
   "table.total": "Total",
+  "table.total_title": "Total",
 
   "summary.subtotal": "Subtotal",
   "summary.tax": "VAT",
