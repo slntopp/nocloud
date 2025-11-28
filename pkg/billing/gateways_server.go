@@ -763,7 +763,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
         %s
 	</div>
 
-    <div>
+    <div class="card">
        %s
     </div>
 
