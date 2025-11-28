@@ -643,7 +643,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--soft);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
-.wrapper{max-width:700px;margin:24px auto;padding:16px}
+.wrapper{max-width:790px;margin:24px auto;padding:16px}
 .card{background:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.04);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:12px;min-width:220px}
