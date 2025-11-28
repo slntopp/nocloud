@@ -684,7 +684,7 @@ footer{padding:10px 20px}
 hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 .note{padding:12px 20px}
 
-  .card{
+  .card-sup{
     background:#fff;
     padding:26px;
     border-radius:18px;
@@ -695,7 +695,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
       0 2px 4px rgba(0,0,0,0.04);
   }
 
- .card table{
+ .card-sup table{
     width:100%%;
     border-collapse:separate;
     border-spacing:0;
@@ -704,7 +704,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
     border:2px solid #92D050;
   }
 
-  .card th{
+  .card-sup th{
     background:linear-gradient(180deg,#f4ffed,#e4f5d4);
     font-weight:600;
     padding:14px 16px;
@@ -714,26 +714,26 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
     text-align:left;
   }
 
-  .card td{
+  .card-sup td{
     padding:14px 16px;
     font-size:15px;
     border-bottom:1px solid #92D05055;
     background:#ffffff;
   }
 
-  .card tr:nth-child(odd) td{
+  .card-sup tr:nth-child(odd) td{
     background:#f9fff4;
   }
 
-  .card tr:last-child td{
+  .card-sup tr:last-child td{
     border-bottom:none;
   }
 
-  .card tbody tr:hover td{
+  .card-sup tbody tr:hover td{
     background:#f0ffe7 !important;
   }
 
-  .card tbody td:first-child{
+  .card-sup tbody td:first-child{
     font-weight:500;
     color:#4b4b4b;
     background:#f7fdf3;
@@ -763,7 +763,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
         %s
 	</div>
 
-    <div class="card">
+    <div class="card-sup">
        %s
     </div>
 
