@@ -929,17 +929,17 @@ func BuildTableHTML(col1, col2, col3 string, rows ...[3]string) string {
 
 	b.WriteString(`<table border="1" cellspacing="0" cellpadding="6">`)
 	b.WriteString("<thead><tr>")
-	b.WriteString("<th>" + html.EscapeString(col1) + "</th>")
-	b.WriteString("<th>" + html.EscapeString(col2) + "</th>")
-	b.WriteString("<th>" + html.EscapeString(col3) + "</th>")
+	b.WriteString("<th>" + col1 + "</th>")
+	b.WriteString("<th>" + col2 + "</th>")
+	b.WriteString("<th>" + col3 + "</th>")
 	b.WriteString("</tr></thead>")
 	b.WriteString("<tbody>")
 
 	for _, r := range rows {
 		b.WriteString("<tr>")
-		b.WriteString("<td>" + html.EscapeString(r[0]) + "</td>")
-		b.WriteString("<td>" + html.EscapeString(r[1]) + "</td>")
-		b.WriteString("<td>" + html.EscapeString(r[2]) + "</td>")
+		b.WriteString("<td>" + r[0] + "</td>")
+		b.WriteString("<td>" + r[1] + "</td>")
+		b.WriteString("<td>" + r[2] + "</td>")
 		b.WriteString("</tr>")
 	}
 
