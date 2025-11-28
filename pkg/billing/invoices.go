@@ -2,11 +2,13 @@ package billing
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	epb "github.com/slntopp/nocloud-proto/events"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	per "github.com/slntopp/nocloud/pkg/nocloud/periods"
@@ -15,6 +17,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
 	"github.com/wI2L/jsondiff"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/metadata"
 	"math"
 	"slices"
 	"strings"
@@ -232,6 +235,60 @@ FILTER @bound_group == "" || account.account_group == @bound_group
 	}
 
 	return s.invoices.ParseNumberIntoTemplate(template, number, date), number, nil
+}
+
+func (s *BillingServiceServer) obtainForcedInvoiceNumber(accGroup string) (int, error) {
+	if accGroup == "" {
+		invConf := MakeInvoicesConf(s.log, &s.settingsClient)
+		return invConf.StartWithNumber, nil
+	}
+	group, err := s.accounts.GetAccountClientGroup(context.Background(), accGroup)
+	if err != nil {
+		return 0, err
+	}
+	if group.HasOwnInvoiceOrder {
+		return int(group.InvoiceOrderSettings.StartWithNumber), nil
+	}
+	invConf := MakeInvoicesConf(s.log, &s.settingsClient)
+	return invConf.StartWithNumber, nil
+}
+
+func (s *BillingServiceServer) saveForcedInvoiceNumber(accGroup string, num int) error {
+	saveInGlobalSettings := func(num int) error {
+		invConf := MakeInvoicesConf(s.log, &s.settingsClient)
+		invConf.StartWithNumber = num
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+		ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, 4)
+		ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+s.rootToken)
+		b, err := json.Marshal(invConf)
+		if err != nil {
+			return err
+		}
+		_, err = s.settingsClient.Put(ctx, &settingspb.PutRequest{
+			Key:   invKey,
+			Value: string(b),
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if accGroup == "" {
+		return saveInGlobalSettings(num)
+	}
+	group, err := s.accounts.GetAccountClientGroup(context.Background(), accGroup)
+	if err != nil {
+		return err
+	}
+	if group.HasOwnInvoiceOrder {
+		group.InvoiceOrderSettings.StartWithNumber = int64(num)
+		if _, err = s.accGroups.Update(context.Background(), group); err != nil {
+			return err
+		}
+		return nil
+	}
+	return saveInGlobalSettings(num)
 }
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {

@@ -8,6 +8,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
+	"time"
 )
 
 // Settings Key storing billing configuration
@@ -53,6 +54,15 @@ type SuspendConf struct {
 	ExtraLimit     float64           `json:"extra_limit"`
 }
 
+type InvoiceFromFields struct {
+	Name       string `json:"name"`
+	Address    string `json:"address"`
+	City       string `json:"city"`
+	PostalCode string `json:"postal_code"`
+	Country    string `json:"country"`
+	TaxID      string `json:"tax_id"`
+}
+
 type InvoicesConf struct {
 	Template                      string  `json:"template"`
 	NewTemplate                   string  `json:"new_template"`
@@ -63,8 +73,10 @@ type InvoicesConf struct {
 	TaxIncluded                   bool    `json:"tax_included"`
 	ForceRequirePhoneVerification bool    `json:"require_phone_verification"`
 
-	InvoiceFrom string `json:"invoice_from"`
-	LogoURL     string `json:"logo_url"`
+	InvoiceFrom InvoiceFromFields `json:"invoice_from_fields"`
+	LogoURL     string            `json:"logo_url"`
+
+	MustResetInvoiceNumberAt time.Time `json:"must_reset_invoice_number_at"`
 }
 
 var (
@@ -107,7 +119,7 @@ var (
 			TaxIncluded:                   false,
 			ForceRequirePhoneVerification: false,
 
-			InvoiceFrom: "NoCloud LLC\n123 Cloud St.\nCloud City, CC 12345\nTax ID: 123-456-789",
+			InvoiceFrom: InvoiceFromFields{Name: "SomeName", Address: "SomeAddress", City: "SomeCity", PostalCode: "123456", Country: "SomeCountry", TaxID: "123456789"},
 			LogoURL:     "https://nocloud.com/logo.png",
 		},
 		Description: "Invoices configuration",

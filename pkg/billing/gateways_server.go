@@ -29,7 +29,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"text/template"
 	"time"
 	"unicode"
 )
@@ -129,8 +128,8 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	}
 
 	var (
-		Supplier string
-		Buyer    = "N/A"
+		Supplier InvoiceFromFields
+		Buyer    InvoiceFromFields
 
 		LogoURL     string
 		InvoiceBody = invoice.Invoice
@@ -138,7 +137,14 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	)
 
 	if group.HasOwnInvoiceBase && group.InvoiceParametersCustom != nil {
-		Supplier = group.InvoiceParametersCustom.InvoiceFrom
+		Supplier = InvoiceFromFields{
+			Name:       group.InvoiceParametersCustom.InvoiceFromFields.Name,
+			Address:    group.InvoiceParametersCustom.InvoiceFromFields.Address,
+			City:       group.InvoiceParametersCustom.InvoiceFromFields.City,
+			PostalCode: group.InvoiceParametersCustom.InvoiceFromFields.PostalCode,
+			Country:    group.InvoiceParametersCustom.InvoiceFromFields.Country,
+			TaxID:      group.InvoiceParametersCustom.InvoiceFromFields.TaxId,
+		}
 		LogoURL = group.InvoiceParametersCustom.LogoUrl
 	} else {
 		Supplier = invConf.InvoiceFrom
@@ -162,58 +168,49 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false)))
 }
 
-func buildBuyerSection(name string, dataMap map[string]any, languageCode string) string {
+func buildBuyerSection(name string, dataMap map[string]any, languageCode string) InvoiceFromFields {
 	var (
-		company string
-		address string
-		country string
-		vatID   string
+		company    string
+		address    string
+		country    string
+		vatID      string
+		city       string
+		postalCode string
 	)
 	if dataMap != nil {
 		company, _ = dataMap["company"].(string)
-		city, _ := dataMap["city"].(string)
+		city, _ = dataMap["city"].(string)
 		address, _ = dataMap["address"].(string)
 		country, _ = dataMap["country"].(string)
 		vatID, _ = dataMap["tax_id"].(string)
-		var addrParts []string
-		if city = strings.TrimSpace(city); city != "" {
-			addrParts = append(addrParts, city)
-		}
-		if address = strings.TrimSpace(address); address != "" {
-			addrParts = append(addrParts, address)
-		}
-		address = strings.Join(addrParts, ", ")
+		postalCode, _ = dataMap["postal_code"].(string)
 	}
-	const addrTemplate = `{{- $hasHeader := or .Company .Name .Address -}}
-{{- $hasFooter := or .Country .VAT -}}
-{{- if .Company}}{{.Company}}
-{{end}}{{- if .Name}}{{.Name}}
-{{end}}{{- if .Address}}{{.Address}}
-{{end}}{{- if and $hasHeader $hasFooter}}
-
-{{end}}{{- if .Country}}{{.Country}}
-{{end}}{{- if .VAT}}VAT (NIP): {{.VAT}}
-{{end -}}`
 	type AddrData struct {
-		Name    string
-		Company string
-		Address string
-		Country string
-		VAT     string
+		Name       string
+		Company    string
+		Address    string
+		City       string
+		Country    string
+		VAT        string
+		PostalCode string
 	}
 	data := AddrData{
-		Name:    strings.TrimSpace(name),
-		Company: strings.TrimSpace(company),
-		Address: strings.TrimSpace(address),
-		Country: strings.TrimSpace(strings.ToUpper(locales.TranslateCountryMust(country, languageCode))),
-		VAT:     strings.TrimSpace(vatID),
+		Name:       strings.TrimSpace(name),
+		Company:    strings.TrimSpace(company),
+		Address:    strings.TrimSpace(address),
+		Country:    strings.TrimSpace(strings.ToUpper(locales.TranslateCountryMust(country, languageCode))),
+		VAT:        strings.TrimSpace(vatID),
+		City:       strings.TrimSpace(city),
+		PostalCode: strings.TrimSpace(postalCode),
 	}
-	tmpl := template.Must(template.New("addr").Parse(addrTemplate))
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return "N/A"
+	return InvoiceFromFields{
+		Name:       strings.Trim(strings.TrimSpace(data.Company)+"\n"+strings.TrimSpace(data.Name), "\n"),
+		Address:    data.Address,
+		City:       data.City,
+		PostalCode: data.PostalCode,
+		Country:    data.Country,
+		TaxID:      data.VAT,
 	}
-	return buf.String()
 }
 
 func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, request *http.Request) {
@@ -251,14 +248,21 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 	invConf := MakeInvoicesConf(s.log, &s.settingsClient)
 
 	var (
-		Supplier    string
-		Buyer       = "N/A"
+		Supplier    InvoiceFromFields
+		Buyer       InvoiceFromFields
 		LogoURL     string
 		InvoiceBody = invoice.Invoice
 	)
 
 	if group.HasOwnInvoiceBase && group.InvoiceParametersCustom != nil {
-		Supplier = group.InvoiceParametersCustom.InvoiceFrom
+		Supplier = InvoiceFromFields{
+			Name:       group.InvoiceParametersCustom.InvoiceFromFields.Name,
+			Address:    group.InvoiceParametersCustom.InvoiceFromFields.Address,
+			City:       group.InvoiceParametersCustom.InvoiceFromFields.City,
+			PostalCode: group.InvoiceParametersCustom.InvoiceFromFields.PostalCode,
+			Country:    group.InvoiceParametersCustom.InvoiceFromFields.Country,
+			TaxID:      group.InvoiceParametersCustom.InvoiceFromFields.TaxId,
+		}
 		LogoURL = group.InvoiceParametersCustom.LogoUrl
 	} else {
 		Supplier = invConf.InvoiceFrom
@@ -303,7 +307,7 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 	}
 }
 
-func GenerateInvoicePDF(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier, buyer, logoURL, lang string) ([]byte, error) {
+func GenerateInvoicePDF(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier InvoiceFromFields, buyer InvoiceFromFields, logoURL, lang string) ([]byte, error) {
 	htmlRaw := generateViewInvoiceHTML(invoiceBody, paymentGateways, supplier, buyer, logoURL, lang, true, true)
 	gotenbergHost := viper.GetString("GOTENBERG_HOST")
 	if gotenbergHost == "" {
@@ -384,7 +388,7 @@ type pg struct {
 	HTML  string
 }
 
-func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier string, buyer string, logoURL string, lang string, omitPmPanel bool, omitGwPanel bool) string {
+func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier InvoiceFromFields, buyer InvoiceFromFields, logoURL string, lang string, omitPmPanel bool, omitGwPanel bool) string {
 	l := invoicei18n.Lang(lang)
 
 	statusKey := func(st pb.BillingStatus) string {
@@ -452,6 +456,17 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 		}
 		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br/>")
 	}
+
+	var (
+		row1 = [3]string{"$info.table.name:", escapeWithBR(supplier.Name), escapeWithBR(buyer.Name)}
+		row2 = [3]string{"$info.table.address:", escapeWithBR(supplier.Address), escapeWithBR(buyer.Address)}
+		row3 = [3]string{"$info.table.city:", escapeWithBR(supplier.City), escapeWithBR(buyer.City)}
+		row4 = [3]string{"$info.table.postal_code:", escapeWithBR(supplier.PostalCode), escapeWithBR(buyer.PostalCode)}
+		row5 = [3]string{"$info.table.country:", escapeWithBR(supplier.Country), escapeWithBR(buyer.Country)}
+		row6 = [3]string{"$info.table.tax_id:", escapeWithBR(supplier.TaxID), escapeWithBR(buyer.TaxID)}
+	)
+	supCusTableHtml := BuildTableHTML("", "$info.table.supplier_title", "$info.table.buyer_title",
+		row1, row2, row3, row4, row5, row6)
 
 	var (
 		rowsBuf     bytes.Buffer
@@ -664,6 +679,7 @@ tfoot td{font-weight:600}
 footer{padding:10px 20px}
 hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 .note{padding:12px 20px}
+
 </style>
 </head>
 <body>
@@ -687,6 +703,10 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 
         %s
 	</div>
+
+    <div>
+       %s
+    </div>
 
 	<div class="grid-2">
 		<div class="box">
@@ -786,8 +806,9 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		paymentDateHTML(invoiceBody.GetPayment(), tsToTime, formatDate),
 		pmHtml,
 		gwPanelHtml,
-		escapeWithBR(supplier),
-		escapeWithBR(buyer),
+		supCusTableHtml,
+		escapeWithBR("suplier legacy"),
+		escapeWithBR("buyer legacy"),
 		formatDate(tsToTime(invoiceBody.GetDeadline())),
 		rowsBuf.String(),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
@@ -857,4 +878,27 @@ func jsGateways(gws []pg) string {
 			g.Key, g.Name, escapeWithBR(g.Extra), g.HTML))
 	}
 	return "[" + strings.Join(parts, ",") + "]"
+}
+
+func BuildTableHTML(col1, col2, col3 string, rows ...[3]string) string {
+	var b strings.Builder
+
+	b.WriteString(`<table border="1" cellspacing="0" cellpadding="6">`)
+	b.WriteString("<thead><tr>")
+	b.WriteString("<th>" + html.EscapeString(col1) + "</th>")
+	b.WriteString("<th>" + html.EscapeString(col2) + "</th>")
+	b.WriteString("<th>" + html.EscapeString(col3) + "</th>")
+	b.WriteString("</tr></thead>")
+	b.WriteString("<tbody>")
+
+	for _, r := range rows {
+		b.WriteString("<tr>")
+		b.WriteString("<td>" + html.EscapeString(r[0]) + "</td>")
+		b.WriteString("<td>" + html.EscapeString(r[1]) + "</td>")
+		b.WriteString("<td>" + html.EscapeString(r[2]) + "</td>")
+		b.WriteString("</tr>")
+	}
+
+	b.WriteString("</tbody></table>")
+	return b.String()
 }

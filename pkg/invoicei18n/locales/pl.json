@@ -34,5 +34,14 @@
   "invoice.status.terminated": "ZAMKNIĘTA",
   "invoice.status.draft": "SZKIC",
   "invoice.status.returned": "ZWROT",
-  "invoice.status.unknown": "NIEZNANY"
+  "invoice.status.unknown": "NIEZNANY",
+
+  "info.table.supplier_title": "Supplier",
+  "info.table.buyer_title": "Buyer",
+  "info.table.address": "Address",
+  "info.table.tax_id": "Tax ID",
+  "info.table.name": "Name",
+  "info.table.city": "City",
+  "info.table.country": "Country",
+  "info.table.postal_code": "Postal Code"
 }
