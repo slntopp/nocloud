@@ -930,9 +930,9 @@ func BuildTableHTML(col1, col2, col3 string, rows ...[3]string) string {
 	b.WriteString(`<table style="width:100%; table-layout:fixed;" cellspacing="0" cellpadding="3">`)
 
 	b.WriteString(`<colgroup>
-		<col style="width:14%">
-		<col style="width:43%">
-		<col style="width:43%">
+		<col style="width:18%">
+		<col style="width:41%">
+		<col style="width:41%">
 	</colgroup>`)
 
 	b.WriteString("<thead><tr>")
