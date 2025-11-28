@@ -1072,6 +1072,31 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 	return resp, nil
 }
 
+func (s *BillingServiceServer) ChangeInvoiceNumber(ctx context.Context, r *connect.Request[pb.ChangeInvoiceNumberRequest]) (*connect.Response[pb.Invoice], error) {
+	log := s.log.Named("ChangeInvoiceNumber")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
+	log.Debug("Request received", zap.Any("req", req), zap.String("requester", requester))
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+	if req.NewNumber == "" {
+		return nil, status.Error(codes.InvalidArgument, "New number cannot be empty")
+	}
+	if err := s.invoices.Patch(ctx, req.Invoice, map[string]any{
+		"number": req.NewNumber,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+	invoice, err := s.invoices.Get(ctx, req.Invoice)
+	if err != nil {
+		return connect.NewResponse(&pb.Invoice{}), nil
+	}
+	return connect.NewResponse(invoice.Invoice), nil
+}
+
 func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Request[pb.UpdateInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("UpdateInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
