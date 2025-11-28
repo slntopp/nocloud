@@ -36,8 +36,11 @@
       <!-- Invoice Order Settings -->
       <div class="d-flex align-center mb-5">
         <v-expansion-panels>
-          <v-expansion-panel>
-            <v-expansion-panel-header disable-icon-rotate>
+          <v-expansion-panel style="background: var(--v-background-light-base)">
+            <v-expansion-panel-header
+              style="padding: 5px 20px"
+              disable-icon-rotate
+            >
               Invoice Order Settings
 
               <v-switch
@@ -47,12 +50,14 @@
               />
             </v-expansion-panel-header>
             <v-expansion-panel-content>
-              <v-row class="pa-5">
+              <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
                   <v-subheader>Template</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-text-field
+                    dense
+                    hide-details
                     label="Template"
                     v-model="newGroup.invoice_order_settings.template"
                     :disabled="!newGroup.has_own_invoice_order"
@@ -63,6 +68,8 @@
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-text-field
+                    dense
+                    hide-details
                     label="New Template"
                     v-model="newGroup.invoice_order_settings.new_template"
                     :disabled="!newGroup.has_own_invoice_order"
@@ -70,7 +77,7 @@
                 </v-col>
               </v-row>
 
-              <v-row class="pa-5 pt-0">
+              <v-row class="px-5 pt-0">
                 <v-col cols="3" class="align-center d-flex">
                   <v-subheader>Start With Number</v-subheader>
                 </v-col>
@@ -82,6 +89,8 @@
                     "
                     type="number"
                     min="0"
+                    dense
+                    hide-details
                     :disabled="!newGroup.has_own_invoice_order"
                   />
                 </v-col>
@@ -93,6 +102,8 @@
                     label="Reset Counter Mode"
                     v-model="newGroup.invoice_order_settings.reset_counter_mode"
                     :items="resetCounterModes"
+                    dense
+                    hide-details
                     :disabled="!newGroup.has_own_invoice_order"
                   />
                 </v-col>
@@ -106,8 +117,11 @@
       <!-- Invoice Parameters Custom -->
       <div class="d-flex align-center mb-5">
         <v-expansion-panels>
-          <v-expansion-panel>
-            <v-expansion-panel-header disable-icon-rotate>
+          <v-expansion-panel style="background: var(--v-background-light-base)">
+            <v-expansion-panel-header
+              style="padding: 5px 20px"
+              disable-icon-rotate
+            >
               Invoice Parameters Custom
 
               <v-switch
@@ -117,17 +131,112 @@
               />
             </v-expansion-panel-header>
             <v-expansion-panel-content>
-              <v-row class="pa-5">
+              <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From</v-subheader>
+                  <v-subheader>Invoice From Name</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-textarea
-                    label="Invoice From"
-                    v-model="newGroup.invoice_parameters_custom.invoice_from"
+                  <v-text-field
+                    label="Invoice From Name"
+                    v-model="
+                      newGroup.invoice_parameters_custom.invoiceFromFields.name
+                    "
                     :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
                   />
                 </v-col>
+              </v-row>
+
+              <v-row class="px-5">
+                <v-col cols="3" class="align-center d-flex">
+                  <v-subheader>Invoice From Address</v-subheader>
+                </v-col>
+                <v-col cols="9" class="align-center d-flex">
+                  <v-text-field
+                    label="Invoice From Address"
+                    v-model="
+                      newGroup.invoice_parameters_custom.invoiceFromFields
+                        .address
+                    "
+                    :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row class="px-5">
+                <v-col cols="3" class="align-center d-flex">
+                  <v-subheader>Invoice From City</v-subheader>
+                </v-col>
+                <v-col cols="9" class="align-center d-flex">
+                  <v-text-field
+                    label="Invoice From City"
+                    v-model="
+                      newGroup.invoice_parameters_custom.invoiceFromFields.city
+                    "
+                    :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row class="px-5">
+                <v-col cols="3" class="align-center d-flex">
+                  <v-subheader>Invoice From Postal Code</v-subheader>
+                </v-col>
+                <v-col cols="9" class="align-center d-flex">
+                  <v-text-field
+                    label="Invoice From Postal Code"
+                    v-model="
+                      newGroup.invoice_parameters_custom.invoiceFromFields
+                        .postalCode
+                    "
+                    :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row class="px-5">
+                <v-col cols="3" class="align-center d-flex">
+                  <v-subheader>Invoice From Postal Country</v-subheader>
+                </v-col>
+                <v-col cols="9" class="align-center d-flex">
+                  <v-text-field
+                    label="Invoice From Postal Country"
+                    v-model="
+                      newGroup.invoice_parameters_custom.invoiceFromFields
+                        .country
+                    "
+                    :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row class="px-5">
+                <v-col cols="3" class="align-center d-flex">
+                  <v-subheader>Invoice From Postal Tax ID</v-subheader>
+                </v-col>
+                <v-col cols="9" class="align-center d-flex">
+                  <v-text-field
+                    label="Invoice From Postal Tax ID"
+                    v-model="
+                      newGroup.invoice_parameters_custom.invoiceFromFields.taxId
+                    "
+                    :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
                   <v-subheader>Logo URL</v-subheader>
                 </v-col>
@@ -136,6 +245,8 @@
                     label="Logo URL"
                     v-model="newGroup.invoice_parameters_custom.logo_url"
                     :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
                   />
                 </v-col>
               </v-row>
@@ -190,7 +301,7 @@ const newGroup = ref({
   },
   has_own_invoice_base: false,
   invoice_parameters_custom: {
-    invoice_from: "",
+    invoiceFromFields: {},
     logo_url: "",
   },
 });
@@ -229,7 +340,7 @@ const setAccountGroup = (val) => {
     },
     has_own_invoice_base: val.hasOwnInvoiceBase || false,
     invoice_parameters_custom: {
-      invoice_from: val.invoiceParametersCustom?.invoiceFrom || "",
+      invoiceFromFields: val.invoiceParametersCustom?.invoiceFromFields || {},
       logo_url: val.invoiceParametersCustom?.logoUrl || "",
     },
   };
