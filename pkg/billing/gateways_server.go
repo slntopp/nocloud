@@ -643,7 +643,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--soft);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
-.wrapper{max-width:960px;margin:24px auto;padding:16px}
+.wrapper{max-width:790px;margin:24px auto;padding:16px}
 .card{background:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.04);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:12px;min-width:220px}
@@ -686,13 +686,11 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 
   .card-sup{
     background:#fff;
-    padding:26px;
+    padding:20px;
     border-radius:18px;
-    max-width:520px;
+    max-width:100%%;
+    width: 100%%;
     margin:auto;
-    box-shadow:
-      0 6px 16px rgba(0,0,0,0.06),
-      0 2px 4px rgba(0,0,0,0.04);
   }
 
  .card-sup table{
@@ -766,17 +764,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
     <div class="card-sup">
        %s
     </div>
-
-	<div class="grid-2">
-		<div class="box">
-			<h4>$invoice.supplier</h4>
-			<div>%s</div>
-		</div>
-		<div class="box">
-			<h4>$invoice.buyer</h4>
-			<div>%s</div>
-		</div>
-	</div>
 
 	<div class="info">
 		<div class="block">
@@ -866,8 +853,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		pmHtml,
 		gwPanelHtml,
 		supCusTableHtml,
-		escapeWithBR("suplier legacy"),
-		escapeWithBR("buyer legacy"),
 		formatDate(tsToTime(invoiceBody.GetDeadline())),
 		rowsBuf.String(),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
@@ -944,17 +929,17 @@ func BuildTableHTML(col1, col2, col3 string, rows ...[3]string) string {
 
 	b.WriteString(`<table border="1" cellspacing="0" cellpadding="6">`)
 	b.WriteString("<thead><tr>")
-	b.WriteString("<th>" + html.EscapeString(col1) + "</th>")
-	b.WriteString("<th>" + html.EscapeString(col2) + "</th>")
-	b.WriteString("<th>" + html.EscapeString(col3) + "</th>")
+	b.WriteString("<th>" + col1 + "</th>")
+	b.WriteString("<th>" + col2 + "</th>")
+	b.WriteString("<th>" + col3 + "</th>")
 	b.WriteString("</tr></thead>")
 	b.WriteString("<tbody>")
 
 	for _, r := range rows {
 		b.WriteString("<tr>")
-		b.WriteString("<td>" + html.EscapeString(r[0]) + "</td>")
-		b.WriteString("<td>" + html.EscapeString(r[1]) + "</td>")
-		b.WriteString("<td>" + html.EscapeString(r[2]) + "</td>")
+		b.WriteString("<td>" + r[0] + "</td>")
+		b.WriteString("<td>" + r[1] + "</td>")
+		b.WriteString("<td>" + r[2] + "</td>")
 		b.WriteString("</tr>")
 	}
 
