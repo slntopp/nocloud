@@ -927,13 +927,19 @@ func jsGateways(gws []pg) string {
 func BuildTableHTML(col1, col2, col3 string, rows ...[3]string) string {
 	var b strings.Builder
 
-	b.WriteString(`<table border="1" cellspacing="0" cellpadding="6">`)
+	b.WriteString(`<table style="width:100%; table-layout:fixed; border-collapse:collapse;" border="1" cellspacing="0" cellpadding="3">`)
+
+	b.WriteString(`<colgroup>
+		<col style="width:20%">
+		<col style="width:40%">
+		<col style="width:40%">
+	</colgroup>`)
+
 	b.WriteString("<thead><tr>")
 	b.WriteString("<th>" + col1 + "</th>")
 	b.WriteString("<th>" + col2 + "</th>")
 	b.WriteString("<th>" + col3 + "</th>")
-	b.WriteString("</tr></thead>")
-	b.WriteString("<tbody>")
+	b.WriteString("</tr></thead><tbody>")
 
 	for _, r := range rows {
 		b.WriteString("<tr>")
