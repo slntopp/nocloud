@@ -136,13 +136,14 @@
                   <v-subheader>Invoice From Name</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-text-field
+                  <v-textarea
                     label="Invoice From Name"
                     v-model="
                       newGroup.invoice_parameters_custom.invoiceFromFields.name
                     "
                     :disabled="!newGroup.has_own_invoice_base"
                     dense
+                    rows="1"
                     hide-details
                   />
                 </v-col>
@@ -153,7 +154,8 @@
                   <v-subheader>Invoice From Address</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-text-field
+                  <v-textarea
+                    rows="1"
                     label="Invoice From Address"
                     v-model="
                       newGroup.invoice_parameters_custom.invoiceFromFields
@@ -171,7 +173,8 @@
                   <v-subheader>Invoice From City</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-text-field
+                  <v-textarea
+                    rows="1"
                     label="Invoice From City"
                     v-model="
                       newGroup.invoice_parameters_custom.invoiceFromFields.city
@@ -188,7 +191,8 @@
                   <v-subheader>Invoice From Postal Code</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-text-field
+                  <v-textarea
+                    rows="1"
                     label="Invoice From Postal Code"
                     v-model="
                       newGroup.invoice_parameters_custom.invoiceFromFields
@@ -203,11 +207,12 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Postal Country</v-subheader>
+                  <v-subheader>Invoice From Country</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-text-field
-                    label="Invoice From Postal Country"
+                  <v-textarea
+                    rows="1"
+                    label="Invoice From  Country"
                     v-model="
                       newGroup.invoice_parameters_custom.invoiceFromFields
                         .country
@@ -221,11 +226,12 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Postal Tax ID</v-subheader>
+                  <v-subheader>Invoice From Tax ID</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
-                  <v-text-field
-                    label="Invoice From Postal Tax ID"
+                  <v-textarea
+                    rows="1"
+                    label="Invoice From  Tax ID"
                     v-model="
                       newGroup.invoice_parameters_custom.invoiceFromFields.taxId
                     "
