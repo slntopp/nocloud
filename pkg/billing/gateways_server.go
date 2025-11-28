@@ -257,13 +257,15 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 	)
 
 	if group.HasOwnInvoiceBase && group.InvoiceParametersCustom != nil {
-		Supplier = InvoiceFromFields{
-			Name:       group.InvoiceParametersCustom.InvoiceFromFields.Name,
-			Address:    group.InvoiceParametersCustom.InvoiceFromFields.Address,
-			City:       group.InvoiceParametersCustom.InvoiceFromFields.City,
-			PostalCode: group.InvoiceParametersCustom.InvoiceFromFields.PostalCode,
-			Country:    group.InvoiceParametersCustom.InvoiceFromFields.Country,
-			TaxID:      group.InvoiceParametersCustom.InvoiceFromFields.TaxId,
+		if group.InvoiceParametersCustom.InvoiceFromFields != nil {
+			Supplier = InvoiceFromFields{
+				Name:       group.InvoiceParametersCustom.InvoiceFromFields.Name,
+				Address:    group.InvoiceParametersCustom.InvoiceFromFields.Address,
+				City:       group.InvoiceParametersCustom.InvoiceFromFields.City,
+				PostalCode: group.InvoiceParametersCustom.InvoiceFromFields.PostalCode,
+				Country:    group.InvoiceParametersCustom.InvoiceFromFields.Country,
+				TaxID:      group.InvoiceParametersCustom.InvoiceFromFields.TaxId,
+			}
 		}
 		LogoURL = group.InvoiceParametersCustom.LogoUrl
 	} else {
