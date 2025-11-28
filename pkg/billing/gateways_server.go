@@ -686,13 +686,11 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 
   .card-sup{
     background:#fff;
-    padding:26px;
+    padding:20px;
     border-radius:18px;
-    max-width:520px;
+    max-width:100%%;
+    width: 100%%;
     margin:auto;
-    box-shadow:
-      0 6px 16px rgba(0,0,0,0.06),
-      0 2px 4px rgba(0,0,0,0.04);
   }
 
  .card-sup table{
@@ -766,17 +764,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
     <div class="card-sup">
        %s
     </div>
-
-	<div class="grid-2">
-		<div class="box">
-			<h4>$invoice.supplier</h4>
-			<div>%s</div>
-		</div>
-		<div class="box">
-			<h4>$invoice.buyer</h4>
-			<div>%s</div>
-		</div>
-	</div>
 
 	<div class="info">
 		<div class="block">
@@ -866,8 +853,6 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		pmHtml,
 		gwPanelHtml,
 		supCusTableHtml,
-		escapeWithBR("suplier legacy"),
-		escapeWithBR("buyer legacy"),
 		formatDate(tsToTime(invoiceBody.GetDeadline())),
 		rowsBuf.String(),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
