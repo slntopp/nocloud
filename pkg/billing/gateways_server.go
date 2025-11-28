@@ -713,7 +713,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
   }
 
   .card-sup td{
-    padding:14px 16px;
+    padding:6px 7px;
     font-size:15px;
     border-bottom:1px solid #92D05055;
     background:#ffffff;
