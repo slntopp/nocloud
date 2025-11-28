@@ -680,6 +680,61 @@ footer{padding:10px 20px}
 hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 .note{padding:12px 20px}
 
+  .card{
+    background:#fff;
+    padding:26px;
+    border-radius:18px;
+    max-width:520px;
+    margin:auto;
+    box-shadow:
+      0 6px 16px rgba(0,0,0,0.06),
+      0 2px 4px rgba(0,0,0,0.04);
+  }
+
+ .card table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    border-radius:14px;
+    overflow:hidden;
+    border:2px solid #92D050;
+  }
+
+  .card th{
+    background:linear-gradient(180deg,#f4ffed,#e4f5d4);
+    font-weight:600;
+    padding:14px 16px;
+    font-size:15px;
+    color:#3c4a3b;
+    border-bottom:2px solid #92D050;
+    text-align:left;
+  }
+
+  .card td{
+    padding:14px 16px;
+    font-size:15px;
+    border-bottom:1px solid #92D05055;
+    background:#ffffff;
+  }
+
+  .card tr:nth-child(odd) td{
+    background:#f9fff4;
+  }
+
+  .card tr:last-child td{
+    border-bottom:none;
+  }
+
+  .card tbody tr:hover td{
+    background:#f0ffe7 !important;
+  }
+
+  .card tbody td:first-child{
+    font-weight:500;
+    color:#4b4b4b;
+    background:#f7fdf3;
+  }
+
 </style>
 </head>
 <body>
