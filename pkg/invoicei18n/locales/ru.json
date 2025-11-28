@@ -16,8 +16,9 @@
   "table.price": "Цена",
   "table.unit_price": "Цена за ед.",
   "table.vat": "НДС",
-  "table.amount": "Сумма",
+  "table.amount": "Сумма НДС",
   "table.total": "Итого",
+  "table.total_title": "Итого",
 
   "summary.subtotal": "Подытог",
   "summary.tax": "Налог",
@@ -33,5 +34,14 @@
   "invoice.status.terminated": "ЗАКРЫТ",
   "invoice.status.draft": "ЧЕРНОВИК",
   "invoice.status.returned": "ВОЗВРАТ",
-  "invoice.status.unknown": "НЕИЗВЕСТЕН"
+  "invoice.status.unknown": "НЕИЗВЕСТЕН",
+
+  "info.table.supplier_title": "Supplier",
+  "info.table.buyer_title": "Buyer",
+  "info.table.address": "Address",
+  "info.table.tax_id": "Tax ID",
+  "info.table.name": "Name",
+  "info.table.city": "City",
+  "info.table.country": "Country",
+  "info.table.postal_code": "Postal Code"
 }

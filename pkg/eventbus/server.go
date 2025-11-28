@@ -108,7 +108,6 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event, i
 	log.Debug("Custom events", zap.Any("events", customEvents))
 
 	for _, ce := range customEvents {
-
 		if ce.Override == event.Key {
 			if ce.Key == "-" {
 				return nil, fmt.Errorf("event cancelled by override")

@@ -2,11 +2,13 @@ package billing
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	epb "github.com/slntopp/nocloud-proto/events"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	per "github.com/slntopp/nocloud/pkg/nocloud/periods"
@@ -15,6 +17,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
 	"github.com/wI2L/jsondiff"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/metadata"
 	"math"
 	"slices"
 	"strings"
@@ -232,6 +235,60 @@ FILTER @bound_group == "" || account.account_group == @bound_group
 	}
 
 	return s.invoices.ParseNumberIntoTemplate(template, number, date), number, nil
+}
+
+func (s *BillingServiceServer) obtainForcedInvoiceNumber(accGroup string) (int, error) {
+	if accGroup == "" {
+		invConf := MakeInvoicesConf(s.log, &s.settingsClient)
+		return invConf.StartWithNumber, nil
+	}
+	group, err := s.accounts.GetAccountClientGroup(context.Background(), accGroup)
+	if err != nil {
+		return 0, err
+	}
+	if group.HasOwnInvoiceOrder {
+		return int(group.InvoiceOrderSettings.StartWithNumber), nil
+	}
+	invConf := MakeInvoicesConf(s.log, &s.settingsClient)
+	return invConf.StartWithNumber, nil
+}
+
+func (s *BillingServiceServer) saveForcedInvoiceNumber(accGroup string, num int) error {
+	saveInGlobalSettings := func(num int) error {
+		invConf := MakeInvoicesConf(s.log, &s.settingsClient)
+		invConf.StartWithNumber = num
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+		ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, 4)
+		ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "Bearer "+s.rootToken)
+		b, err := json.Marshal(invConf)
+		if err != nil {
+			return err
+		}
+		_, err = s.settingsClient.Put(ctx, &settingspb.PutRequest{
+			Key:   invKey,
+			Value: string(b),
+		})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	if accGroup == "" {
+		return saveInGlobalSettings(num)
+	}
+	group, err := s.accounts.GetAccountClientGroup(context.Background(), accGroup)
+	if err != nil {
+		return err
+	}
+	if group.HasOwnInvoiceOrder {
+		group.InvoiceOrderSettings.StartWithNumber = int64(num)
+		if _, err = s.accGroups.Update(context.Background(), group); err != nil {
+			return err
+		}
+		return nil
+	}
+	return saveInGlobalSettings(num)
 }
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
@@ -584,6 +641,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		Requestor: requester,
 	})
 
+	if acc.PaymentsGateway == "nocloud" {
+		if t.Status != pb.BillingStatus_DRAFT && t.Status != pb.BillingStatus_TERMINATED {
+			_ = s.SendEmailEvent("invoice_published", t.Account, map[string]*structpb.Value{}) // TODO data
+		}
+	}
+
 	if t.Total <= 0 {
 		if _, err = s.UpdateInvoiceStatus(ctx, connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 			Uuid:   r.GetUuid(),
@@ -734,6 +797,12 @@ quit:
 		Snapshot:  &elpb.Snapshot{Diff: diff.String()},
 		Requestor: requester,
 	})
+
+	if acc.PaymentsGateway == "nocloud" {
+		if newStatus == pb.BillingStatus_PAID {
+			_ = s.SendEmailEvent("invoice_paid", old.Account, map[string]*structpb.Value{}) // TODO data
+		}
+	}
 
 	log.Info("Finished invoice update status")
 	return connect.NewResponse(_newInv), nil
@@ -1058,6 +1127,31 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 	})
 
 	return resp, nil
+}
+
+func (s *BillingServiceServer) ChangeInvoiceNumber(ctx context.Context, r *connect.Request[pb.ChangeInvoiceNumberRequest]) (*connect.Response[pb.Invoice], error) {
+	log := s.log.Named("ChangeInvoiceNumber")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
+	log.Debug("Request received", zap.Any("req", req), zap.String("requester", requester))
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+	if req.NewNumber == "" {
+		return nil, status.Error(codes.InvalidArgument, "New number cannot be empty")
+	}
+	if err := s.invoices.Patch(ctx, req.Invoice, map[string]any{
+		"number": req.NewNumber,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "Internal error")
+	}
+	invoice, err := s.invoices.Get(ctx, req.Invoice)
+	if err != nil {
+		return connect.NewResponse(&pb.Invoice{}), nil
+	}
+	return connect.NewResponse(invoice.Invoice), nil
 }
 
 func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Request[pb.UpdateInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
