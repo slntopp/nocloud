@@ -696,7 +696,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
   }
 
  .card table{
-    width:100%;
+    width:100%%;
     border-collapse:separate;
     border-spacing:0;
     border-radius:14px;
