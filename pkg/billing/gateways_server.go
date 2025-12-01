@@ -801,7 +801,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	</div>
 
     <div class="pay-words">
-		<div><strong>%s</strong></div>
+		<div><strong>%s %s</strong></div>
 	</div>
 
 	<footer class="small">
@@ -857,6 +857,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		rowsBuf.String(),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
 		CapitalizeWords(totalAsWords),
+		invoiceBody.GetCurrency().GetCode(),
 		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),
 		// JS data
 		invoiceBody.GetCurrency().GetCode(),
