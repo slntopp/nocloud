@@ -28,6 +28,8 @@ var handlers = map[string]EventHandler{
 	"instance_credentials":        GetInstAccountHandler,
 	"inactive_chat_closed":        nil,
 	"logging":                     EventLoggingHandler,
+	"invoice_published":           nil,
+	"invoice_paid":                nil,
 }
 
 var getInstanceAccount = `

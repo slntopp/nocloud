@@ -13,11 +13,12 @@
   "table.item": "Towar/usługa",
   "table.qty": "Ilość",
   "table.unit": "J.m.",
-  "table.price": "Cena",
-  "table.unit_price": "Cena jedn.",
-  "table.vat": "VAT",
-  "table.amount": "Kwota",
+  "table.price": "Wartość Netto",
+  "table.unit_price": "Cena Netto",
+  "table.vat": "Stawka VAT",
+  "table.amount": "Kwota VAT",
   "table.total": "Razem",
+  "table.total_title": "Razem",
 
   "summary.subtotal": "Suma częściowa",
   "summary.tax": "Podatek",
@@ -33,5 +34,14 @@
   "invoice.status.terminated": "ZAMKNIĘTA",
   "invoice.status.draft": "SZKIC",
   "invoice.status.returned": "ZWROT",
-  "invoice.status.unknown": "NIEZNANY"
+  "invoice.status.unknown": "NIEZNANY",
+
+  "info.table.supplier_title": "SPRZEDAWCA",
+  "info.table.buyer_title": "NABYWCA",
+  "info.table.address": "Adres",
+  "info.table.tax_id": "NIP (VAT ID)",
+  "info.table.name": "Nazwa",
+  "info.table.city": "Miasto",
+  "info.table.country": "Kraj",
+  "info.table.postal_code": "Kod pocztowy"
 }
