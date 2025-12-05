@@ -669,7 +669,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
 	var (
 		acc        = graph.Account{Account: &accpb.Account{}}
-		accGroup   *accpb.AccountGroup
+		accGroup   = &accpb.AccountGroup{}
 		boundGroup string
 		template   = invConf.Template
 		_          = invConf.NewTemplate
