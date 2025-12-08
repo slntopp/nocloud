@@ -1307,7 +1307,11 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 	if req.TaxOptions != nil || !ignoreNulls {
 		query += ` tax_options: @tax_options,`
-		vars["tax_options"] = req.GetTaxOptions()
+		if req.GetTaxOptions().GetTaxRate() == 0 && !req.GetTaxOptions().GetTaxIncluded() {
+			vars["tax_options"] = nil
+		} else {
+			vars["tax_options"] = req.GetTaxOptions()
+		}
 	}
 	query += " } IN @@invoices OPTIONS { keepNull: false } "
 	vars["invoice"] = t.GetUuid()
