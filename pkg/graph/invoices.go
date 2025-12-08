@@ -93,6 +93,13 @@ func (i *Invoice) SetBillingData(d *BillingData) {
 	i.Meta[InvoiceRenewalDataKey] = structpb.NewStructValue(s)
 }
 
+func ensureTaxOptions(inv *Invoice) *Invoice {
+	if inv.Invoice != nil && inv.TaxOptions == nil {
+		inv.TaxOptions = &pb.TaxOptions{}
+	}
+	return inv
+}
+
 func SetInvoiceBillingData(inv *pb.Invoice, d *BillingData) *pb.Invoice {
 	if inv == nil {
 		return nil
@@ -199,7 +206,7 @@ func (ctrl *invoicesController) Create(ctx context.Context, tx *Invoice) (*Invoi
 		return nil, err
 	}
 	tx.Uuid = meta.Key
-	return tx, nil
+	return ensureTaxOptions(tx), nil
 }
 
 const getInvoice = `
@@ -234,7 +241,7 @@ func (ctrl *invoicesController) Get(ctx context.Context, uuid string) (*Invoice,
 	}
 
 	tx.Uuid = meta.Key
-	return tx, err
+	return ensureTaxOptions(tx), err
 }
 
 const getInvoiceByExp = `
@@ -282,7 +289,7 @@ func (ctrl *invoicesController) GetByExpiration(ctx context.Context, exp int64, 
 	}
 
 	tx.Uuid = meta.Key
-	return tx, err
+	return ensureTaxOptions(tx), err
 }
 
 func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoice, error) {
@@ -291,7 +298,7 @@ func (ctrl *invoicesController) Update(ctx context.Context, tx *Invoice) (*Invoi
 		ctrl.log.Error("Failed to update invoice", zap.Error(err))
 		return nil, err
 	}
-	return tx, nil
+	return ensureTaxOptions(tx), nil
 }
 
 func (ctrl *invoicesController) Replace(ctx context.Context, tx *Invoice) (*Invoice, error) {
@@ -300,7 +307,7 @@ func (ctrl *invoicesController) Replace(ctx context.Context, tx *Invoice) (*Invo
 		ctrl.log.Error("Failed to update(replace) invoice", zap.Error(err))
 		return nil, err
 	}
-	return tx, nil
+	return ensureTaxOptions(tx), nil
 }
 
 func (ctrl *invoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
@@ -426,7 +433,7 @@ func (ctrl *invoicesController) List(ctx context.Context, account string, filter
 			return nil, err
 		}
 		tx.Uuid = meta.Key
-		list = append(list, tx)
+		list = append(list, ensureTaxOptions(tx))
 	}
 	return list, err
 }
