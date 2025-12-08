@@ -1301,6 +1301,14 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		query += ` instances: @instances,`
 		vars["instances"] = req.GetInstances()
 	}
+	if req.Instances != nil || !ignoreNulls {
+		query += ` instances: @instances,`
+		vars["instances"] = req.GetInstances()
+	}
+	if req.TaxOptions != nil || !ignoreNulls {
+		query += ` tax_options: @tax_options,`
+		vars["tax_options"] = req.GetTaxOptions()
+	}
 	query += " } IN @@invoices OPTIONS { keepNull: false } "
 	vars["invoice"] = t.GetUuid()
 	vars["@invoices"] = schema.INVOICES_COL
