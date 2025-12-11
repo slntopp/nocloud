@@ -18,6 +18,7 @@ import (
 	"github.com/wI2L/jsondiff"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/metadata"
+	"html"
 	"math"
 	"slices"
 	"strings"
@@ -642,8 +643,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	})
 
 	if acc.PaymentsGateway == "nocloud" {
-		if t.Status != pb.BillingStatus_DRAFT && t.Status != pb.BillingStatus_TERMINATED {
-			_ = s.SendEmailEvent("invoice_published", t.Account, map[string]*structpb.Value{}) // TODO data
+		if t.Status == pb.BillingStatus_UNPAID {
+			_ = s.SendEmailEvent("invoice_published", t.Account, formatInvoiceData(r.Invoice, accGroup, invConf))
 		}
 	}
 
@@ -800,12 +801,116 @@ quit:
 
 	if acc.PaymentsGateway == "nocloud" {
 		if newStatus == pb.BillingStatus_PAID {
-			_ = s.SendEmailEvent("invoice_paid", old.Account, map[string]*structpb.Value{}) // TODO data
+			_ = s.SendEmailEvent("invoice_paid", old.Account, formatInvoiceData(newInv.Invoice, accGroup, invConf))
 		}
 	}
 
 	log.Info("Finished invoice update status")
 	return connect.NewResponse(_newInv), nil
+}
+
+func formatInvoiceData(inv *pb.Invoice, accGroup *accpb.AccountGroup, invConf InvoicesConf) map[string]*structpb.Value {
+	var companyDomain string
+	if accGroup == nil || !accGroup.HasOwnInvoiceBase ||
+		accGroup.InvoiceParametersCustom == nil ||
+		accGroup.InvoiceParametersCustom.InvoiceFromFields == nil {
+		companyDomain = invConf.InvoiceFrom.Name
+	} else {
+		companyDomain = accGroup.InvoiceParametersCustom.InvoiceFromFields.Name
+	}
+	data := make(map[string]*structpb.Value)
+	data["invoice_date_created"] = structpb.NewStringValue(time.Unix(inv.GetCreated(), 0).Format(time.DateTime))
+	data["invoice_num"] = structpb.NewStringValue(inv.GetNumber())
+	data["invoice_amount_paid"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
+	data["invoice_total"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
+	data["invoice_date_due"] = structpb.NewStringValue(time.Unix(inv.GetDeadline(), 0).Format(time.DateTime))
+	data["company_domain"] = structpb.NewStringValue(companyDomain)
+	data["invoice_html_contents"] = structpb.NewStringValue(InvoiceItemsHTML(inv))
+	return data
+}
+
+func InvoiceItemsHTML(inv *pb.Invoice) string {
+	if inv == nil {
+		return ""
+	}
+	var b strings.Builder
+
+	currencyCode := ""
+	if inv.Currency != nil {
+		currencyCode = inv.Currency.Code
+	}
+
+	b.WriteString(`<div class="invoice-items">` + "\n")
+
+	b.WriteString(`<table>` + "\n")
+	b.WriteString(`<thead>` + "\n")
+	b.WriteString(`<tr>`)
+	b.WriteString(`<th>#</th>`)
+	b.WriteString(`<th>Description</th>`)
+	b.WriteString(`<th>Quantity</th>`)
+	b.WriteString(`<th>Unit</th>`)
+	b.WriteString(`<th>Price</th>`)
+	b.WriteString(`<th>Line total</th>`)
+	b.WriteString(`</tr>` + "\n")
+	b.WriteString(`</thead>` + "\n")
+
+	b.WriteString(`<tbody>` + "\n")
+
+	var subtotal float64
+	if len(inv.Items) == 0 {
+		b.WriteString(`<tr><td colspan="6">No items</td></tr>` + "\n")
+	} else {
+		for i, it := range inv.Items {
+			if it == nil {
+				continue
+			}
+
+			lineTotal := float64(it.Amount) * it.Price
+			subtotal += lineTotal
+
+			b.WriteString(`<tr>`)
+			b.WriteString(fmt.Sprintf(`<td>%d</td>`, i+1))
+			b.WriteString(`<td>` + html.EscapeString(it.Description) + `</td>`)
+			b.WriteString(fmt.Sprintf(`<td>%d</td>`, it.Amount))
+			b.WriteString(`<td>` + html.EscapeString(it.Unit) + `</td>`)
+			b.WriteString(`<td>` + formatAmount(it.Price, currencyCode) + `</td>`)
+			b.WriteString(`<td>` + formatAmount(lineTotal, currencyCode) + `</td>`)
+			b.WriteString(`</tr>` + "\n")
+		}
+	}
+
+	b.WriteString(`</tbody>` + "\n")
+
+	b.WriteString(`<tfoot>` + "\n")
+
+	b.WriteString(`<tr>`)
+	b.WriteString(`<td colspan="5">Subtotal</td>`)
+	if inv.Subtotal != 0 {
+		b.WriteString(`<td>` + formatAmount(inv.Subtotal, currencyCode) + `</td>`)
+	} else {
+		b.WriteString(`<td>` + formatAmount(subtotal, currencyCode) + `</td>`)
+	}
+	b.WriteString(`</tr>` + "\n")
+
+	if inv.Total != 0 {
+		b.WriteString(`<tr>`)
+		b.WriteString(`<td colspan="5"><strong>Total</strong></td>`)
+		b.WriteString(`<td><strong>` + formatAmount(inv.Total, currencyCode) + `</strong></td>`)
+		b.WriteString(`</tr>` + "\n")
+	}
+
+	b.WriteString(`</tfoot>` + "\n")
+	b.WriteString(`</table>` + "\n")
+	b.WriteString(`</div>` + "\n")
+
+	return b.String()
+}
+
+func formatAmount(v float64, currencyCode string) string {
+	if currencyCode != "" {
+		return fmt.Sprintf("%.2f %s", v, currencyCode)
+	}
+	return fmt.Sprintf("%.2f", v)
 }
 
 func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Request[pb.PayWithBalanceRequest]) (*connect.Response[pb.PayWithBalanceResponse], error) {
