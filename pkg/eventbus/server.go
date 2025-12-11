@@ -211,6 +211,8 @@ init:
 				continue
 			}
 
+			s.log.Info("Event processed successfully", zap.String("event_key", updEvent.Key), zap.String("event_id", updEvent.Id))
+
 			if err = msg.Ack(false); err != nil {
 				log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 			}
