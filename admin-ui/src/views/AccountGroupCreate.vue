@@ -151,6 +151,25 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
+                  <v-subheader>Invoice From Company domain</v-subheader>
+                </v-col>
+                <v-col cols="9" class="align-center d-flex">
+                  <v-textarea
+                    rows="1"
+                    label="Invoice From Company domain"
+                    v-model="
+                      newGroup.invoice_parameters_custom.invoiceFromFields
+                        .companyDomain
+                    "
+                    :disabled="!newGroup.has_own_invoice_base"
+                    dense
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row class="px-5">
+                <v-col cols="3" class="align-center d-flex">
                   <v-subheader>Invoice From Address</v-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
