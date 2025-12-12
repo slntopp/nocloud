@@ -298,7 +298,7 @@ const headers = computed(() => {
     { text: "Account balance", value: "balance" },
     { text: "Period", value: "period" },
     { text: "Email", value: "email" },
-    { text: "Created date", value: "created", editable: { type: "date" } },
+    { text: "Created date", value: "created" },
     { text: "UUID", value: "uuid" },
     { text: "Price model", value: "billingPlan.title" },
     { text: "IP", value: "state.meta.networking" },
@@ -312,7 +312,6 @@ const headers = computed(() => {
     {
       text: "Automatic debit",
       value: "meta.autoRenew",
-      editable: { type: "logic-select" },
     },
 
     { text: "Auto renew", value: "config.auto_renew" },
@@ -609,31 +608,25 @@ const changeAutoRenew = async (instance, value) => {
 const updateEditValues = async (values) => {
   try {
     const promises = value?.value.map((instance) => {
-      const data = store.getters["instances/all"].find(
-        (data) => data.instance.uuid === instance.uuid
-      ).instance;
+      Object.keys(instance.data).forEach((nextPaymentDateKey) => {
+        if (nextPaymentDateKey.endsWith("next_payment_date")) {
+          const lastMonitoringKey = nextPaymentDateKey.replace(
+            "next_payment_date",
+            "last_monitoring"
+          );
 
-      data.created = formatDateToTimestamp(values["date"]);
-      if (["ione", "empty"].includes(data.type)) {
-        Object.keys(data.data).forEach((nextPaymentDateKey) => {
-          if (nextPaymentDateKey.endsWith("next_payment_date")) {
-            const lastMonitoringKey = nextPaymentDateKey.replace(
-              "next_payment_date",
-              "last_monitoring"
-            );
-            data.data[nextPaymentDateKey] = formatDateToTimestamp(
-              values.dueDate
-            );
-            data.data[lastMonitoringKey] =
-              data.data[lastMonitoringKey] +
-              (formatDateToTimestamp(values.dueDate) -
-                data.data[lastMonitoringKey]);
-          }
-        });
-      }
+          instance.data[nextPaymentDateKey] = formatDateToTimestamp(
+            values["data.next_payment_date"]
+          );
+          instance.data[lastMonitoringKey] =
+            instance.data[lastMonitoringKey] +
+            (formatDateToTimestamp(values["data.next_payment_date"]) -
+              instance.data[lastMonitoringKey]);
+        }
+      });
 
       return store.getters["instances/instancesClient"].update(
-        UpdateRequest.fromJson({ instance: data })
+        UpdateRequest.fromJson({ instance }, { ignoreUnknownFields: true })
       );
     });
     await Promise.all(promises);
