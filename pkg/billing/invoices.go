@@ -811,12 +811,15 @@ quit:
 
 func formatInvoiceData(inv *pb.Invoice, accGroup *accpb.AccountGroup, invConf InvoicesConf) map[string]*structpb.Value {
 	var companyDomain string
+	var companyName string
 	if accGroup == nil || !accGroup.HasOwnInvoiceBase ||
 		accGroup.InvoiceParametersCustom == nil ||
 		accGroup.InvoiceParametersCustom.InvoiceFromFields == nil {
-		companyDomain = invConf.InvoiceFrom.Name
+		companyDomain = invConf.InvoiceFrom.CompanyDomain
+		companyName = invConf.InvoiceFrom.Name
 	} else {
-		companyDomain = accGroup.InvoiceParametersCustom.InvoiceFromFields.Name
+		companyDomain = accGroup.InvoiceParametersCustom.InvoiceFromFields.CompanyDomain
+		companyName = accGroup.InvoiceParametersCustom.InvoiceFromFields.Name
 	}
 	data := make(map[string]*structpb.Value)
 	data["invoice_date_created"] = structpb.NewStringValue(time.Unix(inv.GetCreated(), 0).Format(time.DateTime))
@@ -825,6 +828,7 @@ func formatInvoiceData(inv *pb.Invoice, accGroup *accpb.AccountGroup, invConf In
 	data["invoice_total"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
 	data["invoice_date_due"] = structpb.NewStringValue(time.Unix(inv.GetDeadline(), 0).Format(time.DateTime))
 	data["company_domain"] = structpb.NewStringValue(companyDomain)
+	data["company_name"] = structpb.NewStringValue(companyName)
 	data["invoice_html_contents"] = structpb.NewStringValue(InvoiceItemsHTML(inv))
 	return data
 }
