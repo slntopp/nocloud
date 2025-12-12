@@ -117,13 +117,17 @@
     <template v-slot:body.append v-if="isEdit">
       <tr>
         <td />
-        <td v-for="(header, index) in filtredHeaders" :key="index">
+        <td
+          :style="header.editable ? 'min-width: 200px;' : ''"
+          v-for="(header, index) in filtredHeaders"
+          :key="index"
+        >
           <component
             v-if="header.editable"
             :is="getEditComponent(header)"
-            v-bind="getEditComponentProps(header)"
             @input="changeEditableValue(header, $event)"
             :value="editableValues[header.value]"
+            v-bind="getEditComponentProps(header)"
           />
         </td>
       </tr>
@@ -201,8 +205,8 @@
 import { VDataTable } from "vuetify/lib";
 import Sortable from "sortablejs";
 import { VSelect, VTextField } from "vuetify/lib";
-import DatePicker from "@/components/ui/datePicker";
-import { formatSecondsToDateString } from "@/functions";
+import DatePicker from "@/components/ui/dateTimePicker.vue";
+import { timestampToDateTimeLocal } from "../functions";
 
 function watchClass(targetNode, classToWatch) {
   let lastClassState = targetNode.classList.contains(classToWatch);
@@ -603,7 +607,7 @@ export default {
           if (!this.editableValues[header.value]) {
             this.changeEditableValue(
               header,
-              formatSecondsToDateString(Date.now() / 1000)
+              timestampToDateTimeLocal(new Date(Date.now()).getTime() / 1000)
             );
           }
           return {
