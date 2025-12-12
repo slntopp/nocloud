@@ -811,12 +811,15 @@ quit:
 
 func formatInvoiceData(inv *pb.Invoice, accGroup *accpb.AccountGroup, invConf InvoicesConf) map[string]*structpb.Value {
 	var companyDomain string
+	var companyName string
 	if accGroup == nil || !accGroup.HasOwnInvoiceBase ||
 		accGroup.InvoiceParametersCustom == nil ||
 		accGroup.InvoiceParametersCustom.InvoiceFromFields == nil {
-		companyDomain = invConf.InvoiceFrom.Name
+		companyDomain = invConf.InvoiceFrom.CompanyDomain
+		companyName = invConf.InvoiceFrom.Name
 	} else {
-		companyDomain = accGroup.InvoiceParametersCustom.InvoiceFromFields.Name
+		companyDomain = accGroup.InvoiceParametersCustom.InvoiceFromFields.CompanyDomain
+		companyName = accGroup.InvoiceParametersCustom.InvoiceFromFields.Name
 	}
 	data := make(map[string]*structpb.Value)
 	data["invoice_date_created"] = structpb.NewStringValue(time.Unix(inv.GetCreated(), 0).Format(time.DateTime))
@@ -825,6 +828,7 @@ func formatInvoiceData(inv *pb.Invoice, accGroup *accpb.AccountGroup, invConf In
 	data["invoice_total"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
 	data["invoice_date_due"] = structpb.NewStringValue(time.Unix(inv.GetDeadline(), 0).Format(time.DateTime))
 	data["company_domain"] = structpb.NewStringValue(companyDomain)
+	data["company_name"] = structpb.NewStringValue(companyName)
 	data["invoice_html_contents"] = structpb.NewStringValue(InvoiceItemsHTML(inv))
 	return data
 }
@@ -1629,6 +1633,7 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := _req.Msg
 	log.Debug("Request received", zap.String("invoice", req.InvoiceUuid))
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
@@ -1640,17 +1645,33 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// For now email work only with whmcs email templates
-	whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
-	if !ok {
-		return nil, status.Error(codes.Internal, "no whmcs gateway")
+	acc, err := s.accounts.Get(ctx, inv.GetAccount())
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
-	whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
-	if !ok {
-		return nil, status.Error(codes.Internal, "no whmcs invoice id")
-	}
-	if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+
+	if acc.GetPaymentsGateway() == "nocloud" {
+		accGroup, err := s.accounts.GetAccountClientGroup(ctx, acc.GetUuid())
+		if err != nil {
+			log.Error("Failed to get account group", zap.Error(err))
+			return nil, status.Error(codes.Internal, "failed to get account group")
+		}
+		if err := s.SendEmailEvent("invoice_published", inv.Account, formatInvoiceData(inv.Invoice, accGroup, invConf)); err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+		}
+	} else {
+		whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
+		if !ok {
+			return nil, status.Error(codes.Internal, "no whmcs gateway")
+		}
+		whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
+		if !ok {
+			return nil, status.Error(codes.Internal, "no whmcs invoice id")
+		}
+		if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+		}
 	}
 
 	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil
