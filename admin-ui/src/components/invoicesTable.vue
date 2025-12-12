@@ -74,7 +74,7 @@
     </template>
 
     <template v-slot:[`item.taxOptions.taxRate`]="{ item }">
-      {{ item.taxOptions.taxRate * 100 || 0 }}%
+      {{ item.taxOptions?.taxRate * 100 || 0 }}%
     </template>
 
     <template v-slot:[`item.processed`]="{ item }">
