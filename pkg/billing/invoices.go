@@ -18,6 +18,7 @@ import (
 	"github.com/wI2L/jsondiff"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/metadata"
+	"html"
 	"math"
 	"slices"
 	"strings"
@@ -642,8 +643,8 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	})
 
 	if acc.PaymentsGateway == "nocloud" {
-		if t.Status != pb.BillingStatus_DRAFT && t.Status != pb.BillingStatus_TERMINATED {
-			_ = s.SendEmailEvent("invoice_published", t.Account, map[string]*structpb.Value{}) // TODO data
+		if t.Status == pb.BillingStatus_UNPAID {
+			_ = s.SendEmailEvent("invoice_published", t.Account, formatInvoiceData(r.Invoice, accGroup, invConf))
 		}
 	}
 
@@ -668,8 +669,8 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
 	var (
-		acc        graph.Account
-		accGroup   *accpb.AccountGroup
+		acc        = graph.Account{Account: &accpb.Account{}}
+		accGroup   = &accpb.AccountGroup{}
 		boundGroup string
 		template   = invConf.Template
 		_          = invConf.NewTemplate
@@ -800,12 +801,120 @@ quit:
 
 	if acc.PaymentsGateway == "nocloud" {
 		if newStatus == pb.BillingStatus_PAID {
-			_ = s.SendEmailEvent("invoice_paid", old.Account, map[string]*structpb.Value{}) // TODO data
+			_ = s.SendEmailEvent("invoice_paid", old.Account, formatInvoiceData(newInv.Invoice, accGroup, invConf))
 		}
 	}
 
 	log.Info("Finished invoice update status")
 	return connect.NewResponse(_newInv), nil
+}
+
+func formatInvoiceData(inv *pb.Invoice, accGroup *accpb.AccountGroup, invConf InvoicesConf) map[string]*structpb.Value {
+	var companyDomain string
+	var companyName string
+	if accGroup == nil || !accGroup.HasOwnInvoiceBase ||
+		accGroup.InvoiceParametersCustom == nil ||
+		accGroup.InvoiceParametersCustom.InvoiceFromFields == nil {
+		companyDomain = invConf.InvoiceFrom.CompanyDomain
+		companyName = invConf.InvoiceFrom.Name
+	} else {
+		companyDomain = accGroup.InvoiceParametersCustom.InvoiceFromFields.CompanyDomain
+		companyName = accGroup.InvoiceParametersCustom.InvoiceFromFields.Name
+	}
+	data := make(map[string]*structpb.Value)
+	data["invoice_date_created"] = structpb.NewStringValue(time.Unix(inv.GetCreated(), 0).Format(time.DateTime))
+	data["invoice_num"] = structpb.NewStringValue(inv.GetNumber())
+	data["invoice_amount_paid"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
+	data["invoice_total"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
+	data["invoice_date_due"] = structpb.NewStringValue(time.Unix(inv.GetDeadline(), 0).Format(time.DateTime))
+	data["company_domain"] = structpb.NewStringValue(companyDomain)
+	data["company_name"] = structpb.NewStringValue(companyName)
+	data["invoice_html_contents"] = structpb.NewStringValue(InvoiceItemsHTML(inv))
+	return data
+}
+
+func InvoiceItemsHTML(inv *pb.Invoice) string {
+	if inv == nil {
+		return ""
+	}
+	var b strings.Builder
+
+	currencyCode := ""
+	if inv.Currency != nil {
+		currencyCode = inv.Currency.Code
+	}
+
+	b.WriteString(`<div class="invoice-items">` + "\n")
+
+	b.WriteString(`<table>` + "\n")
+	b.WriteString(`<thead>` + "\n")
+	b.WriteString(`<tr>`)
+	b.WriteString(`<th>#</th>`)
+	b.WriteString(`<th>Description</th>`)
+	b.WriteString(`<th>Quantity</th>`)
+	b.WriteString(`<th>Unit</th>`)
+	b.WriteString(`<th>Price</th>`)
+	b.WriteString(`<th>Line total</th>`)
+	b.WriteString(`</tr>` + "\n")
+	b.WriteString(`</thead>` + "\n")
+
+	b.WriteString(`<tbody>` + "\n")
+
+	var subtotal float64
+	if len(inv.Items) == 0 {
+		b.WriteString(`<tr><td colspan="6">No items</td></tr>` + "\n")
+	} else {
+		for i, it := range inv.Items {
+			if it == nil {
+				continue
+			}
+
+			lineTotal := float64(it.Amount) * it.Price
+			subtotal += lineTotal
+
+			b.WriteString(`<tr>`)
+			b.WriteString(fmt.Sprintf(`<td>%d</td>`, i+1))
+			b.WriteString(`<td>` + html.EscapeString(it.Description) + `</td>`)
+			b.WriteString(fmt.Sprintf(`<td>%d</td>`, it.Amount))
+			b.WriteString(`<td>` + html.EscapeString(it.Unit) + `</td>`)
+			b.WriteString(`<td>` + formatAmount(it.Price, currencyCode) + `</td>`)
+			b.WriteString(`<td>` + formatAmount(lineTotal, currencyCode) + `</td>`)
+			b.WriteString(`</tr>` + "\n")
+		}
+	}
+
+	b.WriteString(`</tbody>` + "\n")
+
+	b.WriteString(`<tfoot>` + "\n")
+
+	b.WriteString(`<tr>`)
+	b.WriteString(`<td colspan="5">Subtotal</td>`)
+	if inv.Subtotal != 0 {
+		b.WriteString(`<td>` + formatAmount(inv.Subtotal, currencyCode) + `</td>`)
+	} else {
+		b.WriteString(`<td>` + formatAmount(subtotal, currencyCode) + `</td>`)
+	}
+	b.WriteString(`</tr>` + "\n")
+
+	if inv.Total != 0 {
+		b.WriteString(`<tr>`)
+		b.WriteString(`<td colspan="5"><strong>Total</strong></td>`)
+		b.WriteString(`<td><strong>` + formatAmount(inv.Total, currencyCode) + `</strong></td>`)
+		b.WriteString(`</tr>` + "\n")
+	}
+
+	b.WriteString(`</tfoot>` + "\n")
+	b.WriteString(`</table>` + "\n")
+	b.WriteString(`</div>` + "\n")
+
+	return b.String()
+}
+
+func formatAmount(v float64, currencyCode string) string {
+	if currencyCode != "" {
+		return fmt.Sprintf("%.2f %s", v, currencyCode)
+	}
+	return fmt.Sprintf("%.2f", v)
 }
 
 func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Request[pb.PayWithBalanceRequest]) (*connect.Response[pb.PayWithBalanceResponse], error) {
@@ -1301,6 +1410,18 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		query += ` instances: @instances,`
 		vars["instances"] = req.GetInstances()
 	}
+	if req.Instances != nil || !ignoreNulls {
+		query += ` instances: @instances,`
+		vars["instances"] = req.GetInstances()
+	}
+	if req.TaxOptions != nil || !ignoreNulls {
+		query += ` tax_options: @tax_options,`
+		if req.GetTaxOptions().GetTaxRate() == 0 && !req.GetTaxOptions().GetTaxIncluded() {
+			vars["tax_options"] = nil
+		} else {
+			vars["tax_options"] = req.GetTaxOptions()
+		}
+	}
 	query += " } IN @@invoices OPTIONS { keepNull: false } "
 	vars["invoice"] = t.GetUuid()
 	vars["@invoices"] = schema.INVOICES_COL
@@ -1512,6 +1633,7 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := _req.Msg
 	log.Debug("Request received", zap.String("invoice", req.InvoiceUuid))
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
@@ -1523,17 +1645,33 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// For now email work only with whmcs email templates
-	whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
-	if !ok {
-		return nil, status.Error(codes.Internal, "no whmcs gateway")
+	acc, err := s.accounts.Get(ctx, inv.GetAccount())
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
-	whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
-	if !ok {
-		return nil, status.Error(codes.Internal, "no whmcs invoice id")
-	}
-	if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+
+	if acc.GetPaymentsGateway() == "nocloud" {
+		accGroup, err := s.accounts.GetAccountClientGroup(ctx, acc.GetUuid())
+		if err != nil {
+			log.Error("Failed to get account group", zap.Error(err))
+			return nil, status.Error(codes.Internal, "failed to get account group")
+		}
+		if err := s.SendEmailEvent("invoice_published", inv.Account, formatInvoiceData(inv.Invoice, accGroup, invConf)); err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+		}
+	} else {
+		whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
+		if !ok {
+			return nil, status.Error(codes.Internal, "no whmcs gateway")
+		}
+		whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
+		if !ok {
+			return nil, status.Error(codes.Internal, "no whmcs invoice id")
+		}
+		if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+		}
 	}
 
 	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil

@@ -713,7 +713,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
   }
 
   .card-sup td{
-    padding:14px 16px;
+    padding:6px 7px;
     font-size:15px;
     border-bottom:1px solid #92D05055;
     background:#ffffff;
@@ -801,7 +801,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 	</div>
 
     <div class="pay-words">
-		<div><strong>%s</strong></div>
+		<div><strong>%s %s</strong></div>
 	</div>
 
 	<footer class="small">
@@ -857,6 +857,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		rowsBuf.String(),
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
 		CapitalizeWords(totalAsWords),
+		invoiceBody.GetCurrency().GetCode(),
 		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),
 		// JS data
 		invoiceBody.GetCurrency().GetCode(),
@@ -927,13 +928,19 @@ func jsGateways(gws []pg) string {
 func BuildTableHTML(col1, col2, col3 string, rows ...[3]string) string {
 	var b strings.Builder
 
-	b.WriteString(`<table border="1" cellspacing="0" cellpadding="6">`)
+	b.WriteString(`<table style="width:100%; table-layout:fixed;" cellspacing="0" cellpadding="3">`)
+
+	b.WriteString(`<colgroup>
+		<col style="width:18%">
+		<col style="width:41%">
+		<col style="width:41%">
+	</colgroup>`)
+
 	b.WriteString("<thead><tr>")
 	b.WriteString("<th>" + col1 + "</th>")
 	b.WriteString("<th>" + col2 + "</th>")
 	b.WriteString("<th>" + col3 + "</th>")
-	b.WriteString("</tr></thead>")
-	b.WriteString("<tbody>")
+	b.WriteString("</tr></thead><tbody>")
 
 	for _, r := range rows {
 		b.WriteString("<tr>")

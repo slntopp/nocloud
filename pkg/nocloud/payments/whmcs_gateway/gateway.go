@@ -113,6 +113,10 @@ func sendRequestToWhmcs[T any](method string, url string, body io.Reader) (T, er
 }
 
 func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEmail ...bool) error {
+	if inv.TaxOptions == nil {
+		inv.TaxOptions = &pb.TaxOptions{}
+	}
+
 	if inv.Status == pb.BillingStatus_DRAFT || inv.Status == pb.BillingStatus_TERMINATED {
 		return nil
 	}
@@ -207,6 +211,10 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 }
 
 func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldStatus pb.BillingStatus, sendEmail bool) error {
+	if inv.TaxOptions == nil {
+		inv.TaxOptions = &pb.TaxOptions{}
+	}
+
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -617,6 +625,9 @@ func (g *WhmcsGateway) syncWhmcsInvoice(ctx context.Context, invoiceId int) erro
 			return ps.NoNackErr(fmt.Errorf("error syncWhmcsInvoice: %w", err))
 		}
 		return fmt.Errorf("error syncWhmcsInvoice: %w", err)
+	}
+	if inv.TaxOptions == nil {
+		inv.TaxOptions = &pb.TaxOptions{}
 	}
 
 	cur, err := g.currencies.Get(ctx, inv.GetCurrency().GetId())

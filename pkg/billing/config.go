@@ -55,12 +55,13 @@ type SuspendConf struct {
 }
 
 type InvoiceFromFields struct {
-	Name       string `json:"name"`
-	Address    string `json:"address"`
-	City       string `json:"city"`
-	PostalCode string `json:"postal_code"`
-	Country    string `json:"country"`
-	TaxID      string `json:"tax_id"`
+	Name          string `json:"name"`
+	Address       string `json:"address"`
+	City          string `json:"city"`
+	PostalCode    string `json:"postal_code"`
+	Country       string `json:"country"`
+	TaxID         string `json:"tax_id"`
+	CompanyDomain string `json:"company_domain"`
 }
 
 type InvoicesConf struct {
@@ -119,7 +120,7 @@ var (
 			TaxIncluded:                   false,
 			ForceRequirePhoneVerification: false,
 
-			InvoiceFrom: InvoiceFromFields{Name: "SomeName", Address: "SomeAddress", City: "SomeCity", PostalCode: "123456", Country: "SomeCountry", TaxID: "123456789"},
+			InvoiceFrom: InvoiceFromFields{Name: "SomeName", Address: "SomeAddress", City: "SomeCity", PostalCode: "123456", Country: "SomeCountry", TaxID: "123456789", CompanyDomain: "somecompany.com"},
 			LogoURL:     "https://nocloud.com/logo.png",
 		},
 		Description: "Invoices configuration",
