@@ -1633,6 +1633,7 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := _req.Msg
 	log.Debug("Request received", zap.String("invoice", req.InvoiceUuid))
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
 
 	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
@@ -1644,17 +1645,33 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	// For now email work only with whmcs email templates
-	whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
-	if !ok {
-		return nil, status.Error(codes.Internal, "no whmcs gateway")
+	acc, err := s.accounts.Get(ctx, inv.GetAccount())
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
-	whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
-	if !ok {
-		return nil, status.Error(codes.Internal, "no whmcs invoice id")
-	}
-	if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
-		return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+
+	if acc.GetPaymentsGateway() == "nocloud" {
+		accGroup, err := s.accounts.GetAccountClientGroup(ctx, acc.GetUuid())
+		if err != nil {
+			log.Error("Failed to get account group", zap.Error(err))
+			return nil, status.Error(codes.Internal, "failed to get account group")
+		}
+		if err := s.SendEmailEvent("invoice_published", inv.Account, formatInvoiceData(inv.Invoice, accGroup, invConf)); err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+		}
+	} else {
+		whmcsGateway, ok := payments.GetPaymentGateway("whmcs").(*whmcs_gateway.WhmcsGateway)
+		if !ok {
+			return nil, status.Error(codes.Internal, "no whmcs gateway")
+		}
+		whmcsInvoiceId, ok := whmcs_gateway.GetWhmcsInvoiceId(inv.Invoice)
+		if !ok {
+			return nil, status.Error(codes.Internal, "no whmcs invoice id")
+		}
+		if err = whmcsGateway.SendEmail(ctx, "Invoice Created", whmcsInvoiceId, nil); err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("failed to send email: %s", err.Error()))
+		}
 	}
 
 	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil
