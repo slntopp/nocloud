@@ -62,15 +62,15 @@ onMounted(async () => {
     await store.dispatch("addons/fetchById", route.params.uuid);
     document.title = `${addonTitle.value} | NoCloud`;
 
-    if (!addon.value.descriptionId) {
+    if (addon.value.descriptionId) {
       const desc = await store.dispatch(
         "descriptions/get",
         addon.value.descriptionId
       );
       store.commit("addons/setOne", { ...addon.value, description: desc.text });
+    } else {
+      store.commit("addons/setOne", { ...addon.value, description: "" });
     }
-
-    store.commit("addons/setOne", { ...addon.value, description: "" });
   } catch (e) {
     addon.value.descriptionId = null;
   }
