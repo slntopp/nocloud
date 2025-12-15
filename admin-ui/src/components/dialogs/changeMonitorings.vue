@@ -46,7 +46,10 @@ import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
-import { timestampToDateTimeLocal } from "../../functions";
+import {
+  convertDateToTimeZone,
+  timestampToDateTimeLocal,
+} from "../../functions";
 
 const props = defineProps(["template", "service", "value"]);
 const emit = defineEmits(["refresh", "input"]);
@@ -107,8 +110,12 @@ const changeDates = async () => {
       const { value } = nextPaymentDates.value[key];
 
       let newVal =
-        new Date(isChangeAll.value ? newAllDate.value : value).getTime() / 1000;
-      let oldVal = new Date(template.value.data[key]).getTime();
+        convertDateToTimeZone(
+          new Date(isChangeAll.value ? newAllDate.value : value)
+        ).getTime() / 1000;
+      let oldVal = convertDateToTimeZone(
+        new Date(template.value.data[key])
+      ).getTime();
 
       changedDates[key.replace("next_payment_date", "last_monitoring")] =
         oldVal + (newVal - oldVal);

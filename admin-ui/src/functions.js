@@ -345,6 +345,26 @@ export function formatSecondsToDateString(timestamp) {
   return result;
 }
 
+export function convertDateToTimeZone(date) {
+  const userTimeZone = store.getters["settings/timeZone"];
+  const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const getTimezoneOffset = (timeZone, date) => {
+    const utcDate = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
+    const tzDate = new Date(date.toLocaleString("en-US", { timeZone }));
+    return utcDate - tzDate;
+  };
+
+  const browserOffset = getTimezoneOffset(browserTimeZone, date);
+  const userOffset = getTimezoneOffset(userTimeZone, date);
+
+  const offsetDifference = userOffset - browserOffset;
+
+  const resultDate = new Date(date.getTime() + offsetDifference);
+
+  return resultDate;
+}
+
 export function getTimestamp({ day, month, year, quarter, week, time }) {
   let seconds = 0;
 
