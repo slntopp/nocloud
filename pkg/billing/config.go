@@ -62,6 +62,7 @@ type InvoiceFromFields struct {
 	Country       string `json:"country"`
 	TaxID         string `json:"tax_id"`
 	CompanyDomain string `json:"company_domain"`
+	CompanyName   string `json:"company_name"`
 }
 
 type InvoicesConf struct {

@@ -801,7 +801,12 @@ quit:
 
 	if acc.PaymentsGateway == "nocloud" {
 		if newStatus == pb.BillingStatus_PAID {
-			_ = s.SendEmailEvent("invoice_paid", old.Account, formatInvoiceData(newInv.Invoice, accGroup, invConf))
+			inv, err := s.invoices.Get(ctx, newInv.GetUuid())
+			if err == nil {
+				_ = s.SendEmailEvent("invoice_paid", old.Account, formatInvoiceData(inv.Invoice, accGroup, invConf))
+			} else {
+				log.Error("Failed to get invoice for email event", zap.Error(err))
+			}
 		}
 	}
 
@@ -816,21 +821,28 @@ func formatInvoiceData(inv *pb.Invoice, accGroup *accpb.AccountGroup, invConf In
 		accGroup.InvoiceParametersCustom == nil ||
 		accGroup.InvoiceParametersCustom.InvoiceFromFields == nil {
 		companyDomain = invConf.InvoiceFrom.CompanyDomain
-		companyName = invConf.InvoiceFrom.Name
+		companyName = invConf.InvoiceFrom.CompanyName
 	} else {
 		companyDomain = accGroup.InvoiceParametersCustom.InvoiceFromFields.CompanyDomain
-		companyName = accGroup.InvoiceParametersCustom.InvoiceFromFields.Name
+		companyName = accGroup.InvoiceParametersCustom.InvoiceFromFields.CompanyName
 	}
 	data := make(map[string]*structpb.Value)
-	data["invoice_date_created"] = structpb.NewStringValue(time.Unix(inv.GetCreated(), 0).Format(time.DateTime))
+	data["invoice_date_created"] = structpb.NewStringValue(time.Unix(inv.GetCreated(), 0).Format(time.DateOnly))
 	data["invoice_num"] = structpb.NewStringValue(inv.GetNumber())
 	data["invoice_amount_paid"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
 	data["invoice_total"] = structpb.NewStringValue(fmt.Sprintf("%.2f", inv.GetTotal()) + " " + inv.GetCurrency().GetCode())
-	data["invoice_date_due"] = structpb.NewStringValue(time.Unix(inv.GetDeadline(), 0).Format(time.DateTime))
+	data["invoice_date_due"] = structpb.NewStringValue(time.Unix(inv.GetDeadline(), 0).Format(time.DateOnly))
 	data["company_domain"] = structpb.NewStringValue(companyDomain)
 	data["company_name"] = structpb.NewStringValue(companyName)
 	data["invoice_html_contents"] = structpb.NewStringValue(InvoiceItemsHTML(inv))
 	return data
+}
+
+func formatTaxRate(taxRate float64, applyTax bool) string {
+	if taxRate == 0 || !applyTax {
+		return "-"
+	}
+	return fmt.Sprintf("%.2f%%", taxRate*100)
 }
 
 func InvoiceItemsHTML(inv *pb.Invoice) string {
@@ -854,13 +866,18 @@ func InvoiceItemsHTML(inv *pb.Invoice) string {
 	b.WriteString(`<th>Quantity</th>`)
 	b.WriteString(`<th>Unit</th>`)
 	b.WriteString(`<th>Price</th>`)
-	b.WriteString(`<th>Line total</th>`)
+	b.WriteString(`<th>VAT</th>`)
+	b.WriteString(`<th>Total</th>`)
 	b.WriteString(`</tr>` + "\n")
 	b.WriteString(`</thead>` + "\n")
 
 	b.WriteString(`<tbody>` + "\n")
 
 	var subtotal float64
+	var taxRate float64
+	if inv.TaxOptions != nil {
+		taxRate = inv.TaxOptions.TaxRate
+	}
 	if len(inv.Items) == 0 {
 		b.WriteString(`<tr><td colspan="6">No items</td></tr>` + "\n")
 	} else {
@@ -869,15 +886,24 @@ func InvoiceItemsHTML(inv *pb.Invoice) string {
 				continue
 			}
 
-			lineTotal := float64(it.Amount) * it.Price
-			subtotal += lineTotal
+			lineSubtotal := float64(it.Amount) * it.Price
+			lineTotal := lineSubtotal
+			if it.ApplyTax {
+				if inv.TaxOptions != nil && !inv.TaxOptions.TaxIncluded {
+					lineTotal += lineSubtotal * taxRate
+				} else if inv.TaxOptions != nil && inv.TaxOptions.TaxIncluded {
+					lineSubtotal = lineTotal / (1 + taxRate)
+				}
+			}
+			subtotal += lineSubtotal
 
 			b.WriteString(`<tr>`)
 			b.WriteString(fmt.Sprintf(`<td>%d</td>`, i+1))
 			b.WriteString(`<td>` + html.EscapeString(it.Description) + `</td>`)
 			b.WriteString(fmt.Sprintf(`<td>%d</td>`, it.Amount))
 			b.WriteString(`<td>` + html.EscapeString(it.Unit) + `</td>`)
-			b.WriteString(`<td>` + formatAmount(it.Price, currencyCode) + `</td>`)
+			b.WriteString(`<td>` + formatAmount(lineSubtotal, currencyCode) + `</td>`)
+			b.WriteString(`<td>` + formatTaxRate(taxRate, it.ApplyTax) + `</td>`)
 			b.WriteString(`<td>` + formatAmount(lineTotal, currencyCode) + `</td>`)
 			b.WriteString(`</tr>` + "\n")
 		}
@@ -894,6 +920,11 @@ func InvoiceItemsHTML(inv *pb.Invoice) string {
 	} else {
 		b.WriteString(`<td>` + formatAmount(subtotal, currencyCode) + `</td>`)
 	}
+	b.WriteString(`</tr>` + "\n")
+
+	b.WriteString(`<tr>`)
+	b.WriteString(`<td colspan="5">VAT</td>`)
+	b.WriteString(`<td>` + formatTaxRate(taxRate, true) + `</td>`)
 	b.WriteString(`</tr>` + "\n")
 
 	if inv.Total != 0 {
