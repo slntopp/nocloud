@@ -801,7 +801,12 @@ quit:
 
 	if acc.PaymentsGateway == "nocloud" {
 		if newStatus == pb.BillingStatus_PAID {
-			_ = s.SendEmailEvent("invoice_paid", old.Account, formatInvoiceData(newInv.Invoice, accGroup, invConf))
+			inv, err := s.invoices.Get(ctx, newInv.GetUuid())
+			if err == nil {
+				_ = s.SendEmailEvent("invoice_paid", old.Account, formatInvoiceData(inv.Invoice, accGroup, invConf))
+			} else {
+				log.Error("Failed to get invoice for email event", zap.Error(err))
+			}
 		}
 	}
 
