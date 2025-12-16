@@ -189,6 +189,7 @@
 <script setup>
 import nocloudTable from "@/components/table.vue";
 import {
+  convertDateToTimeZone,
   debounce,
   formatDateToTimestamp,
   formatPrice,
@@ -616,11 +617,13 @@ const updateEditValues = async (values) => {
           );
 
           instance.data[nextPaymentDateKey] = formatDateToTimestamp(
-            values["data.next_payment_date"]
+            convertDateToTimeZone(new Date(values["data.next_payment_date"]))
           );
           instance.data[lastMonitoringKey] =
             instance.data[lastMonitoringKey] +
-            (formatDateToTimestamp(values["data.next_payment_date"]) -
+            (formatDateToTimestamp(
+              convertDateToTimeZone(new Date(values["data.next_payment_date"]))
+            ) -
               instance.data[lastMonitoringKey]);
         }
       });

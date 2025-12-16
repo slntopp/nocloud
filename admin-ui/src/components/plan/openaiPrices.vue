@@ -74,7 +74,11 @@
             </template>
 
             <template v-slot:[`item.disabled`]="{ item }">
-              <v-switch dense v-model="item.disabled" />
+              <v-switch
+                dense
+                :input-value="!item.disabled"
+                @change="changeDisabled(item, $event)"
+              />
             </template>
 
             <template v-slot:[`item.key`]="{ item }">
@@ -448,7 +452,7 @@ const newPricesHeaders = [
   { text: "Provider", value: "provider", width: 100 },
   { text: "Types", value: "types", sortable: false },
   { text: "Visibility", value: "visibility", width: 150 },
-  { text: "Disabled", value: "disabled", width: 100 },
+  { text: "Enabled", value: "disabled", width: 100 },
   { text: "Billing", value: "billing", sortable: false, width: 100 },
   { text: "State", value: "state.state", width: 100 },
 ];
@@ -872,7 +876,6 @@ const exportToXlsx = async () => {
       { title: "Price for 1000 Web Searches", key: "other.web_search_price" },
       { title: "Price per image", key: "images.res_to_quality" },
     ];
-          
 
     const allowedModels = newPricesResourcesFiltred.value.filter(
       (r) => !r.disabled && r.state?.state !== "broken"
@@ -999,6 +1002,10 @@ const save = async () => {
   } finally {
     isSaveLoading.value = false;
   }
+};
+
+const changeDisabled = (item, value) => {
+  item.disabled = !value;
 };
 
 watch(isBillingSettingsOpen, (value) => {
