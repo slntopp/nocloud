@@ -206,7 +206,6 @@ import { VDataTable } from "vuetify/lib";
 import Sortable from "sortablejs";
 import { VSelect, VTextField } from "vuetify/lib";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
-import { timestampToDateTimeLocal } from "../functions";
 
 function watchClass(targetNode, classToWatch) {
   let lastClassState = targetNode.classList.contains(classToWatch);
@@ -604,12 +603,6 @@ export default {
       const baseProps = { ...header.editable, dense: true };
       switch (header.editable.type) {
         case "date": {
-          if (!this.editableValues[header.value]) {
-            this.changeEditableValue(
-              header,
-              timestampToDateTimeLocal(new Date(Date.now()).getTime() / 1000)
-            );
-          }
           return {
             ...baseProps,
             clearable: false,

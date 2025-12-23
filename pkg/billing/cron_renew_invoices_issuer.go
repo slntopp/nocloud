@@ -58,7 +58,10 @@ func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Conte
 	} else {
 		log.Warn("Wrong expiring percentage in config. Using default value", zap.Float64("percentage", expiringPercentage))
 	}
-	isExpiring := func(now, expiringAt, period int64) bool {
+	isExpiring := func(now, expiringAt, period int64, forcedDate *int64) bool {
+		if forcedDate != nil && *forcedDate > 0 {
+			return *forcedDate < now
+		}
 		if period > days15 {
 			return (expiringAt - days10) < now
 		}
@@ -205,7 +208,7 @@ type instanceExpData struct {
 	Period   int64
 }
 
-func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context, log *zap.Logger, data *accountPool, isExp func(now, expiringAt, period int64) bool, defCurr *pb.Currency) (created bool, errCount int, warnsCount int) {
+func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context, log *zap.Logger, data *accountPool, isExp func(now, expiringAt, period int64, forcedDate *int64) bool, defCurr *pb.Currency) (created bool, errCount int, warnsCount int) {
 	log = log.Named("ProcessAccount").With(zap.String("account", data.Account.GetUuid()))
 	defer func(errs *int, warns *int) {
 		if err := recover(); err != nil {
@@ -246,7 +249,13 @@ func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context
 			errCount++
 			continue
 		}
-		if !isExp(time.Now().Unix(), expires, period) {
+
+		var forcedDate *int64
+		if inst.Meta != nil {
+			forcedDate = inst.Meta.NextForcedRenewInvoice
+		}
+
+		if !isExp(time.Now().Unix(), expires, period, forcedDate) {
 			continue
 		}
 
@@ -454,6 +463,17 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		return fmt.Errorf("error creating invoice: %w", err)
 	}
 	log.Info("Created invoice", zap.String("uuid", resp.Msg.GetUuid()), zap.Int("item_count", len(inv.Items)))
+
+	// Reset all forced dates because invoice is created
+	for _, d := range data {
+		if d.Instance == nil {
+			continue
+		}
+		zero := int64(0)
+		if err = s.instances.SetForcedRenewInvoice(ctx, d.Instance, &zero); err != nil {
+			log.Error("Error resetting forced renew invoice date", zap.String("instance", d.Instance.GetUuid()), zap.Error(err))
+		}
+	}
 
 	delaySeconds(601)
 	return nil

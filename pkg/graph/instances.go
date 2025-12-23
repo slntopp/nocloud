@@ -57,6 +57,7 @@ type InstancesController interface {
 	CalculateInstanceEstimatePrice(i *pb.Instance, includeOneTimePayments bool) (float64, error)
 	GetInstancePeriod(i *pb.Instance) (*int64, error)
 	Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error)
+	SetForcedRenewInvoice(ctx context.Context, instance *pb.Instance, date *int64) error
 	Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error
 	UpdateWithPatch(ctx context.Context, sp string, inst, oldInst *pb.Instance) error
 	Exists(ctx context.Context, uuid string) (bool, error)
@@ -434,6 +435,24 @@ func (ctrl *instancesController) GetInstancePeriod(i *pb.Instance) (*int64, erro
 	}
 
 	return nil, nil
+}
+
+func (ctrl *instancesController) SetForcedRenewInvoice(ctx context.Context, instance *pb.Instance, date *int64) error {
+	if instance == nil || instance.Uuid == "" {
+		return errors.New("instance is nil or has empty UUID")
+	}
+	meta := instance.GetMeta()
+	if meta == nil {
+		meta = &pb.InstanceMeta{}
+	}
+	meta.NextForcedRenewInvoice = date
+	instance.Meta = meta // Intentional side effect
+	if _, err := ctrl.col.UpdateDocument(ctx, instance.GetUuid(), map[string]interface{}{
+		"meta": meta,
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 const instanceOwner = `

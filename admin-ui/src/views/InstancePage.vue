@@ -196,6 +196,10 @@ export default {
           component: () => import("@/components/instance/history.vue"),
         },
         {
+          title: "Invoices",
+          component: () => import("@/components/instance/invoices.vue"),
+        },
+        {
           title: "Reports",
           component: () => import("@/components/instance/reports.vue"),
         },
