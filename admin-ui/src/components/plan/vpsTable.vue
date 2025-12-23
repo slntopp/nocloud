@@ -466,6 +466,12 @@ const changePlan = async (plan) => {
           .filter((a) => !!a)
       );
 
+    console.log(
+      el.addons
+        .map((key) => allAddons.find((addon) => key === addon.meta.key))
+        .filter((a) => !!a)
+    );
+
     plan.products[el.id] = {
       kind: "PREPAID",
       title: el.name,
@@ -839,6 +845,12 @@ const initializeData = async () => {
     const { meta } = product;
 
     const { apiName, datacenter, basePrice } = meta;
+    console.log(
+      product.addons
+        ?.map((uuid) => addonsData.find((addon) => addon.uuid === uuid))
+        .filter((addon) => addon?.meta.type !== "os")
+        .map((addon) => addon?.meta.key)
+    );
 
     return {
       ...product,

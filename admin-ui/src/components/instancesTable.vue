@@ -46,6 +46,10 @@
       }}
     </template>
 
+    <template v-slot:[`item.meta.nextForcedRenewInvoice`]="{ item }">
+      {{ formatSecondsToDate(item.meta?.nextForcedRenewInvoice) || "Unknown" }}
+    </template>
+
     <template v-slot:[`item.meta.autoRenew`]="{ item }">
       <div class="d-flex justify-center align-center table-switch">
         <v-switch
@@ -287,6 +291,11 @@ const headers = computed(() => {
     {
       text: "Due date",
       value: "data.next_payment_date",
+      editable: { type: "date" },
+    },
+    {
+      text: "Next forced renew invoice",
+      value: "meta.nextForcedRenewInvoice",
       editable: { type: "date" },
     },
     { text: "Status", value: "state.state" },
@@ -609,24 +618,37 @@ const changeAutoRenew = async (instance, value) => {
 const updateEditValues = async (values) => {
   try {
     const promises = value?.value.map((instance) => {
-      Object.keys(instance.data).forEach((nextPaymentDateKey) => {
-        if (nextPaymentDateKey.endsWith("next_payment_date")) {
-          const lastMonitoringKey = nextPaymentDateKey.replace(
-            "next_payment_date",
-            "last_monitoring"
-          );
+      var nextPaymentDate = new Date(values["data.next_payment_date"]);
+      var forcedRenewInvoice = new Date(values["meta.nextForcedRenewInvoice"]);
 
-          instance.data[nextPaymentDateKey] = formatDateToTimestamp(
-            convertDateToTimeZone(new Date(values["data.next_payment_date"]))
-          );
-          instance.data[lastMonitoringKey] =
-            instance.data[lastMonitoringKey] +
-            (formatDateToTimestamp(
-              convertDateToTimeZone(new Date(values["data.next_payment_date"]))
-            ) -
-              instance.data[lastMonitoringKey]);
+      if (!isNaN(nextPaymentDate)) {
+        Object.keys(instance.data).forEach((nextPaymentDateKey) => {
+          if (nextPaymentDateKey.endsWith("next_payment_date")) {
+            const lastMonitoringKey = nextPaymentDateKey.replace(
+              "next_payment_date",
+              "last_monitoring"
+            );
+
+            instance.data[nextPaymentDateKey] = formatDateToTimestamp(
+              convertDateToTimeZone(nextPaymentDate)
+            );
+            instance.data[lastMonitoringKey] =
+              instance.data[lastMonitoringKey] +
+              (formatDateToTimestamp(convertDateToTimeZone(nextPaymentDate)) -
+                instance.data[lastMonitoringKey]);
+          }
+        });
+      }
+
+      if (!isNaN(forcedRenewInvoice)) {
+        if (!instance.meta) {
+          instance.meta = {};
         }
-      });
+
+        instance.meta.nextForcedRenewInvoice = formatDateToTimestamp(
+          convertDateToTimeZone(forcedRenewInvoice)
+        );
+      }
 
       return store.getters["instances/instancesClient"].update(
         UpdateRequest.fromJson({ instance }, { ignoreUnknownFields: true })
