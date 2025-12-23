@@ -71,6 +71,7 @@ type InvoicesConf struct {
 	StartWithNumber               int     `json:"start_with_number"`
 	ResetCounterMode              string  `json:"reset_counter_mode"`
 	IssueRenewalInvoiceAfter      float64 `json:"issue_renewal_invoice_after"`
+	CreateRenewalInvoicesAsDraft  bool    `json:"create_renewal_invoices_as_draft"`
 	TopUpItemMessage              string  `json:"top_up_item_message"`
 	TaxIncluded                   bool    `json:"tax_included"`
 	ForceRequirePhoneVerification bool    `json:"require_phone_verification"`

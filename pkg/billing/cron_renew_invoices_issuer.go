@@ -161,7 +161,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstancesCronJob(ctx context.Conte
 
 	started = true
 	for _, pool := range accountPools {
-		ok, _errs, _warns := s.processAccountRenewalInvoices(ctx, log, pool, isExpiring, currConf.Currency)
+		ok, _errs, _warns := s.processAccountRenewalInvoices(ctx, log, invConf.CreateRenewalInvoicesAsDraft, pool, isExpiring, currConf.Currency)
 		if _errs < 0 || _warns < 0 {
 			gotPanic = true
 			continue
@@ -208,7 +208,7 @@ type instanceExpData struct {
 	Period   int64
 }
 
-func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context, log *zap.Logger, data *accountPool, isExp func(now, expiringAt, period int64, forcedDate *int64) bool, defCurr *pb.Currency) (created bool, errCount int, warnsCount int) {
+func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context, log *zap.Logger, asDraft bool, data *accountPool, isExp func(now, expiringAt, period int64, forcedDate *int64) bool, defCurr *pb.Currency) (created bool, errCount int, warnsCount int) {
 	log = log.Named("ProcessAccount").With(zap.String("account", data.Account.GetUuid()))
 	defer func(errs *int, warns *int) {
 		if err := recover(); err != nil {
@@ -282,7 +282,7 @@ func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context
 		})
 	}
 
-	if err := s.createRenewalInvoice(ctx, log, &data.Account, expData, defCurr); err != nil {
+	if err := s.createRenewalInvoice(ctx, log, asDraft, &data.Account, expData, defCurr); err != nil {
 		if !errors.Is(err, errNothingToRenew) {
 			log.Error("Error creating renewal invoice", zap.Error(err))
 			errCount++
@@ -295,7 +295,7 @@ func (s *BillingServiceServer) processAccountRenewalInvoices(ctx context.Context
 
 var errNothingToRenew = fmt.Errorf("nothing to renew")
 
-func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *zap.Logger, _acc *graph.Account, data []*instanceExpData, defCurr *pb.Currency) error {
+func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *zap.Logger, asDraft bool, _acc *graph.Account, data []*instanceExpData, defCurr *pb.Currency) error {
 	now := time.Now().Unix()
 	fDateNum := func(d int) string {
 		if d < 10 {
@@ -446,7 +446,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 	}
 	inv.Deadline = dueDate
 
-	if val, ok := ctx.Value("create_as_draft").(bool); ok && val {
+	if asDraft {
 		inv.Status = pb.BillingStatus_DRAFT
 	}
 
