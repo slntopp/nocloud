@@ -3,15 +3,11 @@ name: Checks
 on:
   push:
     branches:
-      - master
-      - dev-*
-      - dev
       - stagging
     paths-ignore:
       - ".github/**"
       - "!.github/workflows/checks.yml"
       - "!.github/workflows/ci.yml"
-  pull_request:
   workflow_dispatch:
 
 jobs:
