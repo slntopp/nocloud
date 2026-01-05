@@ -56,6 +56,7 @@
           </template>
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
+              :key="item.id"
               :input-value="item.enabled"
               @change="item.enabled = $event"
             />
@@ -90,6 +91,7 @@
         >
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
+              :key="item.apiName"
               :input-value="item.enabled"
               @change="item.enabled = $event"
             />

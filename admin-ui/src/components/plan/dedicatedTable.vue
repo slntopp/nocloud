@@ -245,6 +245,7 @@
                   </template>
                   <template v-slot:[`item.public`]="{ item: addon }">
                     <v-switch
+                      :key="addon.title"
                       :input-value="addon.public"
                       @change="changeAddonPublic(item, addon, $event)"
                     />

@@ -75,6 +75,7 @@
 
             <template v-slot:[`item.disabled`]="{ item }">
               <v-switch
+                :key="item.key"
                 dense
                 :input-value="!item.disabled"
                 @change="changeDisabled(item, $event)"
