@@ -83,7 +83,7 @@
               </template>
 
               <template v-slot:[`item.sell`]="{ item }">
-                <v-switch v-model.number="item.sell" />
+                <v-switch v-model="item.sell" />
               </template>
 
               <template v-slot:[`item.addons`]="{ item }">
