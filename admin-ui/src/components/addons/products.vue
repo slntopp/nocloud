@@ -88,13 +88,12 @@ const total = computed(() => store.getters["plans/total"]);
 
 const searchParam = computed(() => store.getters["appSearch/param"]);
 const filters = computed(() => {
+  var filters = { "meta.isIndividual": [false] };
   if (searchParam.value) {
-    return {
-      search_param: searchParam.value || undefined,
-    };
+    filters[searchParam] = searchParam.value;
   }
 
-  return {};
+  return filters;
 });
 
 const requestOptions = computed(() => ({
