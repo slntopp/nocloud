@@ -14,18 +14,6 @@
           label="Automatic debit"
         />
       </v-col>
-      <v-col
-        style="max-height: 50px; max-width: 90px"
-        class="d-flex justify-end align-start pa-0"
-      >
-        <v-switch
-          disabled
-          hide-details
-          dense
-          :input-value="template.config.auto_renew"
-          label="Auto"
-        />
-      </v-col>
       <v-col class="d-flex justify-end" style="max-width: 120px">
         <confirm-dialog
           title="Do you want to renew server?"

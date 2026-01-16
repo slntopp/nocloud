@@ -27,13 +27,13 @@
       <v-skeleton-loader type="text" v-else />
     </template>
 
-    <template v-slot:[`item.config.auto_renew`]="{ item }">
+    <template v-slot:[`item.meta.autoRenew`]="{ item }">
       <div class="d-flex justify-center align-center table-switch">
         <v-switch
           dense
           hide-details
           readonly
-          :input-value="item.config?.auto_renew"
+          :input-value="item.meta?.autoRenew"
         />
       </div>
     </template>
@@ -323,8 +323,7 @@ const headers = computed(() => {
       text: "Automatic debit",
       value: "meta.autoRenew",
     },
-
-    { text: "Auto renew", value: "config.auto_renew" },
+    { text: "Automatic debit", value: "meta.autoRenew" },
   ];
   return headers;
 });
