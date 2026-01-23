@@ -14,21 +14,6 @@
           label="Automatic debit"
         />
       </v-col>
-      <v-col
-        style="max-height: 50px; max-width: 90px"
-        class="d-flex justify-end align-start pa-0"
-      >
-        <v-switch
-          :disabled="isAutoRenewDisabled"
-          hide-details
-          dense
-          :input-value="template.config.auto_renew"
-          @change="
-            emit('update', { key: 'config.auto_renew', value: !!$event })
-          "
-          label="Auto"
-        />
-      </v-col>
       <v-col class="d-flex justify-end" style="max-width: 120px">
         <confirm-dialog
           title="Do you want to renew server?"
@@ -81,7 +66,7 @@ const props = defineProps({
   account: {},
   renewDisabled: { type: Boolean, default: false },
 });
-const { template, addonsPrice, tariffPrice, dueDate, account, renewDisabled } =
+const { template, addonsPrice, tariffPrice, dueDate, account,  } =
   toRefs(props);
 
 const emit = defineEmits(["update"]);
@@ -118,10 +103,6 @@ const isRenewDisabled = computed(() => {
     template.value.data?.blocked ||
     (account.value?.balance || 0) < price.value
   );
-});
-
-const isAutoRenewDisabled = computed(() => {
-  return renewDisabled.value 
 });
 
 const isDeleted = computed(() => {

@@ -192,7 +192,6 @@ const getDefaultInstance = () => ({
     template_id: "",
     password: "",
     username: "",
-    auto_renew: true,
   },
   resources: {
     cpu: 1,

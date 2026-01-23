@@ -149,7 +149,6 @@ import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
-    auto_renew: false,
     type: "vps",
     planCode: null,
     configuration: {
