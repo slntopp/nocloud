@@ -1,6 +1,13 @@
 <template>
   <div>
     <v-row>
+      <v-col>
+        <instance-ip-menu edit :item="template" />
+      </v-col>
+      <v-col>
+        <instance-ip-menu edit type="private" :item="template" />
+      </v-col>
+
       <v-col cols="2">
         <v-text-field
           append-icon="mdi-pencil"
@@ -41,6 +48,7 @@ import PasswordTextField from "@/components/ui/passwordTextField.vue";
 import { toRefs, defineProps } from "vue";
 const props = defineProps(["template", "sp"]);
 const { template } = toRefs(props);
+import InstanceIpMenu from "@/components/ui/instanceIpMenu.vue";
 
 const emit = defineEmits(["update"]);
 </script>
