@@ -190,8 +190,7 @@ const props = defineProps({
       { label: "Week", value: "week" },
       { label: "Month", value: "month" },
       { label: "Month by week", value: "month-7_days" },
-      { label: "Year", value: "year-7_days" },
-      { label: "Year by month", value: "year-1_month" },
+      { label: "Year", value: "year-1_month" },
     ],
   },
 });
