@@ -1,0 +1,520 @@
+package graph
+
+import (
+	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
+	"fmt"
+	"github.com/slntopp/nocloud/pkg/oauth2"
+	"time"
+
+	"github.com/arangodb/go-driver"
+	"go.uber.org/zap"
+)
+
+type OAuthController struct {
+	log *zap.Logger
+	db  driver.Database
+
+	clientsCol driver.Collection
+	codesCol   driver.Collection
+	accessCol  driver.Collection
+	refreshCol driver.Collection
+}
+
+type ArangoRepoOptions struct {
+	ClientsCollection string
+	CodesCollection   string
+	AccessCollection  string
+	RefreshCollection string
+}
+
+func DefaultArangoRepoOptions() ArangoRepoOptions {
+	return ArangoRepoOptions{
+		ClientsCollection: "OAuth2Clients",
+		CodesCollection:   "OAuth2AuthorizationCodes",
+		AccessCollection:  "OAuth2AccessTokens",
+		RefreshCollection: "OAuth2RefreshTokens",
+	}
+}
+
+func NewOAuthController(logger *zap.Logger, db driver.Database, opts *ArangoRepoOptions) *OAuthController {
+	if opts == nil {
+		o := DefaultArangoRepoOptions()
+		opts = &o
+	}
+
+	log := logger.Named("OAuthController")
+	ctx := context.TODO()
+
+	clients, err := ensureCollection(ctx, db, opts.ClientsCollection)
+	if err != nil {
+		log.Fatal("ensure clients collection failed", zap.Error(err))
+	}
+	codes, err := ensureCollection(ctx, db, opts.CodesCollection)
+	if err != nil {
+		log.Fatal("ensure codes collection failed", zap.Error(err))
+	}
+	access, err := ensureCollection(ctx, db, opts.AccessCollection)
+	if err != nil {
+		log.Fatal("ensure access collection failed", zap.Error(err))
+	}
+	refresh, err := ensureCollection(ctx, db, opts.RefreshCollection)
+	if err != nil {
+		log.Fatal("ensure refresh collection failed", zap.Error(err))
+	}
+
+	return &OAuthController{
+		log:        log,
+		db:         db,
+		clientsCol: clients,
+		codesCol:   codes,
+		accessCol:  access,
+		refreshCol: refresh,
+	}
+}
+
+var _ oauth2.ClientStore = (*OAuthController)(nil)
+var _ oauth2.AuthorizationCodeStore = (*OAuthController)(nil)
+var _ oauth2.TokenStore = (*OAuthController)(nil)
+
+type clientDoc struct {
+	Key          string   `json:"_key,omitempty"`
+	Secret       string   `json:"secret,omitempty"`
+	RedirectURIs []string `json:"redirect_uris,omitempty"`
+
+	AllowedGrants []string `json:"allowed_grants,omitempty"`
+	AllowedScopes []string `json:"allowed_scopes,omitempty"`
+
+	Public bool `json:"public,omitempty"`
+}
+
+func (d clientDoc) toClient() oauth2.Client {
+	return oauth2.Client{
+		ID:            d.Key,
+		Secret:        d.Secret,
+		RedirectURIs:  d.RedirectURIs,
+		AllowedGrants: d.AllowedGrants,
+		AllowedScopes: d.AllowedScopes,
+		Public:        d.Public,
+	}
+}
+
+func (r *OAuthController) GetClient(ctx context.Context, clientID string) (oauth2.Client, error) {
+	log := r.log.Named("GetClient")
+	var d clientDoc
+	meta, err := r.clientsCol.ReadDocument(ctx, clientID, &d)
+	if err != nil {
+		if driver.IsNotFoundGeneral(err) {
+			return oauth2.Client{}, err
+		}
+		log.Error("read client failed", zap.Error(err))
+		return oauth2.Client{}, err
+	}
+	d.Key = meta.Key
+	return d.toClient(), nil
+}
+
+func (r *OAuthController) ValidateClientSecret(ctx context.Context, clientID, clientSecret string) (bool, error) {
+	c, err := r.GetClient(ctx, clientID)
+	if err != nil {
+		return false, err
+	}
+	if c.Public || c.Secret == "" {
+		return clientSecret == "", nil
+	}
+	ok := subtle.ConstantTimeCompare([]byte(c.Secret), []byte(clientSecret)) == 1
+	return ok, nil
+}
+
+type authCodeDoc struct {
+	Key string `json:"_key,omitempty"`
+
+	Code string `json:"code"`
+
+	ClientID    string `json:"client_id"`
+	RedirectURI string `json:"redirect_uri"`
+
+	Subject string   `json:"subject"`
+	Scopes  []string `json:"scopes,omitempty"`
+
+	IssuedAt  time.Time `json:"issued_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Consumed  bool      `json:"consumed"`
+}
+
+func toAuthCodeDoc(c oauth2.AuthorizationCode) authCodeDoc {
+	return authCodeDoc{
+		Key:         opaqueKey(c.Code),
+		Code:        c.Code,
+		ClientID:    c.ClientID,
+		RedirectURI: c.RedirectURI,
+		Subject:     c.Subject,
+		Scopes:      c.Scopes,
+		IssuedAt:    c.IssuedAt,
+		ExpiresAt:   c.ExpiresAt,
+		Consumed:    c.Consumed,
+	}
+}
+
+func (d authCodeDoc) toAuthorizationCode() oauth2.AuthorizationCode {
+	return oauth2.AuthorizationCode{
+		Code:        d.Code,
+		ClientID:    d.ClientID,
+		RedirectURI: d.RedirectURI,
+		Subject:     d.Subject,
+		Scopes:      d.Scopes,
+		IssuedAt:    d.IssuedAt,
+		ExpiresAt:   d.ExpiresAt,
+		Consumed:    d.Consumed,
+	}
+}
+
+func (r *OAuthController) Create(ctx context.Context, code oauth2.AuthorizationCode) error {
+	log := r.log.Named("AuthorizationCode.Create")
+	if code.Code == "" {
+		return fmt.Errorf("missing authorization code")
+	}
+	doc := toAuthCodeDoc(code)
+	_, err := r.codesCol.CreateDocument(ctx, doc)
+	if err != nil {
+		log.Error("create authorization code failed", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+const consumeCodeAQL = `
+LET nowTs = DATE_TIMESTAMP(@now)
+LET doc = FIRST(
+  FOR c IN @@codes
+    FILTER c._key == @key
+    FILTER c.consumed != true
+    FILTER DATE_TIMESTAMP(c.expires_at) > nowTs
+    UPDATE c WITH { consumed: true } IN @@codes OPTIONS { ignoreRevs: false }
+    RETURN NEW
+)
+RETURN doc
+`
+
+func (r *OAuthController) Consume(ctx context.Context, code string) (oauth2.AuthorizationCode, error) {
+	log := r.log.Named("AuthorizationCode.Consume")
+
+	if code == "" {
+		return oauth2.AuthorizationCode{}, fmt.Errorf("missing authorization code")
+	}
+
+	key := opaqueKey(code)
+
+	cur, err := r.db.Query(ctx, consumeCodeAQL, map[string]any{
+		"@codes": r.codesCol.Name(),
+		"key":    key,
+		"now":    time.Now().UTC(),
+	})
+	if err != nil {
+		log.Error("consume authorization code query failed", zap.Error(err))
+		return oauth2.AuthorizationCode{}, err
+	}
+	defer cur.Close()
+
+	var out *authCodeDoc
+	_, err = cur.ReadDocument(ctx, &out)
+	if err != nil {
+		if driver.IsNoMoreDocuments(err) {
+			return oauth2.AuthorizationCode{}, fmt.Errorf("invalid authorization code")
+		}
+		log.Error("consume authorization code read failed", zap.Error(err))
+		return oauth2.AuthorizationCode{}, err
+	}
+	if out == nil || out.Code != code {
+		return oauth2.AuthorizationCode{}, fmt.Errorf("invalid authorization code")
+	}
+
+	return out.toAuthorizationCode(), nil
+}
+
+type accessTokenDoc struct {
+	Key string `json:"_key,omitempty"`
+
+	Token string `json:"token"`
+
+	ClientID string   `json:"client_id"`
+	Subject  string   `json:"subject"`
+	Scopes   []string `json:"scopes,omitempty"`
+
+	IssuedAt  time.Time `json:"issued_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+
+	Revoked bool `json:"revoked"`
+}
+
+func toAccessTokenDoc(t oauth2.AccessToken) accessTokenDoc {
+	return accessTokenDoc{
+		Key:       opaqueKey(t.Token),
+		Token:     t.Token,
+		ClientID:  t.ClientID,
+		Subject:   t.Subject,
+		Scopes:    t.Scopes,
+		IssuedAt:  t.IssuedAt,
+		ExpiresAt: t.ExpiresAt,
+		Revoked:   t.Revoked,
+	}
+}
+
+func (d accessTokenDoc) toAccessToken() oauth2.AccessToken {
+	return oauth2.AccessToken{
+		Token:     d.Token,
+		ClientID:  d.ClientID,
+		Subject:   d.Subject,
+		Scopes:    d.Scopes,
+		IssuedAt:  d.IssuedAt,
+		ExpiresAt: d.ExpiresAt,
+		Revoked:   d.Revoked,
+	}
+}
+
+type refreshTokenDoc struct {
+	Key string `json:"_key,omitempty"`
+
+	Token string `json:"token"`
+
+	ClientID string   `json:"client_id"`
+	Subject  string   `json:"subject"`
+	Scopes   []string `json:"scopes,omitempty"`
+
+	IssuedAt  time.Time `json:"issued_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+
+	Revoked bool `json:"revoked"`
+
+	AuthorizationCode string `json:"authorization_code,omitempty"`
+}
+
+func toRefreshTokenDoc(t oauth2.RefreshToken) refreshTokenDoc {
+	return refreshTokenDoc{
+		Key:               opaqueKey(t.Token),
+		Token:             t.Token,
+		ClientID:          t.ClientID,
+		Subject:           t.Subject,
+		Scopes:            t.Scopes,
+		IssuedAt:          t.IssuedAt,
+		ExpiresAt:         t.ExpiresAt,
+		Revoked:           t.Revoked,
+		AuthorizationCode: t.AuthorizationCode,
+	}
+}
+
+func (d refreshTokenDoc) toRefreshToken() oauth2.RefreshToken {
+	return oauth2.RefreshToken{
+		Token:             d.Token,
+		ClientID:          d.ClientID,
+		Subject:           d.Subject,
+		Scopes:            d.Scopes,
+		IssuedAt:          d.IssuedAt,
+		ExpiresAt:         d.ExpiresAt,
+		Revoked:           d.Revoked,
+		AuthorizationCode: d.AuthorizationCode,
+	}
+}
+
+const upsertReplaceAQL = `
+UPSERT { _key: @key }
+INSERT MERGE(@doc, { _key: @key })
+REPLACE MERGE(@doc, { _key: @key }) IN @@col
+RETURN 1
+`
+
+func (r *OAuthController) SaveAccessToken(ctx context.Context, t oauth2.AccessToken) error {
+	log := r.log.Named("SaveAccessToken")
+
+	if t.Token == "" {
+		return fmt.Errorf("missing access token")
+	}
+
+	key := opaqueKey(t.Token)
+	doc := map[string]any{
+		"token":      t.Token,
+		"client_id":  t.ClientID,
+		"subject":    t.Subject,
+		"scopes":     t.Scopes,
+		"issued_at":  t.IssuedAt,
+		"expires_at": t.ExpiresAt,
+		"revoked":    t.Revoked,
+	}
+
+	cur, err := r.db.Query(ctx, upsertReplaceAQL, map[string]any{
+		"@col": r.accessCol.Name(),
+		"key":  key,
+		"doc":  doc,
+	})
+	if err != nil {
+		log.Error("upsert access token failed", zap.Error(err))
+		return err
+	}
+	defer cur.Close()
+
+	var dummy int
+	_, _ = cur.ReadDocument(ctx, &dummy)
+	return nil
+}
+
+func (r *OAuthController) SaveRefreshToken(ctx context.Context, t oauth2.RefreshToken) error {
+	log := r.log.Named("SaveRefreshToken")
+
+	if t.Token == "" {
+		return fmt.Errorf("missing refresh token")
+	}
+
+	key := opaqueKey(t.Token)
+	doc := map[string]any{
+		"token":              t.Token,
+		"client_id":          t.ClientID,
+		"subject":            t.Subject,
+		"scopes":             t.Scopes,
+		"issued_at":          t.IssuedAt,
+		"expires_at":         t.ExpiresAt,
+		"revoked":            t.Revoked,
+		"authorization_code": t.AuthorizationCode,
+	}
+
+	cur, err := r.db.Query(ctx, upsertReplaceAQL, map[string]any{
+		"@col": r.refreshCol.Name(),
+		"key":  key,
+		"doc":  doc,
+	})
+	if err != nil {
+		log.Error("upsert refresh token failed", zap.Error(err))
+		return err
+	}
+	defer cur.Close()
+
+	var dummy int
+	_, _ = cur.ReadDocument(ctx, &dummy)
+	return nil
+}
+
+func (r *OAuthController) LookupAccessToken(ctx context.Context, token string) (oauth2.AccessToken, error) {
+	log := r.log.Named("LookupAccessToken")
+
+	if token == "" {
+		return oauth2.AccessToken{}, fmt.Errorf("missing access token")
+	}
+
+	key := opaqueKey(token)
+	var d accessTokenDoc
+	_, err := r.accessCol.ReadDocument(ctx, key, &d)
+	if err != nil {
+		if driver.IsNotFoundGeneral(err) {
+			return oauth2.AccessToken{}, fmt.Errorf("token not found")
+		}
+		log.Error("read access token failed", zap.Error(err))
+		return oauth2.AccessToken{}, err
+	}
+
+	if d.Token != token {
+		return oauth2.AccessToken{}, fmt.Errorf("token not found")
+	}
+
+	now := time.Now().UTC()
+	if d.Revoked || (!d.ExpiresAt.IsZero() && !d.ExpiresAt.After(now)) {
+		return oauth2.AccessToken{}, fmt.Errorf("token is invalid")
+	}
+
+	return d.toAccessToken(), nil
+}
+
+func (r *OAuthController) LookupRefreshToken(ctx context.Context, token string) (oauth2.RefreshToken, error) {
+	log := r.log.Named("LookupRefreshToken")
+
+	if token == "" {
+		return oauth2.RefreshToken{}, fmt.Errorf("missing refresh token")
+	}
+
+	key := opaqueKey(token)
+	var d refreshTokenDoc
+	_, err := r.refreshCol.ReadDocument(ctx, key, &d)
+	if err != nil {
+		if driver.IsNotFoundGeneral(err) {
+			return oauth2.RefreshToken{}, fmt.Errorf("invalid refresh token")
+		}
+		log.Error("read refresh token failed", zap.Error(err))
+		return oauth2.RefreshToken{}, err
+	}
+
+	if d.Token != token {
+		return oauth2.RefreshToken{}, fmt.Errorf("invalid refresh token")
+	}
+
+	now := time.Now().UTC()
+	if d.Revoked || (!d.ExpiresAt.IsZero() && !d.ExpiresAt.After(now)) {
+		return oauth2.RefreshToken{}, fmt.Errorf("invalid refresh token")
+	}
+
+	return d.toRefreshToken(), nil
+}
+
+const revokeAQL = `
+UPDATE { _key: @key } WITH { revoked: true } IN @@col OPTIONS { ignoreErrors: true }
+RETURN 1
+`
+
+func (r *OAuthController) RevokeAccessToken(ctx context.Context, token string) error {
+	log := r.log.Named("RevokeAccessToken")
+
+	if token == "" {
+		return nil
+	}
+
+	cur, err := r.db.Query(ctx, revokeAQL, map[string]any{
+		"@col": r.accessCol.Name(),
+		"key":  opaqueKey(token),
+	})
+	if err != nil {
+		log.Error("revoke access token failed", zap.Error(err))
+		return err
+	}
+	defer cur.Close()
+
+	var dummy int
+	_, _ = cur.ReadDocument(ctx, &dummy)
+	return nil
+}
+
+func (r *OAuthController) RevokeRefreshToken(ctx context.Context, token string) error {
+	log := r.log.Named("RevokeRefreshToken")
+
+	if token == "" {
+		return nil
+	}
+
+	cur, err := r.db.Query(ctx, revokeAQL, map[string]any{
+		"@col": r.refreshCol.Name(),
+		"key":  opaqueKey(token),
+	})
+	if err != nil {
+		log.Error("revoke refresh token failed", zap.Error(err))
+		return err
+	}
+	defer cur.Close()
+
+	var dummy int
+	_, _ = cur.ReadDocument(ctx, &dummy)
+	return nil
+}
+
+func ensureCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
+	col, err := db.Collection(ctx, name)
+	if err == nil {
+		return col, nil
+	}
+	if driver.IsNotFoundGeneral(err) {
+		return db.CreateCollection(ctx, name, nil)
+	}
+	return nil, err
+}
+
+func opaqueKey(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])
+}
