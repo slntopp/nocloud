@@ -53,7 +53,7 @@ func (s *OAuth2Server) registerOAuthHandlers() {
 
 }
 
-func (s *OAuth2Server) Start(port string, corsAllowed []string) {
+func (s *OAuth2Server) Start(port string, corsAllowed []string, d Dependencies, cfg Config) {
 	s.registerOAuthHandlers()
 
 	s.router.HandleFunc("/oauth", func(writer http.ResponseWriter, request *http.Request) {
@@ -78,6 +78,11 @@ func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 		writer.Write(marshal)
 	})
 
+	_, err := NewServer(s.router, cfg, d, s.log)
+	if err != nil {
+		s.log.Fatal("Failed to create oauth2 server", zap.Error(err))
+	}
+
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,
 		AllowedHeaders:   []string{"Content-Type", "Authorization", "*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
@@ -86,7 +91,7 @@ func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 	}).Handler(s.router)
 
 	s.log.Debug("listen", zap.String("port", port))
-	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), handler)
+	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), handler)
 	if err != nil {
 		s.log.Fatal("Failed to start server", zap.Error(err))
 	}

@@ -18,21 +18,21 @@ import (
 	"strings"
 )
 
-type interceptor struct {
+type Interceptor struct {
 	log         *zap.Logger
 	rdb         redisdb.Client
 	signing_key []byte
 }
 
-func NewInterceptor(logger *zap.Logger, rdb redisdb.Client, key []byte) *interceptor {
-	return &interceptor{
+func NewInterceptor(logger *zap.Logger, rdb redisdb.Client, key []byte) *Interceptor {
+	return &Interceptor{
 		log:         logger,
 		rdb:         rdb,
 		signing_key: key,
 	}
 }
 
-func (i *interceptor) MakeToken(account string) (string, error) {
+func (i *Interceptor) MakeToken(account string) (string, error) {
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account
 	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = "placeholder"
@@ -42,7 +42,7 @@ func (i *interceptor) MakeToken(account string) (string, error) {
 	return token.SignedString(i.signing_key)
 }
 
-func (i *interceptor) MakeTokenInstance(instance string) (string, error) {
+func (i *Interceptor) MakeTokenInstance(instance string) (string, error) {
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = "placeholder"
 	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = instance
@@ -50,7 +50,7 @@ func (i *interceptor) MakeTokenInstance(instance string) (string, error) {
 	return token.SignedString(i.signing_key)
 }
 
-func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
+func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return connect.UnaryFunc(func(
 		ctx context.Context,
 		req connect.AnyRequest,
@@ -95,7 +95,7 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 			segments = []string{"", ""}
 		}
 
-		ctx, err := i.jwtAuthMiddleware(ctx, segments[1])
+		ctx, err := i.JwtAuthMiddleware(ctx, segments[1])
 		if req.Spec().Procedure != "/nocloud.registry.AccountsService/Token" &&
 			req.Spec().Procedure != "/nocloud.billing.CurrencyService/GetCurrencies" &&
 			req.Spec().Procedure != "/nocloud.billing.AddonsService/List" &&
@@ -116,12 +116,12 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	})
 }
 
-func (i *interceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
+func (i *Interceptor) WrapStreamingClient(next connect.StreamingClientFunc) connect.StreamingClientFunc {
 	i.log.Debug("WrapStreamingClient")
 	return next
 }
 
-func (i *interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
+func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) connect.StreamingHandlerFunc {
 	i.log.Debug("Setup Wrap Streaming Handler")
 	return func(ctx context.Context, shc connect.StreamingHandlerConn) error {
 		l := i.log.Named("StreamInterceptor")
@@ -138,7 +138,7 @@ func (i *interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 			return errors.New("wrong auth type")
 		}
 
-		ctx, err := i.jwtAuthMiddleware(ctx, segments[1])
+		ctx, err := i.JwtAuthMiddleware(ctx, segments[1])
 		if err != nil {
 			return err
 		}
@@ -147,7 +147,7 @@ func (i *interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 	}
 }
 
-func (i *interceptor) jwtAuthMiddleware(ctx context.Context, tokenString string) (context.Context, error) {
+func (i *Interceptor) JwtAuthMiddleware(ctx context.Context, tokenString string) (context.Context, error) {
 	l := i.log.Named("Middleware")
 
 	token, err := i.validateToken(tokenString)
@@ -249,7 +249,7 @@ func (i *interceptor) jwtAuthMiddleware(ctx context.Context, tokenString string)
 	return ctx, nil
 }
 
-func (i *interceptor) validateToken(tokenString string) (jwt.MapClaims, error) {
+func (i *Interceptor) validateToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, status.Errorf(codes.Unauthenticated, "Unexpected signing method: %v", t.Header["alg"])
@@ -272,7 +272,7 @@ func (i *interceptor) validateToken(tokenString string) (jwt.MapClaims, error) {
 	return nil, status.Error(codes.Unauthenticated, "Cannot Validate Token")
 }
 
-func (i *interceptor) handleLogActivity(ctx context.Context) {
+func (i *Interceptor) handleLogActivity(ctx context.Context) {
 	sid_ctx := ctx.Value(nocloud.NoCloudSession)
 	if sid_ctx == nil {
 		return
