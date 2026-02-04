@@ -175,6 +175,14 @@ const routes = [
     },
   },
   {
+  path: "/settings/editor/:key",
+  name: "SettingsItem",
+  component: () => import("../views/SettingsItem.vue"),
+  meta: {
+    requireLogin: true,
+  }
+},
+  {
     path: "/settings/app",
     name: "AppSetting",
     component: () => import("../views/AppSettings.vue"),
