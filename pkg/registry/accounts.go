@@ -789,6 +789,16 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	nocloud.Log(log, event)
 
+	maxAge := request.Exp - int32(time.Now().Unix())
+	cookie := fmt.Sprintf(
+		"nocloud_token=%s; Path=/; Max-Age=%d; HttpOnly; Secure; SameSite=None",
+		token_string,
+		maxAge,
+	)
+	md := metadata.Pairs("set-cookie", cookie)
+	if err := grpc.SetHeader(ctx, md); err != nil {
+		log.Warn("Failed to set cookie header", zap.Error(err))
+	}
 	return &accountspb.TokenResponse{Token: token_string}, nil
 }
 
