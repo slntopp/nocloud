@@ -80,7 +80,7 @@ func NewServer(router *mux.Router, cfg Config, deps Dependencies, logger *zap.Lo
 		router: router,
 	}
 
-	s.registerRoutes(s.router, "/oauth")
+	s.registerRoutes(s.router, "")
 	return s, nil
 }
 
