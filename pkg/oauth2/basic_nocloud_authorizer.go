@@ -17,12 +17,19 @@ type BasicAuthorizer struct {
 }
 
 func (b *BasicAuthorizer) Subject(ctx context.Context, r *http.Request) (subject string, ok bool, err error) {
-	header := r.Header.Get("Authorization")
-	segments := strings.Split(header, " ")
-	if len(segments) != 2 {
-		segments = []string{"", ""}
+	var token string
+	tokenCookie, err := r.Cookie("nocloud_token")
+	if err == nil {
+		token = tokenCookie.Value
+	} else {
+		header := r.Header.Get("Authorization")
+		segments := strings.Split(header, " ")
+		if len(segments) != 2 {
+			segments = []string{"", ""}
+		}
+		token = segments[1]
 	}
-	ctx, err = b.Ic.JwtAuthMiddleware(ctx, segments[1])
+	ctx, err = b.Ic.JwtAuthMiddleware(ctx, token)
 	if err != nil {
 		return "", false, nil
 	}
