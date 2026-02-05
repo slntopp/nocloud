@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/slntopp/nocloud-proto/registry"
-	config "github.com/slntopp/nocloud/pkg/oauth2/config"
+	"github.com/slntopp/nocloud/pkg/oauth2/config"
 	"github.com/slntopp/nocloud/pkg/oauth2/handlers"
 	"go.uber.org/zap"
 	"net/http"
@@ -53,7 +53,7 @@ func (s *OAuth2Server) registerOAuthHandlers() {
 
 }
 
-func (s *OAuth2Server) Start(port string, corsAllowed []string, d Dependencies, cfg Config) {
+func (s *OAuth2Server) Start(port string, corsAllowed []string, d Dependencies) {
 	s.registerOAuthHandlers()
 
 	s.router.HandleFunc("/oauth", func(writer http.ResponseWriter, request *http.Request) {
@@ -78,7 +78,12 @@ func (s *OAuth2Server) Start(port string, corsAllowed []string, d Dependencies, 
 		writer.Write(marshal)
 	})
 
-	_, err := NewServer(s.router, cfg, d, s.log)
+	serverConfig, err := ServerConfig()
+	if err != nil {
+		s.log.Fatal("Failed to read server config", zap.Error(err))
+	}
+	s.log.Info("Server config", zap.Any("config", serverConfig))
+	_, err = NewServer(s.router, serverConfig, d, s.log)
 	if err != nil {
 		s.log.Fatal("Failed to create oauth2 server", zap.Error(err))
 	}
