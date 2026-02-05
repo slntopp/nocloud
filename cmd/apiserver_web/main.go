@@ -59,7 +59,7 @@ func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("CORS_ALLOWED", []string{"*"})
+	viper.SetDefault("CORS_ALLOWED", "*")
 	viper.SetDefault("APISERVER_HOST", "proxy:8000")
 	viper.SetDefault("GATEWAY_HOST", ":8000")
 	viper.SetDefault("ADMIN_UI_HOST", ":8080")
