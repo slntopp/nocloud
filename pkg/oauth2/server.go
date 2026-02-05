@@ -18,32 +18,41 @@ import (
 )
 
 type Config struct {
-	Issuer string
+	Issuer string `yaml:"issuer"`
 
-	AuthorizePath  string
-	TokenPath      string
-	IntrospectPath string
-	RevokePath     string
+	AuthorizePath  string `yaml:"authorize_path"`
+	TokenPath      string `yaml:"token_path"`
+	IntrospectPath string `yaml:"introspect_path"`
+	RevokePath     string `yaml:"revoke_path"`
 
-	AuthorizationCodeTTL time.Duration
-	AccessTokenTTL       time.Duration
-	RefreshTokenTTL      time.Duration
+	LoginURL                string `yaml:"login_url"`
+	ConsentURL              string `yaml:"consent_url"`
+	LoginReturnParam        string `yaml:"login_return_param"`
+	ConsentInteractionParam string `yaml:"consent_interaction_param"`
 
-	IssueRefreshToken     *bool
-	RotateRefreshTokens   *bool
-	RevokeOldRefreshToken *bool
+	InteractionPath        string        `yaml:"interaction_path"`
+	InteractionConfirmPath string        `yaml:"interaction_confirm_path"`
+	InteractionTTL         time.Duration `yaml:"interaction_ttl"`
 
-	MaxBodyBytes int64
+	AuthorizationCodeTTL time.Duration `yaml:"authorization_code_ttl"`
+	AccessTokenTTL       time.Duration `yaml:"access_token_ttl"`
+	RefreshTokenTTL      time.Duration `yaml:"refresh_token_ttl"`
 
-	AllowPublicClientsOnTokenEndpoint *bool
+	IssueRefreshToken     *bool `yaml:"issue_refresh_token"`
+	RotateRefreshTokens   *bool `yaml:"rotate_refresh_tokens"`
+	RevokeOldRefreshToken *bool `yaml:"revoke_old_refresh_token"`
+
+	MaxBodyBytes int64 `yaml:"max_body_bytes"`
+
+	AllowPublicClientsOnTokenEndpoint *bool `yaml:"allow_public_clients_on_token_endpoint"`
 }
 
 type Dependencies struct {
-	Clients ClientStore
-	Codes   AuthorizationCodeStore
-	Tokens  TokenStore
-
+	Clients       ClientStore
+	Codes         AuthorizationCodeStore
+	Tokens        TokenStore
 	Authorization AuthorizationService
+	Interactions  InteractionStore
 }
 
 type Server struct {
@@ -71,8 +80,15 @@ func NewServer(router *mux.Router, cfg Config, deps Dependencies, logger *zap.Lo
 		router: router,
 	}
 
-	s.registerRoutes(s.router, "/oauth")
+	s.registerRoutes(s.router, "")
 	return s, nil
+}
+
+type ClientDisplay struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	LogoURL     string `json:"logo_url"`
+	WebsiteURL  string `json:"website_url"`
 }
 
 type Client struct {
@@ -81,7 +97,8 @@ type Client struct {
 	RedirectURIs  []string
 	AllowedGrants []string // authorization_code, refresh_token, client_credentials
 	AllowedScopes []string
-	Public        bool // Should be false by default
+	Public        bool          // Should be false by default
+	Display       ClientDisplay `json:"display"`
 }
 
 type ClientStore interface {
@@ -138,8 +155,29 @@ type TokenStore interface {
 }
 
 type AuthorizationService interface {
-	Authorize(ctx context.Context, r *http.Request, req AuthorizeRequest) (AuthorizeResult, error)
+	Subject(ctx context.Context, r *http.Request) (subject string, ok bool, err error)
+	ConsentedScopes(ctx context.Context, subject, clientID string) ([]string, error)
+	SaveConsent(ctx context.Context, subject, clientID string, scopes []string) error
 	IssueAccessToken(ttl time.Duration, clientID, subject string, scopes []string) (AccessToken, error)
+}
+
+type Interaction struct {
+	ID              string
+	ClientID        string
+	RedirectURI     string
+	State           string
+	Subject         string
+	RequestedScopes []string
+	ExistingScopes  []string
+	CreatedAt       time.Time
+	ExpiresAt       time.Time
+	Consumed        bool
+}
+
+type InteractionStore interface {
+	CreateInteraction(ctx context.Context, it Interaction) error
+	GetInteraction(ctx context.Context, id string) (Interaction, error)
+	ConsumeInteraction(ctx context.Context, id string) (Interaction, error)
 }
 
 type AuthorizeRequest struct {
@@ -194,6 +232,8 @@ func (s *Server) registerRoutes(r *mux.Router, base string) {
 	r.HandleFunc(base+s.cfg.TokenPath, s.handleToken).Methods(http.MethodPost)
 	r.HandleFunc(base+s.cfg.IntrospectPath, s.handleIntrospect).Methods(http.MethodPost)
 	r.HandleFunc(base+s.cfg.RevokePath, s.handleRevoke).Methods(http.MethodPost)
+	r.HandleFunc(base+s.cfg.InteractionPath+"/{id}", s.handleGetInteraction).Methods(http.MethodGet)
+	r.HandleFunc(base+s.cfg.InteractionPath+"/{id}"+s.cfg.InteractionConfirmPath, s.handleConfirmInteraction).Methods(http.MethodPost)
 }
 
 func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
@@ -236,62 +276,272 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	decision, err := s.deps.Authorization.Authorize(ctx, r, req)
+	subject, loggedIn, err := s.deps.Authorization.Subject(ctx, r)
 	if err != nil {
+		s.log.Error("failed to resolve subject", zap.Error(err))
+		s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
+			oauthErr("server_error", "failed to resolve subject", http.StatusInternalServerError))
+		return
+	}
+	if !loggedIn || subject == "" {
+		if s.cfg.LoginURL == "" {
+			writePlainOAuthError(w, oauthErr("server_error", "login_url is not configured", http.StatusInternalServerError))
+			return
+		}
+		loginURL := s.buildLoginRedirect(r)
+		http.Redirect(w, r, loginURL, http.StatusFound)
+		return
+	}
+
+	existing, err := s.deps.Authorization.ConsentedScopes(ctx, subject, client.ID)
+	if err != nil {
+		s.log.Error("failed to resolve consented scopes", zap.Error(err))
+		s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
+			oauthErr("server_error", "failed to resolve consent", http.StatusInternalServerError))
+		return
+	}
+
+	missing := diffStrings(req.Scopes, existing)
+	if len(missing) > 0 {
+		if s.cfg.ConsentURL == "" {
+			s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
+				oauthErr("server_error", "consent_url is not configured", http.StatusInternalServerError))
+			return
+		}
+		if s.deps.Interactions == nil {
+			s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
+				oauthErr("server_error", "interaction store is not configured", http.StatusInternalServerError))
+			return
+		}
+		itID, err := randomURLSafeString(32)
+		if err != nil {
+			s.log.Error("failed to generate interaction id", zap.Error(err))
+			s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
+				oauthErr("server_error", "failed to start interaction", http.StatusInternalServerError))
+			return
+		}
+		now := time.Now().UTC()
+		it := Interaction{
+			ID:              itID,
+			ClientID:        client.ID,
+			RedirectURI:     req.RedirectURI,
+			State:           req.State,
+			Subject:         subject,
+			RequestedScopes: cloneStrings(req.Scopes),
+			ExistingScopes:  cloneStrings(existing),
+			CreatedAt:       now,
+			ExpiresAt:       now.Add(s.interactionTTL()),
+			Consumed:        false,
+		}
+		if err := s.deps.Interactions.CreateInteraction(ctx, it); err != nil {
+			s.log.Error("failed to store interaction", zap.Error(err))
+			s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
+				oauthErr("server_error", "failed to start interaction", http.StatusInternalServerError))
+			return
+		}
+		consentURL, err := s.buildConsentRedirect(itID)
+		if err != nil {
+			s.log.Error("failed to build consent redirect", zap.Error(err))
+			s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
+				oauthErr("server_error", "failed to start interaction", http.StatusInternalServerError))
+			return
+		}
+		http.Redirect(w, r, consentURL, http.StatusFound)
+		return
+	}
+
+	if err := s.issueCodeAndRedirect(ctx, w, r, client.ID, req.RedirectURI, subject, req.Scopes, req.State); err != nil {
 		oe := asOAuthError(err)
-		if oe == nil || oe.Code == "" {
-			oe = oauthErr("access_denied", "authorization denied", http.StatusForbidden)
+		if oe == nil {
+			oe = oauthErr("server_error", "failed to issue authorization code", http.StatusInternalServerError)
 		}
 		s.redirectAuthorizeError(w, r, req.RedirectURI, req.State, oe)
 		return
 	}
-	if decision.Subject == "" {
-		s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
-			oauthErr("access_denied", "missing subject from authorization decision", http.StatusForbidden))
-		return
-	}
-	if !scopesAllowed(client.AllowedScopes, decision.Scopes) {
-		s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
-			oauthErr("invalid_scope", "granted scopes are not allowed for this client", http.StatusBadRequest))
+}
+
+func (s *Server) handleGetInteraction(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	s.setNoStoreHeaders(w)
+
+	if s.deps.Interactions == nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{
+			"error": "server_error", "error_description": "interaction store is not configured",
+		})
 		return
 	}
 
-	codeStr, err := randomURLSafeString(32)
+	id := mux.Vars(r)["id"]
+	if strings.TrimSpace(id) == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": "invalid_request", "error_description": "missing interaction id",
+		})
+		return
+	}
+
+	it, err := s.deps.Interactions.GetInteraction(ctx, id)
 	if err != nil {
-		s.log.Error("failed to generate authorization code", zap.Error(err))
-		s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
-			oauthErr("server_error", "failed to generate authorization code", http.StatusInternalServerError))
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"error": "not_found", "error_description": "interaction not found",
+		})
 		return
 	}
 
 	now := time.Now().UTC()
-	ac := AuthorizationCode{
-		Code:        codeStr,
-		ClientID:    client.ID,
-		RedirectURI: req.RedirectURI,
-		Subject:     decision.Subject,
-		Scopes:      cloneStrings(decision.Scopes),
-		IssuedAt:    now,
-		ExpiresAt:   now.Add(s.cfg.AuthorizationCodeTTL),
-		Consumed:    false,
-	}
-
-	if err := s.deps.Codes.Create(ctx, ac); err != nil {
-		s.log.Error("failed to store authorization code", zap.Error(err))
-		s.redirectAuthorizeError(w, r, req.RedirectURI, req.State,
-			oauthErr("server_error", "failed to store authorization code", http.StatusInternalServerError))
+	if it.Consumed || it.ExpiresAt.Before(now) {
+		writeJSON(w, http.StatusGone, map[string]any{
+			"error": "interaction_expired", "error_description": "interaction expired or consumed",
+		})
 		return
 	}
 
-	u, _ := url.Parse(req.RedirectURI)
-	q := u.Query()
-	q.Set("code", codeStr)
-	if req.State != "" {
-		q.Set("state", req.State)
+	client, err := s.deps.Clients.GetClient(ctx, it.ClientID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": "unauthorized_client", "error_description": "unknown client",
+		})
+		return
 	}
-	u.RawQuery = q.Encode()
 
-	http.Redirect(w, r, u.String(), http.StatusFound)
+	requested := uniqueStrings(it.RequestedScopes)
+	existing := uniqueStrings(it.ExistingScopes)
+
+	resp := map[string]any{
+		"interaction_id": id,
+		"client": map[string]any{
+			"id":          client.ID,
+			"name":        client.Display.Name,
+			"description": client.Display.Description,
+			"logo_url":    client.Display.LogoURL,
+			"website_url": client.Display.WebsiteURL,
+		},
+		"account": map[string]any{
+			"subject": it.Subject,
+		},
+		"requested_scopes": requested,
+		"existing_scopes":  existing,
+		"missing_scopes":   diffStrings(requested, existing),
+		"created_at":       it.CreatedAt.Format(time.RFC3339Nano),
+		"expires_at":       it.ExpiresAt.Format(time.RFC3339Nano),
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+type confirmInteractionRequest struct {
+	Approve bool     `json:"approve"`
+	Scopes  []string `json:"scopes,omitempty"`
+}
+
+func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	s.setNoStoreHeaders(w)
+
+	if s.deps.Interactions == nil {
+		writePlainOAuthError(w, oauthErr("server_error", "interaction store is not configured", http.StatusInternalServerError))
+		return
+	}
+
+	id := mux.Vars(r)["id"]
+	if strings.TrimSpace(id) == "" {
+		writePlainOAuthError(w, oauthErr("invalid_request", "missing interaction id", http.StatusBadRequest))
+		return
+	}
+
+	var body confirmInteractionRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&body); err != nil {
+		writePlainOAuthError(w, oauthErr("invalid_request", "failed to parse json body", http.StatusBadRequest))
+		return
+	}
+
+	it, err := s.deps.Interactions.ConsumeInteraction(ctx, id)
+	if err != nil {
+		writePlainOAuthError(w, oauthErr("invalid_request", "interaction not found", http.StatusBadRequest))
+		return
+	}
+
+	now := time.Now().UTC()
+	if it.Consumed || it.ExpiresAt.Before(now) {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("access_denied", "interaction expired", http.StatusForbidden))
+		return
+	}
+
+	subject, ok, err := s.deps.Authorization.Subject(ctx, r)
+	if err != nil {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("server_error", "failed to resolve subject", http.StatusInternalServerError))
+		return
+	}
+	if !ok || subject == "" {
+		loginURL := s.buildLoginRedirectToConsent(r, id)
+		http.Redirect(w, r, loginURL, http.StatusFound)
+		return
+	}
+	if subject != it.Subject {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("access_denied", "subject mismatch", http.StatusForbidden))
+		return
+	}
+
+	client, err := s.deps.Clients.GetClient(ctx, it.ClientID)
+	if err != nil {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("unauthorized_client", "unknown client", http.StatusBadRequest))
+		return
+	}
+	if !grantAllowed(client.AllowedGrants, "authorization_code") {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("unauthorized_client", "client is not allowed to use authorization_code", http.StatusBadRequest))
+		return
+	}
+
+	ru, ok := resolveAndValidateRedirectURI(client.RedirectURIs, it.RedirectURI)
+	if !ok || ru != it.RedirectURI {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("invalid_request", "redirect_uri mismatch", http.StatusBadRequest))
+		return
+	}
+
+	if !body.Approve {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("access_denied", "user denied consent", http.StatusForbidden))
+		return
+	}
+
+	approved := uniqueStrings(body.Scopes)
+	if len(approved) == 0 {
+		approved = uniqueStrings(it.RequestedScopes)
+	}
+
+	if !isSubset(approved, it.RequestedScopes) {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("invalid_scope", "approved scopes must be subset of requested scopes", http.StatusBadRequest))
+		return
+	}
+	if !scopesAllowed(client.AllowedScopes, approved) {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("invalid_scope", "approved scope is not allowed for this client", http.StatusBadRequest))
+		return
+	}
+
+	newGranted := unionStrings(it.ExistingScopes, approved)
+	if err := s.deps.Authorization.SaveConsent(ctx, it.Subject, it.ClientID, newGranted); err != nil {
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
+			oauthErr("server_error", "failed to save consent", http.StatusInternalServerError))
+		return
+	}
+
+	if err := s.issueCodeAndRedirect(ctx, w, r, client.ID, it.RedirectURI, it.Subject, approved, it.State); err != nil {
+		oe := asOAuthError(err)
+		if oe == nil {
+			oe = oauthErr("server_error", "failed to issue authorization code", http.StatusInternalServerError)
+		}
+		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State, oe)
+		return
+	}
 }
 
 func (s *Server) handleToken(w http.ResponseWriter, r *http.Request) {
@@ -1060,6 +1310,22 @@ func applyDefaults(cfg *Config) {
 		v := false
 		cfg.AllowPublicClientsOnTokenEndpoint = &v
 	}
+
+	if cfg.LoginReturnParam == "" {
+		cfg.LoginReturnParam = "return_to"
+	}
+	if cfg.ConsentInteractionParam == "" {
+		cfg.ConsentInteractionParam = "interaction_id"
+	}
+	if cfg.InteractionPath == "" {
+		cfg.InteractionPath = "/interaction"
+	}
+	if cfg.InteractionConfirmPath == "" {
+		cfg.InteractionConfirmPath = "/confirm"
+	}
+	if cfg.InteractionTTL <= 0 {
+		cfg.InteractionTTL = 5 * time.Minute
+	}
 }
 
 func (s *Server) issueRefreshToken() bool {
@@ -1085,4 +1351,178 @@ func (s *Server) allowPublicClientsOnTokenEndpoint() bool {
 		return false
 	}
 	return *s.cfg.AllowPublicClientsOnTokenEndpoint
+}
+
+func (s *Server) issueCodeAndRedirect(ctx context.Context, w http.ResponseWriter, r *http.Request,
+	clientID, redirectURI, subject string, scopes []string, state string,
+) error {
+	codeStr, err := randomURLSafeString(32)
+	if err != nil {
+		s.log.Error("failed to generate authorization code", zap.Error(err))
+		return oauthErr("server_error", "failed to generate authorization code", http.StatusInternalServerError)
+	}
+
+	now := time.Now().UTC()
+	ac := AuthorizationCode{
+		Code:        codeStr,
+		ClientID:    clientID,
+		RedirectURI: redirectURI,
+		Subject:     subject,
+		Scopes:      cloneStrings(scopes),
+		IssuedAt:    now,
+		ExpiresAt:   now.Add(s.cfg.AuthorizationCodeTTL),
+		Consumed:    false,
+	}
+
+	if err := s.deps.Codes.Create(ctx, ac); err != nil {
+		s.log.Error("failed to store authorization code", zap.Error(err))
+		return oauthErr("server_error", "failed to store authorization code", http.StatusInternalServerError)
+	}
+
+	u, _ := url.Parse(redirectURI)
+	q := u.Query()
+	q.Set("code", codeStr)
+	if state != "" {
+		q.Set("state", state)
+	}
+	u.RawQuery = q.Encode()
+
+	http.Redirect(w, r, u.String(), http.StatusFound)
+	return nil
+}
+
+func (s *Server) interactionTTL() time.Duration {
+	if s.cfg.InteractionTTL > 0 {
+		return s.cfg.InteractionTTL
+	}
+	return 5 * time.Minute
+}
+
+func (s *Server) buildLoginRedirect(r *http.Request) string {
+	returnParam := s.cfg.LoginReturnParam
+	if strings.TrimSpace(returnParam) == "" {
+		returnParam = "return_to"
+	}
+	returnTo := externalRequestURL(r)
+	u, _ := url.Parse(s.cfg.LoginURL)
+	q := u.Query()
+	q.Set(returnParam, returnTo)
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+func (s *Server) buildLoginRedirectToConsent(_ *http.Request, interactionID string) string {
+	returnParam := s.cfg.LoginReturnParam
+	if strings.TrimSpace(returnParam) == "" {
+		returnParam = "return_to"
+	}
+	consentURL, _ := url.Parse(s.cfg.ConsentURL)
+	consentParam := s.cfg.ConsentInteractionParam
+	if strings.TrimSpace(consentParam) == "" {
+		consentParam = "interaction_id"
+	}
+	consentQ := url.Values{}
+	consentQ.Set(consentParam, interactionID)
+	consentURL.RawQuery = consentQ.Encode()
+	u, _ := url.Parse(s.cfg.LoginURL)
+	q := u.Query()
+	q.Set(returnParam, consentURL.String())
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+func (s *Server) buildConsentRedirect(interactionID string) (string, error) {
+	u, err := url.Parse(s.cfg.ConsentURL)
+	if err != nil {
+		return "", err
+	}
+	param := s.cfg.ConsentInteractionParam
+	if strings.TrimSpace(param) == "" {
+		param = "interaction_id"
+	}
+	q := url.Values{}
+	q.Set(param, interactionID)
+	u.RawQuery = q.Encode()
+	u.Fragment = ""
+	return u.String(), nil
+}
+
+func externalRequestURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	if xfProto := r.Header.Get("X-Forwarded-Proto"); xfProto != "" {
+		parts := strings.Split(xfProto, ",")
+		scheme = strings.TrimSpace(parts[0])
+	}
+	host := r.Host
+	if xfHost := r.Header.Get("X-Forwarded-Host"); xfHost != "" {
+		parts := strings.Split(xfHost, ",")
+		host = strings.TrimSpace(parts[0])
+	}
+	uri := r.URL.RequestURI()
+	return scheme + "://" + host + uri
+}
+
+func uniqueStrings(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+func unionStrings(a, b []string) []string {
+	set := make(map[string]struct{}, len(a)+len(b))
+	for _, x := range a {
+		x = strings.TrimSpace(x)
+		if x == "" {
+			continue
+		}
+		set[x] = struct{}{}
+	}
+	for _, x := range b {
+		x = strings.TrimSpace(x)
+		if x == "" {
+			continue
+		}
+		set[x] = struct{}{}
+	}
+	out := make([]string, 0, len(set))
+	for k := range set {
+		out = append(out, k)
+	}
+	return out
+}
+
+func diffStrings(requested, existing []string) []string {
+	req := uniqueStrings(requested)
+	ex := make(map[string]struct{}, len(existing))
+	for _, x := range existing {
+		x = strings.TrimSpace(x)
+		if x == "" {
+			continue
+		}
+		ex[x] = struct{}{}
+	}
+	out := make([]string, 0, len(req))
+	for _, s := range req {
+		if _, ok := ex[s]; !ok {
+			out = append(out, s)
+		}
+	}
+	return out
 }

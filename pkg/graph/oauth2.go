@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/oauth2"
 	"time"
@@ -17,25 +18,28 @@ type OAuthController struct {
 	log *zap.Logger
 	db  driver.Database
 
-	clientsCol driver.Collection
-	codesCol   driver.Collection
-	accessCol  driver.Collection
-	refreshCol driver.Collection
+	clientsCol      driver.Collection
+	codesCol        driver.Collection
+	accessCol       driver.Collection
+	refreshCol      driver.Collection
+	interactionsCol driver.Collection
 }
 
 type ArangoRepoOptions struct {
-	ClientsCollection string
-	CodesCollection   string
-	AccessCollection  string
-	RefreshCollection string
+	ClientsCollection      string
+	CodesCollection        string
+	AccessCollection       string
+	RefreshCollection      string
+	InteractionsCollection string
 }
 
 func DefaultArangoRepoOptions() ArangoRepoOptions {
 	return ArangoRepoOptions{
-		ClientsCollection: "OAuth2Clients",
-		CodesCollection:   "OAuth2AuthorizationCodes",
-		AccessCollection:  "OAuth2AccessTokens",
-		RefreshCollection: "OAuth2RefreshTokens",
+		ClientsCollection:      "OAuth2Clients",
+		CodesCollection:        "OAuth2AuthorizationCodes",
+		AccessCollection:       "OAuth2AccessTokens",
+		RefreshCollection:      "OAuth2RefreshTokens",
+		InteractionsCollection: "OAuth2Interactions",
 	}
 }
 
@@ -64,20 +68,26 @@ func NewOAuthController(logger *zap.Logger, db driver.Database, opts *ArangoRepo
 	if err != nil {
 		log.Fatal("ensure refresh collection failed", zap.Error(err))
 	}
+	interaction, err := ensureCollection(ctx, db, opts.InteractionsCollection)
+	if err != nil {
+		log.Fatal("ensure interactions collection failed", zap.Error(err))
+	}
 
 	return &OAuthController{
-		log:        log,
-		db:         db,
-		clientsCol: clients,
-		codesCol:   codes,
-		accessCol:  access,
-		refreshCol: refresh,
+		log:             log,
+		db:              db,
+		clientsCol:      clients,
+		codesCol:        codes,
+		accessCol:       access,
+		refreshCol:      refresh,
+		interactionsCol: interaction,
 	}
 }
 
 var _ oauth2.ClientStore = (*OAuthController)(nil)
 var _ oauth2.AuthorizationCodeStore = (*OAuthController)(nil)
 var _ oauth2.TokenStore = (*OAuthController)(nil)
+var _ oauth2.InteractionStore = (*OAuthController)(nil)
 
 type clientDoc struct {
 	Key          string   `json:"_key,omitempty"`
@@ -88,9 +98,14 @@ type clientDoc struct {
 	AllowedScopes []string `json:"allowed_scopes,omitempty"`
 
 	Public bool `json:"public,omitempty"`
+
+	Display map[string]any `json:"display,omitempty"`
 }
 
 func (d clientDoc) toClient() oauth2.Client {
+	displayBytes, _ := json.Marshal(d.Display)
+	var display oauth2.ClientDisplay
+	_ = json.Unmarshal(displayBytes, &display)
 	return oauth2.Client{
 		ID:            d.Key,
 		Secret:        d.Secret,
@@ -98,6 +113,7 @@ func (d clientDoc) toClient() oauth2.Client {
 		AllowedGrants: d.AllowedGrants,
 		AllowedScopes: d.AllowedScopes,
 		Public:        d.Public,
+		Display:       display,
 	}
 }
 
@@ -501,6 +517,155 @@ func (r *OAuthController) RevokeRefreshToken(ctx context.Context, token string) 
 	var dummy int
 	_, _ = cur.ReadDocument(ctx, &dummy)
 	return nil
+}
+
+type interactionDoc struct {
+	Key string `json:"_key,omitempty"`
+
+	ID          string `json:"id"`
+	ClientID    string `json:"client_id"`
+	RedirectURI string `json:"redirect_uri"`
+	State       string `json:"state"`
+
+	Subject         string   `json:"subject,omitempty"`
+	RequestedScopes []string `json:"requested_scopes,omitempty"`
+	ExistingScopes  []string `json:"existing_scopes,omitempty"`
+
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Consumed  bool      `json:"consumed"`
+}
+
+func toInteractionDoc(it oauth2.Interaction) interactionDoc {
+	return interactionDoc{
+		Key:             opaqueKey(it.ID),
+		ID:              it.ID,
+		ClientID:        it.ClientID,
+		RedirectURI:     it.RedirectURI,
+		State:           it.State,
+		Subject:         it.Subject,
+		RequestedScopes: it.RequestedScopes,
+		ExistingScopes:  it.ExistingScopes,
+		CreatedAt:       it.CreatedAt,
+		ExpiresAt:       it.ExpiresAt,
+		Consumed:        it.Consumed,
+	}
+}
+
+func (d interactionDoc) toInteraction() oauth2.Interaction {
+	return oauth2.Interaction{
+		ID:              d.ID,
+		ClientID:        d.ClientID,
+		RedirectURI:     d.RedirectURI,
+		State:           d.State,
+		Subject:         d.Subject,
+		RequestedScopes: d.RequestedScopes,
+		ExistingScopes:  d.ExistingScopes,
+		CreatedAt:       d.CreatedAt,
+		ExpiresAt:       d.ExpiresAt,
+		Consumed:        d.Consumed,
+	}
+}
+
+func (r *OAuthController) CreateInteraction(ctx context.Context, it oauth2.Interaction) error {
+	log := r.log.Named("Interaction.Create")
+
+	if it.ID == "" {
+		return fmt.Errorf("missing interaction id")
+	}
+	if it.ClientID == "" {
+		return fmt.Errorf("missing interaction client id")
+	}
+	if it.CreatedAt.IsZero() {
+		it.CreatedAt = time.Now().UTC()
+	}
+
+	doc := toInteractionDoc(it)
+	_, err := r.interactionsCol.CreateDocument(ctx, doc)
+	if err != nil {
+		log.Error("create interaction failed", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (r *OAuthController) GetInteraction(ctx context.Context, id string) (oauth2.Interaction, error) {
+	log := r.log.Named("Interaction.Get")
+
+	if id == "" {
+		return oauth2.Interaction{}, fmt.Errorf("missing interaction id")
+	}
+
+	key := opaqueKey(id)
+	var d interactionDoc
+	_, err := r.interactionsCol.ReadDocument(ctx, key, &d)
+	if err != nil {
+		if driver.IsNotFoundGeneral(err) {
+			return oauth2.Interaction{}, fmt.Errorf("interaction not found")
+		}
+		log.Error("read interaction failed", zap.Error(err))
+		return oauth2.Interaction{}, err
+	}
+
+	if d.ID != id {
+		return oauth2.Interaction{}, fmt.Errorf("interaction not found")
+	}
+
+	now := time.Now().UTC()
+	if d.Consumed || (!d.ExpiresAt.IsZero() && !d.ExpiresAt.After(now)) {
+		return oauth2.Interaction{}, fmt.Errorf("interaction is invalid")
+	}
+
+	return d.toInteraction(), nil
+}
+
+const consumeInteractionAQL = `
+LET nowTs = DATE_TIMESTAMP(@now)
+LET doc = FIRST(
+  FOR i IN @@its
+    FILTER i._key == @key
+    FILTER i.consumed != true
+    FILTER DATE_TIMESTAMP(i.expires_at) > nowTs
+    UPDATE i WITH { consumed: true } IN @@its OPTIONS { ignoreRevs: false }
+    RETURN NEW
+)
+RETURN doc
+`
+
+func (r *OAuthController) ConsumeInteraction(ctx context.Context, id string) (oauth2.Interaction, error) {
+	log := r.log.Named("Interaction.Consume")
+
+	if id == "" {
+		return oauth2.Interaction{}, fmt.Errorf("missing interaction id")
+	}
+
+	key := opaqueKey(id)
+
+	cur, err := r.db.Query(ctx, consumeInteractionAQL, map[string]any{
+		"@its": r.interactionsCol.Name(),
+		"key":  key,
+		"now":  time.Now().UTC(),
+	})
+	if err != nil {
+		log.Error("consume interaction query failed", zap.Error(err))
+		return oauth2.Interaction{}, err
+	}
+	defer cur.Close()
+
+	var out *interactionDoc
+	_, err = cur.ReadDocument(ctx, &out)
+	if err != nil {
+		if driver.IsNoMoreDocuments(err) {
+			return oauth2.Interaction{}, fmt.Errorf("invalid interaction. not found")
+		}
+		log.Error("consume interaction read failed", zap.Error(err))
+		return oauth2.Interaction{}, err
+	}
+	if out == nil || out.ID != id {
+		return oauth2.Interaction{}, fmt.Errorf("invalid interaction. not found")
+	}
+
+	return out.toInteraction(), nil
 }
 
 func ensureCollection(ctx context.Context, db driver.Database, name string) (driver.Collection, error) {
