@@ -437,6 +437,8 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 	ctx := r.Context()
 	s.setNoStoreHeaders(w)
 
+	s.log.Info("Confirming interaction...", zap.String("path", r.URL.Path))
+
 	if s.deps.Interactions == nil {
 		s.log.Error("interaction store is not configured")
 		writePlainOAuthError(w, oauthErr("server_error", "interaction store is not configured", http.StatusInternalServerError))
@@ -560,6 +562,7 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State, oe)
 		return
 	} else {
+		s.log.Info("Authorization code issued successfully", zap.String("interaction_id", id), zap.String("client_id", it.ClientID), zap.String("subject", subject), zap.Strings("approved_scopes", approved))
 		writeJSON(w, http.StatusOK, map[string]any{
 			"redirect_to": redirectUrl,
 		})
