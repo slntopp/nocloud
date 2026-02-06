@@ -88,9 +88,10 @@ type AccountsServiceServer struct {
 	asteriskConn *ssh.Client
 
 	baseHost string
+	appHost  string
 }
 
-func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, asteriskConn *ssh.Client, baseHost string) *AccountsServiceServer {
+func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, asteriskConn *ssh.Client, baseHost string, appHost string) *AccountsServiceServer {
 	return &AccountsServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewAccountsController(
@@ -105,6 +106,7 @@ func NewAccountsServer(log *zap.Logger, db driver.Database, rdb redisdb.Client, 
 		rdb:          rdb,
 		asteriskConn: asteriskConn,
 		baseHost:     baseHost,
+		appHost:      appHost,
 	}
 }
 
@@ -729,7 +731,7 @@ func (s *AccountsServiceServer) Logout(ctx context.Context, request *accountspb.
 		})
 	}
 
-	expiredCookie := "nocloud_token=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; HttpOnly; Domain=" + s.baseHost
+	expiredCookie := "nocloud_token=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; HttpOnly; Domain=" + s.appHost
 	mdOut := metadata.Pairs("set-cookie", expiredCookie)
 	if err := grpc.SetHeader(ctx, mdOut); err != nil {
 		log.Warn("Failed to set cookie header", zap.Error(err))
@@ -872,7 +874,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 		"nocloud_token=%s; Path=/; Max-Age=%d; SameSite=Lax; HttpOnly; Domain=%s",
 		token_string,
 		maxAge,
-		s.baseHost,
+		s.appHost,
 	)
 	md := metadata.Pairs("set-cookie", cookie)
 	if err := grpc.SetHeader(ctx, md); err != nil {
