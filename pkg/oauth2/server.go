@@ -534,12 +534,17 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := s.issueCodeAndRedirect(ctx, w, r, client.ID, it.RedirectURI, it.Subject, approved, it.State); err != nil {
+	if redirectUrl, err := s.issueCodeWithRedirectURL(ctx, client.ID, it.RedirectURI, it.Subject, approved, it.State); err != nil {
 		oe := asOAuthError(err)
 		if oe == nil {
 			oe = oauthErr("server_error", "failed to issue authorization code", http.StatusInternalServerError)
 		}
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State, oe)
+		return
+	} else {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"redirect_to": redirectUrl,
+		})
 		return
 	}
 }
@@ -1389,6 +1394,41 @@ func (s *Server) issueCodeAndRedirect(ctx context.Context, w http.ResponseWriter
 
 	http.Redirect(w, r, u.String(), http.StatusFound)
 	return nil
+}
+
+func (s *Server) issueCodeWithRedirectURL(ctx context.Context, clientID, redirectURI, subject string, scopes []string, state string) (string, error) {
+	codeStr, err := randomURLSafeString(32)
+	if err != nil {
+		s.log.Error("failed to generate authorization code", zap.Error(err))
+		return "", oauthErr("server_error", "failed to generate authorization code", http.StatusInternalServerError)
+	}
+
+	now := time.Now().UTC()
+	ac := AuthorizationCode{
+		Code:        codeStr,
+		ClientID:    clientID,
+		RedirectURI: redirectURI,
+		Subject:     subject,
+		Scopes:      cloneStrings(scopes),
+		IssuedAt:    now,
+		ExpiresAt:   now.Add(s.cfg.AuthorizationCodeTTL),
+		Consumed:    false,
+	}
+
+	if err := s.deps.Codes.Create(ctx, ac); err != nil {
+		s.log.Error("failed to store authorization code", zap.Error(err))
+		return "", oauthErr("server_error", "failed to store authorization code", http.StatusInternalServerError)
+	}
+
+	u, _ := url.Parse(redirectURI)
+	q := u.Query()
+	q.Set("code", codeStr)
+	if state != "" {
+		q.Set("state", state)
+	}
+	u.RawQuery = q.Encode()
+
+	return u.String(), nil
 }
 
 func (s *Server) interactionTTL() time.Duration {
