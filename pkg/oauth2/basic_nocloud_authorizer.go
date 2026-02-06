@@ -19,7 +19,7 @@ type BasicAuthorizer struct {
 func (b *BasicAuthorizer) Subject(ctx context.Context, r *http.Request) (subject string, ok bool, err error) {
 	var token string
 	tokenCookie, err := r.Cookie("nocloud_token")
-	if err == nil {
+	if err == nil && strings.TrimSpace(tokenCookie.Value) != "" {
 		token = tokenCookie.Value
 	} else {
 		header := r.Header.Get("Authorization")

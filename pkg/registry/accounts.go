@@ -698,6 +698,81 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	}, nil
 }
 
+func (s *AccountsServiceServer) Logout(ctx context.Context, request *accountspb.LogoutRequest) (*accountspb.LogoutResponse, error) {
+	log := s.log.Named("Logout")
+	log.Debug("Logout request received", zap.Any("request", request))
+	mdIn, _ := metadata.FromIncomingContext(ctx)
+	tokenStr := ""
+	tokenStr = getCookieValue(mdIn.Get("cookie"), "nocloud_token")
+	if tokenStr == "" {
+		tokenStr = getCookieValue(mdIn.Get("grpcgateway-cookie"), "nocloud_token")
+	}
+
+	if tokenStr == "" {
+		if auth := mdIn.Get("authorization"); len(auth) > 0 {
+			tokenStr = strings.TrimSpace(auth[0])
+			tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
+			tokenStr = strings.TrimPrefix(tokenStr, "bearer ")
+			tokenStr = strings.TrimSpace(tokenStr)
+		}
+	}
+
+	if tokenStr != "" {
+		_, _ = jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
+			return s.SIGNING_KEY, nil
+		})
+	}
+
+	expiredCookie := "nocloud_token=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax; HttpOnly"
+	mdOut := metadata.Pairs("set-cookie", expiredCookie)
+	if err := grpc.SetHeader(ctx, mdOut); err != nil {
+		log.Warn("Failed to set cookie header", zap.Error(err))
+	}
+
+	requester := ""
+	if v := ctx.Value(nocloud.NoCloudAccount); v != nil {
+		if s, ok := v.(string); ok {
+			requester = s
+		}
+	}
+	if requester != "" {
+		event := &elpb.Event{
+			Entity:    schema.ACCOUNTS_COL,
+			Uuid:      requester,
+			Scope:     "database",
+			Action:    "logout",
+			Rc:        0,
+			Requestor: requester,
+			Ts:        time.Now().Unix(),
+			Snapshot:  &elpb.Snapshot{Diff: ""},
+		}
+		nocloud.Log(log, event)
+	}
+
+	return &accountspb.LogoutResponse{}, nil
+}
+
+func getCookieValue(cookieHeaders []string, name string) string {
+	if len(cookieHeaders) == 0 {
+		return ""
+	}
+	prefix := name + "="
+
+	for _, h := range cookieHeaders {
+		parts := strings.Split(h, ";")
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if strings.HasPrefix(p, prefix) {
+				return strings.TrimPrefix(p, prefix)
+			}
+		}
+	}
+	return ""
+}
+
 func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
 	log := s.log.Named("Token")
 	log.Debug("Token request received", zap.Any("request", request))
