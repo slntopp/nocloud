@@ -791,7 +791,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	maxAge := request.Exp - int32(time.Now().Unix())
 	cookie := fmt.Sprintf(
-		"nocloud_token=%s; Path=/; Max-Age=%d; Secure; SameSite=None",
+		"nocloud_token=%s; Path=/; Max-Age=%d; SameSite=Lax; HttpOnly",
 		token_string,
 		maxAge,
 	)
