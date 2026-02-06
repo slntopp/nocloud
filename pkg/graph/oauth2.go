@@ -628,7 +628,6 @@ func (r *OAuthController) ConsumeInteraction(ctx context.Context, id string) (oa
 	}
 
 	key := opaqueKey(id)
-	now := time.Now().UTC()
 
 	tid, err := r.db.BeginTransaction(
 		ctx,
@@ -668,7 +667,6 @@ RETURN NEW
 		"@its": r.interactionsCol.Name(),
 		"key":  key,
 		"id":   id,
-		"now":  now,
 	})
 	if err != nil {
 		if ae, ok := driver.AsArangoError(err); ok && ae.ErrorNum == 1569 {
