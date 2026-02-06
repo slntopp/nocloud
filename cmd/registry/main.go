@@ -61,6 +61,8 @@ var (
 	amiHost        string // SSH host:port
 	amiRequired    bool   // Fatal if AMI fails
 	amiSshPassword string // Asterisk server SSH password
+
+	baseHost string
 )
 
 func init() {
@@ -99,6 +101,8 @@ func init() {
 	amiSshPassword = viper.GetString("AMI_SSH_PASSWORD")
 
 	sshPrivateKeyPath = viper.GetString("SSH_PRIVATE_KEY")
+
+	baseHost = viper.GetString("BASE_HOST")
 }
 
 func SetupSettingsClient() (settingspb.SettingsServiceClient, *grpc.ClientConn) {
@@ -165,7 +169,7 @@ func main() {
 	sessions_server := sessions.NewSessionsServer(log, rdb, db)
 	sspb.RegisterSessionsServiceServer(s, sessions_server)
 
-	accounts_server := accounting.NewAccountsServer(log, db, rdb, asteriskClient)
+	accounts_server := accounting.NewAccountsServer(log, db, rdb, asteriskClient, baseHost)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
 	credentials.SetupSettingsClient(log.Named("Credentials"), sc, token)
 	accounts_server.SetupSettingsClient(sc, token)
