@@ -438,12 +438,14 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 	s.setNoStoreHeaders(w)
 
 	if s.deps.Interactions == nil {
+		s.log.Error("interaction store is not configured")
 		writePlainOAuthError(w, oauthErr("server_error", "interaction store is not configured", http.StatusInternalServerError))
 		return
 	}
 
 	id := mux.Vars(r)["id"]
 	if strings.TrimSpace(id) == "" {
+		s.log.Warn("missing interaction id in request")
 		writePlainOAuthError(w, oauthErr("invalid_request", "missing interaction id", http.StatusBadRequest))
 		return
 	}
@@ -452,18 +454,21 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&body); err != nil {
+		s.log.Warn("Failed to decode confirm interaction request body", zap.Error(err))
 		writePlainOAuthError(w, oauthErr("invalid_request", "failed to parse json body", http.StatusBadRequest))
 		return
 	}
 
 	it, err := s.deps.Interactions.ConsumeInteraction(ctx, id)
 	if err != nil {
+		s.log.Error("Failed to consume interaction", zap.Error(err), zap.String("interaction_id", id))
 		writePlainOAuthError(w, oauthErr("invalid_request", "interaction not found", http.StatusBadRequest))
 		return
 	}
 
 	now := time.Now().UTC()
 	if it.Consumed || it.ExpiresAt.Before(now) {
+		s.log.Warn("Interaction expired or already consumed", zap.String("interaction_id", id))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("access_denied", "interaction expired", http.StatusForbidden))
 		return
@@ -471,16 +476,19 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 
 	subject, ok, err := s.deps.Authorization.Subject(ctx, r)
 	if err != nil {
+		s.log.Warn("failed to resolve subject", zap.Error(err))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("server_error", "failed to resolve subject", http.StatusInternalServerError))
 		return
 	}
 	if !ok || subject == "" {
+		s.log.Warn("User not logged in", zap.String("interaction_id", id))
 		loginURL := s.buildLoginRedirectToConsent(r, id)
 		http.Redirect(w, r, loginURL, http.StatusFound)
 		return
 	}
 	if subject != it.Subject {
+		s.log.Warn("Subject mismatch", zap.String("interaction_id", id), zap.String("expected_subject", it.Subject), zap.String("actual_subject", subject))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("access_denied", "subject mismatch", http.StatusForbidden))
 		return
@@ -488,11 +496,13 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 
 	client, err := s.deps.Clients.GetClient(ctx, it.ClientID)
 	if err != nil {
+		s.log.Warn("Unknown client", zap.String("interaction_id", id), zap.String("client_id", it.ClientID))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("unauthorized_client", "unknown client", http.StatusBadRequest))
 		return
 	}
 	if !grantAllowed(client.AllowedGrants, "authorization_code") {
+		s.log.Warn("Client not allowed to use authorization_code grant", zap.String("interaction_id", id), zap.String("client_id", it.ClientID))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("unauthorized_client", "client is not allowed to use authorization_code", http.StatusBadRequest))
 		return
@@ -500,12 +510,14 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 
 	ru, ok := resolveAndValidateRedirectURI(client.RedirectURIs, it.RedirectURI)
 	if !ok || ru != it.RedirectURI {
+		s.log.Warn("redirect_uri mismatch", zap.String("interaction_id", id), zap.String("client_id", it.ClientID), zap.String("expected_redirect_uri", it.RedirectURI), zap.String("allowed_redirect_uris", strings.Join(client.RedirectURIs, ",")))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("invalid_request", "redirect_uri mismatch", http.StatusBadRequest))
 		return
 	}
 
 	if !body.Approve {
+		s.log.Info("User denied consent", zap.String("interaction_id", id), zap.String("client_id", it.ClientID), zap.String("subject", subject))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("access_denied", "user denied consent", http.StatusForbidden))
 		return
@@ -517,11 +529,13 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 	}
 
 	if !isSubset(approved, it.RequestedScopes) {
+		s.log.Warn("Approved scopes are not subset of requested scopes", zap.String("interaction_id", id), zap.String("client_id", it.ClientID), zap.String("subject", subject), zap.Strings("requested_scopes", it.RequestedScopes), zap.Strings("approved_scopes", approved))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("invalid_scope", "approved scopes must be subset of requested scopes", http.StatusBadRequest))
 		return
 	}
 	if !scopesAllowed(client.AllowedScopes, approved) {
+		s.log.Warn("Approved scopes are not allowed for this client", zap.String("interaction_id", id), zap.String("client_id", it.ClientID), zap.String("subject", subject), zap.Strings("approved_scopes", approved), zap.Strings("client_allowed_scopes", client.AllowedScopes))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("invalid_scope", "approved scope is not allowed for this client", http.StatusBadRequest))
 		return
@@ -529,12 +543,14 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 
 	newGranted := unionStrings(it.ExistingScopes, approved)
 	if err := s.deps.Authorization.SaveConsent(ctx, it.Subject, it.ClientID, newGranted); err != nil {
+		s.log.Error("Failed to save consent", zap.Error(err), zap.String("interaction_id", id), zap.String("client_id", it.ClientID), zap.String("subject", subject), zap.Strings("approved_scopes", approved))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("server_error", "failed to save consent", http.StatusInternalServerError))
 		return
 	}
 
 	if redirectUrl, err := s.issueCodeWithRedirectURL(ctx, client.ID, it.RedirectURI, it.Subject, approved, it.State); err != nil {
+		s.log.Error("Failed to issue authorization code", zap.Error(err), zap.String("interaction_id", id), zap.String("client_id", it.ClientID), zap.String("subject", subject), zap.Strings("approved_scopes", approved))
 		oe := asOAuthError(err)
 		if oe == nil {
 			oe = oauthErr("server_error", "failed to issue authorization code", http.StatusInternalServerError)
