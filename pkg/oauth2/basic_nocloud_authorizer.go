@@ -54,6 +54,7 @@ func (b *BasicAuthorizer) IssueAccessToken(ttl time.Duration, clientID, subject 
 	expirationTime := now.Add(ttl)
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = subject
+	claims[nocloud.NOCLOUD_NOSESSION_CLAIM] = true
 	claims["expires"] = expirationTime.UTC().Unix()
 	claims["exp"] = expirationTime.UTC().Unix()
 	claims["scopes"] = scopes
