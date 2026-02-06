@@ -168,8 +168,8 @@ func toAuthCodeDoc(c oauth2.AuthorizationCode) authCodeDoc {
 		RedirectURI: c.RedirectURI,
 		Subject:     c.Subject,
 		Scopes:      c.Scopes,
-		IssuedAt:    c.IssuedAt,
-		ExpiresAt:   c.ExpiresAt,
+		IssuedAt:    c.IssuedAt.UTC(),
+		ExpiresAt:   c.ExpiresAt.UTC(),
 		Consumed:    c.Consumed,
 	}
 }
@@ -181,8 +181,8 @@ func (d authCodeDoc) toAuthorizationCode() oauth2.AuthorizationCode {
 		RedirectURI: d.RedirectURI,
 		Subject:     d.Subject,
 		Scopes:      d.Scopes,
-		IssuedAt:    d.IssuedAt,
-		ExpiresAt:   d.ExpiresAt,
+		IssuedAt:    d.IssuedAt.UTC(),
+		ExpiresAt:   d.ExpiresAt.UTC(),
 		Consumed:    d.Consumed,
 	}
 }
@@ -272,8 +272,8 @@ func toAccessTokenDoc(t oauth2.AccessToken) accessTokenDoc {
 		ClientID:  t.ClientID,
 		Subject:   t.Subject,
 		Scopes:    t.Scopes,
-		IssuedAt:  t.IssuedAt,
-		ExpiresAt: t.ExpiresAt,
+		IssuedAt:  t.IssuedAt.UTC(),
+		ExpiresAt: t.ExpiresAt.UTC(),
 		Revoked:   t.Revoked,
 	}
 }
@@ -284,8 +284,8 @@ func (d accessTokenDoc) toAccessToken() oauth2.AccessToken {
 		ClientID:  d.ClientID,
 		Subject:   d.Subject,
 		Scopes:    d.Scopes,
-		IssuedAt:  d.IssuedAt,
-		ExpiresAt: d.ExpiresAt,
+		IssuedAt:  d.IssuedAt.UTC(),
+		ExpiresAt: d.ExpiresAt.UTC(),
 		Revoked:   d.Revoked,
 	}
 }
@@ -314,8 +314,8 @@ func toRefreshTokenDoc(t oauth2.RefreshToken) refreshTokenDoc {
 		ClientID:          t.ClientID,
 		Subject:           t.Subject,
 		Scopes:            t.Scopes,
-		IssuedAt:          t.IssuedAt,
-		ExpiresAt:         t.ExpiresAt,
+		IssuedAt:          t.IssuedAt.UTC(),
+		ExpiresAt:         t.ExpiresAt.UTC(),
 		Revoked:           t.Revoked,
 		AuthorizationCode: t.AuthorizationCode,
 	}
@@ -327,8 +327,8 @@ func (d refreshTokenDoc) toRefreshToken() oauth2.RefreshToken {
 		ClientID:          d.ClientID,
 		Subject:           d.Subject,
 		Scopes:            d.Scopes,
-		IssuedAt:          d.IssuedAt,
-		ExpiresAt:         d.ExpiresAt,
+		IssuedAt:          d.IssuedAt.UTC(),
+		ExpiresAt:         d.ExpiresAt.UTC(),
 		Revoked:           d.Revoked,
 		AuthorizationCode: d.AuthorizationCode,
 	}
@@ -354,8 +354,8 @@ func (r *OAuthController) SaveAccessToken(ctx context.Context, t oauth2.AccessTo
 		"client_id":  t.ClientID,
 		"subject":    t.Subject,
 		"scopes":     t.Scopes,
-		"issued_at":  t.IssuedAt,
-		"expires_at": t.ExpiresAt,
+		"issued_at":  t.IssuedAt.UTC(),
+		"expires_at": t.ExpiresAt.UTC(),
 		"revoked":    t.Revoked,
 	}
 
@@ -388,8 +388,8 @@ func (r *OAuthController) SaveRefreshToken(ctx context.Context, t oauth2.Refresh
 		"client_id":          t.ClientID,
 		"subject":            t.Subject,
 		"scopes":             t.Scopes,
-		"issued_at":          t.IssuedAt,
-		"expires_at":         t.ExpiresAt,
+		"issued_at":          t.IssuedAt.UTC(),
+		"expires_at":         t.ExpiresAt.UTC(),
 		"revoked":            t.Revoked,
 		"authorization_code": t.AuthorizationCode,
 	}
@@ -433,7 +433,7 @@ func (r *OAuthController) LookupAccessToken(ctx context.Context, token string) (
 	}
 
 	now := time.Now().UTC()
-	if d.Revoked || (!d.ExpiresAt.IsZero() && !d.ExpiresAt.After(now)) {
+	if d.Revoked || (!d.ExpiresAt.UTC().IsZero() && !d.ExpiresAt.UTC().After(now)) {
 		return oauth2.AccessToken{}, fmt.Errorf("token is invalid")
 	}
 
@@ -463,7 +463,7 @@ func (r *OAuthController) LookupRefreshToken(ctx context.Context, token string) 
 	}
 
 	now := time.Now().UTC()
-	if d.Revoked || (!d.ExpiresAt.IsZero() && !d.ExpiresAt.After(now)) {
+	if d.Revoked || (!d.ExpiresAt.UTC().IsZero() && !d.ExpiresAt.UTC().After(now)) {
 		return oauth2.RefreshToken{}, fmt.Errorf("invalid refresh token")
 	}
 
@@ -546,8 +546,8 @@ func toInteractionDoc(it oauth2.Interaction) interactionDoc {
 		Subject:         it.Subject,
 		RequestedScopes: it.RequestedScopes,
 		ExistingScopes:  it.ExistingScopes,
-		CreatedAt:       it.CreatedAt,
-		ExpiresAt:       it.ExpiresAt,
+		CreatedAt:       it.CreatedAt.UTC(),
+		ExpiresAt:       it.ExpiresAt.UTC(),
 		Consumed:        it.Consumed,
 	}
 }
@@ -561,8 +561,8 @@ func (d interactionDoc) toInteraction() oauth2.Interaction {
 		Subject:         d.Subject,
 		RequestedScopes: d.RequestedScopes,
 		ExistingScopes:  d.ExistingScopes,
-		CreatedAt:       d.CreatedAt,
-		ExpiresAt:       d.ExpiresAt,
+		CreatedAt:       d.CreatedAt.UTC(),
+		ExpiresAt:       d.ExpiresAt.UTC(),
 		Consumed:        d.Consumed,
 	}
 }
@@ -612,7 +612,7 @@ func (r *OAuthController) GetInteraction(ctx context.Context, id string) (oauth2
 	}
 
 	now := time.Now().UTC()
-	if d.Consumed || (!d.ExpiresAt.IsZero() && !d.ExpiresAt.After(now)) {
+	if d.Consumed || (!d.ExpiresAt.UTC().IsZero() && !d.ExpiresAt.UTC().After(now)) {
 		return oauth2.Interaction{}, fmt.Errorf("interaction is invalid")
 	}
 

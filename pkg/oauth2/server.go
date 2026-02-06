@@ -388,7 +388,7 @@ func (s *Server) handleGetInteraction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	if it.Consumed || it.ExpiresAt.Before(now) {
+	if it.Consumed || it.ExpiresAt.UTC().Before(now) {
 		writeJSON(w, http.StatusGone, map[string]any{
 			"error": "interaction_expired", "error_description": "interaction expired or consumed",
 		})
@@ -467,7 +467,7 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 	}
 
 	now := time.Now().UTC()
-	if it.Consumed || it.ExpiresAt.Before(now) {
+	if it.Consumed || it.ExpiresAt.UTC().Before(now) {
 		s.log.Warn("Interaction expired or already consumed", zap.String("interaction_id", id))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("access_denied", "interaction expired", http.StatusForbidden))
@@ -702,7 +702,7 @@ func (s *Server) handleTokenAuthorizationCode(w http.ResponseWriter, r *http.Req
 	}
 
 	now := time.Now().UTC()
-	if stored.ExpiresAt.Before(now) {
+	if stored.ExpiresAt.UTC().Before(now) {
 		writeJSONOAuthError(w, oauthErr("invalid_grant", "authorization code expired", http.StatusBadRequest))
 		return
 	}
@@ -777,7 +777,7 @@ func (s *Server) handleTokenRefreshToken(w http.ResponseWriter, r *http.Request)
 	}
 
 	now := time.Now().UTC()
-	if rt.Revoked || rt.ExpiresAt.Before(now) {
+	if rt.Revoked || rt.ExpiresAt.UTC().Before(now) {
 		writeJSONOAuthError(w, oauthErr("invalid_grant", "refresh_token is expired or revoked", http.StatusBadRequest))
 		return
 	}
@@ -1188,7 +1188,7 @@ func introspectAccess(requestingClientID string, at AccessToken, err error, now 
 	if at.ClientID != requestingClientID {
 		return false, map[string]any{"active": false}
 	}
-	if at.Revoked || at.ExpiresAt.Before(now) {
+	if at.Revoked || at.ExpiresAt.UTC().Before(now) {
 		return false, map[string]any{"active": false}
 	}
 
@@ -1216,7 +1216,7 @@ func introspectRefresh(requestingClientID string, rt RefreshToken, err error, no
 	if rt.ClientID != requestingClientID {
 		return false, map[string]any{"active": false}
 	}
-	if rt.Revoked || rt.ExpiresAt.Before(now) {
+	if rt.Revoked || rt.ExpiresAt.UTC().Before(now) {
 		return false, map[string]any{"active": false}
 	}
 
