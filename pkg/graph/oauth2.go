@@ -658,7 +658,7 @@ func (r *OAuthController) ConsumeInteraction(ctx context.Context, id string) (oa
 
 	const aql = `
 LET doc = DOCUMENT(@@its, @key)
-LET _valid = (doc != null && doc.ID == @id) ? 1 : FAIL("interaction_not_found")
+LET _valid = (doc != null && doc.id == @id) ? 1 : FAIL("interaction_not_found")
 LET _once  = (!doc.consumed) ? 1 : FAIL("interaction_already_consumed")
 UPDATE doc WITH { consumed: true } IN @@its OPTIONS { keepNull: false }
 RETURN NEW
