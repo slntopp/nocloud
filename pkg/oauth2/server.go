@@ -467,7 +467,9 @@ func (s *Server) handleConfirmInteraction(w http.ResponseWriter, r *http.Request
 	}
 
 	now := time.Now().UTC()
-	if it.Consumed || it.ExpiresAt.UTC().Before(now) {
+	// No need to check it.Consumed
+	// If it was successfully consumed, then it was not consumed before and we can proceed
+	if it.ExpiresAt.UTC().Before(now) {
 		s.log.Warn("Interaction expired or already consumed", zap.String("interaction_id", id))
 		s.redirectAuthorizeError(w, r, it.RedirectURI, it.State,
 			oauthErr("access_denied", "interaction expired", http.StatusForbidden))
