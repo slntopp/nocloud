@@ -41,7 +41,7 @@ func init() {
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 
-	viper.SetDefault("CORS_ALLOWED", []string{"*"})
+	viper.SetDefault("CORS_ALLOWED", "*")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 

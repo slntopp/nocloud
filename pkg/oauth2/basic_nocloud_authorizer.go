@@ -17,12 +17,19 @@ type BasicAuthorizer struct {
 }
 
 func (b *BasicAuthorizer) Subject(ctx context.Context, r *http.Request) (subject string, ok bool, err error) {
-	header := r.Header.Get("Authorization")
-	segments := strings.Split(header, " ")
-	if len(segments) != 2 {
-		segments = []string{"", ""}
+	var token string
+	tokenCookie, err := r.Cookie("nocloud_token")
+	if err == nil && strings.TrimSpace(tokenCookie.Value) != "" {
+		token = tokenCookie.Value
+	} else {
+		header := r.Header.Get("Authorization")
+		segments := strings.Split(header, " ")
+		if len(segments) != 2 {
+			segments = []string{"", ""}
+		}
+		token = segments[1]
 	}
-	ctx, err = b.Ic.JwtAuthMiddleware(ctx, segments[1])
+	ctx, err = b.Ic.JwtAuthMiddleware(ctx, token)
 	if err != nil {
 		return "", false, nil
 	}
@@ -47,6 +54,7 @@ func (b *BasicAuthorizer) IssueAccessToken(ttl time.Duration, clientID, subject 
 	expirationTime := now.Add(ttl)
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = subject
+	claims[nocloud.NOCLOUD_NOSESSION_CLAIM] = true
 	claims["expires"] = expirationTime.UTC().Unix()
 	claims["exp"] = expirationTime.UTC().Unix()
 	claims["scopes"] = scopes
