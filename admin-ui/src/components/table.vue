@@ -324,7 +324,10 @@ export default {
       default: false,
     },
     serverSidePage: Number,
-    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25, 50] },
+    itemsPerPageOptions: {
+      type: Array,
+      default: () => [10, 25, 50, 100, 500, 1000],
+    },
   },
   data() {
     return {
@@ -426,13 +429,13 @@ export default {
         this.filtredHeaders.splice(
           oldIndex > newIndex ? newIndex : newIndex + 1,
           0,
-          this.filtredHeaders[oldIndex]
+          this.filtredHeaders[oldIndex],
         );
       }
 
       this.filtredHeaders.splice(
         oldIndex > newIndex ? oldIndex + 1 : oldIndex,
-        1
+        1,
       );
 
       this.table = this.filtredHeaders;
@@ -520,7 +523,7 @@ export default {
     },
     saveItemsPerPage(val) {
       let itemsPerPageSettings = JSON.parse(
-        localStorage.getItem("itemsPerPage")
+        localStorage.getItem("itemsPerPage"),
       );
 
       if (!itemsPerPageSettings) {
@@ -531,7 +534,7 @@ export default {
 
       localStorage.setItem(
         "itemsPerPage",
-        JSON.stringify(itemsPerPageSettings)
+        JSON.stringify(itemsPerPageSettings),
       );
     },
     configureColumns() {
@@ -676,7 +679,7 @@ export default {
           });
           Sortable.create(
             el.querySelector("tr"),
-            binding.value ? { ...binding.value, handle: ".sortHandle" } : {}
+            binding.value ? { ...binding.value, handle: ".sortHandle" } : {},
           );
         }, 0);
       },

@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/slntopp/nocloud-proto/registry"
-	config "github.com/slntopp/nocloud/pkg/oauth2/config"
+	"github.com/slntopp/nocloud/pkg/oauth2/config"
 	"github.com/slntopp/nocloud/pkg/oauth2/handlers"
 	"go.uber.org/zap"
 	"net/http"
@@ -53,7 +53,7 @@ func (s *OAuth2Server) registerOAuthHandlers() {
 
 }
 
-func (s *OAuth2Server) Start(port string, corsAllowed []string) {
+func (s *OAuth2Server) Start(port string, corsAllowed []string, d Dependencies) {
 	s.registerOAuthHandlers()
 
 	s.router.HandleFunc("/oauth", func(writer http.ResponseWriter, request *http.Request) {
@@ -78,6 +78,16 @@ func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 		writer.Write(marshal)
 	})
 
+	serverConfig, err := ServerConfig()
+	if err != nil {
+		s.log.Fatal("Failed to read server config", zap.Error(err))
+	}
+	s.log.Info("Server config", zap.Any("config", serverConfig))
+	_, err = NewServer(s.router, serverConfig, d, s.log)
+	if err != nil {
+		s.log.Fatal("Failed to create oauth2 server", zap.Error(err))
+	}
+
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,
 		AllowedHeaders:   []string{"Content-Type", "Authorization", "*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code"},
@@ -86,7 +96,7 @@ func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 	}).Handler(s.router)
 
 	s.log.Debug("listen", zap.String("port", port))
-	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), handler)
+	err = http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), handler)
 	if err != nil {
 		s.log.Fatal("Failed to start server", zap.Error(err))
 	}

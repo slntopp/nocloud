@@ -71,12 +71,12 @@ const props = defineProps({
 });
 
 useSearch({
-  name: "addon-products",
+  name: "addon-products-tab",
   defaultLayout: {
     title: "Default",
     filter: {
-      public: [true],
-      status: [NoCloudStatus.UNSPECIFIED],
+      public: [],
+      status: [],
     },
   },
 });
@@ -175,7 +175,7 @@ const filters = computed(() => {
     return newFilter;
   }, {});
 
-  filters["meta.isIndividual"] = isIndividual.value;
+  filters["meta.isIndividual"] = [isIndividual.value];
 
   if (searchParam.value || filters.title) {
     filters.search_param = searchParam.value || filters.title;

@@ -43,6 +43,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"net/http"
+	"strings"
 	"sync"
 
 	cc "github.com/slntopp/nocloud-proto/billing/billingconnect"
@@ -85,6 +86,8 @@ var (
 
 	whmcsPricesTaxExcluded   bool
 	syncCreatedDateOnPayment bool
+
+	corsAllowed []string
 )
 
 func init() {
@@ -92,6 +95,7 @@ func init() {
 	log = nocloud.NewLogger()
 
 	viper.SetDefault("PORT", "8000")
+	viper.SetDefault("CORS_ALLOWED", "*")
 
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("DB_HOST", "db:8529")
@@ -116,6 +120,7 @@ func init() {
 	viper.SetDefault("SYNC_CREATED_DATE_ON_PAYMENT", false)
 
 	port = viper.GetString("PORT")
+	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
@@ -354,7 +359,7 @@ func main() {
 	host := fmt.Sprintf("0.0.0.0:%s", port)
 
 	handler = cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
+		AllowedOrigins: corsAllowed,
 		AllowedMethods: []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
 		AllowedHeaders: []string{"*", "Connect-Protocol-Version", "grpc-metadata-nocloud-primary-currency-code", "NoCloud-Primary-Currency-Code", "NoCloud-Primary-Currency-Precision-Override",
 			"grpc-metadata-nocloud-primary-currency-precision-override", "nocloud-primary-currency-precision-override"},

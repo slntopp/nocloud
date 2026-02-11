@@ -59,7 +59,7 @@ func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("CORS_ALLOWED", []string{"*"})
+	viper.SetDefault("CORS_ALLOWED", "*")
 	viper.SetDefault("APISERVER_HOST", "proxy:8000")
 	viper.SetDefault("GATEWAY_HOST", ":8000")
 	viper.SetDefault("ADMIN_UI_HOST", ":8080")
@@ -84,7 +84,13 @@ func main() {
 	log.Info("Registering Endpoints", zap.String("server", apiserver))
 	var err error
 
-	gwmux := runtime.NewServeMux()
+	gwmux := runtime.NewServeMux(
+		runtime.WithOutgoingHeaderMatcher(func(key string) (string, bool) {
+			if strings.ToLower(key) == "set-cookie" {
+				return "Set-Cookie", true
+			}
+			return runtime.DefaultHeaderMatcher(key)
+		}))
 	opts := []grpc.DialOption{}
 	if insecure_enabled {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))

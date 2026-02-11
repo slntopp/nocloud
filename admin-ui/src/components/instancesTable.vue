@@ -318,6 +318,7 @@ const headers = computed(() => {
     { text: "OS", value: "config.template_id" },
     { text: "Domain", value: "config.domain" },
     { text: "DCV", value: "resources.dcv" },
+    { text: "Bitrix Domain", value: "resources.bitrix_domain" },
     { text: "Approver email", value: "resources.approver_email" },
     {
       text: "Automatic debit",
@@ -495,6 +496,7 @@ const searchFields = computed(() => [
   { title: "Email", key: "email", type: "input" },
   { title: "Date", key: "created", type: "date" },
   { title: "IP", key: "state.meta.networking", type: "input" },
+  { title: "Bitrix Domain", key: "resources.bitrix_domain", type: "input" },
   {
     key: "resources.cpu",
     type: "number-range",
