@@ -1,7 +1,6 @@
 <template>
   <div class="pa-4 h-100">
-
-
+    
     <div class="d-flex justify-space-between pb-2 mt-4 flex-wrap">
       <div class="d-flex flex-wrap align-center">
         <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/app">app settings</v-btn>
@@ -40,7 +39,7 @@
 
     <nocloud-table
       v-model="selected"
-      table-name="settings"
+      table-name="settings-new"
       item-key="key"
       show-select
       :headers="headers"
@@ -57,14 +56,14 @@
             {{ item.key }}
           </router-link>
 
-          <v-btn icon @click.stop="copyKey(item.key)" class="ml-1">
-            <v-icon>mdi-content-copy</v-icon>
+          <v-btn icon small @click.stop="copyKey(item.key)" class="ml-1">
+            <v-icon small>mdi-content-copy</v-icon>
           </v-btn>
         </div>
       </template>
 
       <template v-slot:[`item.description`]="{ item }">
-        {{ getShortName(item.description, 15) }}
+        {{ getShortName(item.description, 45) }}
       </template>
 
       <template v-slot:[`item.value`]="{ item }">
