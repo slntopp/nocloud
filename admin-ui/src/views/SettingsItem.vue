@@ -53,7 +53,7 @@
 
         <v-row justify="end" class="mt-6 mx-0">
           <confirm-dialog v-if="isEdit" @confirm="deleteSetting">
-            <v-btn text class="mr-3 action-btn-text">Delete</v-btn>
+            <v-btn text color="error" class="mr-3 action-btn-text">Delete</v-btn>
           </confirm-dialog>
 
           <confirm-dialog :disabled="!isValid" @confirm="saveSetting">

@@ -22,15 +22,22 @@
       </div>
     </div>
 
-    <div class="editor-shell">
-      <div ref="editorContainer" class="json-editor"></div>
+    <div :class="{ 'editor-readonly': !isEditing }" class="editor-container">
+      <json-editor-new 
+        ref="editorRef"
+        :value="currentEditorValue"
+        :read-only="!isEditing"
+        @input="handleEditorInput"
+        @change="handleEditorChange"
+        @valid="handleEditorValid"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, shallowRef, watch } from "vue";
-import { JSONEditor } from "vanilla-jsoneditor";
+import { ref, watch } from "vue";
+import JsonEditorNew from "./JsonEditor-New.vue";
 
 const props = defineProps({
   value: {
@@ -49,13 +56,13 @@ const props = defineProps({
 
 const emit = defineEmits(["input", "valid", "save"]);
 
-const editorContainer = ref(null);
-const editor = shallowRef(null);
+const editorRef = ref(null);
 const isEditing = ref(false);
 const isSaving = ref(false);
 const isValidJson = ref(false);
 const currentValue = ref("");
 const originalValue = ref("");
+const currentEditorValue = ref(props.value);
 
 function getFormattedText(val) {
   try {
@@ -65,37 +72,26 @@ function getFormattedText(val) {
   }
 }
 
-function initEditor() {
-  if (editor.value) editor.value.destroy();
+function handleEditorInput(value) {
+  try {
+    currentValue.value = getFormattedText(value);
+    emit("input", value);
+  } catch (e) {
+    console.error("Input error:", e);
+  }
+}
 
-  editor.value = new JSONEditor({
-    target: editorContainer.value,
-    props: {
-      mode: "text",
-      modes: ["text"], 
-      mainMenuBar: true,
-      navigationBar: false,
-      statusBar: false,
-      askToFormat: false,
-      readOnly: !isEditing.value,
-      content: {
-        text: getFormattedText(props.value),
-      },
-      onChangeText: (text) => {
-        try {
-          JSON.parse(text);
-          
-          isValidJson.value = true;
-          currentValue.value = text;
-          emit("valid", true);
-          emit("input", text);
-        } catch (e) {
-          isValidJson.value = false;
-          emit("valid", false);
-        }
-      },
-    },
-  });
+function handleEditorChange(value) {
+  try {
+    currentValue.value = getFormattedText(value);
+  } catch (e) {
+    console.error("Change error:", e);
+  }
+}
+
+function handleEditorValid(isValid) {
+  isValidJson.value = isValid;
+  emit("valid", isValid);
 }
 
 async function handleSave() {
@@ -121,37 +117,28 @@ function handleCancel() {
   isEditing.value = false;
   isValidJson.value = false;
   currentValue.value = originalValue.value;
-  if (editor.value) {
-    editor.value.update({
-      content: { text: getFormattedText(props.value) },
-    });
-  }
+  currentEditorValue.value = JSON.parse(originalValue.value);
 }
 
 watch(isEditing, () => {
-  initEditor();
+  if (isEditing.value) {
+    currentEditorValue.value = props.value;
+  }
 });
 
 watch(
   () => props.value,
   (newVal) => {
-    if (editor.value && !isEditing.value) {
-      editor.value.update({
-        content: { text: getFormattedText(newVal) },
-      });
+    if (!isEditing.value) {
+      currentEditorValue.value = newVal;
+      originalValue.value = getFormattedText(newVal);
     }
   },
   { deep: true }
 );
 
-onMounted(() => {
-  originalValue.value = getFormattedText(props.value);
-  initEditor();
-});
-
-onUnmounted(() => {
-  if (editor.value) editor.value.destroy();
-});
+originalValue.value = getFormattedText(props.value);
+currentEditorValue.value = props.value;
 </script>
 
 <style scoped lang="scss">
@@ -184,95 +171,28 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.editor-shell {
+.editor-container {
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  background: var(--v-background-light-base);
-  height: 70vh;
   flex: 1;
 }
 
-.json-editor {
-  height: 100%;
-  width: 100%;
-  font-family: "JetBrains Mono", monospace;
-
-  --jse-background-color: #ffffff;
-  --jse-panel-background: #f5f5f5;
-  --jse-text-color: #1a1a1a;
-  --jse-menu-background: #f0f0f0;
-  --jse-menu-color: #5c5c5c;
-  --jse-menu-button-size: 32px;
+.editor-readonly {
+  position: relative;
+  cursor: not-allowed;
   
-  --jse-menu-button-color-selected: #ffffff;
-  --jse-menu-button-background-highlight: #e0e0e0;
-  --jse-menu-button-background-selected: #aeaeae;
-  
-  --jse-key-color: #1a01cc;
-  --jse-string-color: #00802b;
-  --jse-number-color: #d13600;
-  --jse-delimiter-color: #333333;
-  --jse-theme-color: #b4b4b4;
-}
-</style>
-
-<style lang="scss">
-.jse-main, .jse-contents, .jse-text-mode {
-  border: none !important;
-  box-shadow: none !important;
-}
-
-.jse-menu {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
-  background-color: var(--jse-menu-background) !important;
-}
-
-.jse-menu button {
-  transition: all 0.2s ease !important;
-  
-  &:hover:not([disabled]) {
-    background-color: #a80bae !important;
-    color: white !important;
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    cursor: not-allowed;
+    z-index: 10;
+    border-radius: 12px;
+    pointer-events: none;
   }
-}
-
-.jse-menu button {
-  &[title="table"] {
-    display: none !important;
-  }
-}
-
-button[title*="table"] {
-  display: none !important;
-}
-
-.v-application.theme--dark {
-  .json-editor {
-    --jse-background-color: #1a1c2a;
-    --jse-panel-background: #1a1c2a;
-    --jse-text-color: #e5e7eb;
-    --jse-menu-background: #0e061d;
-    --jse-menu-color: #ffffff;
-    --jse-menu-button-color: #cccccc;
-    --jse-menu-button-background-highlight: #251b3d;
-    --jse-menu-button-color-selected: #ffffff;
-    --jse-menu-button-background-selected: #a80bae;
-    
-    --jse-key-color: #74b1f6;
-    --jse-string-color: #34d399;
-    --jse-number-color: #c4b5fd;
-    --jse-delimiter-color: #94a3b8;
-  }
-
-  .jse-message.jse-info {
-    background-color: #2e1a47 !important;
-    border: 1px solid #a80bae !important;
-    .jse-message-text { color: white !important; }
-  }
-}
-
-.jse-text-mode {
-  border: none !important;
 }
 </style>
