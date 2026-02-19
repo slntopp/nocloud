@@ -115,6 +115,12 @@ export default {
           component: () => import("@/components/ServicesProvider/nebula.vue"),
         });
 
+      if (this.sp?.type === "bitrix24")
+        tabs.splice(3, 0, {
+          title: "Licences",
+          component: () => import("@/components/ServicesProvider/licences.vue"),
+        });
+
       return tabs;
     },
     title() {
