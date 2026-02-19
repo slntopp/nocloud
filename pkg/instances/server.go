@@ -32,6 +32,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 	"slices"
+	"strings"
 	go_sync "sync"
 	"time"
 
@@ -1027,6 +1028,9 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			query += fmt.Sprintf(` FILTER CONTAINS(node.config.domain, "%s")`, val.GetStringValue())
 		} else if key == "config.configuration.vps_os" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.config.configuration.vps_os, "%s")`, val.GetStringValue())
+		} else if strings.HasPrefix(key, "resources.") {
+			field := strings.TrimPrefix(key, "resources.")
+			query += fmt.Sprintf(` FILTER TO_STRING(node.resources.%s) == "%s"`, field, val.GetStringValue())
 		} else if key == "type" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
