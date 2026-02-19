@@ -92,12 +92,13 @@ import api from "@/api";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import useSearch from "@/hooks/useSearch";
-const props = defineProps(["template"]);
 import plansAutoComplete from "@/components/ui/plansAutoComplete.vue";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
 import { timestampToDateTimeLocal, formatDateToTimestamp } from "@/functions";
 
-const { template } = toRefs(props);
+
+const props = defineProps(["template",'plan']);
+const { template, plan } = toRefs(props);
 
 const store = useStore();
 useSearch({
@@ -123,7 +124,7 @@ const isPlansLoading = ref(false);
 
 const tableOptions = ref({
   page: 1,
-  itemsPerPage: 20,
+  itemsPerPage: 10,
   sortBy: [],
   sortDesc: [],
 });
@@ -141,55 +142,56 @@ const searchParam = computed(() => store.getters["appSearch/param"]);
 
 const sp = computed(() => template.value.uuid);
 
-const searchFields = computed(() => [
-  {
-    key: "domain",
-    title: "Domain",
-    type: "input",
-  },
+const searchFields = computed(() =>
+  [
+    {
+      key: "domain",
+      title: "Domain",
+      type: "input",
+    },
+    !plan.value && {
+      key: "app_key",
+      custom: true,
+      fetchValue: true,
+      title: "Plan",
+      label: "Plan",
+      clearable: true,
+      customParams: { filters: { type: ["bitrix24"] } },
+      component: plansAutoComplete,
+    },
+    {
+      key: "is_trial",
+      title: "Trial Status",
+      type: "select",
+      items: [
+        { text: "All", value: null },
+        { text: "Trial", value: true },
+        { text: "Not Trial", value: false },
+      ],
+    },
+    {
+      key: "suspended",
+      title: "Status",
+      type: "select",
+      items: [
+        { text: "All", value: null },
+        { text: "Suspended", value: true },
+        { text: "Active", value: false },
+      ],
+    },
+    {
+      key: "licence_expires",
+      title: "License Expires",
+      type: "date",
+    },
 
-  {
-    key: "app_key",
-    custom: true,
-    fetchValue: true,
-    title: "Plan",
-    label: "Plan",
-    clearable: true,
-    customParams: { filters: { type: ["bitrix24"] } },
-    component: plansAutoComplete,
-  },
-  {
-    key: "is_trial",
-    title: "Trial Status",
-    type: "select",
-    items: [
-      { text: "All", value: null },
-      { text: "Trial", value: true },
-      { text: "Not Trial", value: false },
-    ],
-  },
-  {
-    key: "suspended",
-    title: "Status",
-    type: "select",
-    items: [
-      { text: "All", value: null },
-      { text: "Suspended", value: true },
-      { text: "Active", value: false },
-    ],
-  },
-  {
-    key: "licence_expires",
-    title: "License Expires",
-    type: "date",
-  },
-
-  {
-    key: "trial_expires",
-    title: "Trial Expires",
-    type: "date",
-  },
-]);
+    {
+      key: "trial_expires",
+      title: "Trial Expires",
+      type: "date",
+    },
+  ].filter((v) => !!v),
+);
 
 const formatDate = (date) => {
   if (!date) return "-";
@@ -212,9 +214,7 @@ const getProduct = (plan, product, meta) => {
     return product;
   }
 
-  return `${productData.title || product} (${
-    meta?.free_processed_pages_count || 0
-  })`;
+  return productData.title || product;
 };
 
 const buildPayload = () => {
@@ -225,12 +225,12 @@ const buildPayload = () => {
     sort_dir: tableOptions.value.sortDesc?.[0] ? "desc" : "asc",
   };
 
-  if (filter.value.domain) {
-    payload.domain = filter.value.domain;
+  if (filter.value.domain || searchParam.value) {
+    payload.domain = filter.value.domain || searchParam.value;
   }
 
-  if (filter.value.app_key) {
-    payload.app_key = filter.value.app_key;
+  if (filter.value.app_key || plan.value) {
+    payload.app_key = filter.value.app_key || plan.value;
   }
 
   if (Array.isArray(filter.value.is_trial) && filter.value.is_trial.length) {
