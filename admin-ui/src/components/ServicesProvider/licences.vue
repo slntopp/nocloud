@@ -123,7 +123,7 @@ const isPlansLoading = ref(false);
 
 const tableOptions = ref({
   page: 1,
-  itemsPerPage: 20,
+  itemsPerPage: 10,
   sortBy: [],
   sortDesc: [],
 });
@@ -212,9 +212,7 @@ const getProduct = (plan, product, meta) => {
     return product;
   }
 
-  return `${productData.title || product} (${
-    meta?.free_processed_pages_count || 0
-  })`;
+  return productData.title || product;
 };
 
 const buildPayload = () => {
@@ -225,8 +223,8 @@ const buildPayload = () => {
     sort_dir: tableOptions.value.sortDesc?.[0] ? "desc" : "asc",
   };
 
-  if (filter.value.domain) {
-    payload.domain = filter.value.domain;
+  if (filter.value.domain || searchParam.value) {
+    payload.domain = filter.value.domain || searchParam.value;
   }
 
   if (filter.value.app_key) {
