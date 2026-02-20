@@ -33,7 +33,7 @@
       v-model="selectedLicence"
       :headers="headers"
       :items="licences"
-      table-name="licences-table"
+      table-name="sp-licences-table"
       :footer-error="fetchError"
       :options.sync="tableOptions"
       :server-items-length="totalLicences"
@@ -52,6 +52,38 @@
         <span v-if="!isPlansLoading">
           {{ getProduct(item.app_key, value, item.licence_metadata) }}
         </span>
+        <v-skeleton-loader type="text" v-else />
+      </template>
+
+      <template v-slot:[`item.account`]="{ item }">
+        <router-link
+          v-if="!isAccountsLoading && !isInstancesLoading"
+          :to="{
+            name: 'Account',
+            params: {
+              accountId: getAccount(item.licence_metadata.nocloud_instance)
+                ?.uuid,
+            },
+          }"
+        >
+          {{ getAccount(item.licence_metadata.nocloud_instance)?.title }}
+        </router-link>
+        <v-skeleton-loader type="text" v-else />
+      </template>
+
+      <template v-slot:[`item.instance`]="{ item }">
+        <router-link
+          v-if="!isInstancesLoading"
+          :to="{
+            name: 'Instance',
+            params: { instanceId: item.licence_metadata.nocloud_instance },
+          }"
+        >
+          {{
+            getInstance(item.licence_metadata.nocloud_instance)?.instance?.title
+          }}
+        </router-link>
+
         <v-skeleton-loader type="text" v-else />
       </template>
 
@@ -96,8 +128,7 @@ import plansAutoComplete from "@/components/ui/plansAutoComplete.vue";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
 import { timestampToDateTimeLocal, formatDateToTimestamp } from "@/functions";
 
-
-const props = defineProps(["template",'plan']);
+const props = defineProps(["template", "plan"]);
 const { template, plan } = toRefs(props);
 
 const store = useStore();
@@ -122,6 +153,12 @@ const totalLicences = ref(0);
 const plans = ref({});
 const isPlansLoading = ref(false);
 
+const accounts = ref({});
+const isAccountsLoading = ref(false);
+
+const instances = ref({});
+const isInstancesLoading = ref(false);
+
 const tableOptions = ref({
   page: 1,
   itemsPerPage: 10,
@@ -131,6 +168,8 @@ const tableOptions = ref({
 
 const headers = ref([
   { text: "Domain", value: "domain" },
+  { text: "Instance", value: "instance" },
+  { text: "Account", value: "account" },
   { text: "Plan", value: "app_key" },
   { text: "Tariff Key", value: "tariff_key" },
   { text: "License Expires", value: "licence_expires_at" },
@@ -201,6 +240,16 @@ const formatDate = (date) => {
 
 const getPlan = (uuid) => {
   return plans.value[uuid];
+};
+
+const getAccount = (instanceUuid) => {
+  const accountId = getInstance(instanceUuid)?.account;
+
+  return accounts.value[accountId];
+};
+
+const getInstance = (uuid) => {
+  return instances.value[uuid];
 };
 
 const getProduct = (plan, product, meta) => {
@@ -308,6 +357,7 @@ const setTrialEndDate = async () => {
 
   try {
     isTrialLoading.value = true;
+    fetchError.value = "";
 
     await Promise.all(
       selectedLicence.value.map((licence) =>
@@ -328,9 +378,8 @@ const setTrialEndDate = async () => {
     trialEndDate.value = timestampToDateTimeLocal(
       new Date(Date.now()).getTime() / 1000,
     );
-
-    console.log("Trial end date set successfully");
   } catch (e) {
+    fetchError.value = `Error setting trial end date: ${e.message}`;
     console.error("Error setting trial end date:", e);
   } finally {
     isTrialLoading.value = false;
@@ -353,13 +402,63 @@ watch(licences, () => {
         plans.value[uuid] = api.plans.get(uuid);
         plans.value[uuid] = await plans.value[uuid];
       }
+    } catch (e) {
+      console.error(`Error fetching plan ${uuid}:`, e);
+      delete plans.value[uuid];
     } finally {
       isPlansLoading.value = Object.values(plans.value).some(
         (acc) => acc instanceof Promise,
       );
     }
   });
+
+  licences.value.forEach(async (license) => {
+    const instanceId = license.licence_metadata.nocloud_instance;
+    isInstancesLoading.value = true;
+    try {
+      if (!instances.value[instanceId]) {
+        instances.value[instanceId] = store.getters[
+          "instances/instancesClient"
+        ].get({ uuid: instanceId });
+
+        instances.value[instanceId] = await instances.value[instanceId];
+      }
+    } catch (e) {
+      console.error(`Error fetching instance ${instanceId}:`, e);
+      delete instances.value[instanceId];
+    } finally {
+      isInstancesLoading.value = Object.values(instances.value).some(
+        (acc) => acc instanceof Promise,
+      );
+    }
+  });
 });
+
+watch(
+  isInstancesLoading,
+  () => {
+    Object.values(instances.value).forEach(async (instance) => {
+      const accountId = instance.account;
+
+      isAccountsLoading.value = true;
+      try {
+        if (!accounts.value[accountId]) {
+          accounts.value[accountId] = api.accounts.get(accountId);
+
+          accounts.value[accountId] = await accounts.value[accountId];
+        }
+      } catch (e) {
+        console.error(`Error fetching account ${accountId}:`, e);
+        delete accounts.value[accountId];
+      } finally {
+        isAccountsLoading.value = Object.values(accounts.value).some(
+          (acc) => acc instanceof Promise,
+        );
+      }
+    });
+  },
+  { deep: true },
+);
 
 onMounted(() => {
   fetchLicences();
