@@ -61,12 +61,12 @@
           :to="{
             name: 'Account',
             params: {
-              accountId: getAccount(item.licence_metadata.nocloud_instance)
+              accountId: getAccount(item.licence_metadata?.nocloud_instance)
                 ?.uuid,
             },
           }"
         >
-          {{ getAccount(item.licence_metadata.nocloud_instance)?.title }}
+          {{ getAccount(item.licence_metadata?.nocloud_instance)?.title }}
         </router-link>
         <v-skeleton-loader type="text" v-else />
       </template>
@@ -76,11 +76,11 @@
           v-if="!isInstancesLoading"
           :to="{
             name: 'Instance',
-            params: { instanceId: item.licence_metadata.nocloud_instance },
+            params: { instanceId: item.licence_metadata?.nocloud_instance },
           }"
         >
           {{
-            getInstance(item.licence_metadata.nocloud_instance)?.instance?.title
+            getInstance(item.licence_metadata?.nocloud_instance)?.instance?.title
           }}
         </router-link>
 
@@ -413,7 +413,7 @@ watch(licences, () => {
   });
 
   licences.value.forEach(async (license) => {
-    const instanceId = license.licence_metadata.nocloud_instance;
+    const instanceId = license.licence_metadata?.nocloud_instance;
     isInstancesLoading.value = true;
     try {
       if (!instances.value[instanceId]) {
