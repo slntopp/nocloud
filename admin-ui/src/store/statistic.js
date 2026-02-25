@@ -1,6 +1,6 @@
 import api from "@/api";
 import { formatToYYMMDD } from "@/functions";
-import qs from 'qs';
+import qs from "qs";
 
 const getCacheKey = (params) => JSON.stringify(params);
 
@@ -22,38 +22,46 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit, state }, params) {
+    async fetch({ commit, state }, { withCache = true, ...params }) {
       const cacheKey = getCacheKey(params);
 
-      if (state.cached[cacheKey]) {
+      if (withCache && state.cached[cacheKey]) {
         return state.cached[cacheKey];
       }
 
       try {
         commit("setLoading", true);
 
-        commit("setToCached", {
-          key: cacheKey,
-          value: api.get(`/statistic/${params.entity}`, {
-            params: params.params,
-            paramsSerializer: (params) =>
-              qs.stringify(params, { arrayFormat: "repeat" }),
-          }),
+        const promise = api.get(`/statistic/${params.entity}`, {
+          params: params.params,
+          paramsSerializer: (params) =>
+            qs.stringify(params, { arrayFormat: "repeat" }),
         });
 
-        const response = await state.cached[cacheKey];
+        if (withCache) {
+          commit("setToCached", {
+            key: cacheKey,
+            value: promise,
+          });
 
-        commit("setToCached", { key: cacheKey, value: response });
+          const response = await state.cached[cacheKey];
 
-        return response;
+          commit("setToCached", { key: cacheKey, value: response });
+
+          return response;
+        } else {
+          return promise;
+        }
       } catch {
-        commit("setToCached", { key: cacheKey, value: null });
+        if (withCache) {
+          commit("setToCached", { key: cacheKey, value: null });
+        }
       } finally {
         commit(
           "setLoading",
           Object.keys(state.cached).some(
-            (key) => state.cached[key] instanceof Promise
-          )
+            (key) => state.cached[key] instanceof Promise,
+          ),
         );
       }
     },
@@ -62,7 +70,11 @@ export default {
         params: params.params,
       });
     },
-    async getForChart({ dispatch }, { periods, periodType, entity, params }) {
+    async getForChart(
+      { dispatch },
+      { periods, periodType, entity, params, withCache = true },
+    ) {
+
       let interval = "1 day";
 
       if (periodType.split("-")[1]) {
@@ -76,6 +88,7 @@ export default {
           with_timeseries: true,
           bucket_interval: interval,
         },
+        withCache,
       };
 
       const data = await Promise.all(
@@ -84,7 +97,7 @@ export default {
           dataParams.params.end_date = formatToYYMMDD(period[1]);
 
           return dispatch("fetch", dataParams);
-        })
+        }),
       );
 
       data.forEach((data) => {

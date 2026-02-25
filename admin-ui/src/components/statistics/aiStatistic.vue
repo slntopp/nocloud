@@ -28,6 +28,7 @@
     >
       <template v-slot:content>
         <default-chart
+          ref="chartRef"
           description="AI statistics"
           :type="type"
           :series="series"
@@ -116,9 +117,20 @@
         :key="point.series"
         class="data_point_menu"
       >
-        <v-card-title>{{
-          `${point?.series}: ${point?.category} - ${point?.value} ${defaultCurrency.code}`
-        }}</v-card-title>
+        <v-card-title>
+          <router-link
+            v-if="fields === 'accounts'"
+            :to="{ name: 'Account', params: { accountId: point?.series } }"
+          >
+            {{ getSeriesName(point?.series) }}
+          </router-link>
+
+          <span v-else>
+            {{ getSeriesName(point?.series) }}
+          </span>
+
+          {{ `: ${point?.category} - ${point?.value} ${defaultCurrency.code}` }}
+        </v-card-title>
 
         <template v-if="fields !== 'accounts'">
           <v-card-subtitle class="subtitle">Accounts:</v-card-subtitle>
@@ -171,7 +183,7 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { computed, onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, shallowRef, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
@@ -225,27 +237,64 @@ const agentTypes = ref([
 ]);
 const agentType = ref("all");
 
-const allModels = ref(new Set());
+const allModels = shallowRef(new Set());
 const selectedModels = ref([]);
 
 const isAccountsLoading = ref(false);
 const allAccounts = ref([]);
-const fullAccounts = ref(new Map());
+const fullAccounts = shallowRef(new Map());
 const selectedAccounts = ref([]);
 
 const selectedProviders = ref([]);
 
-const series = ref([]);
-const categories = ref([]);
-const summary = ref({});
+const series = shallowRef([]);
+const categories = shallowRef([]);
+const summary = shallowRef({});
 
 const isDataLoading = ref(false);
-const chartData = ref();
+const chartData = shallowRef();
 
 const aiConfig = ref({ models: [] });
 
 const isSelectedPointOpen = ref(false);
 const selectedDataPoints = ref([]);
+
+const chartRef = ref(null);
+
+const processedDataCache = new Map();
+const CACHE_MAX_SIZE = 3;
+
+function getCacheKey(params) {
+  return JSON.stringify({
+    periodType: params.periodType,
+    periods: params.periods,
+    fields: params.fields,
+    models: params.models?.sort(),
+    accounts: params.accounts?.sort(),
+    agents: params.agents?.sort(),
+  });
+}
+
+function getCachedProcessedData(key) {
+  return processedDataCache.get(key) || null;
+}
+
+function setCachedProcessedData(key, data) {
+  if (processedDataCache.size >= CACHE_MAX_SIZE) {
+    const firstKey = processedDataCache.keys().next().value;
+    processedDataCache.delete(firstKey);
+  }
+
+  processedDataCache.set(key, data);
+}
+
+function getSeriesName(series) {
+  if (fields.value === "accounts") {
+    return fullAccounts.value.get(series)?.label || series;
+  }
+
+  return series;
+}
 
 onMounted(async () => {
   try {
@@ -282,7 +331,7 @@ const currentModels = computed(() => {
   const accepted = [...providersModels.value];
 
   return [...allModels.value.values()].filter((model) =>
-    accepted.includes(model.value)
+    accepted.includes(model.value),
   );
 });
 
@@ -299,16 +348,27 @@ const chartOptions = computed(() => {
         const categories = w.globals.labels;
         const category = categories[dataPointIndex];
 
+        let data = JSON.parse(JSON.stringify(series.value));
+
+        data = data
+          .map((serie, index) => ({ ...serie, index }))
+          .sort((a, b) => {
+            const valA = a.data?.[dataPointIndex] || 0;
+            const valB = b.data?.[dataPointIndex] || 0;
+            return valB - valA;
+          })
+          .slice(0, 5);
+
         let html = `<div class="apexcharts-tooltip-title">Date: ${category}</div>`;
-        for (let i = 0; i < series.value.length; i++) {
-          const val = series.value[i].data?.[dataPointIndex];
+        for (let i = 0; i < data.length; i++) {
+          const val = data[i].data?.[dataPointIndex];
           if (val == null) continue;
 
-          let seriesName = w.globals.seriesNames[i];
+          let seriesName = w.globals.seriesNames[data[i].index];
 
-          const color = w.globals.colors[i];
+          const color = w.globals.colors[data[i].index];
 
-          const meta = series.value?.[i]?.meta?.[dataPointIndex] || {};
+          const meta = data[i]?.meta?.[dataPointIndex] || {};
 
           const { accounts = [], agents = [], models = [] } = meta;
 
@@ -364,6 +424,9 @@ const chartOptions = computed(() => {
       events: {
         dataPointSelection: onColumnClick,
       },
+      animations: {
+        enabled: false,
+      },
     },
   };
 
@@ -390,28 +453,32 @@ async function fetchData() {
   isDataLoading.value = true;
 
   try {
-    chartData.value = await store.dispatch("statistic/getForChart", {
-      entity: "ai/transactions",
-      periodType: periodType.value,
-      periods: !comparable.value
-        ? [period.value]
-        : [periods.value.first, periods.value.second],
-      params: {
-        raw: fields.value !== "revenue",
-        models: selectedModels.value.length
-          ? selectedModels.value
-          : providersModels.value.length
-          ? providersModels.value
-          : undefined,
-        accounts: selectedAccounts.value.length
-          ? selectedAccounts.value
-          : undefined,
-        agents:
-          agentType.value !== "all"
-            ? [agentType.value]
-            : agentTypes.value.map((a) => a.value).filter((a) => a !== "all"),
+    chartData.value = await store.dispatch(
+      "statistic/getForChart",
+      {
+        entity: "ai/transactions",
+        periodType: periodType.value,
+        periods: !comparable.value
+          ? [period.value]
+          : [periods.value.first, periods.value.second],
+        params: {
+          raw: fields.value !== "revenue",
+          models: selectedModels.value.length
+            ? selectedModels.value
+            : providersModels.value.length
+            ? providersModels.value
+            : undefined,
+          accounts: selectedAccounts.value.length
+            ? selectedAccounts.value
+            : undefined,
+          agents:
+            agentType.value !== "all"
+              ? [agentType.value]
+              : agentTypes.value.map((a) => a.value).filter((a) => a !== "all"),
+        },
+        withCache: false,
       },
-    });
+    );
   } finally {
     isDataLoading.value = false;
   }
@@ -429,7 +496,7 @@ function getValue(value) {
 
 const onColumnClick = (...args) => {
   const { dataPointIndex } = args[2];
-  selectedDataPoints.value = series.value
+  const points = series.value
     .map((serie) => ({
       series: serie.name,
       meta: serie.meta[dataPointIndex],
@@ -437,6 +504,10 @@ const onColumnClick = (...args) => {
       category: categories.value[dataPointIndex],
     }))
     .filter((v) => !!v.value);
+
+  points.sort((a, b) => b.value - a.value);
+
+  selectedDataPoints.value = points;
 
   isSelectedPointOpen.value = true;
 };
@@ -460,6 +531,11 @@ async function fetchAccounts(accounts) {
       accountsToFetch.push(account);
     }
   });
+
+  if (accountsToFetch.length === 0) {
+    return;
+  }
+
   isAccountsLoading.value = true;
   await Promise.allSettled(
     accountsToFetch.map(async (uuid) => {
@@ -474,7 +550,7 @@ async function fetchAccounts(accounts) {
       } catch (e) {
         fullAccounts.value.delete(uuid);
       }
-    })
+    }),
   );
 
   isAccountsLoading.value = false;
@@ -499,7 +575,7 @@ watch(
     } else {
       fetchDataDebounced();
     }
-  }
+  },
 );
 
 watch(fields, () => {
@@ -513,34 +589,69 @@ watch([chartData, fields], () => {
     return;
   }
 
+  const cacheKey = getCacheKey({
+    periodType: periodType.value,
+    periods: !comparable.value
+      ? [period.value]
+      : [periods.value.first, periods.value.second],
+    fields: fields.value,
+    models: selectedModels.value.length
+      ? selectedModels.value
+      : providersModels.value.length
+      ? providersModels.value
+      : undefined,
+    accounts: selectedAccounts.value.length
+      ? selectedAccounts.value
+      : undefined,
+    agents:
+      agentType.value !== "all"
+        ? [agentType.value]
+        : agentTypes.value.map((a) => a.value).filter((a) => a !== "all"),
+  });
+
+  const cached = getCachedProcessedData(cacheKey);
+  if (cached) {
+    series.value = cached.series;
+    categories.value = cached.categories;
+    summary.value = cached.summary;
+
+    if (chartRef.value) {
+      chartRef.value.updateChart(
+        cached.series,
+        cached.categories,
+        cached.summary,
+      );
+    }
+    return;
+  }
+
   const newSeries = [];
   const newCategories = [];
-  summary.value = {};
+  const newSummary = {};
 
-  const tempData = JSON.parse(JSON.stringify(chartData.value));
+  const tempData = structuredClone
+    ? structuredClone(chartData.value)
+    : JSON.parse(JSON.stringify(chartData.value));
 
   if (fields.value === "revenue") {
     Object.keys(
-      comparable.value ? periods.value : { first: period.value }
+      comparable.value ? periods.value : { first: period.value },
     ).forEach((key) => {
       newSeries.push({
         name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
-          periods.value[key][1]
+          periods.value[key][1],
         )}`,
         data: [],
         meta: [],
       });
     });
 
-    for (
-      let index = 0;
-      index <
-      Math.max(
-        tempData[0]?.timeseries?.length || 0,
-        tempData[1]?.timeseries?.length || 0
-      );
-      index++
-    ) {
+    const maxLength = Math.max(
+      tempData[0]?.timeseries?.length || 0,
+      tempData[1]?.timeseries?.length || 0,
+    );
+
+    for (let index = 0; index < maxLength; index++) {
       const first = tempData[0]?.timeseries?.[index];
       const second = tempData[1]?.timeseries?.[index];
 
@@ -564,8 +675,8 @@ watch([chartData, fields], () => {
     }
 
     newSeries.forEach((serie) => {
-      summary.value[serie.name] = getValue(
-        serie.data.reduce((acc, a) => acc + a, 0) || 0
+      newSummary[serie.name] = getValue(
+        serie.data.reduce((acc, a) => acc + a, 0) || 0,
       );
     });
   } else {
@@ -581,7 +692,7 @@ watch([chartData, fields], () => {
         dataKey = timeserie.model;
       } else if (fields.value === "providers") {
         dataKey = Object.keys(modelsByProviders.value).find((provider) =>
-          modelsByProviders.value[provider].includes(timeserie.model)
+          modelsByProviders.value[provider].includes(timeserie.model),
         );
       }
 
@@ -640,21 +751,19 @@ watch([chartData, fields], () => {
     }
 
     newSeries.forEach((serie) => {
-      summary.value[serie.name] = getValue(
+      newSummary[serie.name] = getValue(
         Object.keys(dataMap[serie.name]).reduce(
           (acc, key) => acc + dataMap[serie.name][key]?.revenue,
-          0
-        ) || 0
+          0,
+        ) || 0,
       );
     });
-
-    console.log(summary.value);
   }
 
   const accounts = [];
   tempData.forEach((data) => {
     data.summary?.models?.forEach((model) =>
-      allModels.value.add({ label: model, value: model })
+      allModels.value.add({ label: model, value: model }),
     );
 
     data.summary?.accounts?.forEach((account) => accounts.push(account));
@@ -666,6 +775,21 @@ watch([chartData, fields], () => {
 
   series.value = newSeries;
   categories.value = newCategories.map((c) => c.toString().split("T")[0]);
+  summary.value = newSummary;
+
+  setCachedProcessedData(cacheKey, {
+    series: newSeries,
+    categories: newCategories.map((c) => c.toString().split("T")[0]),
+    summary: newSummary,
+  });
+
+  if (chartRef.value) {
+    chartRef.value.updateChart(
+      newSeries,
+      newCategories.map((c) => c.toString().split("T")[0]),
+      newSummary,
+    );
+  }
 });
 
 watch(
@@ -673,7 +797,7 @@ watch(
   (accounts) => {
     fetchAccountsDebounced(accounts);
   },
-  { deep: true }
+  { deep: true },
 );
 </script>
 
