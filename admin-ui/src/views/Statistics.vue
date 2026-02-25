@@ -43,9 +43,10 @@ import InstancesIncomeStatistic from "@/components/statistics/instancesIncomeSta
 import ChatsStatistics from "@/components/statistics/chatsStatistics.vue";
 import RevenueStatistics from "@/components/statistics/revenueStatistics.vue";
 import aiStatistic from "../components/statistics/aiStatistic.vue";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useStore } from "@/store/";
 import { useRoute } from "vue-router/composables";
+import router from "../router";
 
 const store = useStore();
 const route = useRoute();
@@ -115,6 +116,11 @@ onBeforeUnmount(() => {
   store.commit("statistic/clearCache");
 });
 
+watch(tab, (newValue) => {
+  router.replace({ query: { ...route.query, tab: widgets[newValue].key } });
+  store.commit("statistic/clearCache");
+});
+
 const saveWidgetsData = () => {
   localStorage.setItem(
     "nocloud-statistic",
@@ -124,7 +130,7 @@ const saveWidgetsData = () => {
       periodsFirstOffset: periodsFirstOffset.value,
       periodsSecondOffset: periodsSecondOffset.value,
       periodOffset: periodOffset.value,
-    })
+    }),
   );
 };
 

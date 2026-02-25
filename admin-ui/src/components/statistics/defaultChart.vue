@@ -1,5 +1,6 @@
 <template>
   <apexchart
+    ref="apexChartRef"
     :height="height"
     :options="chartOptions"
     :type="type"
@@ -8,7 +9,7 @@
 </template>
 
 <script setup>
-import { computed, ref, toRefs } from "vue";
+import { computed, ref, shallowRef, toRefs } from "vue";
 import apexchart from "vue-apexcharts";
 import { useStore } from "@/store";
 import { getApexChartsColors } from "@/functions";
@@ -27,14 +28,40 @@ const { categories, series, summary, type, stacked, description, options } =
 
 const store = useStore();
 
+const apexChartRef = ref(null);
+
 const colors = getApexChartsColors();
 
 const height = ref(window.innerHeight * 0.7);
 
+const internalSeries = shallowRef(series.value || []);
+const internalCategories = shallowRef(categories.value || []);
+const internalSummary = shallowRef(summary.value || {});
+
+const updateChart = (newSeries, newCategories, newSummary) => {
+  internalSeries.value = newSeries;
+  internalCategories.value = newCategories;
+  internalSummary.value = newSummary;
+  
+  if (apexChartRef.value) {
+    const coloredData = newSeries.map((v, index) => ({ ...v, color: colors[index] }));
+    apexChartRef.value.updateSeries(coloredData, false);  
+    apexChartRef.value.updateOptions({
+      xaxis: {
+        categories: newCategories,
+      },
+    }, false, false);
+  }
+};
+
+defineExpose({
+  updateChart,
+});
+
 const chartOptions = computed(() => ({
   ...(options.value || {}),
   dataLabels: {
-    enabled: series.value?.[0]?.data?.length < 35,
+    enabled: (internalSeries.value?.[0]?.data?.length || series.value?.[0]?.data?.length) < 35,
     style:
       store.getters["app/theme"] == "light"
         ? {
@@ -58,7 +85,7 @@ const chartOptions = computed(() => ({
     stacked: !!stacked.value,
   },
   xaxis: {
-    categories: categories.value,
+    categories: internalCategories.value?.length ? internalCategories.value : categories.value,
   },
   legend: {
     onItemClick: {
@@ -67,9 +94,11 @@ const chartOptions = computed(() => ({
     show: true,
     showForSingleSeries: true,
     formatter: function (val, opts) {
+      const currentSummary = Object.keys(internalSummary.value).length ? internalSummary.value : summary.value;
+      const currentSeries = internalSeries.value?.length ? internalSeries.value : series.value;
       return `${val} ${
-        summary.value[series.value[opts.seriesIndex]?.name]
-          ? summary.value[series.value[opts.seriesIndex]?.name]
+        currentSummary[currentSeries[opts.seriesIndex]?.name]
+          ? currentSummary[currentSeries[opts.seriesIndex]?.name]
           : ""
       }`;
     },
@@ -78,6 +107,7 @@ const chartOptions = computed(() => ({
 }));
 
 const coloredSeries = computed(() => {
-  return series.value.map((v, index) => ({ ...v, color: colors[index] }));
+  const currentSeries = internalSeries.value?.length ? internalSeries.value : series.value;
+  return currentSeries.map((v, index) => ({ ...v, color: colors[index] }));
 });
 </script>
