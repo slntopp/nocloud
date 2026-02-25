@@ -158,7 +158,15 @@ func main() {
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
-		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		opts := []grpc.DialOption{}
+		opts = append(opts,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithDefaultCallOptions(
+				grpc.MaxCallRecvMsgSize(500*1024*1024),
+				grpc.MaxCallSendMsgSize(500*1024*1024),
+			),
+		)
+		conn, err := grpc.Dial(driver, opts...)
 		if err != nil {
 			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
 		}
