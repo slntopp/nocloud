@@ -1,184 +1,106 @@
 <template>
-  <div class="settings pa-4">
-    <div class="buttons__inline pb-8 pt-4">
-      <v-btn color="background-light" class="mr-2" to="/settings/app">
-        app settings
-      </v-btn>
-      <v-btn color="background-light" class="mr-2" to="/settings/widget">
-        widget settings
-      </v-btn>
-      <v-btn color="background-light" class="mr-2" to="/settings/plugins">
-        plugins settings
-      </v-btn>
-      <v-btn color="background-light" class="mr-2" to="/settings/invoices">
-        invoice settings
-      </v-btn>
+  <div class="pa-4 h-100">
+    
+    <div class="d-flex justify-space-between pb-2 mt-4 flex-wrap">
+      <div class="d-flex flex-wrap align-center">
+        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/app">app settings</v-btn>
+        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/widget">widget settings</v-btn>
+        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/plugins">plugins settings</v-btn>
+        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/invoices">invoice settings</v-btn>
 
-      <v-dialog style="height: 100%">
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn color="background-light" class="mr-2" v-on="on" v-bind="attrs">
-            chats settings
-          </v-btn>
-        </template>
-        <plugin-iframe
-          style="height: 80vh"
-          url="/cc.ui/"
-          :params="{ redirect: 'settings' }"
-        />
-      </v-dialog>
+        <v-dialog style="height: 100%">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn color="background-light" class="mr-2 mb-2 action-btn" v-on="on" v-bind="attrs">
+              chats settings
+            </v-btn>
+          </template>
+          <plugin-iframe
+            style="height: 80vh"
+            url="/cc.ui/"
+            :params="{ redirect: 'settings' }"
+          />
+        </v-dialog>
 
-      <v-menu
-        offset-y
-        transition="slide-y-transition"
-        bottom
-        :close-on-content-click="false"
-        v-model="newSetting.visible"
-      >
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn color="background-light" class="mr-2" v-bind="attrs" v-on="on">
-            create
-          </v-btn>
-        </template>
-        <v-card class="pa-4">
-          <v-row>
-            <v-col>
-              <v-text-field
-                dense
-                v-model="newSetting.data.key"
-                label="key"
-                :rules="newSetting.rules"
-              >
-              </v-text-field>
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col>
-              <v-text-field
-                dense
-                v-model="newSetting.data.data.description"
-                label="description"
-                :rules="newSetting.rules"
-              >
-              </v-text-field>
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col>
-              <v-text-field
-                dense
-                v-model="newSetting.data.data.value"
-                label="value"
-                :rules="newSetting.rules"
-              >
-              </v-text-field>
-            </v-col>
-          </v-row>
-          <v-row>
-            <v-col>
-              <v-btn :loading="newSetting.loading" @click="createKey">
-                send
-              </v-btn>
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-menu>
-      <confirm-dialog
-        :disabled="selected.length < 1"
-        @confirm="deleteSelectedKeys"
-      >
         <v-btn
-          :disabled="selected.length < 1"
           color="background-light"
-          class="mr-8"
+          class="mr-2 mb-2 action-btn"
+          :to="{ name: 'SettingsItem', params: { key: 'create' } }"
         >
+          create
+        </v-btn>
+      </div>
+
+      <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelected">
+        <v-btn color="background-light" :disabled="selected.length < 1" class="mb-2 action-btn">
           delete
         </v-btn>
       </confirm-dialog>
     </div>
 
     <nocloud-table
-      table-name="settings"
-      isKeyOnlyAfterClick
-      :isKeyInCircle="false"
-      item-key="key"
-      :loading="loading"
-      :headers="headers"
-      :items="filtredSettings"
-      sortBy="description"
-      show-select
       v-model="selected"
+      table-name="settings-new"
+      item-key="key"
+      show-select
+      :headers="headers"
+      :items="filteredSettings"
+      :loading="loading"
       :footer-error="fetchError"
     >
-      <template v-slot:[`item.description`]="{ item }">
-        <div
-          class="d-flex align-center"
-          v-if="edit.key == 'description' && edit.data == item"
-        >
-          <div class="control">
-            <v-icon @click="saveEdit()" class="edit-btn mr-2">
-              mdi-content-save-outline
-            </v-icon>
-            <v-icon @click="stopEdit()" class="edit-btn mr-3">
-              mdi-close-circle-outline
-            </v-icon>
-          </div>
-          <v-text-field v-model="edit.data.description"></v-text-field>
+      <template v-slot:[`item.key`]="{ item }">
+        <div class="d-flex align-center">
+          <router-link
+            class="setting-link text-truncate mr-1"
+            :to="{ name: 'SettingsItem', params: { key: item.key } }"
+          >
+            {{ item.key }}
+          </router-link>
+
+          <v-btn icon small @click.stop="copyKey(item.key)" class="ml-1">
+            <v-icon small>mdi-content-copy</v-icon>
+          </v-btn>
         </div>
-        <template v-else>
-          <v-icon @click="startEdit('description', item)" class="edit-btn">
-            mdi-border-color
-          </v-icon>
-          {{ getShortName(item.description, 45) }}
-        </template>
+      </template>
+
+      <template v-slot:[`item.description`]="{ item }">
+        {{ getShortName(item.description, 45) }}
       </template>
 
       <template v-slot:[`item.value`]="{ item }">
-        <div
-          class="d-flex align-center"
-          v-if="edit.key == 'value' && edit.data == item"
-        >
-          <div class="control">
-            <v-icon @click="saveEdit()" class="edit-btn mr-2">
-              mdi-content-save-outline
-            </v-icon>
-            <v-icon @click="stopEdit()" class="edit-btn mr-3">
-              mdi-close-circle-outline
-            </v-icon>
-          </div>
-          <v-text-field v-model="edit.data.value"></v-text-field>
-        </div>
-        <template v-else>
-          <v-icon @click="startEdit('value', item)" class="edit-btn">
-            mdi-border-color
-          </v-icon>
-          {{ getShortName(item.value, 45) }}
-        </template>
+        {{ getShortName(item.value, 15) }}
       </template>
     </nocloud-table>
 
-    <div class="widgets align-start mt-4 d-flex flex-wrap">
+    <div class="widgets align-start mt-8 d-flex flex-wrap">
       <component
-        class="mx-3"
-        v-for="widget of widgets"
+        v-for="widget in widgetComponents"
         :key="widget"
         :is="widget"
-        style="width: 30%"
+        class="mx-2 mb-4"
+        style="width: 30%; min-width: 300px;"
       />
     </div>
   </div>
 </template>
 
-<script>
-import { mapGetters } from "vuex";
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { useStore } from "@/store";
 import api from "@/api.js";
-import snackbar from "@/mixins/snackbar.js";
+import { addToClipboard, getShortName, filterArrayIncludes } from "@/functions";
+
 import noCloudTable from "@/components/table.vue";
-import PluginIframe from "@/components/plugin/iframe.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import { filterArrayIncludes, getShortName } from "@/functions";
-import RoutinesWidget from "@/components/widgets/routines";
-import HealthWidget from "@/components/widgets/health";
+import PluginIframe from "@/components/plugin/iframe.vue";
 import ServicesWidget from "@/components/widgets/services";
+import HealthWidget from "@/components/widgets/health";
+import RoutinesWidget from "@/components/widgets/routines";
+
+const store = useStore();
+
+const selected = ref([]);
+const fetchError = ref("");
+const widgetComponents = ["ServicesWidget", "HealthWidget", "RoutinesWidget"];
 
 const headers = [
   { text: "Key", value: "key" },
@@ -186,34 +108,48 @@ const headers = [
   { text: "Value", value: "value" },
 ];
 
-const defaultData = {
-  key: "",
-  data: {
-    description: "",
-    // visible: false,
-    value: "",
-  },
+const settings = computed(() => store.getters["settings/all"]);
+const loading = computed(() => store.getters["settings/isLoading"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
+
+const filteredSettings = computed(() => {
+  if (searchParam.value) {
+    return filterArrayIncludes(settings.value, {
+      keys: ["key", "description", "value"],
+      value: searchParam.value,
+    });
+  }
+  return settings.value;
+});
+
+const fetchSettings = () => {
+  store.dispatch("settings/fetch").catch((err) => {
+    fetchError.value = err.response?.data?.message || "Error";
+  });
 };
 
+const copyKey = (val) => addToClipboard(val);
+
+const deleteSelected = async () => {
+  try {
+    const promises = selected.value.map((s) => api.settings.delete(s.key));
+    await Promise.all(promises);
+    selected.value = [];
+    fetchSettings();
+  } catch (err) {
+    store.commit("snackbar/showSnackbarError", { message: "Delete failed" });
+  }
+};
+
+onMounted(() => {
+  fetchSettings();
+  store.commit("reloadBtn/setCallback", { event: fetchSettings });
+});
+</script>
+
+<script>
 export default {
-  name: "settings-view",
-  created() {
-    this.$store
-      .dispatch("settings/fetch")
-      .then(() => {
-        this.fetchError = "";
-      })
-      .catch((err) => {
-        console.log(`err`, err);
-        this.fetchError = "Can't reach the server";
-        if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-        }
-      });
-    // this.$store.dispatch('settings/fetchKeys')
-  },
+  name: "SettingsView",
   components: {
     "nocloud-table": noCloudTable,
     ConfirmDialog,
@@ -222,163 +158,31 @@ export default {
     HealthWidget,
     RoutinesWidget,
   },
-  mixins: [snackbar],
-  data: () => ({
-    headers,
-    selected: [],
-    newSetting: {
-      rules: [(value) => !!value || "Required."],
-      isLoading: false,
-      visible: false,
-      data: {
-        ...JSON.parse(JSON.stringify(defaultData)),
-      },
-    },
-    edit: {
-      key: "",
-      data: {},
-    },
-    fetchError: "",
-    sortBy: "description",
-
-    widgets: ["ServicesWidget", "HealthWidget", "RoutinesWidget"],
-  }),
-  computed: {
-    ...mapGetters("settings", {
-      settings: "all",
-      loading: "isLoading",
-    }),
-    filtredSettings() {
-      if (this.searchParam) {
-        return filterArrayIncludes(this.settings, {
-          keys: ["key", "description", "value"],
-          value: this.searchParam,
-        });
-      }
-      return this.settings;
-    },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
-    },
-  },
-  methods: {
-    getShortName,
-    deleteSelectedKeys() {
-      if (this.selected.length > 0) {
-        const deletePromices = this.selected.map((el) =>
-          api.settings.delete(el.key)
-        );
-        Promise.all(deletePromices)
-          .then((res) => {
-            if (res.every((el) => el.result)) {
-              this.$store.dispatch("settings/fetch");
-
-              const ending = deletePromices.length == 1 ? "" : "s";
-              this.showSnackbar({
-                message: `Setting${ending} deleted successfully.`,
-              });
-            } else {
-              this.showSnackbar({ message: `Some error executed` });
-            }
-          })
-          .catch((err) => {
-            if (err.response.status == 501 || err.response.status == 502) {
-              const opts = {
-                message: `Service Unavailable: ${err.response.data.message}.`,
-                timeout: 0,
-              };
-              this.showSnackbarError(opts);
-            }
-          });
-      }
-    },
-    createKey() {
-      if (
-        Object.keys(this.newSetting.data).every((dataKey) => {
-          const dataValue = this.newSetting.data[dataKey];
-          return this.newSetting.rules.every((rule) => {
-            const res = typeof rule(dataValue) == "boolean";
-            return res;
-          });
-        })
-      ) {
-        this.newSetting.loading = true;
-        this.sendKey()
-          .then(() => {
-            this.showSnackbar({ message: "Setting created successfully" });
-
-            this.newSetting.data = {
-              ...JSON.parse(JSON.stringify(defaultData)),
-            };
-            this.newSetting.visible = false;
-          })
-          .finally(() => {
-            this.newSetting.loading = false;
-          });
-      } else {
-        this.showSnackbarError({ message: "All fields are required" });
-      }
-    },
-    sendKey(key, data) {
-      let reqestKey = key;
-      let reqestData = data;
-
-      if (reqestKey == undefined || reqestData == undefined) {
-        reqestKey = this.newSetting.data.key;
-        reqestData = this.newSetting.data.data;
-      }
-
-      return new Promise((resolve, reject) => {
-        api.settings
-          .addKey(reqestKey, reqestData)
-          .then((res) => {
-            if (res.key != reqestKey) throw res;
-            this.$store.dispatch("settings/fetch");
-            resolve(res);
-          })
-          .catch((err) => {
-            this.showSnackbarError({ message: err.response.data.message });
-            reject(err);
-          });
-      });
-    },
-    startEdit(key, data) {
-      this.edit.key = key;
-      this.edit.data = data;
-    },
-    stopEdit() {
-      this.edit.key = "";
-      this.edit.data = {};
-    },
-    saveEdit() {
-      const data = JSON.parse(JSON.stringify(this.edit.data));
-      const key = this.edit.data.key;
-      delete data.key;
-
-      this.sendKey(key, data)
-        .then(() => {
-          this.$store.dispatch("settings/fetch");
-          this.showSnackbar({ message: "Setting created successfully" });
-          this.stopEdit();
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err.response.data.message });
-        });
-    },
-  },
-  mounted() {
-    this.$store.commit("reloadBtn/setCallback", {
-      type: "settings/fetch",
-    });
-  },
 };
 </script>
 
-<style scoped lang="sass">
-.edit-btn
-	opacity: 0.4
-	margin-right: 4px
+<style scoped lang="scss">
 
-	&:hover
-		opacity: 1
+.page__title {
+  color: #5171f1;
+  font-weight: 300;
+  font-size: 32px;
+  font-family: "Quicksand", sans-serif;
+  line-height: 1em;
+  text-transform: uppercase;
+}
+
+.action-btn {
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.setting-link {
+  color: var(--v-primary-base);
+  text-decoration: none;
+  font-weight: 500;
+  &:hover {
+    text-decoration: underline;
+  }
+}
 </style>

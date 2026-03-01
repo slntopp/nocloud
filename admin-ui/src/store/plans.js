@@ -52,7 +52,7 @@ export default {
       commit("setPlans", []);
       try {
         const response = await getters.plansClient.listPlans(
-          ListRequest.fromJson(options)
+          ListRequest.fromJson(options || {})
         );
 
         const data = response.toJson();
