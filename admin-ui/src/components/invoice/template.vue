@@ -1,6 +1,6 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <template-json-editor-new
+    <template-json-editor
       :value="invoice"
       title="Template JSON"
       @save="editInvoice"
@@ -10,12 +10,12 @@
 
 <script>
 import snackbar from "@/mixins/snackbar.js";
-import TemplateJsonEditorNew from "@/components/TemplateJsonEditorNew.vue";
+import TemplateJsonEditor from "@/components/TemplateJsonEditor.vue";
 import { Invoice } from "nocloud-proto/proto/es/billing/billing_pb";
 
 export default {
   name: "invoice-template",
-  components: { TemplateJsonEditorNew },
+  components: { TemplateJsonEditor },
   mixins: [snackbar],
   props: {
     invoice: {

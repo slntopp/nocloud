@@ -4,7 +4,7 @@
 		color="background-light"
 		class="pa-4"
 	>
-		<template-json-editor-new
+		<template-json-editor
 			:value="template"
 			title="Template JSON"
 			@save="editService"
@@ -15,11 +15,11 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
-import TemplateJsonEditorNew from "@/components/TemplateJsonEditorNew.vue";
+import TemplateJsonEditor from "@/components/TemplateJsonEditor.vue";
 
 export default {
 	name: 'service-template',
-	components: { TemplateJsonEditorNew },
+	components: { TemplateJsonEditor },
 	mixins: [snackbar],
 	props: {
 		template: {

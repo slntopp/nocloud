@@ -3,14 +3,9 @@
     <div class="editor-top">
       <div class="editor-left">
         {{ title }}
-        
+
         <template v-if="isEditing">
-          <v-btn
-            class="mr-2"
-            :loading="isSaving"
-            :disabled="!isValidJson"
-            @click="handleSave"
-          >
+          <v-btn class="mr-2" :loading="isSaving" @click="handleSave">
             Save
           </v-btn>
           <v-btn @click="handleCancel">Cancel</v-btn>
@@ -23,13 +18,12 @@
     </div>
 
     <div :class="{ 'editor-readonly': !isEditing }" class="editor-container">
-      <json-editor-new 
+      <json-editor-new
         ref="editorRef"
         :value="currentEditorValue"
         :read-only="!isEditing"
         @input="handleEditorInput"
         @change="handleEditorChange"
-        @valid="handleEditorValid"
       />
     </div>
   </div>
@@ -54,12 +48,11 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["input", "valid", "save"]);
+const emit = defineEmits(["input", "save"]);
 
 const editorRef = ref(null);
 const isEditing = ref(false);
 const isSaving = ref(false);
-const isValidJson = ref(false);
 const currentValue = ref("");
 const originalValue = ref("");
 const currentEditorValue = ref(props.value);
@@ -89,20 +82,15 @@ function handleEditorChange(value) {
   }
 }
 
-function handleEditorValid(isValid) {
-  isValidJson.value = isValid;
-  emit("valid", isValid);
-}
-
 async function handleSave() {
   try {
     isSaving.value = true;
     const parsedValue = JSON.parse(currentValue.value);
-    
+
     if (props.onSave) {
       await props.onSave(parsedValue);
     }
-    
+
     emit("save", parsedValue);
     isEditing.value = false;
     originalValue.value = currentValue.value;
@@ -115,7 +103,6 @@ async function handleSave() {
 
 function handleCancel() {
   isEditing.value = false;
-  isValidJson.value = false;
   currentValue.value = originalValue.value;
   currentEditorValue.value = JSON.parse(originalValue.value);
 }
@@ -134,7 +121,7 @@ watch(
       originalValue.value = getFormattedText(newVal);
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 originalValue.value = getFormattedText(props.value);
@@ -150,19 +137,19 @@ currentEditorValue.value = props.value;
 
 .editor-top {
   position: sticky;
-  top: 0px; 
-  
+  top: 0px;
+
   z-index: 5;
   display: flex;
   justify-content: space-between;
   align-items: center;
 
   background: var(--v-background-light-base) !important;
-  
+
   padding: 10px 0;
   margin-bottom: 10px;
 
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .editor-left {
@@ -173,16 +160,18 @@ currentEditorValue.value = props.value;
 
 .editor-container {
   border-radius: 12px;
-  overflow: hidden;
+  overflow-y: auto;
+  height: 110%;
   flex: 1;
+  min-height: 0;
 }
 
 .editor-readonly {
   position: relative;
   cursor: not-allowed;
-  
+
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -193,6 +182,7 @@ currentEditorValue.value = props.value;
     z-index: 10;
     border-radius: 12px;
     pointer-events: none;
+    height: 110%;
   }
 }
 </style>

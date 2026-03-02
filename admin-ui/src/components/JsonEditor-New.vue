@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, shallowRef, watch } from "vue";
+import { ref, onMounted, onUnmounted, shallowRef, watch, toRefs } from "vue";
 import { JSONEditor } from "vanilla-jsoneditor";
 
 const props = defineProps({
@@ -20,6 +20,8 @@ const props = defineProps({
     default: false
   }
 });
+
+const { value, readOnly } = toRefs(props);
 
 const emit = defineEmits(["input", "change"]);
 
@@ -49,9 +51,9 @@ function initEditor() {
       mainMenuBar: true,
       navigationBar: false,
       statusBar: false,
-      readOnly: props.readOnly,
+      readOnly: readOnly.value,
       content: {
-        json: safeJson(props.value)
+        json: safeJson(value.value)
       },
       onChange: (content) => {
         let updated;
@@ -69,7 +71,7 @@ function initEditor() {
   });
 }
 
-watch(() => props.value, (newVal) => {
+watch(value, (newVal) => {
   if (editor.value) {
     const newData = safeJson(newVal);
     const currentContent = editor.value.get();
@@ -81,9 +83,10 @@ watch(() => props.value, (newVal) => {
   }
 }, { deep: true });
 
-watch(() => props.readOnly, () => {
+watch(readOnly, () => {
   if (editor.value) {
-    editor.value.update({ readOnly: props.readOnly });
+    editor.value.destroy();
+    initEditor();
   }
 });
 

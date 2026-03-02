@@ -1,6 +1,6 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4 template-card">
-    <template-json-editor-new
+    <template-json-editor
       :value="template"
       title="Template JSON"
       @save="editPlan"
@@ -11,11 +11,11 @@
 <script>
 import api from "@/api";
 import snackbar from "@/mixins/snackbar";
-import TemplateJsonEditorNew from "@/components/TemplateJsonEditorNew.vue";
+import TemplateJsonEditor from "@/components/TemplateJsonEditor.vue";
 
 export default {
   name: "plan-template",
-  components: { TemplateJsonEditorNew },
+  components: { TemplateJsonEditor },
   mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
