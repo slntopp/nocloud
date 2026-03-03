@@ -5,7 +5,7 @@
     color="background-light"
     class="flex-grow-1 rounded-lg"
     :min-width="width >= 450 ? 350 : 200"
-    :height="410"
+    :height="480"
     :style="{ width: width < 1375 ? '100%' : 'auto' }"
     :loading="loading"
   >
@@ -50,4 +50,14 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped>
+.widget-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.widget-content > *:last-child {
+  margin-top: auto;
+}
+</style>
