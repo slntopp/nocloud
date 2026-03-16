@@ -80,7 +80,8 @@
           }"
         >
           {{
-            getInstance(item.licence_metadata?.nocloud_instance)?.instance?.title
+            getInstance(item.licence_metadata?.nocloud_instance)?.instance
+              ?.title
           }}
         </router-link>
 
@@ -103,8 +104,14 @@
 
       <template v-slot:[`item.trial_ends_at`]="{ item }">
         {{ formatDate(item.trial_ends_at) }}
-        <v-icon v-if="item.read_only_is_trial" color="green">
+        <v-icon
+          v-if="item.read_only_is_trial && !item.is_trial_expired"
+          color="green"
+        >
           {{ "mdi-check-circle" }}
+        </v-icon>
+        <v-icon v-if="item.is_trial_expired" color="red">
+          {{ "mdi-alert-circle" }}
         </v-icon>
       </template>
     </nocloud-table>
@@ -336,9 +343,15 @@ const fetchLicences = async () => {
     });
 
     const payload = res.meta.payload;
-    licences.value = (payload.items || []).map((item) => ({
-      ...item,
-    }));
+    licences.value = (payload.items || []).map((item) => {
+      return {
+        ...item,
+        is_trial_expired:
+          item.read_only_is_trial &&
+          item.trial_ends_at &&
+          new Date(item.trial_ends_at).getDate() < new Date().getDate(),
+      };
+    });
     totalLicences.value = payload.total || 0;
   } catch (e) {
     fetchError.value = e.message;
