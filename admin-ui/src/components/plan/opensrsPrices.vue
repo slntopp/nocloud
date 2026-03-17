@@ -13,6 +13,7 @@
             @onValid="(data) => (isValid = data)"
           />
           <confirm-dialog
+            @confirm="saveFee(fee)"
             text="This will apply the rules markup parameters to all prices"
           >
             <v-btn class="mt-4" color="secondary">Set rules</v-btn>
@@ -178,7 +179,7 @@ const existedDomens = computed(() =>
     ...template.value.products[key],
     key,
     period: getBillingPeriod(template.value.products[key].period),
-  }))
+  })),
 );
 
 const tryToSend = async (action) => {
@@ -224,6 +225,26 @@ const tryToSend = async (action) => {
 
 const changeFee = (value) => {
   fee.value = JSON.parse(JSON.stringify(value));
+};
+
+const saveFee = async (value) => {
+  try {
+    await api.plans.update(template.value.uuid, {
+      ...template.value,
+      fee: value,
+    });
+
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Margin rules updated successfully",
+    });
+
+    store.dispatch("reloadBtn/onclick");
+
+  } catch (err) {
+    const message = err.response?.data?.message ?? err.message ?? err;
+
+    store.commit("snackbar/showSnackbarError", { message });
+  }
 };
 </script>
 
