@@ -1,16 +1,40 @@
 <template>
   <div class="pa-4 h-100">
-    
     <div class="d-flex justify-space-between pb-2 mt-4 flex-wrap">
       <div class="d-flex flex-wrap align-center">
-        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/app">app settings</v-btn>
-        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/widget">widget settings</v-btn>
-        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/plugins">plugins settings</v-btn>
-        <v-btn color="background-light" class="mr-2 mb-2 action-btn" to="/settings/invoices">invoice settings</v-btn>
+        <v-btn
+          color="background-light"
+          class="mr-2 mb-2 action-btn"
+          to="/settings/app"
+          >app settings</v-btn
+        >
+        <v-btn
+          color="background-light"
+          class="mr-2 mb-2 action-btn"
+          to="/settings/widget"
+          >widget settings</v-btn
+        >
+        <v-btn
+          color="background-light"
+          class="mr-2 mb-2 action-btn"
+          to="/settings/plugins"
+          >plugins settings</v-btn
+        >
+        <v-btn
+          color="background-light"
+          class="mr-2 mb-2 action-btn"
+          to="/settings/invoices"
+          >invoice settings</v-btn
+        >
 
         <v-dialog style="height: 100%">
           <template v-slot:activator="{ on, attrs }">
-            <v-btn color="background-light" class="mr-2 mb-2 action-btn" v-on="on" v-bind="attrs">
+            <v-btn
+              color="background-light"
+              class="mr-2 mb-2 action-btn"
+              v-on="on"
+              v-bind="attrs"
+            >
               chats settings
             </v-btn>
           </template>
@@ -31,7 +55,11 @@
       </div>
 
       <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelected">
-        <v-btn color="background-light" :disabled="selected.length < 1" class="mb-2 action-btn">
+        <v-btn
+          color="background-light"
+          :disabled="selected.length < 1"
+          class="mb-2 action-btn"
+        >
           delete
         </v-btn>
       </confirm-dialog>
@@ -63,11 +91,11 @@
       </template>
 
       <template v-slot:[`item.description`]="{ item }">
-        {{ getShortName(item.description, 45) }}
+        {{ getShortName(item.description, 100) }}
       </template>
 
       <template v-slot:[`item.value`]="{ item }">
-        {{ getShortName(item.value, 15) }}
+        {{ getShortName(item.value, 100) }}
       </template>
     </nocloud-table>
 
@@ -77,7 +105,7 @@
         :key="widget"
         :is="widget"
         class="mx-2 mb-4"
-        style="width: 30%; min-width: 300px;"
+        style="width: 30%; min-width: 300px"
       />
     </div>
   </div>
@@ -87,7 +115,7 @@
 import { ref, computed, onMounted } from "vue";
 import { useStore } from "@/store";
 import api from "@/api.js";
-import { addToClipboard, getShortName, filterArrayIncludes } from "@/functions";
+import { addToClipboard, filterArrayIncludes, getShortName } from "@/functions";
 
 import noCloudTable from "@/components/table.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
@@ -105,7 +133,7 @@ const widgetComponents = ["ServicesWidget", "HealthWidget", "RoutinesWidget"];
 const headers = [
   { text: "Key", value: "key" },
   { text: "Description", value: "description" },
-  { text: "Value", value: "value" },
+  { text: "Value", value: "value", width: "50%" },
 ];
 
 const settings = computed(() => store.getters["settings/all"]);
@@ -162,7 +190,6 @@ export default {
 </script>
 
 <style scoped lang="scss">
-
 .page__title {
   color: #5171f1;
   font-weight: 300;
