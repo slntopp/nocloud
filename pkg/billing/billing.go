@@ -24,6 +24,7 @@ import (
 	ccinstances "github.com/slntopp/nocloud-proto/instances/instancesconnect"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
+	"github.com/slntopp/nocloud/pkg/nocloud/ksefclient"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
@@ -123,6 +124,9 @@ type BillingServiceServer struct {
 	topicsPs *pubsub.PubSub
 
 	syncCreatedDate bool
+
+	useCustomKsefValidation bool
+	ksefCustomClient        *ksefclient.Client
 }
 
 func SetupEventPublisher(log *zap.Logger, rbmq rabbitmq.Connection) func(event *epb.Event) error {
@@ -169,7 +173,9 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	nss graph.NamespacesController, plans graph.BillingPlansController, transactions graph.TransactionsController, invoices graph.InvoicesController,
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
-	ca graph.CommonActionsController, promocodes graph.PromocodesController, pgs graph.PaymentGatewaysController, accGroups graph.AccountGroupsController, whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub, syncCreatedDate bool) *BillingServiceServer {
+	ca graph.CommonActionsController, promocodes graph.PromocodesController, pgs graph.PaymentGatewaysController, accGroups graph.AccountGroupsController,
+	whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error,
+	instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub, syncCreatedDate bool, useCustomKsefValidation bool, ksefClient *ksefclient.Client) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
 		rbmq:                conn,
@@ -238,7 +244,9 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 				Status:  healthpb.Status_STOPPED,
 			},
 		},
-		syncCreatedDate: syncCreatedDate,
+		syncCreatedDate:         syncCreatedDate,
+		useCustomKsefValidation: useCustomKsefValidation,
+		ksefCustomClient:        ksefClient,
 	}
 
 	s.migrate()

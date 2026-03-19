@@ -32,6 +32,7 @@ import (
 	nocloud_auth "github.com/slntopp/nocloud/pkg/nocloud/auth"
 	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
 	"github.com/slntopp/nocloud/pkg/nocloud/invoices_manager"
+	"github.com/slntopp/nocloud/pkg/nocloud/ksefclient"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
@@ -88,6 +89,9 @@ var (
 	syncCreatedDateOnPayment bool
 
 	corsAllowed []string
+
+	enableKsef        bool
+	customKsefBaseUrl string
 )
 
 func init() {
@@ -119,6 +123,9 @@ func init() {
 	viper.SetDefault("WHMCS_PRICES_TAX_EXCLUDED", true)
 	viper.SetDefault("SYNC_CREATED_DATE_ON_PAYMENT", false)
 
+	viper.SetDefault("KSEF_ENABLE", false)
+	viper.SetDefault("KSEF_CUSTOM_BASE_URL", "http://nocloud-ksef:8080")
+
 	port = viper.GetString("PORT")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 
@@ -144,6 +151,9 @@ func init() {
 
 	whmcsPricesTaxExcluded = viper.GetBool("WHMCS_PRICES_TAX_EXCLUDED")
 	syncCreatedDateOnPayment = viper.GetBool("SYNC_CREATED_DATE_ON_PAYMENT")
+
+	enableKsef = viper.GetBool("KSEF_ENABLE")
+	customKsefBaseUrl = viper.GetString("KSEF_CUSTOM_BASE_URL")
 }
 
 func main() {
@@ -281,10 +291,15 @@ func main() {
 	instancesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, services_registry.Topic("instances-commands"))
 	tps := pubsub.New(50)
 
+	var ksefClient *ksefclient.Client
+	if enableKsef {
+		ksefClient = ksefclient.New(customKsefBaseUrl)
+	}
+
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment, enableKsef, ksefClient)
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 

@@ -610,6 +610,19 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	t.Processed = 0
 	t.Returned = 0
 	t.PaymentGateway = pgKey
+
+	if s.useCustomKsefValidation {
+		resp, _, err := s.ksefCustomClient.ValidateInvoice(ctx, s.rootToken, t)
+		if err != nil {
+			log.Error("Failed to validate invoice with custom KSeF client", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to validate invoice with KSeF client. "+err.Error())
+		}
+		if !resp.Valid || (resp.Errors != nil && len(resp.Errors) > 0) {
+			log.Error("Invoice did not pass validation with custom KSeF client", zap.Any("validation_response", resp))
+			return nil, status.Error(codes.InvalidArgument, "Invoice did not pass validation with KSeF client.")
+		}
+		s.log.Info("Invoice passed validation with custom KSeF client", zap.Any("validation_response", resp))
+	}
 	r, err := s.invoices.Create(ctx, &graph.Invoice{
 		Invoice: t,
 		InvoiceNumberMeta: &graph.InvoiceNumberMeta{
