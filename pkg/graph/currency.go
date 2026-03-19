@@ -61,6 +61,19 @@ func CurrencyFromPb(currency *pb.Currency) Currency {
 	}
 }
 
+func CurrencyToPb(currency Currency) *pb.Currency {
+	return &pb.Currency{
+		Id:        currency.Id,
+		Title:     currency.Title,
+		Public:    currency.Public,
+		Precision: currency.Precision,
+		Format:    currency.Format,
+		Rounding:  currency.Rounding,
+		Code:      currency.Code,
+		Default:   currency.Default,
+	}
+}
+
 type сurrencyController struct {
 	log   *zap.Logger
 	col   driver.Collection

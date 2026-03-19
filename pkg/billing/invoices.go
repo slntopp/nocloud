@@ -611,6 +611,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	t.Returned = 0
 	t.PaymentGateway = pgKey
 
+	chosenCurrency, err := s.currencies.Get(ctx, t.Currency.GetId())
+	if err != nil {
+		log.Error("Failed to get currency", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get currency")
+	}
+	t.Currency = graph.CurrencyToPb(chosenCurrency)
+
 	if s.useCustomKsefValidation {
 		resp, _, err := s.ksefCustomClient.ValidateInvoice(ctx, s.rootToken, t)
 		if err != nil {
