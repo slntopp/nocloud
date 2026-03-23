@@ -69,7 +69,7 @@
           </v-btn>
         </div>
 
-        <div class="item" style="max-width: 80px" v-if="!isBalanceInvoice">
+        <div class="item" style="max-width: 80px">
           <v-text-field
             :value="newInvoice.taxRate * 100"
             @input="newInvoice.taxRate = $event / 100"
@@ -483,7 +483,7 @@ const instances = computed(() => {
 
 const topUpItemMessage = computed(() => {
   const data = store.getters["settings/all"].find(
-    (s) => s.key === "billing-invoices"
+    (s) => s.key === "billing-invoices",
   );
 
   return (JSON.parse(data?.value || "{}") || {}).top_up_item_message;
@@ -491,15 +491,15 @@ const topUpItemMessage = computed(() => {
 
 const accountCurrency = computed(
   () =>
-    newInvoice.value.account?.currency || store.getters["currencies/default"]
+    newInvoice.value.account?.currency || store.getters["currencies/default"],
 );
 
 const isEmailDisabled = computed(() =>
-  ["TERMINATED", "CANCELED"].includes(newInvoice.value.status)
+  ["TERMINATED", "CANCELED"].includes(newInvoice.value.status),
 );
 
 const isSaveDisabled = computed(() =>
-  ["TERMINATED"].includes(newInvoice.value.status)
+  ["TERMINATED"].includes(newInvoice.value.status),
 );
 
 const setInvoice = () => {
@@ -560,7 +560,7 @@ const saveInvoice = async (withEmail = false, status) => {
         CreateInvoiceRequest.fromJson({
           invoice: data,
           isSendEmail: !!withEmail,
-        })
+        }),
       );
       router.push({ name: "Invoices" });
     } else {
@@ -570,21 +570,21 @@ const saveInvoice = async (withEmail = false, status) => {
       if (newInvoice.value.created) {
         data.created = getInvoiceDateTs(
           invoice.value.created,
-          newInvoice.value.created
+          newInvoice.value.created,
         );
       }
 
       if (newInvoice.value.returned) {
         data.returned = getInvoiceDateTs(
           invoice.value.returned,
-          newInvoice.value.returned
+          newInvoice.value.returned,
         );
       }
 
       if (newInvoice.value.payment) {
         data.payment = getInvoiceDateTs(
           invoice.value.payment,
-          newInvoice.value.payment
+          newInvoice.value.payment,
         );
       }
 
@@ -592,7 +592,7 @@ const saveInvoice = async (withEmail = false, status) => {
         UpdateInvoiceRequest.fromJson({
           invoice: data,
           isSendEmail: !!withEmail,
-        })
+        }),
       );
       store.commit("snackbar/showSnackbarSuccess", {
         message: "Invoice successfully saved",
@@ -701,14 +701,14 @@ const onChangeInstance = () => {
 
   newInvoice.value.instances.forEach((uuid) => {
     const { price, title } = instances.value.find(
-      (instance) => instance.uuid === uuid
+      (instance) => instance.uuid === uuid,
     );
     if (!price && !title) {
       return;
     }
 
     const existedProduct = newInvoice.value.items.find(
-      (item) => item.description === title
+      (item) => item.description === title,
     );
 
     if (existedProduct) {
@@ -749,7 +749,7 @@ const openAddPaymentDialog = () => {
 const openAccountWindow = () => {
   return window.open(
     "/admin/accounts/" + newInvoice.value.account.uuid,
-    "_blanc"
+    "_blanc",
   );
 };
 
@@ -778,7 +778,7 @@ const changeInvoiceStatus = async (status, params = null) => {
         uuid: invoice.value.uuid,
         status: BillingStatus[status],
         params,
-      })
+      }),
     );
 
     emit("refresh");
@@ -805,7 +805,9 @@ watch(isBalanceInvoice, (value) => {
     newInvoice.value.items = [];
   }
 
-  newInvoice.value.taxRate = 0;
+  if (!isEdit.value) {
+    newInvoice.value.taxRate = 0;
+  }
 
   newInvoice.value.instances = [];
 });
@@ -815,7 +817,7 @@ watch(
   () => {
     newInvoice.value.subtotal = newInvoice.value.items?.reduce(
       (acc, i) => acc + Number(i.price || 0) * Number(i.amount || 0),
-      0
+      0,
     );
 
     newInvoice.value.total = newInvoice.value.items?.reduce((acc, i) => {
@@ -826,7 +828,7 @@ watch(
       );
     }, 0);
   },
-  { deep: true }
+  { deep: true },
 );
 
 watch(invoice, setInvoice);
@@ -837,7 +839,7 @@ watch(
     newInvoice.value.taxRate = newInvoice.value.account?.data.tax_rate
       ? newInvoice.value.account.data.tax_rate
       : newInvoice.value.taxRate;
-  }
+  },
 );
 </script>
 
