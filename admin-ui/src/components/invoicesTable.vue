@@ -172,6 +172,7 @@ const headers = ref([
   { text: "Type ", value: "type" },
   { text: "Tax rate ", value: "taxOptions.taxRate" },
   { text: "External ID", value: "meta.whmcs_invoice_id" },
+  { text: "Ksef number", value: "meta.ksef_number" },
   { text: "Created date ", value: "created" },
   { text: "Due date", value: "deadline" },
   { text: "Payment date", value: "payment" },
