@@ -103,6 +103,8 @@ func (conv *PricesConverter) ConvertObjectPrices(obj interface{}) {
 		ConvertAddon(val, conv.rate, conv.target.Precision, conv.target.Rounding)
 	case *bpb.Plan:
 		ConvertPlan(val, conv.rate, conv.target.Precision, conv.target.Rounding)
+	case *BillingPlan:
+		ConvertPlan(val.Plan, conv.rate, conv.target.Precision, conv.target.Rounding)
 	case *spb.Service:
 		ConvertService(val, conv.rate, conv.target.Precision, conv.target.Rounding)
 	case *ipb.Instance:
