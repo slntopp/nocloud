@@ -148,7 +148,7 @@ func (s *BillingServiceServer) KsefEnqueue(ctx context.Context, r *connect.Reque
 		return nil, err
 	}
 
-	if err = s.invoicesPublisher(&epb.Event{
+	if err = s.ksefPublisher(&epb.Event{
 		Uuid: invoice.GetUuid(),
 		Key:  ksef.KsefSyncEnqueued,
 		Data: map[string]*structpb.Value{},
