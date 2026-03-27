@@ -38,6 +38,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	nps "github.com/slntopp/nocloud/pkg/pubsub"
 	billingps "github.com/slntopp/nocloud/pkg/pubsub/billing"
+	"github.com/slntopp/nocloud/pkg/pubsub/ksef"
 	"github.com/slntopp/nocloud/pkg/pubsub/services_registry"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -288,6 +289,7 @@ func main() {
 
 	ps := nps.NewPubSub[*epb.Event](rbmq, log)
 	invoicesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, billingps.Topic("invoices"))
+	ksefPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, ksef.Topic("sync"))
 	instancesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, services_registry.Topic("instances-commands"))
 	tps := pubsub.New(50)
 
@@ -299,7 +301,7 @@ func main() {
 	server := billing.NewBillingServiceServer(log, db, rbmq, rdb, registeredDrivers, token,
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
-		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment, enableKsef, ksefClient)
+		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, ksefPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment, enableKsef, ksefClient)
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 

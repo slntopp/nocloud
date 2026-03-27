@@ -232,16 +232,33 @@
           >
             {{ isEdit && !isDraft ? "Save" : "Publish" }} + email
           </v-btn>
-          <v-btn
-            v-if="isEdit"
-            class="mx-1"
-            color="background-light"
-            :loading="isSendEmailLoading"
-            @click="sendEmail"
-            :disabled="isEmailDisabled"
-          >
-            email
-          </v-btn>
+          <template v-if="isEdit">
+            <v-btn
+              class="mx-1"
+              color="background-light"
+              :loading="isSendEmailLoading"
+              @click="sendEmail"
+              :disabled="isEmailDisabled"
+            >
+              email
+            </v-btn>
+
+            <confirm-dialog
+              v-if="isKsefEnabled"
+              @confirm="sendKsefEnqueueRequest"
+              :loading="isKsefLoading"
+              :disabled="isKsefDisabled"
+            >
+              <v-btn
+                class="mx-1"
+                color="background-light"
+                :loading="isKsefLoading"
+                :disabled="isKsefDisabled"
+              >
+                Ksef enqueue
+              </v-btn>
+            </confirm-dialog>
+          </template>
 
           <v-btn
             class="mx-1"
@@ -398,6 +415,7 @@ const isValid = ref(false);
 const invoiceForm = ref(null);
 const isSaveLoading = ref(false);
 const isSendEmailLoading = ref(false);
+const isKsefLoading = ref(false);
 const isStatusChangeLoading = ref(false);
 const newStatus = ref("");
 const isAddPaymentDialogOpen = ref(false);
@@ -497,6 +515,12 @@ const accountCurrency = computed(
 const isEmailDisabled = computed(() =>
   ["TERMINATED", "CANCELED"].includes(newInvoice.value.status),
 );
+
+const isKsefDisabled = computed(() =>
+  ["TERMINATED", "CANCELED"].includes(newInvoice.value.status),
+);
+
+const isKsefEnabled = computed(() => store.getters["settings/ksefEnabled"]);
 
 const isSaveDisabled = computed(() =>
   ["TERMINATED"].includes(newInvoice.value.status),
@@ -739,6 +763,25 @@ const sendEmail = async () => {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     isSendEmailLoading.value = false;
+  }
+};
+
+const sendKsefEnqueueRequest = async () => {
+  try {
+    isKsefLoading.value = true;
+
+    await store.getters["invoices/invoicesClient"].ksefEnqueue({
+      invoiceUuid: invoice.value.uuid,
+    });
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "KSeF enqueue request sent",
+    });
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Failed to send KSeF enqueue request",
+    });
+  } finally {
+    isKsefLoading.value = false;
   }
 };
 

@@ -271,6 +271,11 @@ func (s *InstancesServer) Start(ctx context.Context, _req *connect.Request[pb.St
 	}
 	old := proto.Clone(instance.Instance).(*pb.Instance)
 
+	if instance.Config["auto_start"] != nil && instance.Config["auto_start"].GetBoolValue() {
+		log.Info("Instance already has auto_start enabled", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.FailedPrecondition, "Instance already has auto_start enabled")
+	}
+
 	instance.Config["auto_start"] = structpb.NewBoolValue(true)
 
 	if err = s.ctrl.Update(ctx, "", instance.Instance, old); err != nil {
