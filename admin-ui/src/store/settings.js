@@ -31,7 +31,7 @@ export default {
           .then((response) => {
             commit(
               "setRawKeys",
-              response.pool.map((el) => el.key)
+              response.pool.map((el) => el.key),
             );
             commit("setKeys", response.pool);
             resolve(response.pool);
@@ -94,6 +94,9 @@ export default {
     },
     timeZone(state) {
       return JSON.parse(state.values["timezone"] || "{}").timeZone;
+    },
+    ksefEnabled(state) {
+      return JSON.parse(state.values["app"] || "{}").ksef_enabled;
     },
   },
 };

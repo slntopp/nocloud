@@ -28,8 +28,22 @@
           <v-btn
             :disabled="isCopyDisabled"
             :loading="isCopyLoading"
-            class="mr-8"
+            class="mr-1"
             >Copy</v-btn
+          >
+        </confirm-dialog>
+
+        <confirm-dialog
+          v-if="isKsefEnabled"
+          :disabled="isKsefDisabled"
+          :loading="isKsefLoading"
+          @confirm="handleKsefEnqueue"
+        >
+          <v-btn
+            :disabled="isKsefDisabled"
+            :loading="isKsefLoading"
+            class="mr-8"
+            >Ksef enqueue</v-btn
           >
         </confirm-dialog>
 
@@ -82,6 +96,7 @@ const selectedInvoices = ref([]);
 const refetch = ref(false);
 
 const isCopyLoading = ref(false);
+const isKsefLoading = ref(false);
 
 const isUpdateStatusLoading = ref(false);
 const updateStatusName = ref("");
@@ -93,27 +108,28 @@ const isLoading = computed(() => store.getters["invoices/isLoading"]);
 const invoices = computed(() => store.getters["invoices/all"]);
 
 const isCopyDisabled = computed(() => selectedInvoices.value.length !== 1);
+const isKsefDisabled = computed(() => selectedInvoices.value.length < 1);
 
 const changeStatusBtns = computed(() => [
   {
     title: "paid",
     status: "PAID",
     disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "DRAFT", "RETURNED"].includes(invoice.status)
+      ["TERMINATED", "DRAFT", "RETURNED"].includes(invoice.status),
     ),
   },
   {
     title: "unpaid",
     status: "UNPAID",
     disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "RETURNED"].includes(invoice.status)
+      ["TERMINATED", "RETURNED"].includes(invoice.status),
     ),
   },
   {
     title: "cancel",
     status: "CANCELED",
     disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "RETURNED", "DRAFT", "PAID"].includes(invoice.status)
+      ["TERMINATED", "RETURNED", "DRAFT", "PAID"].includes(invoice.status),
     ),
   },
   {
@@ -151,8 +167,10 @@ const defaultLayouts = computed(() => ({
 }));
 
 const currentSearchLayout = computed(
-  () => store.getters["appSearch/currentLayout"]
+  () => store.getters["appSearch/currentLayout"],
 );
+
+const isKsefEnabled = computed(() => store.getters["settings/ksefEnabled"]);
 
 const refetchInvoices = () => {
   refetch.value = !refetch.value;
@@ -173,9 +191,9 @@ const handleUpdateStatus = async (newStatus) => {
           UpdateInvoiceStatusRequest.fromJson({
             uuid: invoice.uuid,
             status: BillingStatus[newStatus],
-          })
+          }),
         );
-      })
+      }),
     );
     selectedInvoices.value = [];
     refetchInvoices();
@@ -193,7 +211,7 @@ const handleCopyInvoice = async () => {
   try {
     const data = await store.dispatch(
       "invoices/copy",
-      selectedInvoices.value[0]
+      selectedInvoices.value[0],
     );
     router.push({ name: "Invoice page", params: { uuid: data.uuid } });
 
@@ -209,7 +227,7 @@ const handleCopyInvoice = async () => {
 const setDefaultLayouts = () => {
   const defaults = Object.values(defaultLayouts.value);
   const layouts = JSON.parse(
-    JSON.stringify(store.getters["appSearch/layouts"])
+    JSON.stringify(store.getters["appSearch/layouts"]),
   );
 
   defaults.forEach((layout) => {
@@ -222,6 +240,33 @@ const setDefaultLayouts = () => {
   });
 
   store.commit("appSearch/setLayouts", layouts);
+};
+
+const handleKsefEnqueue = async () => {
+  isKsefLoading.value = true;
+
+  try {
+    await Promise.all(
+      selectedInvoices.value.map((invoice) => {
+        return store.getters["invoices/invoicesClient"].ksefEnqueue({
+          invoiceUuid: invoice.uuid,
+        });
+      }),
+    );
+
+    refetchInvoices();
+    selectedInvoices.value = [];
+
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "KSeF enqueue request sent",
+    });
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Failed to send KSeF enqueue requests",
+    });
+  } finally {
+    isKsefLoading.value = false;
+  }
 };
 
 const setInvoicesLayout = (key) => {
