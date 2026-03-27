@@ -161,7 +161,7 @@ export default {
           const tempService = JSON.parse(JSON.stringify(this.service));
           const instance = JSON.parse(JSON.stringify(this.template));
           const igIndex = tempService.instancesGroups.findIndex((ig) =>
-            ig.instances.find((i) => i.uuid === this.template.uuid)
+            ig.instances.find((i) => i.uuid === this.template.uuid),
           );
           Object.keys(tempService.instancesGroups[igIndex].resources).forEach(
             (key) => {
@@ -169,7 +169,7 @@ export default {
                 tempService.instancesGroups[igIndex].resources[key] -=
                   instance.resources[key];
               }
-            }
+            },
           );
 
           await api.services._update(tempService);
@@ -206,7 +206,7 @@ export default {
 
       const tempService = JSON.parse(JSON.stringify(this.service));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
+        ig.instances.find((i) => i.uuid === this.template.uuid),
       );
       const instanceIndex = tempService.instancesGroups[
         igIndex
@@ -291,7 +291,7 @@ export default {
         this.copyAddons.map((addon) => {
           if (addon.meta?.individual) {
             return this.$store.getters["addons/addonsClient"].update(
-              Addon.fromJson(addon)
+              Addon.fromJson(addon),
             );
           }
           delete addon.uuid;
@@ -301,9 +301,9 @@ export default {
               ...addon,
               title: "IND_" + addon.title,
               meta: { ...(addon.meta || {}), individual: true },
-            })
+            }),
           );
-        })
+        }),
       );
     },
     async save(createNewPlan = false, instance) {
@@ -313,7 +313,7 @@ export default {
 
       const tempService = JSON.parse(JSON.stringify(this.service));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
+        ig.instances.find((i) => i.uuid === this.template.uuid),
       );
       const instanceIndex = tempService.instancesGroups[
         igIndex
@@ -343,7 +343,6 @@ export default {
         this.showSnackbarSuccess({
           message: "Instance saved successfully",
         });
-        console.log("refresh");
 
         this.$emit("refresh");
       } catch (err) {
@@ -351,6 +350,9 @@ export default {
       } finally {
         this.isSaveLoading = false;
       }
+    },
+    async activateInstance() {
+      this.$emit("refresh");
     },
     async startInstance(instance) {
       if (!instance) {
@@ -364,8 +366,8 @@ export default {
             JSON.stringify({
               ...instance,
               config: { ...instance.config, auto_start: true },
-            })
-          )
+            }),
+          ),
         );
 
         await api.services.up(this.template.service);
@@ -378,13 +380,13 @@ export default {
     async rebuildVps(os) {
       await this.sendAction(
         this.vmControlBtns.find((a) => a.action === "rebuild"),
-        { imageId: os.id }
+        { imageId: os.id },
       );
 
       const tempService = JSON.parse(JSON.stringify(this.service));
       const instance = JSON.parse(JSON.stringify(this.template));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
+        ig.instances.find((i) => i.uuid === this.template.uuid),
       );
       const instanceIndex = tempService.instancesGroups[
         igIndex
@@ -791,9 +793,20 @@ export default {
         ],
       };
 
-      return (
-        types[this.type]?.map((b) => ({ ...b, type: b.type || "action" })) || []
-      );
+      const actions =
+        types[this.type]?.map((b) => ({ ...b, type: b.type || "action" })) ||
+        [];
+
+      if (!this.template.config.auto_start) {
+        actions.unshift({
+          action: "activate",
+          type: "method",
+          component: () => import("@/components/dialogs/activateInstance.vue"),
+          method: this.activateInstance,
+        });
+      }
+
+      return actions;
     },
     ioneActions() {
       if (
@@ -955,7 +968,7 @@ export default {
     },
     service() {
       return this.$store.getters["services/all"]?.find(
-        (s) => s.uuid == this.template.service
+        (s) => s.uuid == this.template.service,
       );
     },
     isInstanceChanged() {
@@ -998,7 +1011,7 @@ export default {
     },
     ansiblePlugin() {
       return this.plugins.find((p) =>
-        p.title.toLowerCase().includes("ansible")
+        p.title.toLowerCase().includes("ansible"),
       );
     },
     isAnsibleActive() {
