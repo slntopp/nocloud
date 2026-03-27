@@ -30,6 +30,7 @@ import (
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	ps "github.com/slntopp/nocloud/pkg/pubsub"
 	"github.com/slntopp/nocloud/pkg/pubsub/billing"
+	"github.com/slntopp/nocloud/pkg/pubsub/ksef"
 	"google.golang.org/protobuf/proto"
 	"slices"
 	"strings"
@@ -118,6 +119,7 @@ type BillingServiceServer struct {
 
 	invoicesPublisher   func(event *epb.Event) error
 	instanceCommandsPub func(event *epb.Event) error
+	ksefPublisher       func(event *epb.Event) error
 	eventsPublisher     func(event *epb.Event) error
 	ps                  *ps.PubSub[*epb.Event]
 
@@ -127,6 +129,36 @@ type BillingServiceServer struct {
 
 	useCustomKsefValidation bool
 	ksefCustomClient        *ksefclient.Client
+}
+
+func (s *BillingServiceServer) KsefEnqueue(ctx context.Context, r *connect.Request[pb.KsefEnqueueRequest]) (*connect.Response[pb.KsefEnqueueResponse], error) {
+	log := s.log.Named("KsefEnqueue")
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
+	log.Debug("Request received", zap.Any("req", req), zap.String("requester", requester))
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	invoice, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.invoicesPublisher(&epb.Event{
+		Uuid: invoice.GetUuid(),
+		Key:  ksef.KsefSyncEnqueued,
+		Data: map[string]*structpb.Value{},
+	}); err != nil {
+		log.Error("Failed to publish invoice ksef", zap.Error(err))
+		return nil, fmt.Errorf("failed to publish")
+	}
+
+	resp := connect.NewResponse(&pb.KsefEnqueueResponse{})
+	return resp, nil
 }
 
 func SetupEventPublisher(log *zap.Logger, rbmq rabbitmq.Connection) func(event *epb.Event) error {
@@ -174,7 +206,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 	records graph.RecordsController, currencies graph.CurrencyController, accounts graph.AccountsController, descriptions graph.DescriptionsController,
 	instances graph.InstancesController, sp graph.ServicesProvidersController, services graph.ServicesController, addons graph.AddonsController,
 	ca graph.CommonActionsController, promocodes graph.PromocodesController, pgs graph.PaymentGatewaysController, accGroups graph.AccountGroupsController,
-	whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error,
+	whmcsGateway *whmcs_gateway.WhmcsGateway, invPub func(event *epb.Event) error, ksefPub func(event *epb.Event) error,
 	instPub func(event *epb.Event) error, ps *ps.PubSub[*epb.Event], tps *pubsub.PubSub, syncCreatedDate bool, useCustomKsefValidation bool, ksefClient *ksefclient.Client) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
@@ -206,6 +238,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		rootToken:           token,
 		whmcsGateway:        whmcsGateway,
 		invoicesPublisher:   invPub,
+		ksefPublisher:       ksefPub,
 		instanceCommandsPub: instPub,
 		ps:                  ps,
 		topicsPs:            tps,
