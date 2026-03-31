@@ -190,8 +190,16 @@ func (ctrl *invoicesController) ParseNumberIntoTemplate(template string, number 
 	month := int(date.Month())
 	day := date.Day()
 	template = strings.Replace(template, "{YEAR}", fmt.Sprintf("%d", year), -1)
-	template = strings.Replace(template, "{MONTH}", fmt.Sprintf("%d", month), -1)
-	template = strings.Replace(template, "{DAY}", fmt.Sprintf("%d", day), -1)
+	if month < 10 {
+		template = strings.Replace(template, "{MONTH}", fmt.Sprintf("0%d", month), -1)
+	} else {
+		template = strings.Replace(template, "{MONTH}", fmt.Sprintf("%d", month), -1)
+	}
+	if day < 10 {
+		template = strings.Replace(template, "{DAY}", fmt.Sprintf("0%d", day), -1)
+	} else {
+		template = strings.Replace(template, "{DAY}", fmt.Sprintf("%d", day), -1)
+	}
 	template = strings.Replace(template, "{NUMBER}", fmt.Sprintf("%d", number), -1)
 	return template
 }
