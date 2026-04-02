@@ -1,4 +1,6 @@
 import api from "@/api.js";
+import { createPromiseClient } from "@connectrpc/connect";
+import { AccountsService } from "nocloud-proto/proto/es/registry/registry_connect";
 
 export default {
   namespaced: true,
@@ -84,6 +86,9 @@ export default {
     },
     isLoading(state) {
       return state.loading;
+    },
+    accountsClient(state, getters, rootState, rootGetters) {
+      return createPromiseClient(AccountsService, rootGetters["app/transport"]);
     },
   },
 };
