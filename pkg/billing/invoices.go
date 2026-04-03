@@ -41,6 +41,8 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+var invoicesPaidMutex = &sync.Mutex{}
+
 type pair[T any] struct {
 	f T
 	s T
@@ -172,8 +174,57 @@ FILTER invoice.created < @date_to
 RETURN invoice
 `
 
-func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery string, date time.Time, template string, resetMode string, boundGroup string) (string, int, error) {
+const invoicesByForcedNumber = `
+FOR invoice IN @@invoices
+FILTER invoice.payment && invoice.payment > 0
+FILTER invoice.meta["%s"] == @search_number
+FILTER TO_NUMBER(@now_unix) - TO_NUMBER(invoice.meta["%s"]) < 3600
+
+LET account_raw = DOCUMENT(@@accounts, invoice.account)
+LET account = account_raw == null ? {} : account_raw
+FILTER @bound_group == "" || account.account_group == @bound_group
+RETURN invoice
+`
+
+const forcedNumberMetaKey = "forced_invoice_number"
+const forcedNumberDateMetaKey = "forced_invoice_number_date"
+
+func (s *BillingServiceServer) GetNewNumber(log *zap.Logger, invoicesQuery string, date time.Time, template string, resetMode string, boundGroup string) (string, int, bool, error) {
 	log = log.Named("GetNewNumber")
+
+	if invoicesQuery == invoicesByPaymentDate {
+		forcedNumber, err := s.obtainForcedInvoiceNumber(boundGroup)
+		if err != nil {
+			log.Error("Failed to obtain forced invoice number", zap.Error(err))
+			return "", 0, false, fmt.Errorf("failed to obtain forced invoice number. %w", err)
+		}
+		if forcedNumber > 0 {
+			log.Info("Using forced invoice number", zap.Int("number", forcedNumber))
+			bindVars := map[string]interface{}{
+				"@accounts":     schema.ACCOUNTS_COL,
+				"@invoices":     schema.INVOICES_COL,
+				"now_unix":      time.Now().Unix(),
+				"search_number": forcedNumber,
+				"bound_group":   boundGroup,
+			}
+			cur, err := s.db.Query(context.Background(), fmt.Sprintf(invoicesByForcedNumber, forcedNumberMetaKey, forcedNumberDateMetaKey), bindVars)
+			if err != nil {
+				log.Error("Failed to get invoices with forced number", zap.Error(err))
+				return "", 0, false, fmt.Errorf("failed to get invoices. %w", err)
+			}
+			defer cur.Close()
+			if cur.HasMore() {
+				if err := s.saveForcedInvoiceNumber(boundGroup, 0); err != nil {
+					log.Error("Failed to reset forced invoice number after use", zap.Error(err))
+				}
+				log.Info("Forced invoice number is already used by another invoice. Resetting forced number and searching for new one", zap.Int("number", forcedNumber))
+				goto numberSearch
+			}
+			return s.invoices.ParseNumberIntoTemplate(template, forcedNumber, date), forcedNumber, true, nil
+		}
+	}
+
+numberSearch:
 	var dateFrom, dateTo int64
 	switch resetMode {
 	case "DAILY":
@@ -209,7 +260,7 @@ FILTER @bound_group == "" || account.account_group == @bound_group
 	cur, err := s.db.Query(context.Background(), invoicesQuery, bindVars)
 	if err != nil {
 		log.Error("Failed to get invoices to define number", zap.Error(err))
-		return "", 0, fmt.Errorf("failed to get invoices. %w", err)
+		return "", 0, false, fmt.Errorf("failed to get invoices. %w", err)
 	}
 	defer cur.Close()
 	number := 1
@@ -225,17 +276,17 @@ FILTER @bound_group == "" || account.account_group == @bound_group
 				break
 			}
 			log.Error("Failed to get invoices", zap.Error(err))
-			return "", 0, fmt.Errorf("failed to decode invoices. %w", err)
+			return "", 0, false, fmt.Errorf("failed to decode invoices. %w", err)
 		}
 		if err = s.invoices.DecodeInvoice(result, invoice); err != nil {
-			return "", 0, fmt.Errorf("failed to decode invoice. %w", err)
+			return "", 0, false, fmt.Errorf("failed to decode invoice. %w", err)
 		}
 		if invoice.NumericNumber >= number {
 			number = invoice.NumericNumber + 1
 		}
 	}
 
-	return s.invoices.ParseNumberIntoTemplate(template, number, date), number, nil
+	return s.invoices.ParseNumberIntoTemplate(template, number, date), number, false, nil
 }
 
 func (s *BillingServiceServer) obtainForcedInvoiceNumber(accGroup string) (int, error) {
@@ -448,6 +499,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	log := s.log.Named("CreateInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 
+	invoicesPaidMutex.Lock() // Locking simultaneous access to number manipulation
+	defer invoicesPaidMutex.Unlock()
+
 	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requester", requester))
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
@@ -550,17 +604,18 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
 	}
 	var (
-		strNum string
-		num    int
+		strNum    string
+		num       int
+		wasForced bool
 	)
 	if t.Status == pb.BillingStatus_PAID {
-		strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, now, template, resetMode, boundGroup)
+		strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, now, template, resetMode, boundGroup)
 		if err != nil {
 			log.Error("Failed to get next paid number", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get next number")
 		}
 	} else {
-		strNum, num, err = s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, newTemplate, "NONE", boundGroup)
+		strNum, num, wasForced, err = s.GetNewNumber(log, unpaidInvoicesByCreatedDate, now, newTemplate, "NONE", boundGroup)
 		if err != nil {
 			log.Error("Failed to get new number for invoice", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get new number for invoice. "+err.Error())
@@ -602,6 +657,10 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if acc.GetPaymentsGateway() == "whmcs" || acc.GetPaymentsGateway() == "" {
 		t.Meta["whmcs_sync_required"] = structpb.NewBoolValue(true)
 	}
+	if wasForced {
+		t.Meta[forcedNumberMetaKey] = structpb.NewNumberValue(float64(num))
+		t.Meta[forcedNumberDateMetaKey] = structpb.NewNumberValue(float64(time.Now().Unix()))
+	}
 
 	t.Number = strNum
 	if t.Created == 0 {
@@ -642,6 +701,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
+	if wasForced {
+		if err = s.saveForcedInvoiceNumber(boundGroup, 0); err != nil {
+			log.Error("Failed to reset forced invoice number", zap.Error(err))
+		}
+	}
+
 	if err = s.invoicesPublisher(&epb.Event{
 		Uuid: r.GetUuid(),
 		Key:  billing.InvoiceCreated,
@@ -670,12 +735,14 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	if t.Total <= 0 {
-		if _, err = s.UpdateInvoiceStatus(ctx, connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
-			Uuid:   r.GetUuid(),
-			Status: pb.BillingStatus_PAID,
-		})); err != nil {
-			log.Error("Failed to auto-pay 0 or less total invoice", zap.Error(err))
-		}
+		go func() {
+			if _, err = s.UpdateInvoiceStatus(ctx, connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
+				Uuid:   r.GetUuid(),
+				Status: pb.BillingStatus_PAID,
+			})); err != nil {
+				log.Error("Failed to auto-pay 0 or less total invoice", zap.Error(err))
+			}
+		}()
 	}
 
 	resp := connect.NewResponse(r.Invoice)
@@ -687,6 +754,9 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
 	t := req.Msg
 	log.Debug("UpdateInvoiceStatus request received")
+
+	invoicesPaidMutex.Lock() // Locking simultaneous access to number manipulation
+	defer invoicesPaidMutex.Unlock()
 
 	invConf := MakeInvoicesConf(log, &s.settingsClient)
 	var (
@@ -737,6 +807,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	var strNum string
 	var num int
+	var wasForced bool
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -770,7 +841,7 @@ payment:
 		_ = accGroup.InvoiceOrderSettings.NewTemplate
 		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
 	}
-	strNum, num, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
+	strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
 	if err != nil {
 		log.Error("Failed to get next number", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get next number")
@@ -786,6 +857,10 @@ quit:
 	if newInv.Meta == nil {
 		newInv.Meta = map[string]*structpb.Value{}
 	}
+	if wasForced {
+		newInv.Meta[forcedNumberMetaKey] = structpb.NewNumberValue(float64(num))
+		newInv.Meta[forcedNumberDateMetaKey] = structpb.NewNumberValue(float64(time.Now().Unix()))
+	}
 	newInv.Meta["paid_with_balance"] = structpb.NewBoolValue(paidWithBalance)
 	newInv.Transactions = nil
 	newInv.Instances = nil
@@ -794,6 +869,12 @@ quit:
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
+	}
+
+	if wasForced {
+		if err = s.saveForcedInvoiceNumber(boundGroup, 0); err != nil {
+			log.Error("Failed to reset forced invoice number", zap.Error(err))
+		}
 	}
 
 	if err = s.invoicesPublisher(&epb.Event{

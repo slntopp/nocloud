@@ -329,6 +329,54 @@ func (s *AccountsServiceServer) ChangePhone(ctx context.Context, req *accountspb
 	return &accountspb.ChangePhoneResponse{Result: true}, nil
 }
 
+func (s *AccountsServiceServer) CheckVerifyPhone(ctx context.Context, req *accountspb.CheckVerifyPhoneRequest) (*accountspb.CheckVerifyPhoneResponse, error) {
+	log := s.log.Named("CheckVerifyPhone")
+
+	requester := ctx.Value(nocloud.NoCloudAccount).(string)
+	log = log.With(zap.String("requester", requester))
+	log = log.With(zap.String("account", req.GetAccount()))
+	log = log.With(zap.Bool("flag", req.GetFlag()))
+	log.Debug("CheckVerifyPhone", zap.Any("request", req))
+
+	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	rootAccess := s.ca.HasAccess(ctx, requester, rootNs, access.Level_ROOT)
+	if !rootAccess {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+	acc, err := s.ctrl.Get(ctx, req.GetAccount())
+	if err != nil {
+		log.Error("error obtaining account", zap.Error(err))
+		return nil, err
+	}
+	phone, hasPhone := acc.GetPhone()
+	if !hasPhone {
+		return nil, status.Error(codes.Internal, "Account has invalid phone. Can't verify")
+	}
+	accountPhone := phone.CountryCode + phone.Number
+	if err = s.ctrl.Update(ctx, acc, map[string]interface{}{"is_phone_verified": req.GetFlag()}); err != nil {
+		log.Error("Failed to update account", zap.Error(err))
+		return nil, fmt.Errorf("internal error")
+	}
+	var eventKey = "phone_verification_revoked"
+	if req.GetFlag() {
+		eventKey = "phone_verified"
+	}
+	nocloud.Log(log, &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.GetUuid(),
+		Scope:     "database",
+		Action:    eventKey,
+		Rc:        0,
+		Requestor: requester,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "Phone: " + accountPhone,
+		},
+	})
+	log.Info("Phone was successfully verified manually")
+	return &accountspb.CheckVerifyPhoneResponse{Result: true}, nil
+}
+
 func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.VerificationRequest) (*pb.VerificationResponse, error) {
 	log := s.log.Named("Verify")
 
