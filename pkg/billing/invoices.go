@@ -701,8 +701,10 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	if err = s.saveForcedInvoiceNumber(boundGroup, 0); err != nil {
-		log.Error("Failed to reset forced invoice number", zap.Error(err))
+	if wasForced {
+		if err = s.saveForcedInvoiceNumber(boundGroup, 0); err != nil {
+			log.Error("Failed to reset forced invoice number", zap.Error(err))
+		}
 	}
 
 	if err = s.invoicesPublisher(&epb.Event{
@@ -869,8 +871,10 @@ quit:
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
-	if err = s.saveForcedInvoiceNumber(boundGroup, 0); err != nil {
-		log.Error("Failed to reset forced invoice number", zap.Error(err))
+	if wasForced {
+		if err = s.saveForcedInvoiceNumber(boundGroup, 0); err != nil {
+			log.Error("Failed to reset forced invoice number", zap.Error(err))
+		}
 	}
 
 	if err = s.invoicesPublisher(&epb.Event{
