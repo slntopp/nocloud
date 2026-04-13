@@ -483,6 +483,10 @@ func (s *AccountsServiceServer) Verify(ctx context.Context, req *pb.Verification
 			log.Debug("Chosen Asterisk device", zap.String("device", available))
 
 			to := accountPhone
+			if !strings.HasPrefix(to, "+") {
+				to = "+" + to
+			}
+
 			smsBody := fmt.Sprintf("Ваш код верификации ЛК: %s. Хостинг-провайдер support.by", code)
 			command := fmt.Sprintf(`sudo /usr/sbin/asterisk -rx 'dongle sms %s %s %s'`, available, to, smsBody)
 			resp, err = s.asteriskConn.RunCommand(command)

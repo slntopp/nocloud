@@ -354,7 +354,7 @@ const init = async () => {
   try {
     const { total } = await store.dispatch(
       "invoices/count",
-      countOptions.value
+      countOptions.value,
     );
     count.value = Number(total);
   } finally {
@@ -395,11 +395,14 @@ const downloadInvoice = async (invoice) => {
 
 watch(
   invoicesFilters,
-  () => {
+  (val, prevVal) => {
+    if (JSON.stringify(val) === JSON.stringify(prevVal)) {
+      return;
+    }
     page.value = 1;
     fetchInvoicesDebounce();
   },
-  { deep: true }
+  { deep: true },
 );
 watch(options, fetchInvoicesDebounce);
 watch(refetch, fetchInvoicesDebounce);
@@ -416,7 +419,7 @@ watch(invoices, () => {
       accounts.value[uuid] = undefined;
     } finally {
       isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
+        (acc) => acc instanceof Promise,
       );
     }
   });
