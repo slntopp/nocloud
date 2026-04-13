@@ -13,64 +13,12 @@
           {{ layout }}</v-btn
         >
       </div>
-      <div class="d-flex align-center">
-        <v-btn class="mr-1" :to="{ name: 'Invoice create' }"> Create </v-btn>
 
-        <confirm-dialog>
-          <v-btn class="mr-1" disabled>Merge</v-btn>
-        </confirm-dialog>
-
-        <confirm-dialog
-          :disabled="isCopyDisabled"
-          :loading="isCopyLoading"
-          @confirm="handleCopyInvoice"
-        >
-          <v-btn
-            :disabled="isCopyDisabled"
-            :loading="isCopyLoading"
-            class="mr-1"
-            >Copy</v-btn
-          >
-        </confirm-dialog>
-
-        <confirm-dialog
-          v-if="isKsefEnabled"
-          :disabled="isKsefDisabled"
-          :loading="isKsefLoading"
-          @confirm="handleKsefEnqueue"
-        >
-          <v-btn
-            :disabled="isKsefDisabled"
-            :loading="isKsefLoading"
-            class="mr-8"
-            >Ksef enqueue</v-btn
-          >
-        </confirm-dialog>
-
-        <confirm-dialog
-          v-for="button in changeStatusBtns"
-          :key="button.status"
-          :disabled="
-            (isUpdateStatusLoading && updateStatusName !== button.status) ||
-            button.disabled
-          "
-          @confirm="handleUpdateStatus(button.status)"
-        >
-          <v-btn
-            :disabled="
-              (isUpdateStatusLoading && updateStatusName !== button.status) ||
-              button.disabled ||
-              !selectedInvoices.length
-            "
-            :loading="
-              isUpdateStatusLoading && updateStatusName === button.status
-            "
-            class="mr-1"
-          >
-            {{ button.title }}
-          </v-btn>
-        </confirm-dialog>
-      </div>
+      <invoices-actions
+        :selected-invoices="selectedInvoices"
+        @input="selectedInvoices = $event"
+        @refresh="onRefresh"
+      />
     </div>
     <invoices-table
       v-model="selectedInvoices"
@@ -85,59 +33,15 @@
 import { computed, onMounted, ref } from "vue";
 import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
-import {
-  BillingStatus,
-  UpdateInvoiceStatusRequest,
-} from "nocloud-proto/proto/es/billing/billing_pb";
-import confirmDialog from "@/components/confirmDialog.vue";
-import { useRouter } from "vue-router/composables";
+import InvoicesActions from "@/components/invoicesActions.vue";
 
 const selectedInvoices = ref([]);
 const refetch = ref(false);
 
-const isCopyLoading = ref(false);
-const isKsefLoading = ref(false);
-
-const isUpdateStatusLoading = ref(false);
-const updateStatusName = ref("");
-
 const store = useStore();
-const router = useRouter();
 
 const isLoading = computed(() => store.getters["invoices/isLoading"]);
 const invoices = computed(() => store.getters["invoices/all"]);
-
-const isCopyDisabled = computed(() => selectedInvoices.value.length !== 1);
-const isKsefDisabled = computed(() => selectedInvoices.value.length < 1);
-
-const changeStatusBtns = computed(() => [
-  {
-    title: "paid",
-    status: "PAID",
-    disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "DRAFT", "RETURNED"].includes(invoice.status),
-    ),
-  },
-  {
-    title: "unpaid",
-    status: "UNPAID",
-    disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "RETURNED"].includes(invoice.status),
-    ),
-  },
-  {
-    title: "cancel",
-    status: "CANCELED",
-    disabled: selectedInvoices.value.some((invoice) =>
-      ["TERMINATED", "RETURNED", "DRAFT", "PAID"].includes(invoice.status),
-    ),
-  },
-  {
-    title: "terminate",
-    status: "TERMINATED",
-    disabled: false,
-  },
-]);
 
 const defaultLayouts = computed(() => ({
   unpaid: {
@@ -170,60 +74,6 @@ const currentSearchLayout = computed(
   () => store.getters["appSearch/currentLayout"],
 );
 
-const isKsefEnabled = computed(() => store.getters["settings/ksefEnabled"]);
-
-const refetchInvoices = () => {
-  refetch.value = !refetch.value;
-};
-
-const handleUpdateStatus = async (newStatus) => {
-  isUpdateStatusLoading.value = true;
-  updateStatusName.value = newStatus;
-
-  try {
-    await Promise.all(
-      selectedInvoices.value.map((invoice) => {
-        if (invoice.status === newStatus) {
-          return;
-        }
-
-        return store.getters["invoices/invoicesClient"].updateInvoiceStatus(
-          UpdateInvoiceStatusRequest.fromJson({
-            uuid: invoice.uuid,
-            status: BillingStatus[newStatus],
-          }),
-        );
-      }),
-    );
-    selectedInvoices.value = [];
-    refetchInvoices();
-  } catch (e) {
-    store.commit("snackbar/showSnackbarError", { message: e.message });
-  } finally {
-    isUpdateStatusLoading.value = false;
-    updateStatusName.value = "";
-  }
-};
-
-const handleCopyInvoice = async () => {
-  isCopyLoading.value = true;
-
-  try {
-    const data = await store.dispatch(
-      "invoices/copy",
-      selectedInvoices.value[0],
-    );
-    router.push({ name: "Invoice page", params: { uuid: data.uuid } });
-
-    refetchInvoices();
-    selectedInvoices.value = [];
-  } catch (e) {
-    store.commit("snackbar/showSnackbarError", { message: e.message });
-  } finally {
-    isCopyLoading.value = false;
-  }
-};
-
 const setDefaultLayouts = () => {
   const defaults = Object.values(defaultLayouts.value);
   const layouts = JSON.parse(
@@ -242,35 +92,12 @@ const setDefaultLayouts = () => {
   store.commit("appSearch/setLayouts", layouts);
 };
 
-const handleKsefEnqueue = async () => {
-  isKsefLoading.value = true;
-
-  try {
-    await Promise.all(
-      selectedInvoices.value.map((invoice) => {
-        return store.getters["invoices/invoicesClient"].ksefEnqueue({
-          invoiceUuid: invoice.uuid,
-        });
-      }),
-    );
-
-    refetchInvoices();
-    selectedInvoices.value = [];
-
-    store.commit("snackbar/showSnackbarSuccess", {
-      message: "KSeF enqueue request sent",
-    });
-  } catch (e) {
-    store.commit("snackbar/showSnackbarError", {
-      message: "Failed to send KSeF enqueue requests",
-    });
-  } finally {
-    isKsefLoading.value = false;
-  }
-};
-
 const setInvoicesLayout = (key) => {
   store.commit("appSearch/setCurrentLayout", defaultLayouts.value[key].id);
+};
+
+const onRefresh = () => {
+  refetch.value = !refetch.value;
 };
 
 onMounted(() => {
