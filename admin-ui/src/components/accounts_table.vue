@@ -34,6 +34,19 @@
       </div>
     </template>
 
+    <template v-slot:[`item.accountGroup`]="{ item }">
+      <div class="d-flex justify-space-between">
+        <router-link
+          v-if="item.accountGroup"
+          :to="{ name: 'AccountGroupPage', params: { uuid: item.accountGroup } }"
+        >
+          {{ getAccountGroup(item)?.title }}
+        </router-link>
+
+        <span v-else>Default group</span>
+      </div>
+    </template>
+
     <template v-slot:[`item.data.email`]="{ item }">
       {{ getShortName(item.data.email) }}
     </template>
@@ -123,8 +136,9 @@ const loading = ref(false);
 const fetchError = ref("");
 const options = ref({});
 const headers = ref([
-  { text: "Title", value: "title" },
   { text: "UUID", value: "uuid" },
+  { text: "Title", value: "title" },
+  { text: "Account Group", value: "accountGroup" },
   { text: "Status", value: "status" },
   { text: "Balance", value: "balance" },
   { text: "Email", value: "data.email" },
@@ -206,7 +220,7 @@ const accounts = computed(() =>
         ...a.data,
       },
     };
-  })
+  }),
 );
 const total = computed(() => store.getters["accounts/total"]);
 
@@ -328,6 +342,9 @@ const colorChip = (level) => {
 const getColorByGroup = (account) => {
   const group = accountGroups.value.find((g) => g.uuid == account.accountGroup);
   return group?.color || null;
+};
+const getAccountGroup = (account) => {
+  return accountGroups.value.find((g) => g.uuid == account.accountGroup);
 };
 const goToBalance = (uuid) => {
   router.push({ name: "Transactions", query: { account: uuid } });
