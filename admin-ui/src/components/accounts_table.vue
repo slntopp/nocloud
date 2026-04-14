@@ -34,7 +34,7 @@
       </div>
     </template>
 
-    <template v-slot:[`item.accountGroup`]="{ item }">
+    <template v-slot:[`item.account_group`]="{ item }">
       <div class="d-flex justify-space-between">
         <router-link
           v-if="item.accountGroup"
@@ -138,7 +138,7 @@ const options = ref({});
 const headers = ref([
   { text: "UUID", value: "uuid" },
   { text: "Title", value: "title" },
-  { text: "Account Group", value: "accountGroup" },
+  { text: "Account Group", value: "account_group" },
   { text: "Status", value: "status" },
   { text: "Balance", value: "balance" },
   { text: "Email", value: "data.email" },
