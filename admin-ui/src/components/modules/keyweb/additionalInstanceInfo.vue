@@ -65,6 +65,10 @@
         <v-text-field :value="ram" readonly label="RAM" />
       </v-col>
 
+       <v-col cols="2">
+        <v-text-field value="SSD" readonly label="Disk type" />
+      </v-col>
+
       <v-col cols="2">
         <v-text-field :value="disk" readonly label="Disk size" />
       </v-col>
