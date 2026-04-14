@@ -83,18 +83,31 @@ const store = useStore();
 const newIps = ref([]);
 const isSaveNewIpLoading = ref(false);
 
-const ip = computed(
-  () =>
+const ip = computed(() => {
+  if (type.value === "display_ips") {
+    return item.value.data.display_ips?.join(", ") || "";
+  }
+
+  return (
     item.value.state.meta?.networking?.[type.value]?.find(
       (ip) =>
         /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/gm.exec(
-          ip
-        ) || /\/32$/.exec(ip)
+          ip,
+        ) || /\/32$/.exec(ip),
     ) || item.value.state.meta?.networking?.[type.value]?.[0]
-);
+  );
+});
 
 const setNewIps = () => {
   newIps.value = [];
+
+  if (type.value === "display_ips") {
+    item.value.data.display_ips.forEach((ip) => {
+      newIps.value.push(ip);
+    });
+
+    return;
+  }
 
   item.value.state.meta?.networking?.[type.value]?.forEach((ip) => {
     newIps.value.push(ip);

@@ -28,8 +28,8 @@ const useCurrency = () => {
 
     const endPrice = rate ? price * rate : 0;
 
-    const precision = currency.precision || 0;
-    const rounding = currency.rounding || "ROUND_HALF";
+    const precision = currency?.precision || 0;
+    const rounding = currency?.rounding || "ROUND_HALF";
 
     if (endPrice == 0) {
       return 0;

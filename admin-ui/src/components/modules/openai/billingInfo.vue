@@ -21,7 +21,7 @@
           </template>
         </v-text-field>
       </v-col>
-      <v-col cols="2">
+      <v-col cols="3">
         <date-picker
           label="Date (create)"
           :value="timestampToDateTimeLocal(template?.created)"
@@ -35,7 +35,7 @@
         />
       </v-col>
 
-      <v-col cols="2">
+      <v-col cols="3">
         <date-picker
           label="Deleted date"
           :value="timestampToDateTimeLocal(template?.deleted)"
