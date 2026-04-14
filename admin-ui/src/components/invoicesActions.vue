@@ -7,7 +7,7 @@
       Create
     </v-btn>
 
-    <confirm-dialog>
+    <confirm-dialog disabled>
       <v-btn class="mr-1" disabled>Merge</v-btn>
     </confirm-dialog>
 
