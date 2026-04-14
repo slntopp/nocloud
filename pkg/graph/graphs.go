@@ -574,6 +574,13 @@ func listAccounts[T Accessible](
 			}
 			insert += ` FILTER TO_NUMBER(node.status) in @statuses`
 			bindVars["statuses"] = values
+		} else if key == "account_groups" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER node.account_groups in @account_groups`
+			bindVars["account_groups"] = values
 		} else if key == "currency" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
