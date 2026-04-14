@@ -138,7 +138,7 @@
             @click="
               addToClipboard(
                 template.billingPlan.products[template.product].meta
-                  ?.description || ''
+                  ?.description || '',
               )
             "
             >copy</v-btn
@@ -152,6 +152,7 @@
         :is="additionalInstanceInfoComponent"
         :sp="sp"
         :account="account"
+        :addons="copyAddons"
         :template="template"
       />
       <v-card-title class="primary--text">Billing info</v-card-title>
@@ -212,7 +213,7 @@ export default {
     nocloudTable,
     instanceActions,
     JsonTextarea,
-    AdminNotesPinned
+    AdminNotesPinned,
   },
   mixins: [snackbar],
   props: {
@@ -317,7 +318,7 @@ export default {
     const types = require.context(
       "@/components/modules/",
       true,
-      /instanceCard\.vue$/
+      /instanceCard\.vue$/,
     );
 
     types.keys().forEach((key) => {
