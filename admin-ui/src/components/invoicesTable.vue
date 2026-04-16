@@ -95,6 +95,10 @@
       {{ value?.replaceAll("_", " ") }}
     </template>
 
+    <template v-slot:[`item.meta.ksef_number`]="{ value, item }">
+      {{ [value, item.meta.ksef_last_error].filter((v) => !!v).join(" ") }}
+    </template>
+
     <template v-slot:[`item.deadline`]="{ item }">
       {{ formatSecondsToDate(item.deadline, true) }}
     </template>
