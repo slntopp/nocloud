@@ -255,7 +255,7 @@
                 :loading="isKsefLoading"
                 :disabled="isKsefDisabled"
               >
-                Ksef enqueue
+                Ksef 
               </v-btn>
             </confirm-dialog>
           </template>
@@ -774,11 +774,11 @@ const sendKsefEnqueueRequest = async () => {
       invoiceUuid: invoice.value.uuid,
     });
     store.commit("snackbar/showSnackbarSuccess", {
-      message: "KSeF enqueue request sent",
+      message: "KSeF request sent",
     });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: "Failed to send KSeF enqueue request",
+      message: "Failed to send KSeF request",
     });
   } finally {
     isKsefLoading.value = false;

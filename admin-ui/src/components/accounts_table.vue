@@ -4,7 +4,7 @@
     :headers="headers"
     :items="accounts"
     :value="selected"
-    :loading="loading"
+    :loading="loading || isAccountsLoading"
     :single-select="singleSelect"
     :footer-error="fetchError"
     @input="handleSelect"
@@ -38,7 +38,10 @@
       <div class="d-flex justify-space-between">
         <router-link
           v-if="item.accountGroup"
-          :to="{ name: 'AccountGroupPage', params: { uuid: item.accountGroup } }"
+          :to="{
+            name: 'AccountGroupPage',
+            params: { uuid: item.accountGroup },
+          }"
         >
           {{ getAccountGroup(item)?.title }}
         </router-link>
@@ -169,6 +172,7 @@ onMounted(() => {
 });
 
 const searchParam = computed(() => store.getters["appSearch/param"]);
+const isAccountsLoading = computed(() => store.getters["accounts/loading"]);
 const filter = computed(() => {
   const filter = store.getters["appSearch/filter"];
   const total = {};
@@ -331,7 +335,9 @@ const fetchAccounts = async () => {
   }
 };
 
-const fetchAccountsDebounce = debounce(fetchAccounts);
+const fetchAccountsDebounce = debounce(() => {
+  fetchAccounts();
+}, 300);
 
 const handleSelect = (item) => {
   emit("input", item);
@@ -364,9 +370,13 @@ watch(value, () => {
   selected.value = value.value;
 });
 
-watch(filter, fetchAccountsDebounce, { deep: true });
-watch(options, fetchAccountsDebounce);
-watch(customSearchParam, fetchAccountsDebounce);
+watch(
+  [() => filter.value, () => options.value, () => customSearchParam.value],
+  () => {
+    fetchAccountsDebounce();
+  },
+  { deep: true },
+);
 </script>
 
 <script>

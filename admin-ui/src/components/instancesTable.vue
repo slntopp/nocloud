@@ -562,7 +562,7 @@ const fetchUnique = async () => {
   }
 };
 
-const fetchInstancesDebounce = debounce(fetchInstances, 100);
+const fetchInstancesDebounce = debounce(fetchInstances, 300);
 
 const getPeriod = (instance) => {
   if (isInstancePayg(instance)) {

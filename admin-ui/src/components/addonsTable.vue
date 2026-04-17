@@ -87,7 +87,7 @@ const requestOptions = computed(() => ({
 
       return newFilter;
     },
-    { system: false }
+    { system: false },
   ),
   page: page.value,
   limit: options.value.itemsPerPage,
@@ -102,6 +102,8 @@ const countOptions = computed(() => ({
 
 const filter = computed(() => ({
   ...store.getters["appSearch/filter"],
+  title:
+    store.getters["appSearch/param"] || store.getters["appSearch/filter"].title,
 }));
 const searchFields = computed(() => {
   return [
@@ -131,33 +133,31 @@ const setOptions = (newOptions) => {
   }
 };
 
-const init = async () => {
-  isCountLoading.value = true;
-  try {
-    const data = await store.dispatch("addons/count", countOptions.value);
-    const { unique, total } = data.toJson();
-
-    count.value = Number(total);
-    allAddonsGroups.value = unique.groups;
-  } finally {
-    isCountLoading.value = false;
-  }
-};
-
 const fetchAddons = async () => {
-  init();
   isFetchLoading.value = true;
+  isCountLoading.value = true;
   fetchError.value = "";
+
   try {
-    await store.dispatch("addons/fetch", requestOptions.value);
+    const [countRes] = await Promise.all([
+      store.dispatch("addons/count", countOptions.value),
+      store.dispatch("addons/fetch", requestOptions.value)
+    ]);
+
+    if (countRes) {
+      const data = countRes.toJson();
+      count.value = Number(data.total);
+      allAddonsGroups.value = data.unique.groups;
+    }
   } catch (e) {
     fetchError.value = e.message;
   } finally {
     isFetchLoading.value = false;
+    isCountLoading.value = false;
   }
 };
 
-const fetchAddonsDebounced = debounce(fetchAddons, 100);
+const fetchAddonsDebounced = debounce(fetchAddons, 300);
 
 const updateAddon = async (item, { key, value }) => {
   try {
@@ -179,7 +179,7 @@ watch(
   (value) => {
     store.commit("appSearch/setFields", value);
   },
-  { deep: true }
+  { deep: true },
 );
 
 watch(
@@ -188,7 +188,7 @@ watch(
     page.value = 1;
     fetchAddonsDebounced();
   },
-  { deep: true }
+  { deep: true },
 );
 watch(options, fetchAddonsDebounced);
 watch(refetch, fetchAddonsDebounced);

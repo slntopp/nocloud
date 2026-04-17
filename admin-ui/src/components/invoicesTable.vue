@@ -95,6 +95,10 @@
       {{ value?.replaceAll("_", " ") }}
     </template>
 
+    <template v-slot:[`item.meta.ksef_number`]="{ value, item }">
+      {{ [value, item.meta.ksef_last_error].filter((v) => !!v).join(" ") }}
+    </template>
+
     <template v-slot:[`item.deadline`]="{ item }">
       {{ formatSecondsToDate(item.deadline, true) }}
     </template>
@@ -349,29 +353,25 @@ const setOptions = (newOptions) => {
   }
 };
 
-const init = async () => {
-  isCountLoading.value = true;
-  try {
-    const { total } = await store.dispatch(
-      "invoices/count",
-      countOptions.value,
-    );
-    count.value = Number(total);
-  } finally {
-    isCountLoading.value = false;
-  }
-};
-
 const fetchInvoices = async () => {
-  init();
   isFetchLoading.value = true;
+  isCountLoading.value = true;
   fetchError.value = "";
+
   try {
-    await store.dispatch("invoices/fetch", listOptions.value);
+    const [countRes] = await Promise.all([
+      store.dispatch("invoices/count", countOptions.value),
+      store.dispatch("invoices/fetch", listOptions.value)
+    ]);
+
+    if (countRes) {
+      count.value = Number(countRes.total);
+    }
   } catch (e) {
     fetchError.value = e.message;
   } finally {
     isFetchLoading.value = false;
+    isCountLoading.value = false;
   }
 };
 

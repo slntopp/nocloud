@@ -28,7 +28,7 @@
       @confirm="handleKsefEnqueue"
     >
       <v-btn :disabled="isKsefDisabled" :loading="isKsefLoading" class="mr-8"
-        >Ksef enqueue</v-btn
+        >Ksef</v-btn
       >
     </confirm-dialog>
 
@@ -192,11 +192,11 @@ const handleKsefEnqueue = async () => {
     emit("input", []); // Clear selection
 
     store.commit("snackbar/showSnackbarSuccess", {
-      message: "KSeF enqueue request sent",
+      message: "KSeF request sent",
     });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: "Failed to send KSeF enqueue requests",
+      message: "Failed to send KSeF requests",
     });
   } finally {
     isKsefLoading.value = false;
