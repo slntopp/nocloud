@@ -11,6 +11,9 @@ export default {
     addons: [],
     one: null,
     loading: false,
+
+    currentFetchRequestId: 0,
+    currentCountRequestId: 0,
   },
   mutations: {
     setAddons(state, addons) {
@@ -24,20 +27,34 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit, getters }, options) {
-      commit("setAddons", []);
+    async fetch({ commit, state, getters }, options) {
+      const id = ++state.currentFetchRequestId;
       commit("setLoading", true);
+
       try {
         const response = await getters.addonsClient.list(
-          ListAddonsRequest.fromJson(options)
+          ListAddonsRequest.fromJson(options),
         );
+        if (id !== state.currentFetchRequestId) return;
+
         commit("setAddons", response.addons);
       } finally {
-        commit("setLoading", false);
+        if (id === state.currentFetchRequestId) commit("setLoading", false);
       }
     },
-    async count({ getters }, options) {
-      return getters.addonsClient.count(CountAddonsRequest.fromJson(options));
+
+    async count({ state, getters }, options) {
+      const id = ++state.currentCountRequestId;
+      try {
+        const response = await getters.addonsClient.count(
+          CountAddonsRequest.fromJson(options),
+        );
+        if (id !== state.currentCountRequestId) return null;
+
+        return response;
+      } catch (e) {
+        return null;
+      }
     },
     async fetchById({ commit, getters }, id) {
       commit("setLoading", true);

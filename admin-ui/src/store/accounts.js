@@ -9,6 +9,7 @@ export default {
     total: 0,
     loading: false,
     one: {},
+    currentRequestId: null,
   },
   mutations: {
     setAccounts(state, accounts) {
@@ -34,27 +35,26 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, params) {
-      commit("setAccounts", []);
-      if (!params.silent) {
-        commit("setLoading", true);
-      }
+    async fetch({ commit, state }, params) {
+      const requestId = Date.now();
+      state.currentRequestId = requestId;
 
-      return new Promise((resolve, reject) => {
-        api
-          .post("accounts", params)
-          .then((response) => {
-            commit("setAccounts", response.pool);
-            commit("setTotal", response.count);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      if (!params.silent) commit("setLoading", true);
+
+      try {
+        const response = await api.post("accounts", params);
+
+        if (requestId !== state.currentRequestId) {
+          return;
+        }
+
+        commit("setAccounts", response.pool);
+        commit("setTotal", response.count);
+      } finally {
+        if (requestId === state.currentRequestId) {
+          commit("setLoading", false);
+        }
+      }
     },
     fetchById({ commit }, id) {
       commit("setLoading", true);

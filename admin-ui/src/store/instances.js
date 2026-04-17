@@ -10,6 +10,8 @@ export default {
     one: null,
     loading: false,
     total: 0,
+
+    currentRequestId: null,
   },
   mutations: {
     setInstances(state, instances) {
@@ -32,13 +34,17 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit, getters }, params) {
-      commit("setInstances", []);
+    async fetch({ commit, state, getters }, params) {
+      const requestId = Date.now();
+      state.currentRequestId = requestId;
+
       commit("setLoading", true);
       try {
         const response = await getters["instancesClient"].list(
-          ListInstancesRequest.fromJson(params)
+          ListInstancesRequest.fromJson(params),
         );
+
+        if (requestId !== state.currentRequestId) return;
 
         const instances = response.pool.map((i) => ({
           ...i,
@@ -48,10 +54,11 @@ export default {
 
         commit("setInstances", instances);
         commit("setTotal", Number(response.count));
-
         return instances;
       } finally {
-        commit("setLoading", false);
+        if (requestId === state.currentRequestId) {
+          commit("setLoading", false);
+        }
       }
     },
     async get({ commit, getters }, uuid) {
@@ -115,7 +122,7 @@ export default {
     instancesClient(state, getters, rootState, rootGetters) {
       return createPromiseClient(
         InstancesService,
-        rootGetters["app/transport"]
+        rootGetters["app/transport"],
       );
     },
   },

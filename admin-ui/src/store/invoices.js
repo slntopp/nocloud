@@ -12,6 +12,8 @@ export default {
     invoices: [],
     one: null,
     loading: false,
+    currentFetchRequestId: null,
+    currentCountRequestId: null,
   },
   mutations: {
     setInvoices(state, invoices) {
@@ -23,24 +25,42 @@ export default {
     setLoading(state, data) {
       state.loading = data;
     },
+    incrementFetchRequestId(state) {
+      state.currentFetchRequestId++;
+    },
+    incrementCountRequestId(state) {
+      state.currentCountRequestId++;
+    },
   },
   actions: {
-    async fetch({ commit, getters }, params) {
-      commit("setInvoices", []);
+    async fetch({ commit, state, getters }, params) {
+      commit("incrementFetchRequestId");
+      const requestId = state.currentFetchRequestId;
+
       commit("setLoading", true);
       try {
         const response = await getters["invoicesClient"].getInvoices(
-          GetInvoicesRequest.fromJson(params)
+          GetInvoicesRequest.fromJson(params),
         );
+
+        if (requestId !== state.currentFetchRequestId) return;
+
         commit("setInvoices", response.toJson().pool);
       } finally {
-        commit("setLoading", false);
+        if (requestId === state.currentFetchRequestId) {
+          commit("setLoading", false);
+        }
       }
     },
-    count({ getters }, params) {
-      return getters["invoicesClient"].getInvoicesCount(
-        GetInvoicesCountRequest.fromJson(params)
+    async count({ state, getters, commit }, params) {
+      commit("incrementCountRequestId");
+      const requestId = state.currentCountRequestId;
+      const response = await getters["invoicesClient"].getInvoicesCount(
+        GetInvoicesCountRequest.fromJson(params),
       );
+
+      if (requestId !== state.currentCountRequestId) return null;
+      return response;
     },
     async get({ commit, getters }, uuid) {
       commit("setLoading", true);
@@ -68,7 +88,7 @@ export default {
         CreateInvoiceRequest.fromJson({
           invoice: data,
           isSendEmail: false,
-        })
+        }),
       );
     },
   },

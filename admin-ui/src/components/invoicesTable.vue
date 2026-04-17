@@ -353,29 +353,25 @@ const setOptions = (newOptions) => {
   }
 };
 
-const init = async () => {
-  isCountLoading.value = true;
-  try {
-    const { total } = await store.dispatch(
-      "invoices/count",
-      countOptions.value,
-    );
-    count.value = Number(total);
-  } finally {
-    isCountLoading.value = false;
-  }
-};
-
 const fetchInvoices = async () => {
-  init();
   isFetchLoading.value = true;
+  isCountLoading.value = true;
   fetchError.value = "";
+
   try {
-    await store.dispatch("invoices/fetch", listOptions.value);
+    const [countRes] = await Promise.all([
+      store.dispatch("invoices/count", countOptions.value),
+      store.dispatch("invoices/fetch", listOptions.value)
+    ]);
+
+    if (countRes) {
+      count.value = Number(countRes.total);
+    }
   } catch (e) {
     fetchError.value = e.message;
   } finally {
     isFetchLoading.value = false;
+    isCountLoading.value = false;
   }
 };
 

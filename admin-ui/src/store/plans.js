@@ -9,6 +9,8 @@ export default {
     total: 0,
     plan: {},
     loading: false,
+
+    currentFetchRequestId: null,
   },
   getters: {
     all(state) {
@@ -42,25 +44,30 @@ export default {
     },
     updatePlan(state, newPlan) {
       state.plan = state.plan.map((plan) =>
-        newPlan.uuid === plan.uuid ? newPlan : plan
+        newPlan.uuid === plan.uuid ? newPlan : plan,
       );
     },
   },
   actions: {
-    async fetch({ commit, getters }, options) {
+    async fetch({ commit, state, getters }, options) {
+      const currentId = ++state.currentFetchRequestId;
       commit("setLoading", true);
-      commit("setPlans", []);
+
       try {
         const response = await getters.plansClient.listPlans(
-          ListRequest.fromJson(options || {})
+          ListRequest.fromJson(options || {}),
         );
+
+        if (currentId !== state.currentFetchRequestId) return;
 
         const data = response.toJson();
         commit("setPlans", data.pool);
         commit("setTotal", data.total);
         return data.pool;
       } finally {
-        commit("setLoading", false);
+        if (currentId === state.currentFetchRequestId) {
+          commit("setLoading", false);
+        }
       }
     },
     async fetchById({ commit, getters }, id) {
