@@ -96,7 +96,7 @@
     </template>
 
     <template v-slot:[`item.meta.ksef_number`]="{ value, item }">
-      {{ [value, item.meta.ksef_last_error].filter((v) => !!v).join(" ") }}
+      {{ [item.meta.ksef_last_error, value].filter((v) => !!v).join(" ") }}
     </template>
 
     <template v-slot:[`item.deadline`]="{ item }">
@@ -361,7 +361,7 @@ const fetchInvoices = async () => {
   try {
     const [countRes] = await Promise.all([
       store.dispatch("invoices/count", countOptions.value),
-      store.dispatch("invoices/fetch", listOptions.value)
+      store.dispatch("invoices/fetch", listOptions.value),
     ]);
 
     if (countRes) {
