@@ -1,6 +1,6 @@
 ARG IMAGE_TAG=latest
 ARG ARCH=amd64
-FROM ghcr.io/slntopp/nocloud/base:${IMAGE_TAG} as builder
+FROM ghcr.io/slntopp/nocloud/base:${IMAGE_TAG} AS builder
 
 RUN CGO_ENABLED=0 GOARCH=${ARCH} go build -ldflags="-s -w" -buildvcs=false ./cmd/apiserver_web
 RUN upx ./apiserver_web
@@ -25,7 +25,7 @@ USER nocloud
 
 HEALTHCHECK NONE
 EXPOSE 8000
-LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
-LABEL nocloud.update "true"
+LABEL org.opencontainers.image.source=https://github.com/slntopp/nocloud
+LABEL nocloud.update="true"
 
 ENTRYPOINT ["/apiserver_web"]
