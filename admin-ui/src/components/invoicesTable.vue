@@ -186,6 +186,7 @@ const headers = ref([
 ]);
 
 onMounted(() => {
+  store.dispatch("accountGroups/fetch");
   store.commit("reloadBtn/setCallback", {
     event: () => {
       accounts.value = [];
@@ -199,6 +200,7 @@ onMounted(() => {
 });
 
 const invoices = computed(() => store.getters["invoices/all"]);
+const accountGroups = computed(() => store.getters["accountGroups/all"]);
 const isLoading = computed(() => isFetchLoading.value || isCountLoading.value);
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
@@ -241,6 +243,18 @@ const searchFields = computed(() => [
     title: "Account",
     label: "Account",
     component: AccountsAutocomplete,
+  },
+  {
+    key: "account_groups",
+    type: "select",
+    title: "Account group",
+    items: [
+      { text: "Default group", value: "__default__" },
+      ...accountGroups.value.map((g) => ({
+        text: g.title,
+        value: g.uuid,
+      })),
+    ],
   },
   {
     title: "Currency",
@@ -319,7 +333,11 @@ const invoicesFilters = computed(() => {
         continue;
       }
 
-      filters[key] = filter.value[key];
+      if (key === "account_groups") {
+        filters[key] = value.map((v) => v === "__default__" ? "" : v);
+      } else {
+        filters[key] = filter.value[key];
+      }
     }
   }
 

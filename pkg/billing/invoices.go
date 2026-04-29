@@ -418,6 +418,14 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "account_groups" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` LET _acc = DOCUMENT(@@accounts, t.account) FILTER (_acc.account_group in @account_groups) || (_acc.accountGroup in @account_groups) || ("" in @account_groups AND (IS_NULL(_acc.account_group) OR _acc.account_group == "") AND (IS_NULL(_acc.accountGroup) OR _acc.accountGroup == ""))`
+				vars["account_groups"] = values
+				vars["@accounts"] = schema.ACCOUNTS_COL
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -1345,6 +1353,14 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "account_groups" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` LET _acc = DOCUMENT(@@accounts, t.account) FILTER (_acc.account_group in @account_groups) || (_acc.accountGroup in @account_groups) || ("" in @account_groups AND (IS_NULL(_acc.account_group) OR _acc.account_group == "") AND (IS_NULL(_acc.accountGroup) OR _acc.accountGroup == ""))`
+				vars["account_groups"] = values
+				vars["@accounts"] = schema.ACCOUNTS_COL
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {

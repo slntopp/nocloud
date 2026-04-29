@@ -239,6 +239,9 @@ const requestOptions = computed(() => ({
           from: filter.value?.balance.from && +filter.value?.balance.from,
           to: filter.value?.balance.to && +filter.value?.balance.to,
         },
+        account_groups: filter.value?.account_groups?.map((v) =>
+          v === "__default__" ? "" : v
+        ),
         search_param:
           searchParam.value || filter.value.search_param || undefined,
       }
@@ -291,10 +294,13 @@ const searchFields = computed(() => [
     title: "Account group",
     key: "account_groups",
     type: "select",
-    items: store.getters["accountGroups/all"].map((g) => ({
-      text: g.title,
-      value: g.uuid,
-    })),
+    items: [
+      { text: "Default group", value: "__default__" },
+      ...store.getters["accountGroups/all"].map((g) => ({
+        text: g.title,
+        value: g.uuid,
+      })),
+    ],
   },
   {
     title: "Access level",
