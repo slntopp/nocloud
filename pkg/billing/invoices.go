@@ -1728,6 +1728,8 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		return nil, status.Error(codes.InvalidArgument, "Sum must be greater than 0")
 	}
 
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, requester)
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
@@ -1746,7 +1748,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       req.GetSum(),
-				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+				Description: invConf.TopUpItemMessage,
 				ApplyTax:    true,
 			},
 		},
