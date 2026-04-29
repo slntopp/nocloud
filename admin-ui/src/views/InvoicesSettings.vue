@@ -57,6 +57,12 @@
           v-model.number="newSettings.top_up_item_message"
           label="Top up item message"
         />
+
+        <v-switch
+          :loading="isSettingsLoading"
+          v-model="newSettings.force_require_phone_verification"
+          label="Force Require Phone Verification"
+        />
       </v-col>
       <v-divider vertical></v-divider>
       <v-col cols="6">
