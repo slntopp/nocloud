@@ -999,6 +999,8 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 	}
 
 	query := ""
+	var accountGroupUuids []interface{}
+	var noGroup bool
 	for key, val := range filters {
 		if key == "account" {
 			values := val.GetListValue().AsSlice()
@@ -1187,18 +1189,22 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			query += fmt.Sprintf(` FILTER TO_BOOL(node.config.auto_start) == @%s`, keyVal)
 			bindVars[keyVal] = val.GetBoolValue()
 		} else if key == "no_group" {
-			if !val.GetBoolValue() {
-				continue
-			}
-			query += ` FILTER (IS_NULL(acc.account_group) OR acc.account_group == "") AND (IS_NULL(acc.accountGroup) OR acc.accountGroup == "")`
+			noGroup = val.GetBoolValue()
 		} else if key == "account_groups" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			query += ` FILTER (acc.account_group in @account_groups) || (acc.accountGroup in @account_groups)`
-			bindVars["account_groups"] = values
+			accountGroupUuids = val.GetListValue().AsSlice()
 		}
+	}
+
+	if noGroup || len(accountGroupUuids) > 0 {
+		var conditions []string
+		if len(accountGroupUuids) > 0 {
+			bindVars["account_groups"] = accountGroupUuids
+			conditions = append(conditions, `(acc.account_group in @account_groups) || (acc.accountGroup in @account_groups)`)
+		}
+		if noGroup {
+			conditions = append(conditions, `(IS_NULL(acc.account_group) OR acc.account_group == "") AND (IS_NULL(acc.accountGroup) OR acc.accountGroup == "")`)
+		}
+		query += ` FILTER ` + strings.Join(conditions, ` || `)
 	}
 
 	return query

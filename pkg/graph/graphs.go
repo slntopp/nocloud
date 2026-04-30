@@ -519,6 +519,8 @@ func listAccounts[T Accessible](
 	}
 
 	var insert string
+	var accountGroupUuids []interface{}
+	var noGroup bool
 
 	if field != "" && sort != "" {
 		insert += fmt.Sprintf("SORT node.%s %s\n", field, sort)
@@ -575,17 +577,9 @@ func listAccounts[T Accessible](
 			insert += ` FILTER TO_NUMBER(node.status) in @statuses`
 			bindVars["statuses"] = values
 		} else if key == "no_group" {
-			if !val.GetBoolValue() {
-				continue
-			}
-			insert += ` FILTER (IS_NULL(node.account_group) OR node.account_group == "") AND (IS_NULL(node.accountGroup) OR node.accountGroup == "")`
+			noGroup = val.GetBoolValue()
 		} else if key == "account_groups" {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			insert += ` FILTER (node.account_group in @account_groups) || (node.accountGroup in @account_groups)`
-			bindVars["account_groups"] = values
+			accountGroupUuids = val.GetListValue().AsSlice()
 		} else if key == "currency" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
@@ -612,6 +606,18 @@ func listAccounts[T Accessible](
 			insert += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
 			bindVars[key] = values
 		}
+	}
+
+	if noGroup || len(accountGroupUuids) > 0 {
+		var conditions []string
+		if len(accountGroupUuids) > 0 {
+			bindVars["account_groups"] = accountGroupUuids
+			conditions = append(conditions, `(node.account_group in @account_groups) || (node.accountGroup in @account_groups)`)
+		}
+		if noGroup {
+			conditions = append(conditions, `(IS_NULL(node.account_group) OR node.account_group == "") AND (IS_NULL(node.accountGroup) OR node.accountGroup == "")`)
+		}
+		insert += ` FILTER ` + strings.Join(conditions, ` || `)
 	}
 
 	q := fmt.Sprintf(listAccountsQuery, insert)
