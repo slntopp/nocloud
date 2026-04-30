@@ -230,29 +230,34 @@ const total = computed(() => store.getters["accounts/total"]);
 
 const accountGroups = computed(() => store.getters["accountGroups/all"]);
 
-const requestOptions = computed(() => ({
-  filters: !noSearch.value
-    ? {
-        ...filter.value,
-        "data.whmcs_id": +filter.value["data.whmcs_id"] || undefined,
-        balance: filter.value?.balance && {
-          from: filter.value?.balance.from && +filter.value?.balance.from,
-          to: filter.value?.balance.to && +filter.value?.balance.to,
-        },
-        account_groups: filter.value?.account_groups?.map((v) =>
-          v === "__default__" ? "" : v
-        ),
-        search_param:
-          searchParam.value || filter.value.search_param || undefined,
-      }
-    : customFilter.value
-    ? customFilter.value
-    : { search_param: customSearchParam.value || undefined },
-  page: options.value.page,
-  limit: options.value.itemsPerPage,
-  field: options.value.sortBy[0],
-  sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
-}));
+const requestOptions = computed(() => {
+  const rawGroups = filter.value?.account_groups;
+  const groups = rawGroups?.filter((v) => v !== "no_group");
+  const hasNoGroup = rawGroups?.includes("no_group");
+
+  return {
+    filters: !noSearch.value
+      ? {
+          ...filter.value,
+          "data.whmcs_id": +filter.value["data.whmcs_id"] || undefined,
+          balance: filter.value?.balance && {
+            from: filter.value?.balance.from && +filter.value?.balance.from,
+            to: filter.value?.balance.to && +filter.value?.balance.to,
+          },
+          account_groups: groups?.length ? groups : undefined,
+          no_group: hasNoGroup ? true : undefined,
+          search_param:
+            searchParam.value || filter.value.search_param || undefined,
+        }
+      : customFilter.value
+      ? customFilter.value
+      : { search_param: customSearchParam.value || undefined },
+    page: options.value.page,
+    limit: options.value.itemsPerPage,
+    field: options.value.sortBy[0],
+    sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
+  };
+});
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const searchFields = computed(() => [
@@ -295,7 +300,7 @@ const searchFields = computed(() => [
     key: "account_groups",
     type: "select",
     items: [
-      { text: "Default group", value: "__default__" },
+      { text: "Default group", value: "no_group" },
       ...store.getters["accountGroups/all"].map((g) => ({
         text: g.title,
         value: g.uuid,

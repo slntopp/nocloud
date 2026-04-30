@@ -396,7 +396,14 @@ const listOptions = computed(() => {
     }
 
     if (key === "account_groups") {
-      filters[key] = filter.value[key].map((v) => v === "__default__" ? "" : v);
+      const groups = filter.value[key].filter((v) => v !== "no_group");
+      const hasNoGroup = filter.value[key].includes("no_group");
+      if (groups.length) {
+        filters[key] = groups;
+      }
+      if (hasNoGroup) {
+        filters["no_group"] = true;
+      }
     } else {
       filters[key] = filter.value[key];
     }
@@ -465,7 +472,7 @@ const searchFields = computed(() => [
     type: "select",
     title: "Account group",
     items: [
-      { text: "Default group", value: "__default__" },
+      { text: "Default group", value: "no_group" },
       ...accountGroups.value.map((g) => ({
         text: g.title,
         value: g.uuid,

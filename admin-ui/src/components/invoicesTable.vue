@@ -249,7 +249,7 @@ const searchFields = computed(() => [
     type: "select",
     title: "Account group",
     items: [
-      { text: "Default group", value: "__default__" },
+      { text: "Default group", value: "no_group" },
       ...accountGroups.value.map((g) => ({
         text: g.title,
         value: g.uuid,
@@ -334,7 +334,14 @@ const invoicesFilters = computed(() => {
       }
 
       if (key === "account_groups") {
-        filters[key] = value.map((v) => v === "__default__" ? "" : v);
+        const groups = value.filter((v) => v !== "no_group");
+        const hasNoGroup = value.includes("no_group");
+        if (groups.length) {
+          filters[key] = groups;
+        }
+        if (hasNoGroup) {
+          filters["no_group"] = true;
+        }
       } else {
         filters[key] = filter.value[key];
       }
