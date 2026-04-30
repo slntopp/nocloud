@@ -118,7 +118,7 @@ var (
 			ResetCounterMode:              "MONTHLY",
 			StartWithNumber:               0,
 			IssueRenewalInvoiceAfter:      0.666,
-			TopUpItemMessage:              "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+			TopUpItemMessage:              "",
 			TaxIncluded:                   false,
 			ForceRequirePhoneVerification: false,
 

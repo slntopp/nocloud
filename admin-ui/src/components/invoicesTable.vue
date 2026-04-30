@@ -96,7 +96,7 @@
     </template>
 
     <template v-slot:[`item.meta.ksef_number`]="{ value, item }">
-      {{ [value, item.meta.ksef_last_error].filter((v) => !!v).join(" ") }}
+      {{ [item.meta.ksef_last_error, value].filter((v) => !!v).join(" ") }}
     </template>
 
     <template v-slot:[`item.deadline`]="{ item }">
@@ -186,6 +186,7 @@ const headers = ref([
 ]);
 
 onMounted(() => {
+  store.dispatch("accountGroups/fetch");
   store.commit("reloadBtn/setCallback", {
     event: () => {
       accounts.value = [];
@@ -199,6 +200,7 @@ onMounted(() => {
 });
 
 const invoices = computed(() => store.getters["invoices/all"]);
+const accountGroups = computed(() => store.getters["accountGroups/all"]);
 const isLoading = computed(() => isFetchLoading.value || isCountLoading.value);
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
@@ -241,6 +243,18 @@ const searchFields = computed(() => [
     title: "Account",
     label: "Account",
     component: AccountsAutocomplete,
+  },
+  {
+    key: "account_groups",
+    type: "select",
+    title: "Account group",
+    items: [
+      { text: "Default group", value: "no_group" },
+      ...accountGroups.value.map((g) => ({
+        text: g.title,
+        value: g.uuid,
+      })),
+    ],
   },
   {
     title: "Currency",
@@ -319,7 +333,18 @@ const invoicesFilters = computed(() => {
         continue;
       }
 
-      filters[key] = filter.value[key];
+      if (key === "account_groups") {
+        const groups = value.filter((v) => v !== "no_group");
+        const hasNoGroup = value.includes("no_group");
+        if (groups.length) {
+          filters[key] = groups;
+        }
+        if (hasNoGroup) {
+          filters["no_group"] = true;
+        }
+      } else {
+        filters[key] = filter.value[key];
+      }
     }
   }
 
@@ -361,7 +386,7 @@ const fetchInvoices = async () => {
   try {
     const [countRes] = await Promise.all([
       store.dispatch("invoices/count", countOptions.value),
-      store.dispatch("invoices/fetch", listOptions.value)
+      store.dispatch("invoices/fetch", listOptions.value),
     ]);
 
     if (countRes) {
