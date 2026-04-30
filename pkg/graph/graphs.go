@@ -574,6 +574,11 @@ func listAccounts[T Accessible](
 			}
 			insert += ` FILTER TO_NUMBER(node.status) in @statuses`
 			bindVars["statuses"] = values
+		} else if key == "no_group" {
+			if !val.GetBoolValue() {
+				continue
+			}
+			insert += ` FILTER (IS_NULL(node.account_group) OR node.account_group == "") AND (IS_NULL(node.accountGroup) OR node.accountGroup == "")`
 		} else if key == "account_groups" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {

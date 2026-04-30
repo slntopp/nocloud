@@ -418,6 +418,20 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "no_group" {
+				if !value.GetBoolValue() {
+					continue
+				}
+				query += ` LET _acc_ng = DOCUMENT(@@accounts, t.account) FILTER (IS_NULL(_acc_ng.account_group) OR _acc_ng.account_group == "") AND (IS_NULL(_acc_ng.accountGroup) OR _acc_ng.accountGroup == "")`
+				vars["@accounts"] = schema.ACCOUNTS_COL
+			} else if key == "account_groups" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` LET _acc = DOCUMENT(@@accounts, t.account) FILTER (_acc.account_group in @account_groups) || (_acc.accountGroup in @account_groups)`
+				vars["account_groups"] = values
+				vars["@accounts"] = schema.ACCOUNTS_COL
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -1345,6 +1359,20 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "no_group" {
+				if !value.GetBoolValue() {
+					continue
+				}
+				query += ` LET _acc_ng = DOCUMENT(@@accounts, t.account) FILTER (IS_NULL(_acc_ng.account_group) OR _acc_ng.account_group == "") AND (IS_NULL(_acc_ng.accountGroup) OR _acc_ng.accountGroup == "")`
+				vars["@accounts"] = schema.ACCOUNTS_COL
+			} else if key == "account_groups" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` LET _acc = DOCUMENT(@@accounts, t.account) FILTER (_acc.account_group in @account_groups) || (_acc.accountGroup in @account_groups)`
+				vars["account_groups"] = values
+				vars["@accounts"] = schema.ACCOUNTS_COL
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -1728,6 +1756,8 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		return nil, status.Error(codes.InvalidArgument, "Sum must be greater than 0")
 	}
 
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, requester)
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
@@ -1746,7 +1776,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       req.GetSum(),
-				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+				Description: invConf.TopUpItemMessage,
 				ApplyTax:    true,
 			},
 		},

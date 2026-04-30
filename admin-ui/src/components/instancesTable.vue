@@ -261,6 +261,7 @@ const accounts = ref({});
 const isUpdateActionLoading = ref(false);
 
 onMounted(() => {
+  store.dispatch("accountGroups/fetch");
   store.commit("reloadBtn/setCallback", {
     event: () => {
       accounts.value = [];
@@ -338,6 +339,7 @@ const instances = computed(() =>
 );
 const isLoading = computed(() => store.getters["instances/isLoading"]);
 const total = computed(() => store.getters["instances/total"]);
+const accountGroups = computed(() => store.getters["accountGroups/all"]);
 
 const servicesProviders = computed(
   () => store.getters["servicesProviders/all"]
@@ -393,7 +395,18 @@ const listOptions = computed(() => {
       continue;
     }
 
-    filters[key] = filter.value[key];
+    if (key === "account_groups") {
+      const groups = filter.value[key].filter((v) => v !== "no_group");
+      const hasNoGroup = filter.value[key].includes("no_group");
+      if (groups.length) {
+        filters[key] = groups;
+      }
+      if (hasNoGroup) {
+        filters["no_group"] = true;
+      }
+    } else {
+      filters[key] = filter.value[key];
+    }
   }
 
   if (searchParam.value) {
@@ -453,6 +466,18 @@ const searchFields = computed(() => [
     title: "Account",
     label: "Account",
     component: AccountsAutocomplete,
+  },
+  {
+    key: "account_groups",
+    type: "select",
+    title: "Account group",
+    items: [
+      { text: "Default group", value: "no_group" },
+      ...accountGroups.value.map((g) => ({
+        text: g.title,
+        value: g.uuid,
+      })),
+    ],
   },
   {
     key: "product",
