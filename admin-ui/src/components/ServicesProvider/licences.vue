@@ -88,29 +88,15 @@
         <v-skeleton-loader type="text" v-else />
       </template>
 
-      <template v-slot:[`item.licence_expires_at`]="{ item }">
-        {{ formatDate(item.licence_expires_at) }}
-        <v-icon
-          v-if="!item.read_only_is_trial && !item.suspended"
-          color="green"
-        >
-          {{ "mdi-check-circle" }}
-        </v-icon>
-
-        <v-icon v-if="item.suspended" color="red">
-          {{ "mdi-alert-circle" }}
-        </v-icon>
-      </template>
-
-      <template v-slot:[`item.trial_ends_at`]="{ item }">
-        {{ formatDate(item.trial_ends_at) }}
+      <template v-slot:[`item.due_date`]="{ item }">
+        {{ formatDate(item.read_only_is_trial ? item.trial_ends_at : item.licence_expires_at) }}
         <v-icon
           v-if="item.read_only_is_trial && !item.is_trial_expired"
           color="green"
         >
           {{ "mdi-check-circle" }}
         </v-icon>
-        <v-icon v-if="item.is_trial_expired" color="red">
+        <v-icon v-if="item.is_trial_expired || item.suspended" color="red">
           {{ "mdi-alert-circle" }}
         </v-icon>
       </template>
@@ -179,8 +165,7 @@ const headers = ref([
   { text: "Account", value: "account" },
   { text: "Plan", value: "app_key" },
   { text: "Tariff Key", value: "tariff_key" },
-  { text: "License Expires", value: "licence_expires_at" },
-  { text: "Trial Ends", value: "trial_ends_at" },
+  { text: "Due Date", value: "due_date" },
 ]);
 
 const filter = computed(() => store.getters["appSearch/filter"]);
@@ -192,10 +177,10 @@ const searchFields = computed(() =>
   [
     {
       key: "domain",
-      title: "Domain",
+      title: "Portal Name",
       type: "input",
     },
-    !plan.value && {
+    {
       key: "app_key",
       custom: true,
       fetchValue: true,
