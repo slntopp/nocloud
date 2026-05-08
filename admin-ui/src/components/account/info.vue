@@ -86,6 +86,7 @@
           item-text="title"
           item-value="uuid"
           label="Account Group"
+          clearable
         >
           <template v-slot:item="{ item }">
             <div
@@ -411,10 +412,12 @@ const updateAccount = (newAccount) => {
 };
 
 const updateAccountGroup = () => {
-  if (accountGroup.value !== account.value.accountGroup) {
+  const newGroup = accountGroup.value ?? "";
+  const currentGroup = account.value.accountGroup ?? "";
+  if (newGroup !== currentGroup) {
     return api.post("/accounts/change_account_group", {
       target_account: account.value.uuid,
-      account_group: accountGroup.value,
+      account_group: newGroup,
     });
   }
 };

@@ -381,6 +381,9 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	}
 
 	if req.GetFilters() != nil {
+		var accountGroupUuids []interface{}
+		var noGroup bool
+
 		for key, value := range req.GetFilters() {
 			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" || key == "deadline" {
 				values := value.GetStructValue().AsMap()
@@ -418,6 +421,10 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "no_group" {
+				noGroup = value.GetBoolValue()
+			} else if key == "account_groups" {
+				accountGroupUuids = value.GetListValue().AsSlice()
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -426,6 +433,20 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
 				vars[key] = values
 			}
+		}
+
+		if noGroup || len(accountGroupUuids) > 0 {
+			vars["@accounts"] = schema.ACCOUNTS_COL
+			query += ` LET _acc_grp = DOCUMENT(@@accounts, t.account)`
+			var conditions []string
+			if len(accountGroupUuids) > 0 {
+				vars["account_groups"] = accountGroupUuids
+				conditions = append(conditions, `(_acc_grp.account_group in @account_groups) || (_acc_grp.accountGroup in @account_groups)`)
+			}
+			if noGroup {
+				conditions = append(conditions, `(IS_NULL(_acc_grp.account_group) OR _acc_grp.account_group == "") AND (IS_NULL(_acc_grp.accountGroup) OR _acc_grp.accountGroup == "")`)
+			}
+			query += ` FILTER ` + strings.Join(conditions, ` || `)
 		}
 	}
 
@@ -1308,6 +1329,9 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 	}
 
 	if req.GetFilters() != nil {
+		var accountGroupUuids []interface{}
+		var noGroup bool
+
 		for key, value := range req.GetFilters() {
 			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" || key == "deadline" {
 				values := value.GetStructValue().AsMap()
@@ -1345,6 +1369,10 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "no_group" {
+				noGroup = value.GetBoolValue()
+			} else if key == "account_groups" {
+				accountGroupUuids = value.GetListValue().AsSlice()
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -1353,6 +1381,20 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				query += fmt.Sprintf(` FILTER t["%s"] in @%s`, key, key)
 				vars[key] = values
 			}
+		}
+
+		if noGroup || len(accountGroupUuids) > 0 {
+			vars["@accounts"] = schema.ACCOUNTS_COL
+			query += ` LET _acc_grp = DOCUMENT(@@accounts, t.account)`
+			var conditions []string
+			if len(accountGroupUuids) > 0 {
+				vars["account_groups"] = accountGroupUuids
+				conditions = append(conditions, `(_acc_grp.account_group in @account_groups) || (_acc_grp.accountGroup in @account_groups)`)
+			}
+			if noGroup {
+				conditions = append(conditions, `(IS_NULL(_acc_grp.account_group) OR _acc_grp.account_group == "") AND (IS_NULL(_acc_grp.accountGroup) OR _acc_grp.accountGroup == "")`)
+			}
+			query += ` FILTER ` + strings.Join(conditions, ` || `)
 		}
 	}
 
@@ -1728,6 +1770,8 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 		return nil, status.Error(codes.InvalidArgument, "Sum must be greater than 0")
 	}
 
+	invConf := MakeInvoicesConf(log, &s.settingsClient)
+
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, requester)
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
@@ -1746,7 +1790,7 @@ func (s *BillingServiceServer) CreateTopUpBalanceInvoice(ctx context.Context, _r
 				Amount:      1,
 				Unit:        "Pcs",
 				Price:       req.GetSum(),
-				Description: "Пополнение баланса (услуги хостинга, оплата за сервисы)",
+				Description: invConf.TopUpItemMessage,
 				ApplyTax:    true,
 			},
 		},
