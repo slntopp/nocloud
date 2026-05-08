@@ -629,6 +629,15 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 		fmt.Printf("ERROR: Formatting total as words: %s\n", err.Error())
 	}
 
+	var ksefNumberHTML string
+	if meta := invoiceBody.GetMeta(); meta != nil {
+		ksefNumber := strings.TrimSpace(meta["ksef_number"].GetStringValue())
+		ksefLastError := strings.TrimSpace(meta["ksef_last_error"].GetStringValue())
+		if ksefNumber != "" && ksefLastError == "" {
+			ksefNumberHTML = `<div class="ksef-number small">Numer KSeF: ` + html.EscapeString(ksefNumber) + `</div>`
+		}
+	}
+
 	var b strings.Builder
 	_, _ = fmt.Fprintf(&b, `<!doctype html>
 <html lang="%s">
@@ -679,6 +688,7 @@ tfoot td{font-weight:600}
 .pay{display:flex;justify-content:flex-end;align-items:center;padding:12px 20px;flex-wrap:wrap;border-top:1px solid var(--line);gap:8px;background-color:#92D050;color:#fff}
 .pay .due{font-weight:700;}
 .pay-words{display:flex;justify-content:flex-end;align-items:center;padding:12px 20px;flex-wrap:wrap;gap:8px}
+.ksef-number{padding:8px 20px;text-align:right;border-top:1px solid var(--line)}
 .small{font-size:12px;color:var(--muted)}
 footer{padding:10px 20px}
 hr.sep{border:0;border-top:1px solid var(--line);margin:0}
@@ -804,6 +814,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<div><strong>%s %s</strong></div>
 	</div>
 
+	%s
+
 	<footer class="small">
 		$footer.invoice_id: %s
 	</footer>
@@ -858,6 +870,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		formatMoney(invoiceBody.GetCurrency(), grandTotal),
 		CapitalizeWords(totalAsWords),
 		invoiceBody.GetCurrency().GetCode(),
+		ksefNumberHTML,
 		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),
 		// JS data
 		invoiceBody.GetCurrency().GetCode(),
