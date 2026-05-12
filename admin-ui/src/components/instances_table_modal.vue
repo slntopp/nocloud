@@ -126,7 +126,7 @@ const fetchInstances = async () => {
       filters: { account: [uuid.value] },
       page: page.value,
       limit: options.value.itemsPerPage || 10,
-      field: options.value.sortBy?.[0],
+      field:'created',
       sort:
         options.value.sortBy?.[0] && options.value.sortDesc?.[0]
           ? "DESC"
