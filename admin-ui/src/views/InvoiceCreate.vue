@@ -256,7 +256,7 @@
                 :disabled="isKsefDisabled"
               >
                 Ksef
-                <v-icon v-if="newInvoice.meta?.ksef_number" small class="ml-1">
+                <v-icon v-if="newInvoice.meta?.ksef_number || newInvoice.meta?.ksef_last_error" small class="ml-1">
                   {{ newInvoice.meta?.ksef_last_error ? 'mdi-alert-circle' : 'mdi-check-circle' }}
                 </v-icon>
               </v-btn>
@@ -526,7 +526,7 @@ const isKsefDisabled = computed(() =>
 const isKsefEnabled = computed(() => store.getters["settings/ksefEnabled"]);
 
 const ksefBtnColor = computed(() => {
-  if (!newInvoice.value.meta?.ksef_number) return "background-light";
+  if (!newInvoice.value.meta?.ksef_number && !newInvoice.value.meta?.ksef_last_error) return "background-light";
   return newInvoice.value.meta?.ksef_last_error ? "error" : "success";
 });
 
