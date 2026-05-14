@@ -33,6 +33,8 @@ var (
 	redisHost string
 	port      string
 	rbmq      string
+
+	ccHost string
 )
 
 func init() {
@@ -48,6 +50,7 @@ func init() {
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
+	viper.SetDefault("CC_HOST", "")
 
 	port = viper.GetString("PORT")
 
@@ -58,6 +61,7 @@ func init() {
 
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 	rbmq = viper.GetString("RABBITMQ_CONN")
+	ccHost = viper.GetString("CC_HOST")
 
 }
 
@@ -86,6 +90,7 @@ func main() {
 	})
 
 	auth.SetContext(log, rdb, SIGNING_KEY)
+	eventbus.SetupOverdueTicketHandler(ccHost, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),
