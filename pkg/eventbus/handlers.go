@@ -1,34 +1,19 @@
 package eventbus
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/arangodb/go-driver"
-	"github.com/golang-jwt/jwt/v4"
 	pb "github.com/slntopp/nocloud-proto/events"
-	elpb "github.com/slntopp/nocloud-proto/events_logging"
-	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type EventHandler func(context.Context, *zap.Logger, *pb.Event, driver.Database) (*pb.Event, error)
-
-var (
-	overdueCCHost     string
-	overdueSigningKey []byte
-)
-
-func SetupOverdueTicketHandler(ccHost string, signingKey []byte) {
-	overdueCCHost = ccHost
-	overdueSigningKey = signingKey
-}
 
 var handlers = map[string]EventHandler{
 	"instance_suspended":          GetInstAccountHandler,
@@ -45,7 +30,6 @@ var handlers = map[string]EventHandler{
 	"logging":                     EventLoggingHandler,
 	"invoice_published":           nil,
 	"invoice_paid":                nil,
-	"overdue_ticket":              OverdueTicketHandler,
 }
 
 var getInstanceAccount = `
@@ -166,80 +150,6 @@ func GetInstAccountHandler(ctx context.Context, _ *zap.Logger, event *pb.Event, 
 	event.Uuid = eventInfo.Account
 	event.Type = "email"
 
-	return event, nil
-}
-
-func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event, db driver.Database) (*pb.Event, error) {
-	if overdueCCHost == "" {
-		log.Warn("CC_HOST not set, skipping overdue ticket creation")
-		event.Type = "noop"
-		return event, nil
-	}
-
-	inst := driver.NewDocumentID(schema.INSTANCES_COL, event.GetUuid())
-	cursor, err := db.Query(ctx, getInstanceAccount, map[string]interface{}{
-		"inst":        inst,
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"@services":   schema.SERVICES_COL,
-		"@accounts":   schema.ACCOUNTS_COL,
-		"currencies":  schema.CUR_COL,
-		"graph":       schema.BILLING_GRAPH.Name,
-		"@c2c":        schema.CUR2CUR,
-		"inner_price": 0,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("overdue ticket: query account: %w", err)
-	}
-	defer cursor.Close()
-
-	var info EventInfo
-	for cursor.HasMore() {
-		if _, err := cursor.ReadDocument(ctx, &info); err != nil {
-			return nil, fmt.Errorf("overdue ticket: read account: %w", err)
-		}
-	}
-
-	if info.Account == "" {
-		log.Warn("overdue ticket: account not found", zap.String("instance", event.GetUuid()))
-		event.Type = "noop"
-		return event, nil
-	}
-
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		nocloud.NOCLOUD_ACCOUNT_CLAIM:   schema.ROOT_ACCOUNT_KEY,
-		nocloud.NOCLOUD_INSTANCE_CLAIM:  "placeholder",
-		nocloud.NOCLOUD_ROOT_CLAIM:      4,
-		nocloud.NOCLOUD_NOSESSION_CLAIM: true,
-	}).SignedString(overdueSigningKey)
-	if err != nil {
-		return nil, fmt.Errorf("overdue ticket: sign token: %w", err)
-	}
-
-	body, _ := json.Marshal(map[string]any{
-		"owner":  info.Account,
-		"users":  []string{info.Account},
-		"topic":  fmt.Sprintf("Overdue payment: %s (%s)", info.Instance, event.GetUuid()),
-		"status": 0,
-	})
-
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost,
-		overdueCCHost+"/cc.ChatsAPI/Create", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("overdue ticket: http request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode >= 300 {
-		log.Error("overdue ticket: unexpected status", zap.Int("status", resp.StatusCode))
-	} else {
-		log.Info("overdue ticket created", zap.String("account", info.Account), zap.String("instance", event.GetUuid()))
-	}
-
-	event.Type = "noop"
 	return event, nil
 }
 
