@@ -56,7 +56,13 @@ var (
 	invoicesManager    whmcs_gateway.NoCloudInvoicesManager
 
 	whmcsTaxExcluded bool
+
+	whmcsPayPrecheck func(context.Context, *pb.Invoice, graph.Account) error
 )
+
+func SetWhmcsPaymentPrecheck(fn func(context.Context, *pb.Invoice, graph.Account) error) {
+	whmcsPayPrecheck = fn
+}
 
 func RegisterGateways(whmcs whmcs_gateway.WhmcsData,
 	accountCtrl graph.AccountsController, currCtrl graph.CurrencyController,
@@ -80,8 +86,8 @@ func GetPaymentGateway(t string) PaymentGateway {
 	case "nocloud":
 		return nocloud_gateway.NewNoCloudGateway(os.Getenv("BASE_HOST"))
 	case "whmcs":
-		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, currencyController, invoicesManager, whmcsTaxExcluded)
+		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, currencyController, invoicesManager, whmcsTaxExcluded, whmcsPayPrecheck)
 	default:
-		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, currencyController, invoicesManager, whmcsTaxExcluded)
+		return whmcs_gateway.NewWhmcsGateway(whmcsData, accountController, currencyController, invoicesManager, whmcsTaxExcluded, whmcsPayPrecheck)
 	}
 }

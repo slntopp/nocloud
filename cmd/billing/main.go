@@ -113,6 +113,7 @@ func init() {
 	viper.SetDefault("INSTANCES_MIGRATIONS_FILE", "./instances_invoices.csv")
 	viper.SetDefault("PRIMARY_LANGUAGE_CODE", "en")
 	viper.SetDefault("GOTENBERG_HOST", "gotenberg:3000")
+	viper.SetDefault("BILLING_WHMCS_MODULE_SECRET", "")
 
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
@@ -232,7 +233,7 @@ func main() {
 	payments.RegisterGateways(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
 
 	// Register whmcs gateway
-	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded)
+	whmcsGw := whmcs_gateway.NewWhmcsGateway(whmcsData, accountsCtrl, currCtrl, manager, whmcsPricesTaxExcluded, nil)
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -287,6 +288,8 @@ func main() {
 
 	billing.SetupSettingsContext(ctx)
 
+	payments.SetWhmcsPaymentPrecheck(billing.NewWhmcsSSOPaymentPrecheck(log, settingsClient))
+
 	ps := nps.NewPubSub[*epb.Event](rbmq, log)
 	invoicesPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, billingps.Topic("invoices"))
 	ksefPublisher := ps.Publisher(nps.DEFAULT_EXCHANGE, ksef.Topic("sync"))
@@ -302,6 +305,13 @@ func main() {
 		settingsClient, accClient, eventsClient, instancesClient,
 		nssCtrl, plansCtrl, transactCtrl, invoicesCtrl, recordsCtrl, currCtrl, accountsCtrl, descCtrl,
 		instCtrl, spCtrl, srvCtrl, addonsCtrl, caCtrl, promoCtrl, pgsCtrl, accGroupsCtrl, whmcsGw, invoicesPublisher, ksefPublisher, instancesPublisher, ps, tps, syncCreatedDateOnPayment, enableKsef, ksefClient)
+
+	if whmcsModSecret := strings.TrimSpace(viper.GetString("BILLING_WHMCS_MODULE_SECRET")); whmcsModSecret != "" {
+		billing.RegisterWhmcsModuleVerificationRoute(log, router, server, whmcsModSecret)
+		log.Info("WHMCS PHP module: internal account-verification route enabled",
+			zap.String("path", billing.PathWhmcsAccountVerification))
+	}
+
 	log.Info("Starting Currencies Service")
 	currencies := billing.NewCurrencyServiceServer(log, db, currCtrl, accountsCtrl, caCtrl)
 
