@@ -34,10 +34,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Set up Go 1.22
-        uses: actions/setup-go@v5
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v6
         with:
-          go-version: 1.22
+          go-version: 1.24
       - name: Go Modules
         run: go mod download
       - name: Attempt build
