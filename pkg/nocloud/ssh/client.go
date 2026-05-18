@@ -12,6 +12,7 @@ import (
 	"time"
 
 	gossh "golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 const (
@@ -64,10 +65,20 @@ func NewSSHClientFromPassword(sshHost, sshUser, pass string) (*Client, error) {
 }
 
 func dialClient(host, user string, auth []gossh.AuthMethod) (*gossh.Client, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve user home directory: %w", err)
+	}
+
+	hostKeyCallback, err := knownhosts.New(homeDir + "/.ssh/known_hosts")
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize known_hosts callback: %w", err)
+	}
+
 	config := &gossh.ClientConfig{
 		User:            user,
 		Auth:            auth,
-		HostKeyCallback: gossh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         dialTimeout,
 	}
 
