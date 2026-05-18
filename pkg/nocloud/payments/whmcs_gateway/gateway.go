@@ -42,6 +42,7 @@ type WhmcsGateway struct {
 	invMan     NoCloudInvoicesManager
 
 	taxExcluded bool
+	payPrecheck func(context.Context, *pb.Invoice, graph.Account) error
 }
 
 var ErrNotFound = fmt.Errorf("not found")
@@ -54,7 +55,7 @@ const BalancePayMethod = "balancepay"
 
 var balancePayMethod = BalancePayMethod
 
-func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool) *WhmcsGateway {
+func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool, payPrecheck func(context.Context, *pb.Invoice, graph.Account) error) *WhmcsGateway {
 	return &WhmcsGateway{
 		m:           &sync.Mutex{},
 		apiUsername: data.WhmcsUser,
@@ -65,6 +66,7 @@ func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.Cu
 		invMan:      invMan,
 		taxExcluded: whmcsTaxExcluded,
 		currencies:  curr,
+		payPrecheck: payPrecheck,
 	}
 }
 
@@ -437,6 +439,12 @@ func (g *WhmcsGateway) PaymentURI(ctx context.Context, inv *pb.Invoice) (string,
 	acc, err := g.accounts.Get(ctx, inv.GetAccount())
 	if err != nil {
 		return "", fmt.Errorf("failed to get nocloud account: %w", err)
+	}
+
+	if g.payPrecheck != nil {
+		if err := g.payPrecheck(ctx, inv, acc); err != nil {
+			return "", fmt.Errorf("whmcs sso blocked: %w", err)
+		}
 	}
 
 	userId, ok := g.getWhmcsUser(acc.Account)

@@ -132,13 +132,11 @@ func invoicesEqual(a, b *pb.Invoice, ignoreNulls bool) bool {
 var forbiddenStatusConversions = make([]pair[pb.BillingStatus], 0)
 
 func checkAdditionalProperties(conf InvoicesConf, inv graph.Invoice, acc graph.Account) error {
-	if inv.Properties == nil {
-		return nil
-	}
-	if inv.GetProperties().GetEmailVerificationRequired() && !acc.GetIsEmailVerified() {
+	props := inv.GetProperties()
+	if props != nil && props.GetEmailVerificationRequired() && !acc.GetIsEmailVerified() {
 		return fmt.Errorf("email is not verified")
 	}
-	if (inv.GetProperties().GetPhoneVerificationRequired() && !acc.GetIsPhoneVerified()) ||
+	if (props != nil && props.GetPhoneVerificationRequired() && !acc.GetIsPhoneVerified()) ||
 		(conf.ForceRequirePhoneVerification && !acc.GetIsPhoneVerified()) {
 		return fmt.Errorf("phone is not verified")
 	}
