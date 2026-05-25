@@ -1189,7 +1189,9 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
 	if req.WhmcsId != 0 {
-		return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
+		return s.withPayWithBalanceLock(ctx, requester, log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
+			return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
+		})
 	}
 
 	inv, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
@@ -1197,11 +1199,11 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		log.Warn("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Invoice not found")
 	}
-	if err := s.validateNocloudPayWithBalance(ctx, inv, requester); err != nil {
-		return nil, err
-	}
 
 	return s.withPayWithBalanceLock(ctx, inv.GetAccount(), log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
+		if errVal := s.validateNocloudPayWithBalance(ctx, inv, requester); errVal != nil {
+			return nil, errVal
+		}
 		return s.executeNocloudPayWithBalance(ctx, inv, log)
 	})
 }
@@ -1232,9 +1234,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		if errVal := s.validateNocloudPayWithBalance(ctx, invNc, requester); errVal != nil {
 			return nil, errVal
 		}
-		return s.withPayWithBalanceLock(ctx, invNc.GetAccount(), log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
-			return s.executeNocloudPayWithBalance(ctx, invNc, log)
-		})
+		return s.executeNocloudPayWithBalance(ctx, invNc, log)
 	}
 	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
 		log.Error("Failed to ensure that whmcs invoice exists in NoCloud", zap.Error(err))
@@ -1256,69 +1256,67 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.PermissionDenied, "No access to this invoice")
 	}
 
-	return s.withPayWithBalanceLock(ctx, requester, log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
-		currConf := MakeCurrencyConf(log, &s.settingsClient)
+	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
-		balance := acc.GetBalance()
-		accCurrency := acc.Currency
-		if accCurrency == nil {
-			accCurrency = currConf.Currency
-		}
-		invCurrency := acc.Currency
+	balance := acc.GetBalance()
+	accCurrency := acc.Currency
+	if accCurrency == nil {
+		accCurrency = currConf.Currency
+	}
+	invCurrency := acc.Currency
 
-		if accCurrency.GetId() != invCurrency.GetId() {
-			var convErr error
-			balance, convErr = s.currencies.Convert(ctx, accCurrency, invCurrency, balance)
-			if convErr != nil {
-				log.Error("Failed to convert balance", zap.Error(convErr))
-				return nil, status.Error(codes.Internal, "Failed to convert balance")
-			}
+	if accCurrency.GetId() != invCurrency.GetId() {
+		var convErr error
+		balance, convErr = s.currencies.Convert(ctx, accCurrency, invCurrency, balance)
+		if convErr != nil {
+			log.Error("Failed to convert balance", zap.Error(convErr))
+			return nil, status.Error(codes.Internal, "Failed to convert balance")
 		}
+	}
 
-		rounded := graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-		if rounded < float64(inv.Balance) {
-			return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
-		}
+	rounded := graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
+	if rounded < float64(inv.Balance) {
+		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
+	}
 
-		if errPay := s.whmcsGateway.PayInvoice(ctx, int(invId), true); errPay != nil {
-			log.Error("Failed to pay invoice", zap.Error(errPay))
-			return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+errPay.Error())
-		}
+	if errPay := s.whmcsGateway.PayInvoice(ctx, int(invId), true); errPay != nil {
+		log.Error("Failed to pay invoice", zap.Error(errPay))
+		return nil, status.Error(codes.Internal, "Failed to perform payment with balance. Error: "+errPay.Error())
+	}
 
-		log.Debug("Generating transaction after whmcs invoice payment")
-		noCancelCtx := context.WithoutCancel(ctx)
-		trCtx, errTr := graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
-			Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL, schema.INVOICES_COL},
-		})
-		if errTr != nil {
-			log.Error("Failed to start transaction", zap.Error(errTr))
-			return nil, status.Error(codes.Internal, "Failed to start transaction. Error: "+errTr.Error())
-		}
-		abort := func() {
-			if errAbt := graph.AbortTransaction(trCtx, s.db); errAbt != nil {
-				log.Error("Failed to abort transaction")
-			}
-		}
-		commit := func() error {
-			if errCmt := graph.CommitTransaction(trCtx, s.db); errCmt != nil {
-				log.Error("Failed to commit transaction")
-				return errCmt
-			}
-			return nil
-		}
-		_, errTr = s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency)
-		if errTr != nil {
-			abort()
-			log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(errTr))
-			return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+errTr.Error())
-		}
-		if errTr = commit(); errTr != nil {
-			log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(errTr))
-			return nil, status.Error(codes.Internal, "Failed to commit transaction. Error: "+errTr.Error())
-		}
-
-		return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
+	log.Debug("Generating transaction after whmcs invoice payment")
+	noCancelCtx := context.WithoutCancel(ctx)
+	trCtx, errTr := graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
+		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL, schema.INVOICES_COL},
 	})
+	if errTr != nil {
+		log.Error("Failed to start transaction", zap.Error(errTr))
+		return nil, status.Error(codes.Internal, "Failed to start transaction. Error: "+errTr.Error())
+	}
+	abort := func() {
+		if errAbt := graph.AbortTransaction(trCtx, s.db); errAbt != nil {
+			log.Error("Failed to abort transaction")
+		}
+	}
+	commit := func() error {
+		if errCmt := graph.CommitTransaction(trCtx, s.db); errCmt != nil {
+			log.Error("Failed to commit transaction")
+			return errCmt
+		}
+		return nil
+	}
+	_, errTr = s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency)
+	if errTr != nil {
+		abort()
+		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(errTr))
+		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+errTr.Error())
+	}
+	if errTr = commit(); errTr != nil {
+		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(errTr))
+		return nil, status.Error(codes.Internal, "Failed to commit transaction. Error: "+errTr.Error())
+	}
+
+	return connect.NewResponse(&pb.PayWithBalanceResponse{Success: true}), nil
 }
 
 func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.Request[pb.GetInvoicesCountRequest]) (*connect.Response[pb.GetInvoicesCountResponse], error) {
