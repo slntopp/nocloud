@@ -1076,11 +1076,6 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
 	if req.WhmcsId != 0 {
-		unlock, err := s.payWithBalanceAcquireRedisLock(ctx, requester)
-		if err != nil {
-			return nil, err
-		}
-		defer unlock()
 		return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
 	}
 
@@ -1228,6 +1223,11 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
 	if err == nil {
 		log.Info("Found NoCloud invoice with this whmcs_id. Redirecting to pay it on NoCloud", zap.Int64("whmcs_id", invId))
+		unlock, lerr := s.payWithBalanceAcquireRedisLock(ctx, ncInv.GetAccount())
+		if lerr != nil {
+			return nil, lerr
+		}
+		defer unlock()
 		return s.payWithBalanceNocloudInvoiceLocked(ctx, &graph.Invoice{Invoice: ncInv})
 	}
 	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
@@ -1249,6 +1249,13 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	if inv.UserId != clientId {
 		return nil, status.Error(codes.PermissionDenied, "No access to this invoice")
 	}
+
+	unlock, lerr := s.payWithBalanceAcquireRedisLock(ctx, requester)
+	if lerr != nil {
+		return nil, lerr
+	}
+	defer unlock()
+
 	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	balance := acc.GetBalance()

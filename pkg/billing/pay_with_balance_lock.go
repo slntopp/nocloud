@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -33,31 +34,26 @@ func payWithBalanceLockToken() string {
 	return hex.EncodeToString(b)
 }
 
-type redisPayBalanceLocker interface {
-	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
-	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
-}
-
-func (s *BillingServiceServer) payBalanceRedisLocker() (redisPayBalanceLocker, error) {
-	r, ok := s.rdb.(redisPayBalanceLocker)
-	if !ok {
+func (s *BillingServiceServer) payBalanceRedis() (*redis.Client, error) {
+	rc, ok := redisdb.RedisUnderlying(s.rdb)
+	if !ok || rc == nil {
 		return nil, status.Error(codes.Internal, "redis client cannot run pay-with-balance lock")
 	}
-	return r, nil
+	return rc, nil
 }
 
 func (s *BillingServiceServer) payWithBalanceRedisUnlock(lockKey, token string) {
-	rd, err := s.payBalanceRedisLocker()
+	rc, err := s.payBalanceRedis()
 	if err != nil {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, _ = rd.Eval(ctx, payWithBalanceUnlockScript, []string{lockKey}, token).Result()
+	_, _ = rc.Eval(ctx, payWithBalanceUnlockScript, []string{lockKey}, token).Result()
 }
 
 func (s *BillingServiceServer) payWithBalanceAcquireRedisLock(ctx context.Context, accountKey string) (unlock func(), err error) {
-	rd, err := s.payBalanceRedisLocker()
+	rc, err := s.payBalanceRedis()
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +61,7 @@ func (s *BillingServiceServer) payWithBalanceAcquireRedisLock(ctx context.Contex
 	token := payWithBalanceLockToken()
 	deadline := time.Now().Add(payWithBalanceLockMaxWait)
 	for {
-		ok, err := rd.SetNX(ctx, lockKey, token, payWithBalanceLockTTL).Result()
+		ok, err := rc.SetNX(ctx, lockKey, token, payWithBalanceLockTTL).Result()
 		if err != nil {
 			return nil, status.Errorf(codes.Unavailable, "balance payment lock error: %v", err)
 		}

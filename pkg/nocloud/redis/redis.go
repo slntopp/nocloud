@@ -30,3 +30,15 @@ func NewRedisClient(c *redis.Client) Client {
 		Client: c,
 	}
 }
+
+func RedisUnderlying(c Client) (*redis.Client, bool) {
+	switch v := c.(type) {
+	case *client:
+		if v != nil && v.Client != nil {
+			return v.Client, true
+		}
+	case *redis.Client:
+		return v, true
+	}
+	return nil, false
+}
