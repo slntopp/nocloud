@@ -455,6 +455,51 @@ func (_c *MockClient_Set_Call) RunAndReturn(run func(context.Context, string, in
 	return _c
 }
 
+func (_m *MockClient) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd {
+	ret := _m.Called(ctx, key, value, expiration)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetNX")
+	}
+
+	var r0 *redis.BoolCmd
+	if rf, ok := ret.Get(0).(func(context.Context, string, interface{}, time.Duration) *redis.BoolCmd); ok {
+		r0 = rf(ctx, key, value, expiration)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*redis.BoolCmd)
+		}
+	}
+
+	return r0
+}
+
+func (_m *MockClient) Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd {
+	_va := make([]interface{}, len(args))
+	for _i := range args {
+		_va[_i] = args[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, script, keys)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Eval")
+	}
+
+	var r0 *redis.Cmd
+	if rf, ok := ret.Get(0).(func(context.Context, string, []string, ...interface{}) *redis.Cmd); ok {
+		r0 = rf(ctx, script, keys, args...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*redis.Cmd)
+		}
+	}
+
+	return r0
+}
+
 // Subscribe provides a mock function with given fields: ctx, channels
 func (_m *MockClient) Subscribe(ctx context.Context, channels ...string) *redis.PubSub {
 	_va := make([]interface{}, len(channels))
