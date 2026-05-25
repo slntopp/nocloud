@@ -1227,7 +1227,7 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 		return nil
 	}
-	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency, true)
 	if err != nil {
 		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
@@ -1388,7 +1388,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		}
 		return nil
 	}
-	_, errTr = s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency)
+	_, errTr = s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency, true)
 	if errTr != nil {
 		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(errTr))
@@ -2217,7 +2217,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 
 	switch inv.GetType() {
 	case pb.ActionType_BALANCE:
-		tr, err := s.applyTransaction(ctx, -inv.GetSubtotal(), inv.GetAccount(), inv.GetCurrency())
+		tr, err := s.applyTransaction(ctx, -inv.GetSubtotal(), inv.GetAccount(), inv.GetCurrency(), false)
 		if err != nil {
 			return inv, fmt.Errorf("failed to apply transaction: %w", err)
 		}
@@ -2268,7 +2268,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				log.Error("Failed to convert cost", zap.Error(err))
 				return inv, fmt.Errorf("failed to convert cost: %w", err)
 			}
-			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency())
+			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency(), false)
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
@@ -2325,7 +2325,7 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 			log.Error("Failed to get transaction", zap.Error(err))
 			return nil, fmt.Errorf("failed to get transaction: %w", err)
 		}
-		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency()); err != nil {
+		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency(), false); err != nil {
 			log.Error("Failed to apply transaction", zap.Error(err))
 			return nil, fmt.Errorf("failed to apply transaction: %w", err)
 		}
