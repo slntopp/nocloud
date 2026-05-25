@@ -2150,6 +2150,14 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 	return resp, nil
 }
 
+func invoicePaidFromAccountBalance(inv *graph.Invoice) bool {
+	if inv == nil || inv.GetMeta() == nil {
+		return false
+	}
+	v := inv.GetMeta()["paid_with_balance"]
+	return v != nil && v.GetBoolValue()
+}
+
 func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice, defCurr *pb.Currency) (*graph.Invoice, error) {
 
 	switch inv.GetType() {
@@ -2191,23 +2199,28 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			}
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
-			// Add balance to compensate instance first payment
-			acc, err := s.instances.GetInstanceOwner(ctx, i)
-			if err != nil {
-				return inv, err
-			}
-			cost, _, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
-			if err != nil {
-				return inv, fmt.Errorf("failed to get instance price: %w", err)
-			}
-			cost, err = s.currencies.Convert(ctx, defCurr, acc.GetCurrency(), cost)
-			if err != nil {
-				log.Error("Failed to convert cost", zap.Error(err))
-				return inv, fmt.Errorf("failed to convert cost: %w", err)
-			}
-			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency())
-			if err != nil {
-				return inv, fmt.Errorf("failed to apply transaction: %w", err)
+			if !invoicePaidFromAccountBalance(inv) {
+				// Add balance to compensate instance first payment
+				acc, err := s.instances.GetInstanceOwner(ctx, i)
+				if err != nil {
+					return inv, err
+				}
+				cost, _, err := s.promocodes.GetDiscountPriceByInstance(instOld.Instance, true, true)
+				if err != nil {
+					return inv, fmt.Errorf("failed to get instance price: %w", err)
+				}
+				cost, err = s.currencies.Convert(ctx, defCurr, acc.GetCurrency(), cost)
+				if err != nil {
+					log.Error("Failed to convert cost", zap.Error(err))
+					return inv, fmt.Errorf("failed to convert cost: %w", err)
+				}
+				_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency())
+				if err != nil {
+					return inv, fmt.Errorf("failed to apply transaction: %w", err)
+				}
+			} else {
+				log.Debug("Skipping INSTANCE_START balance compensate; invoice paid from account balance",
+					zap.String("invoice", inv.GetUuid()))
 			}
 			// Update instance in the end due to publish operations inside
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
