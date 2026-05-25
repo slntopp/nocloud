@@ -61,6 +61,24 @@ import (
 
 const internalAccessKey = nocloud.ContextKey("billing-internal-access")
 
+type payBalanceRedisLockHeldKey struct{}
+
+func ctxWithPayBalanceRedisLockHeld(ctx context.Context) context.Context {
+	return context.WithValue(ctx, payBalanceRedisLockHeldKey{}, true)
+}
+
+func hasPayBalanceRedisLockHeld(ctx context.Context) bool {
+	v, _ := ctx.Value(payBalanceRedisLockHeldKey{}).(bool)
+	return v
+}
+
+func mergePayBalanceRedisLockCtx(dst, src context.Context) context.Context {
+	if hasPayBalanceRedisLockHeld(src) {
+		return ctxWithPayBalanceRedisLockHeld(dst)
+	}
+	return dst
+}
+
 func ctxWithRoot(ctx context.Context) context.Context {
 	return context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_NAMESPACE_KEY)
 }

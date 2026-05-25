@@ -1107,7 +1107,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, err
 	}
 	defer unlock()
-	return s.payWithBalanceNocloudInvoiceLocked(ctx, inv)
+	return s.payWithBalanceNocloudInvoiceLocked(ctxWithPayBalanceRedisLockHeld(ctx), inv)
 }
 
 func (s *BillingServiceServer) payWithBalanceNocloudInvoiceLocked(ctx context.Context, inv *graph.Invoice) (*connect.Response[pb.PayWithBalanceResponse], error) {
@@ -1178,7 +1178,7 @@ func (s *BillingServiceServer) payWithBalanceNocloudInvoiceLocked(ctx context.Co
 		}
 		return nil
 	}
-	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
+	tr, err := s.applyTransaction(mergePayBalanceRedisLockCtx(ctxWithInternalAccess(trCtx), ctx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
 	if err != nil {
 		abort()
 		if st, ok := status.FromError(err); ok && st.Code() == codes.FailedPrecondition {
@@ -1249,7 +1249,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 			return nil, lerr
 		}
 		defer unlock()
-		return s.payWithBalanceNocloudInvoiceLocked(ctx, &graph.Invoice{Invoice: ncInv})
+		return s.payWithBalanceNocloudInvoiceLocked(ctxWithPayBalanceRedisLockHeld(ctx), &graph.Invoice{Invoice: ncInv})
 	}
 	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
 		log.Error("Failed to ensure that whmcs invoice exists in NoCloud", zap.Error(err))

@@ -265,12 +265,23 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 	})
 	resp := connect.NewResponse(r.Transaction)
 	if r.Transaction.Priority == pb.Priority_URGENT && r.Transaction.GetExec() != 0 {
+		var ledgerDone func()
+		ledgerDone = func() {}
+		if r.Transaction.Total > 0 && !hasPayBalanceRedisLockHeld(ctx) {
+			var uerr error
+			ledgerDone, uerr = s.payWithBalanceAcquireRedisLock(ctx, r.Transaction.Account)
+			if uerr != nil {
+				return nil, uerr
+			}
+		}
+		defer ledgerDone()
+
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
 		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
-		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
+		vars := map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
 			"@transactions":  schema.TRANSACTIONS_COL,
 			"@records":       schema.RECORDS_COL,
@@ -280,7 +291,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			"currencies":     schema.CUR_COL,
 			"now":            time.Now().Unix(),
 			"graph":          schema.BILLING_GRAPH.Name,
-		})
+		}
+		_, err := s.db.Query(ctx, processUrgentTransaction, vars)
 		if err != nil {
 			log.Error("Failed to process transaction", zap.String("err", err.Error()))
 			return resp, nil
@@ -485,8 +497,18 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 	}
 
 	if t.GetExec() != 0 {
+		var ledgerDone func()
+		ledgerDone = func() {}
+		if t.GetTotal() > 0 && !hasPayBalanceRedisLockHeld(ctx) {
+			var uerr error
+			ledgerDone, uerr = s.payWithBalanceAcquireRedisLock(ctx, t.Account)
+			if uerr != nil {
+				return nil, uerr
+			}
+		}
+		defer ledgerDone()
+
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
-		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
 		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
@@ -495,7 +517,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 			"@transactions":  schema.TRANSACTIONS_COL,
 			"@records":       schema.RECORDS_COL,
 			"accountKey":     acc.String(),
-			"transactionKey": transaction.String(),
+			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid).String(),
 			"currency":       currencyConf.Currency,
 			"currencies":     schema.CUR_COL,
 			"now":            time.Now().Unix(),
