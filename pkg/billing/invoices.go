@@ -1122,6 +1122,9 @@ func (s *BillingServiceServer) validateNocloudPayWithBalance(ctx context.Context
 		pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_DRAFT}, inv.GetStatus()) {
 		return status.Error(codes.InvalidArgument, "Can't pay this invoice. Try again later or contact support")
 	}
+	if inv.GetStatus() == pb.BillingStatus_PAID {
+		return status.Error(codes.InvalidArgument, "Invoice is already paid")
+	}
 	if inv.GetType() == pb.ActionType_BALANCE {
 		return status.Error(codes.InvalidArgument, "Can't pay top-up balance invoice with balance")
 	}
@@ -1175,6 +1178,32 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 	if err != nil {
 		log.Error("Failed to update invoice status", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
+	}
+
+	acc, err = s.accounts.Get(ctx, inv.GetAccount())
+	if err != nil {
+		log.Error("Failed to re-read account after invoice status update", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Account not found")
+	}
+	balance = acc.GetBalance()
+	accCurrency = acc.Currency
+	if accCurrency == nil {
+		accCurrency = currConf.Currency
+	}
+	if accCurrency != invCurrency {
+		balance, err = s.currencies.Convert(ctx, accCurrency, invCurrency, balance)
+		if err != nil {
+			log.Error("Failed to convert balance after invoice status update", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to convert balance")
+		}
+	}
+	rounded = graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
+	if rounded < inv.GetTotal() {
+		log.Error("Insufficient balance after marking invoice paid (concurrent spend?)",
+			zap.String("invoice", inv.GetUuid()),
+			zap.Float64("balance_rounded", rounded),
+			zap.Float64("invoice_total", inv.GetTotal()))
+		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
 	log.Debug("Generating transaction after invoice payment")
@@ -1243,13 +1272,18 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		})
 	}
 
-	inv, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
+	invPeek, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
 	if err != nil {
 		log.Warn("Failed to get invoice", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Invoice not found")
 	}
 
-	return s.withPayWithBalanceLock(ctx, inv.GetAccount(), log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
+	return s.withPayWithBalanceLock(ctx, invPeek.GetAccount(), log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
+		inv, err := s.invoices.Get(ctx, req.GetInvoiceUuid())
+		if err != nil {
+			log.Warn("Failed to get invoice", zap.Error(err))
+			return nil, status.Error(codes.NotFound, "Invoice not found")
+		}
 		if errVal := s.validateNocloudPayWithBalance(ctx, inv, requester); errVal != nil {
 			return nil, errVal
 		}
