@@ -1076,6 +1076,11 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
 	if req.WhmcsId != 0 {
+		unlock, err := s.payWithBalanceAcquireRedisLock(ctx, requester)
+		if err != nil {
+			return nil, err
+		}
+		defer unlock()
 		return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
 	}
 
@@ -1099,6 +1104,16 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		return nil, status.Error(codes.InvalidArgument, "Can't pay top-up balance invoice with balance")
 	}
 
+	unlock, err := s.payWithBalanceAcquireRedisLock(ctx, inv.GetAccount())
+	if err != nil {
+		return nil, err
+	}
+	defer unlock()
+	return s.payWithBalanceNocloudInvoiceLocked(ctx, inv)
+}
+
+func (s *BillingServiceServer) payWithBalanceNocloudInvoiceLocked(ctx context.Context, inv *graph.Invoice) (*connect.Response[pb.PayWithBalanceResponse], error) {
+	log := s.log.Named("PayWithBalance")
 	acc, err := s.accounts.Get(ctx, inv.GetAccount())
 	if err != nil {
 		log.Warn("Failed to get account", zap.Error(err))
@@ -1213,7 +1228,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
 	if err == nil {
 		log.Info("Found NoCloud invoice with this whmcs_id. Redirecting to pay it on NoCloud", zap.Int64("whmcs_id", invId))
-		return s.PayWithBalance(ctx, connect.NewRequest(&pb.PayWithBalanceRequest{InvoiceUuid: ncInv.GetUuid(), WhmcsId: 0}))
+		return s.payWithBalanceNocloudInvoiceLocked(ctx, &graph.Invoice{Invoice: ncInv})
 	}
 	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
 		log.Error("Failed to ensure that whmcs invoice exists in NoCloud", zap.Error(err))
