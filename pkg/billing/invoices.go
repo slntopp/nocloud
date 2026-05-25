@@ -1189,7 +1189,13 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	log.Debug("Request received", zap.Any("request", req), zap.String("requester", requester))
 
 	if req.WhmcsId != 0 {
-		return s.withPayWithBalanceLock(ctx, requester, log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
+		lockAccount := requester
+		if ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(req.WhmcsId)); err == nil {
+			if invNc, errGet := s.invoices.Get(ctx, ncInv.GetUuid()); errGet == nil {
+				lockAccount = invNc.GetAccount()
+			}
+		}
+		return s.withPayWithBalanceLock(ctx, lockAccount, log, func(ctx context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
 			return s.payWithBalanceWhmcsInvoice(ctx, req.WhmcsId)
 		})
 	}

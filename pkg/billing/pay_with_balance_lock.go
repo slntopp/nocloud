@@ -80,3 +80,15 @@ func (s *BillingServiceServer) withPayWithBalanceLock(
 		}
 	}
 }
+
+func (s *BillingServiceServer) withPayWithBalanceLockExec(
+	ctx context.Context,
+	accountID string,
+	log *zap.Logger,
+	fn func(context.Context) error,
+) error {
+	_, err := s.withPayWithBalanceLock(ctx, accountID, log, func(c context.Context) (*connect.Response[pb.PayWithBalanceResponse], error) {
+		return nil, fn(c)
+	})
+	return err
+}

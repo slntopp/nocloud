@@ -148,6 +148,21 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 		return nil
 	}
 
+	invPeek, err := s.invoices.Get(ctx, event.GetUuid())
+	if err != nil {
+		return fmt.Errorf("failed to get invoice: %w", err)
+	}
+	accountID := invPeek.GetAccount()
+	if accountID == "" {
+		return fmt.Errorf("invoice has empty account")
+	}
+
+	return s.withPayWithBalanceLockExec(ctx, accountID, log.Named("invoiceStatusActions"), func(lockCtx context.Context) error {
+		return s.processInvoiceStatusActionLocked(log, lockCtx, event)
+	})
+}
+
+func (s *BillingServiceServer) processInvoiceStatusActionLocked(log *zap.Logger, ctx context.Context, event *epb.Event) error {
 	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	ctx, err := graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
