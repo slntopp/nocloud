@@ -1094,6 +1094,9 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		pb.BillingStatus_BILLING_STATUS_UNKNOWN, pb.BillingStatus_DRAFT}, inv.GetStatus()) {
 		return nil, status.Error(codes.InvalidArgument, "Can't pay this invoice. Try again later or contact support")
 	}
+	if inv.GetStatus() == pb.BillingStatus_PAID || inv.GetStatus() == pb.BillingStatus_RETURNED {
+		return nil, status.Error(codes.FailedPrecondition, "Invoice already paid")
+	}
 
 	if inv.GetType() == pb.ActionType_BALANCE {
 		return nil, status.Error(codes.InvalidArgument, "Can't pay top-up balance invoice with balance")
@@ -1109,6 +1112,16 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 
 func (s *BillingServiceServer) payWithBalanceNocloudInvoiceLocked(ctx context.Context, inv *graph.Invoice) (*connect.Response[pb.PayWithBalanceResponse], error) {
 	log := s.log.Named("PayWithBalance")
+	fresh, err := s.invoices.Get(ctx, inv.GetUuid())
+	if err != nil {
+		log.Warn("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Invoice not found")
+	}
+	inv = fresh
+	if inv.GetStatus() == pb.BillingStatus_PAID || inv.GetStatus() == pb.BillingStatus_RETURNED {
+		return nil, status.Error(codes.FailedPrecondition, "Invoice already paid")
+	}
+
 	acc, err := s.accounts.Get(ctx, inv.GetAccount())
 	if err != nil {
 		log.Warn("Failed to get account", zap.Error(err))
@@ -1144,20 +1157,7 @@ func (s *BillingServiceServer) payWithBalanceNocloudInvoiceLocked(ctx context.Co
 		return nil, status.Error(codes.FailedPrecondition, "Failed to pay invoice. Error: "+err.Error())
 	}
 
-	ctx = context.WithValue(ctx, "paid-with-balance", true)
-	resp, err := s.UpdateInvoiceStatus(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
-		Uuid:   inv.GetUuid(),
-		Status: pb.BillingStatus_PAID,
-		Params: &pb.UpdateInvoiceStatusRequest_Params{
-			IsSendEmail: true,
-		},
-	}))
-	if err != nil {
-		log.Error("Failed to update invoice status", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to paid with balance. Error: "+err.Error())
-	}
-
-	log.Debug("Generating transaction after invoice payment")
+	log.Debug("Debiting account before marking invoice paid")
 	noCancelCtx := context.WithoutCancel(ctx)
 	trCtx, err := graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
 		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL, schema.INVOICES_COL},
@@ -1181,13 +1181,31 @@ func (s *BillingServiceServer) payWithBalanceNocloudInvoiceLocked(ctx context.Co
 	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
 	if err != nil {
 		abort()
-		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Invoice was paid but still encountered an error. Error: "+err.Error())
+		if st, ok := status.FromError(err); ok && st.Code() == codes.FailedPrecondition {
+			return nil, err
+		}
+		log.Error("Failed to create transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to debit account for invoice payment. Error: "+err.Error())
 	}
 	if err = commit(); err != nil {
-		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
+		abort()
+		log.Error("Failed to commit transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to commit transaction. Error: "+err.Error())
 	}
+
+	ctxPaid := context.WithValue(ctx, "paid-with-balance", true)
+	resp, err := s.UpdateInvoiceStatus(ctxWithRoot(ctxPaid), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
+		Uuid:   inv.GetUuid(),
+		Status: pb.BillingStatus_PAID,
+		Params: &pb.UpdateInvoiceStatusRequest_Params{
+			IsSendEmail: true,
+		},
+	}))
+	if err != nil {
+		log.Error("Debited account but failed to mark invoice PAID", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Account debited but invoice status update failed. Error: "+err.Error())
+	}
+
 	if tr != nil {
 		respTrans := resp.Msg.Transactions
 		if respTrans == nil {
@@ -1222,6 +1240,9 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 
 	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
 	if err == nil {
+		if ncInv.GetStatus() == pb.BillingStatus_PAID || ncInv.GetStatus() == pb.BillingStatus_RETURNED {
+			return nil, status.Error(codes.FailedPrecondition, "Invoice already paid")
+		}
 		log.Info("Found NoCloud invoice with this whmcs_id. Redirecting to pay it on NoCloud", zap.Int64("whmcs_id", invId))
 		unlock, lerr := s.payWithBalanceAcquireRedisLock(ctx, ncInv.GetAccount())
 		if lerr != nil {

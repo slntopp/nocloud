@@ -292,18 +292,18 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			return resp, nil
 		}
 
-		var cur *pb.Currency
+		var accCur *pb.Currency
 
 		if dbAcc.Currency == nil {
-			cur = currencyConf.Currency
+			accCur = currencyConf.Currency
 		} else {
-			cur = dbAcc.Currency
+			accCur = dbAcc.Currency
 		}
 
 		var rate float64 = 1
 
-		if cur.GetId() != currencyConf.Currency.GetId() {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
+		if accCur.GetId() != currencyConf.Currency.GetId() {
+			rate, _, err = s.currencies.GetExchangeRate(ctx, accCur, currencyConf.Currency)
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
 				return resp, nil
