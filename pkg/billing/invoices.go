@@ -43,6 +43,17 @@ import (
 
 var invoicesPaidMutex = &sync.Mutex{}
 
+type skipPayWithBalanceRedisLockCtxKey struct{}
+
+func contextWithSkipPayWithBalanceRedisLock(parent context.Context) context.Context {
+	return context.WithValue(parent, skipPayWithBalanceRedisLockCtxKey{}, struct{}{})
+}
+
+func skipPayWithBalanceRedisLock(ctx context.Context) bool {
+	_, ok := ctx.Value(skipPayWithBalanceRedisLockCtxKey{}).(struct{})
+	return ok
+}
+
 type pair[T any] struct {
 	f T
 	s T
@@ -774,6 +785,48 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	t := req.Msg
 	log.Debug("UpdateInvoiceStatus request received")
 
+	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
+		t.Status = pb.BillingStatus_DRAFT
+	}
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	old, err := s.invoices.Get(ctx, t.GetUuid())
+	if err != nil {
+		log.Error("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get invoice")
+	}
+
+	newStatus := t.GetStatus()
+	oldStatus := old.GetStatus()
+
+	if oldStatus == newStatus {
+		return nil, status.Error(codes.InvalidArgument, "Same status")
+	}
+	if slices.Contains(forbiddenStatusConversions, pair[pb.BillingStatus]{oldStatus, newStatus}) {
+		return nil, status.Error(codes.InvalidArgument, "Cannot convert from "+oldStatus.String()+" to "+newStatus.String())
+	}
+
+	if newStatus == pb.BillingStatus_PAID && old.GetAccount() != "" && !skipPayWithBalanceRedisLock(ctx) {
+		var resp *connect.Response[pb.Invoice]
+		err := s.withPayWithBalanceLockExec(ctx, old.GetAccount(), log, func(lockCtx context.Context) error {
+			var innerErr error
+			resp, innerErr = s.updateInvoiceStatusUnderMutex(lockCtx, log, requester, req)
+			return innerErr
+		})
+		return resp, err
+	}
+
+	return s.updateInvoiceStatusUnderMutex(ctx, log, requester, req)
+}
+
+func (s *BillingServiceServer) updateInvoiceStatusUnderMutex(ctx context.Context, log *zap.Logger, requester string, req *connect.Request[pb.UpdateInvoiceStatusRequest]) (*connect.Response[pb.Invoice], error) {
+	t := req.Msg
+
 	invoicesPaidMutex.Lock() // Locking simultaneous access to number manipulation
 	defer invoicesPaidMutex.Unlock()
 
@@ -786,16 +839,6 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		_          = invConf.NewTemplate
 		resetMode  = invConf.ResetCounterMode
 	)
-
-	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
-		t.Status = pb.BillingStatus_DRAFT
-	}
-
-	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := s.ca.HasAccess(ctx, requester, ns, access.Level_ROOT)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
-	}
 
 	old, err := s.invoices.Get(ctx, t.GetUuid())
 	if err != nil {
@@ -1121,7 +1164,7 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		return nil, status.Error(codes.FailedPrecondition, "Failed to pay invoice. Error: "+err.Error())
 	}
 
-	ctx = context.WithValue(ctx, "paid-with-balance", true)
+	ctx = contextWithSkipPayWithBalanceRedisLock(context.WithValue(ctx, "paid-with-balance", true))
 	resp, err := s.UpdateInvoiceStatus(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceStatusRequest{
 		Uuid:   inv.GetUuid(),
 		Status: pb.BillingStatus_PAID,
