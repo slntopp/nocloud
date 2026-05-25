@@ -41,6 +41,35 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func transactionEnforcesSufficientBalance(t *pb.Transaction) bool {
+	if t == nil || t.Meta == nil {
+		return false
+	}
+	if v := t.Meta["enforce_sufficient_balance"]; v != nil {
+		return v.GetBoolValue()
+	}
+	return false
+}
+
+func drainUrgentDebitCursor(ctx context.Context, cursor driver.Cursor, enforce bool) error {
+	defer cursor.Close()
+	n := 0
+	for cursor.HasMore() {
+		var scratch map[string]interface{}
+		if _, err := cursor.ReadDocument(ctx, &scratch); err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			return err
+		}
+		n++
+	}
+	if enforce && n == 0 {
+		return status.Error(codes.FailedPrecondition, "Insufficient balance to complete debit")
+	}
+	return nil
+}
+
 func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, acc, uuid string) (*connect.Response[pb.Transactions], error) {
 	tr, err := s.transactions.Get(ctx, uuid)
 	if err != nil {
@@ -270,19 +299,40 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
-		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
-			"@accounts":      schema.ACCOUNTS_COL,
-			"@transactions":  schema.TRANSACTIONS_COL,
-			"@records":       schema.RECORDS_COL,
-			"accountKey":     acc.String(),
-			"transactionKey": transaction.String(),
-			"currency":       currencyConf.Currency,
-			"currencies":     schema.CUR_COL,
-			"now":            time.Now().Unix(),
-			"graph":          schema.BILLING_GRAPH.Name,
-		})
-		if err != nil {
-			log.Error("Failed to process transaction", zap.String("err", err.Error()))
+		enforce := transactionEnforcesSufficientBalance(r.Transaction)
+		if enforce {
+			if _, ok := driver.HasTransactionID(ctx); !ok {
+				return nil, status.Error(codes.Internal, "internal: balance-guarded debit requires an active database transaction")
+			}
+		}
+		aql := processUrgentTransaction
+		if enforce {
+			aql = processUrgentTransactionEnforceSufficientBalance
+		}
+		vars := map[string]interface{}{
+			"@accounts":       schema.ACCOUNTS_COL,
+			"@transactions":   schema.TRANSACTIONS_COL,
+			"@records":        schema.RECORDS_COL,
+			"accountKey":      acc.String(),
+			"transactionKey":  transaction.String(),
+			"currency":        currencyConf.Currency,
+			"currencies":      schema.CUR_COL,
+			"now":             time.Now().Unix(),
+			"graph":           schema.BILLING_GRAPH.Name,
+		}
+		cursor, err2 := s.db.Query(ctx, aql, vars)
+		if err2 != nil {
+			log.Error("Failed to process transaction", zap.String("err", err2.Error()))
+			if enforce {
+				return nil, err2
+			}
+			return resp, nil
+		}
+		if err2 = drainUrgentDebitCursor(ctx, cursor, enforce); err2 != nil {
+			if enforce {
+				return nil, err2
+			}
+			log.Error("Failed to process transaction", zap.String("err", err2.Error()))
 			return resp, nil
 		}
 
@@ -490,20 +540,34 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
 		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
-		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
-			"@accounts":      schema.ACCOUNTS_COL,
-			"@transactions":  schema.TRANSACTIONS_COL,
-			"@records":       schema.RECORDS_COL,
-			"accountKey":     acc.String(),
-			"transactionKey": transaction.String(),
-			"currency":       currencyConf.Currency,
-			"currencies":     schema.CUR_COL,
-			"now":            time.Now().Unix(),
-			"graph":          schema.BILLING_GRAPH.Name,
-		})
-		if err != nil {
-			log.Error("Failed to process transaction", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, err.Error())
+		enforce := transactionEnforcesSufficientBalance(t)
+		if enforce {
+			if _, ok := driver.HasTransactionID(ctx); !ok {
+				return nil, status.Error(codes.Internal, "internal: balance-guarded debit requires an active database transaction")
+			}
+		}
+		aql := processUrgentTransaction
+		if enforce {
+			aql = processUrgentTransactionEnforceSufficientBalance
+		}
+		vars := map[string]interface{}{
+			"@accounts":       schema.ACCOUNTS_COL,
+			"@transactions":   schema.TRANSACTIONS_COL,
+			"@records":        schema.RECORDS_COL,
+			"accountKey":      acc.String(),
+			"transactionKey":  transaction.String(),
+			"currency":        currencyConf.Currency,
+			"currencies":      schema.CUR_COL,
+			"now":             time.Now().Unix(),
+			"graph":           schema.BILLING_GRAPH.Name,
+		}
+		cursor, err2 := s.db.Query(ctx, aql, vars)
+		if err2 != nil {
+			log.Error("Failed to process transaction", zap.String("err", err2.Error()))
+			return nil, status.Error(codes.Internal, err2.Error())
+		}
+		if err2 = drainUrgentDebitCursor(ctx, cursor, enforce); err2 != nil {
+			return nil, err2
 		}
 
 		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
@@ -586,7 +650,33 @@ FOR r in transaction.records
 UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
 UPDATE account WITH { balance: account.balance - total } IN @@accounts
 
-return account
+RETURN account
+`
+
+const processUrgentTransactionEnforceSufficientBalance = `
+LET account = DOCUMENT(@accountKey)
+LET transaction = DOCUMENT(@transactionKey)
+
+LET currency = account.currency != null ? account.currency : @currency
+LET rate = PRODUCT(
+	FOR vertex, edge IN OUTBOUND
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
+	TO DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(currency.id)))
+	GRAPH @graph
+	FILTER edge
+		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
+)
+
+LET total = transaction.total * rate
+
+FOR _guard IN (account.balance >= total ? [1] : [])
+	FOR r in transaction.records
+		UPDATE r WITH {cost: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key, payment_date: @now}), exec: transaction.exec} in @@records
+
+	UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
+	UPDATE account WITH { balance: account.balance - total } IN @@accounts
+
+	RETURN account
 `
 
 const updateTransactionWithCurrency = `
@@ -691,7 +781,7 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	return resp, nil
 }
 
-func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency) (*pb.Transaction, error) {
+func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency, enforceSufficientBalance bool) (*pb.Transaction, error) {
 	if account == "" {
 		return nil, fmt.Errorf("account is required")
 	}
@@ -702,12 +792,19 @@ func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount floa
 		conf := MakeCurrencyConf(s.log, &s.settingsClient)
 		curr = conf.Currency
 	}
+	meta := map[string]*structpb.Value{
+		"type": structpb.NewStringValue("transaction"),
+	}
+	if enforceSufficientBalance {
+		meta["enforce_sufficient_balance"] = structpb.NewBoolValue(true)
+	}
 	resp, err := s.CreateTransaction(ctxWithInternalAccess(ctxWithRoot(ctx)), connect.NewRequest(&pb.Transaction{
 		Exec:     time.Now().Unix(),
 		Priority: pb.Priority_URGENT,
 		Account:  account,
 		Total:    amount,
 		Currency: curr,
+		Meta:     meta,
 	}))
 	if err != nil {
 		return nil, err
