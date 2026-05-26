@@ -34,8 +34,9 @@ var (
 	port      string
 	rbmq      string
 
-	ccHost                   string
-	overdueTicketDepartment  string
+	ccHost                       string
+	overdueTicketDepartment      string
+	overdueTicketWhmcsSenderUUID string
 )
 
 func init() {
@@ -53,6 +54,7 @@ func init() {
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	viper.SetDefault("CC_HOST", "")
 	viper.SetDefault("OVERDUE_TICKET_DEPARTMENT", "")
+	viper.SetDefault("OVERDUE_TICKET_WHMCS_SENDER_UUID", "")
 
 	port = viper.GetString("PORT")
 
@@ -65,6 +67,7 @@ func init() {
 	rbmq = viper.GetString("RABBITMQ_CONN")
 	ccHost = viper.GetString("CC_HOST")
 	overdueTicketDepartment = viper.GetString("OVERDUE_TICKET_DEPARTMENT")
+	overdueTicketWhmcsSenderUUID = viper.GetString("OVERDUE_TICKET_WHMCS_SENDER_UUID")
 
 }
 
@@ -93,7 +96,7 @@ func main() {
 	})
 
 	auth.SetContext(log, rdb, SIGNING_KEY)
-	eventbus.SetupOverdueTicketHandler(ccHost, SIGNING_KEY, overdueTicketDepartment)
+	eventbus.SetupOverdueTicketHandler(ccHost, SIGNING_KEY, overdueTicketDepartment, overdueTicketWhmcsSenderUUID)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),
