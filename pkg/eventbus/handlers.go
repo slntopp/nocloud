@@ -431,7 +431,21 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		log.Warn("overdue ticket: set OVERDUE_TICKET_WHMCS_SENDER_UUID (staff NoCloud UUID with whmcs_admin_id) so the first message opens WHMCS as admin")
 	}
 
-	createStatus, createBody, err := overdueCCPost(ctx, "/cc.ChatsAPI/Create", createPayload, token)
+	// ChatsAPI/Create sets chat owner from JWT (not from payload). Root → owner "0" (nocloud);
+	// WHMCS OpenTicket treats the first message as admin opener only if sender ∈ chat.admins.
+	// Use the same staff JWT for Create+Send when configured so CC owner matches the opener.
+	createToken := token
+	sendToken := token
+	if overdueWhmcsSenderUUID != "" {
+		staffTok, err := overdueCCJWT(overdueWhmcsSenderUUID)
+		if err != nil {
+			return nil, fmt.Errorf("overdue ticket: sign staff token: %w", err)
+		}
+		createToken = staffTok
+		sendToken = staffTok
+	}
+
+	createStatus, createBody, err := overdueCCPost(ctx, "/cc.ChatsAPI/Create", createPayload, createToken)
 	if err != nil {
 		return nil, fmt.Errorf("overdue ticket: create chat: %w", err)
 	}
@@ -448,15 +462,6 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		log.Error("overdue ticket: parse chat uuid", zap.Error(err), zap.String("body", string(createBody)))
 		event.Type = "noop"
 		return event, nil
-	}
-
-	sendToken := token
-	if overdueWhmcsSenderUUID != "" {
-		st, err := overdueCCJWT(overdueWhmcsSenderUUID)
-		if err != nil {
-			return nil, fmt.Errorf("overdue ticket: sign opener token: %w", err)
-		}
-		sendToken = st
 	}
 
 	sendStatus, sendBody, err := overdueCCPost(ctx, "/cc.MessagesAPI/Send", map[string]any{
