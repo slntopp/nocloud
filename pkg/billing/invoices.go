@@ -903,14 +903,18 @@ payment:
 		_ = accGroup.InvoiceOrderSettings.NewTemplate
 		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
 	}
-	strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
-	if err != nil {
-		log.Error("Failed to get next number", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get next number")
+	paidFromBalanceCtx, _ := ctx.Value("paid-with-balance").(bool)
+	skipFiscalInvoiceNumber := paidFromBalanceCtx
+	if !skipFiscalInvoiceNumber {
+		strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
+		if err != nil {
+			log.Error("Failed to get next number", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get next number")
+		}
+		newInv.Number = strNum
+		newInv.NumericNumber = num
+		newInv.NumberTemplate = invConf.Template
 	}
-	newInv.Number = strNum
-	newInv.NumericNumber = num
-	newInv.NumberTemplate = invConf.Template
 
 quit:
 	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
@@ -1158,8 +1162,9 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 	}
 
+	debitNet := graph.Round(inv.GetSubtotal(), invCurrency.Precision, invCurrency.Rounding)
 	rounded := graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-	if rounded < inv.GetTotal() {
+	if rounded < debitNet {
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
@@ -1198,11 +1203,11 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 	}
 	rounded = graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-	if rounded < inv.GetTotal() {
+	if rounded < debitNet {
 		log.Error("Insufficient balance after marking invoice paid (concurrent spend?)",
 			zap.String("invoice", inv.GetUuid()),
 			zap.Float64("balance_rounded", rounded),
-			zap.Float64("invoice_total", inv.GetTotal()))
+			zap.Float64("invoice_subtotal", inv.GetSubtotal()))
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
@@ -1227,7 +1232,7 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 		return nil
 	}
-	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency, true)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, debitNet), inv.GetAccount(), invCurrency, true)
 	if err != nil {
 		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
