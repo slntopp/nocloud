@@ -870,6 +870,8 @@ func (s *BillingServiceServer) updateInvoiceStatusUnderMutex(ctx context.Context
 	var strNum string
 	var num int
 	var wasForced bool
+	var paidFromBalanceCtx bool
+	var skipFiscalInvoiceNumber bool
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -903,8 +905,8 @@ payment:
 		_ = accGroup.InvoiceOrderSettings.NewTemplate
 		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
 	}
-	paidFromBalanceCtx, _ := ctx.Value("paid-with-balance").(bool)
-	skipFiscalInvoiceNumber := paidFromBalanceCtx
+	paidFromBalanceCtx, _ = ctx.Value("paid-with-balance").(bool)
+	skipFiscalInvoiceNumber = paidFromBalanceCtx
 	if !skipFiscalInvoiceNumber {
 		strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
 		if err != nil {
