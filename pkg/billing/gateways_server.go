@@ -615,7 +615,16 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 	}
 
 	var titleKey = "$invoice.title"
-	if invoiceBody.GetStatus() == pb.BillingStatus_PAID || invoiceBody.GetStatus() == pb.BillingStatus_RETURNED {
+	switch invoiceBody.GetStatus() {
+	case pb.BillingStatus_RETURNED:
+		titleKey = "$invoice.title_paid"
+	case pb.BillingStatus_PAID:
+		if meta := invoiceBody.GetMeta(); meta != nil {
+			if v, ok := meta["paid_with_balance"]; ok && v.GetBoolValue() {
+				titleKey = "$invoice.title"
+				break
+			}
+		}
 		titleKey = "$invoice.title_paid"
 	}
 
