@@ -1291,7 +1291,8 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		return nil
 	}
 
-	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, debitNet), inv.GetAccount(), invCurrency, true, metaForNoCloudInvoicePayment(inv))
+	debitAmount := graph.Round(inv.GetTotal(), invCurrency.Precision, invCurrency.Rounding)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, debitAmount), inv.GetAccount(), invCurrency, true, metaForNoCloudInvoicePayment(inv))
 
 	if err != nil {
 		abort()
