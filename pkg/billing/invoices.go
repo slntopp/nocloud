@@ -2019,6 +2019,29 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil
 }
 
+const bitrixDomainResourceKey = "bitrix_domain"
+
+func bitrixPortalFromInstanceResources(resources map[string]*structpb.Value) string {
+	if resources == nil {
+		return ""
+	}
+	v, ok := resources[bitrixDomainResourceKey]
+	if !ok || v == nil {
+		return ""
+	}
+	return strings.TrimSpace(v.GetStringValue())
+}
+
+func formatRenewInvoiceLineDescription(invoicePrefix, productTitle string, resources map[string]*structpb.Value, expireDate, untilDate time.Time, fDateNum func(int) string) string {
+	dates := fmt.Sprintf("%s.%s.%d - %s.%s.%d",
+		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
+		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
+	if portal := bitrixPortalFromInstanceResources(resources); portal != "" {
+		return strings.TrimSpace(fmt.Sprintf("%s%s(%s) (%s)", invoicePrefix, productTitle, portal, dates))
+	}
+	return strings.TrimSpace(fmt.Sprintf("%s%s(%s)", invoicePrefix, productTitle, dates))
+}
+
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateRenewalInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -2172,10 +2195,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
-	renewDescription := fmt.Sprintf("%s%s(%s.%s.%d - %s.%s.%d)", invoicePrefix, productTitle,
-		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
-		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
-	renewDescription = strings.TrimSpace(renewDescription)
+	renewDescription := formatRenewInvoiceLineDescription(invoicePrefix, productTitle, inst.GetResources(), expireDate, untilDate, fDateNum)
 
 	tax := acc.GetTaxRate()
 	invCost := initCost

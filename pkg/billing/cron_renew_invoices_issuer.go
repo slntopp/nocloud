@@ -18,7 +18,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -385,10 +384,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 		invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 		productTitle := product.GetTitle() + " "
-		renewDescription := fmt.Sprintf("%s%s(%s.%s.%d - %s.%s.%d)", invoicePrefix, productTitle,
-			fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
-			fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
-		renewDescription = strings.TrimSpace(renewDescription)
+		renewDescription := formatRenewInvoiceLineDescription(invoicePrefix, productTitle, inst.GetResources(), expireDate, untilDate, fDateNum)
 
 		billingData.RenewalData[inst.GetUuid()] = graph.RenewalData{
 			ExpirationTs: d.ExpireAt,
