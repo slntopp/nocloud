@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -220,6 +221,17 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		t.Meta = map[string]*structpb.Value{}
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
+	var recMeta map[string]*structpb.Value
+	if t.GetMeta() != nil {
+		recMeta = maps.Clone(t.GetMeta())
+	} else {
+		recMeta = map[string]*structpb.Value{}
+	}
+	var instanceFromMeta string
+	if v, ok := recMeta["instance_uuid"]; ok && v != nil {
+		instanceFromMeta = strings.TrimSpace(v.GetStringValue())
+		delete(recMeta, "instance_uuid")
+	}
 	recBody := &pb.Record{
 		Start:             time.Now().Unix(),
 		End:               time.Now().Unix() + 1,
@@ -230,10 +242,14 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		Currency:          t.GetCurrency(),
 		Service:           t.GetService(),
 		Account:           t.GetAccount(),
-		Meta:              t.GetMeta(),
+		Meta:              recMeta,
 		Cost:              t.GetTotal(),
 		IgnoreOverlapping: t.GetIgnoreOverlapping(),
 	}
+	if instanceFromMeta != "" {
+		recBody.Instance = instanceFromMeta
+	}
+	delete(t.Meta, "instance_uuid")
 	if t.GetBase() != "" {
 		recBody.Base = t.Base
 	}
