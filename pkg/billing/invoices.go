@@ -2068,6 +2068,14 @@ func bitrixPortalFromInvoiceLineInstance(inst invoiceLineInstance) string {
 	return bitrixPortalFromInstanceMaps(inst.GetResources(), inst.GetConfig())
 }
 
+func formatInstanceStartInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance) string {
+	base := strings.TrimSpace(fmt.Sprintf("%s%s", invoicePrefix, productTitle))
+	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
+		return fmt.Sprintf("%s (%s)", base, portal)
+	}
+	return base
+}
+
 func formatRenewInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance, expireDate, untilDate time.Time, fDateNum func(int) string) string {
 	dates := fmt.Sprintf("%s.%s.%d - %s.%s.%d",
 		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
