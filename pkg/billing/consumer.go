@@ -22,7 +22,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 )
@@ -389,8 +388,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
-	startDescription := fmt.Sprintf("%s%s", invoicePrefix, productTitle)
-	startDescription = strings.TrimSpace(startDescription)
+	startDescription := formatInstanceStartInvoiceLineDescription(invoicePrefix, productTitle, instance)
 
 	tax := acc.GetTaxRate()
 	invCost := initCost
