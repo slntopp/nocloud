@@ -19,9 +19,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	epb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"strconv"
 	"strings"
 	"time"
 
@@ -219,6 +221,17 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		t.Meta = map[string]*structpb.Value{}
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
+	var recMeta map[string]*structpb.Value
+	if t.GetMeta() != nil {
+		recMeta = maps.Clone(t.GetMeta())
+	} else {
+		recMeta = map[string]*structpb.Value{}
+	}
+	var instanceFromMeta string
+	if v, ok := recMeta["instance_uuid"]; ok && v != nil {
+		instanceFromMeta = strings.TrimSpace(v.GetStringValue())
+		delete(recMeta, "instance_uuid")
+	}
 	recBody := &pb.Record{
 		Start:             time.Now().Unix(),
 		End:               time.Now().Unix() + 1,
@@ -229,10 +242,14 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		Currency:          t.GetCurrency(),
 		Service:           t.GetService(),
 		Account:           t.GetAccount(),
-		Meta:              t.GetMeta(),
+		Meta:              recMeta,
 		Cost:              t.GetTotal(),
 		IgnoreOverlapping: t.GetIgnoreOverlapping(),
 	}
+	if instanceFromMeta != "" {
+		recBody.Instance = instanceFromMeta
+	}
+	delete(t.Meta, "instance_uuid")
 	if t.GetBase() != "" {
 		recBody.Base = t.Base
 	}
@@ -310,15 +327,15 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			aql = processUrgentTransactionEnforceSufficientBalance
 		}
 		vars := map[string]interface{}{
-			"@accounts":       schema.ACCOUNTS_COL,
-			"@transactions":   schema.TRANSACTIONS_COL,
-			"@records":        schema.RECORDS_COL,
-			"accountKey":      acc.String(),
-			"transactionKey":  transaction.String(),
-			"currency":        currencyConf.Currency,
-			"currencies":      schema.CUR_COL,
-			"now":             time.Now().Unix(),
-			"graph":           schema.BILLING_GRAPH.Name,
+			"@accounts":      schema.ACCOUNTS_COL,
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"@records":       schema.RECORDS_COL,
+			"accountKey":     acc.String(),
+			"transactionKey": transaction.String(),
+			"currency":       currencyConf.Currency,
+			"currencies":     schema.CUR_COL,
+			"now":            time.Now().Unix(),
+			"graph":          schema.BILLING_GRAPH.Name,
 		}
 		cursor, err2 := s.db.Query(ctx, aql, vars)
 		if err2 != nil {
@@ -551,15 +568,15 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 			aql = processUrgentTransactionEnforceSufficientBalance
 		}
 		vars := map[string]interface{}{
-			"@accounts":       schema.ACCOUNTS_COL,
-			"@transactions":   schema.TRANSACTIONS_COL,
-			"@records":        schema.RECORDS_COL,
-			"accountKey":      acc.String(),
-			"transactionKey":  transaction.String(),
-			"currency":        currencyConf.Currency,
-			"currencies":      schema.CUR_COL,
-			"now":             time.Now().Unix(),
-			"graph":           schema.BILLING_GRAPH.Name,
+			"@accounts":      schema.ACCOUNTS_COL,
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"@records":       schema.RECORDS_COL,
+			"accountKey":     acc.String(),
+			"transactionKey": transaction.String(),
+			"currency":       currencyConf.Currency,
+			"currencies":     schema.CUR_COL,
+			"now":            time.Now().Unix(),
+			"graph":          schema.BILLING_GRAPH.Name,
 		}
 		cursor, err2 := s.db.Query(ctx, aql, vars)
 		if err2 != nil {
@@ -781,7 +798,60 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	return resp, nil
 }
 
-func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency, enforceSufficientBalance bool) (*pb.Transaction, error) {
+type applyTransactionMeta struct {
+	TransactionType string
+	Description     string
+	InvoiceUUID     string
+	InvoiceNumber   string
+	WhmcsInvoiceID  int64
+	InstanceUUID    string
+}
+
+func mergeApplyTransactionMeta(meta map[string]*structpb.Value, extra *applyTransactionMeta, amount float64) {
+	tt := ""
+	desc := ""
+	invoiceUUID := ""
+	invoiceNumber := ""
+	instanceUUID := ""
+	var whmcsID int64
+	if extra != nil {
+		tt = strings.TrimSpace(extra.TransactionType)
+		desc = strings.TrimSpace(extra.Description)
+		invoiceUUID = strings.TrimSpace(extra.InvoiceUUID)
+		invoiceNumber = strings.TrimSpace(extra.InvoiceNumber)
+		instanceUUID = strings.TrimSpace(extra.InstanceUUID)
+		whmcsID = extra.WhmcsInvoiceID
+	}
+	if tt == "" {
+		if amount < 0 {
+			tt = "transaction top-up"
+		} else {
+			tt = "transaction payment"
+		}
+	}
+	meta["transactionType"] = structpb.NewStringValue(tt)
+	if desc != "" {
+		meta["description"] = structpb.NewStringValue(desc)
+	} else if invoiceNumber != "" {
+		meta["description"] = structpb.NewStringValue("Invoice " + invoiceNumber)
+	} else if whmcsID != 0 {
+		meta["description"] = structpb.NewStringValue(fmt.Sprintf("WHMCS invoice #%d", whmcsID))
+	}
+	if invoiceUUID != "" {
+		meta["invoice_uuid"] = structpb.NewStringValue(invoiceUUID)
+	}
+	if invoiceNumber != "" {
+		meta["invoice_number"] = structpb.NewStringValue(invoiceNumber)
+	}
+	if whmcsID != 0 {
+		meta["whmcs_invoice_id"] = structpb.NewStringValue(strconv.FormatInt(whmcsID, 10))
+	}
+	if instanceUUID != "" {
+		meta["instance_uuid"] = structpb.NewStringValue(instanceUUID)
+	}
+}
+
+func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount float64, account string, curr *pb.Currency, enforceSufficientBalance bool, extra *applyTransactionMeta) (*pb.Transaction, error) {
 	if account == "" {
 		return nil, fmt.Errorf("account is required")
 	}
@@ -798,6 +868,7 @@ func (s *BillingServiceServer) applyTransaction(ctx context.Context, amount floa
 	if enforceSufficientBalance {
 		meta["enforce_sufficient_balance"] = structpb.NewBoolValue(true)
 	}
+	mergeApplyTransactionMeta(meta, extra, amount)
 	resp, err := s.CreateTransaction(ctxWithInternalAccess(ctxWithRoot(ctx)), connect.NewRequest(&pb.Transaction{
 		Exec:     time.Now().Unix(),
 		Priority: pb.Priority_URGENT,

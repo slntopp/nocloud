@@ -43,6 +43,69 @@ import (
 
 var invoicesPaidMutex = &sync.Mutex{}
 
+func firstInvoiceInstance(inv *graph.Invoice) string {
+	if inv == nil {
+		return ""
+	}
+	for _, id := range inv.GetInstances() {
+		if id = strings.TrimSpace(id); id != "" {
+			return id
+		}
+	}
+	return ""
+}
+
+func metaForNoCloudInvoicePayment(inv *graph.Invoice) *applyTransactionMeta {
+	if inv == nil {
+		return nil
+	}
+	num := strings.TrimSpace(inv.GetNumber())
+	if num == "" {
+		num = inv.GetUuid()
+	}
+	return &applyTransactionMeta{
+		TransactionType: "invoice payment",
+		InvoiceUUID:     inv.GetUuid(),
+		InvoiceNumber:   strings.TrimSpace(inv.GetNumber()),
+		InstanceUUID:    firstInvoiceInstance(inv),
+		Description:     fmt.Sprintf("Payment for invoice %s", num),
+	}
+}
+
+func metaForTopUpInvoicePaid(inv *graph.Invoice) *applyTransactionMeta {
+	if inv == nil {
+		return nil
+	}
+	num := strings.TrimSpace(inv.GetNumber())
+	if num == "" {
+		num = inv.GetUuid()
+	}
+	return &applyTransactionMeta{
+		TransactionType: "invoice top-up",
+		InvoiceUUID:     inv.GetUuid(),
+		InvoiceNumber:   strings.TrimSpace(inv.GetNumber()),
+		InstanceUUID:    firstInvoiceInstance(inv),
+		Description:     fmt.Sprintf("Top-up invoice %s", num),
+	}
+}
+
+func metaForInvoiceRefund(inv *graph.Invoice) *applyTransactionMeta {
+	if inv == nil {
+		return &applyTransactionMeta{TransactionType: "correct", Description: "Invoice correction / reversal"}
+	}
+	num := strings.TrimSpace(inv.GetNumber())
+	if num == "" {
+		num = inv.GetUuid()
+	}
+	return &applyTransactionMeta{
+		TransactionType: "correct",
+		InvoiceUUID:     inv.GetUuid(),
+		InvoiceNumber:   strings.TrimSpace(inv.GetNumber()),
+		InstanceUUID:    firstInvoiceInstance(inv),
+		Description:     fmt.Sprintf("Reversal (invoice %s)", num),
+	}
+}
+
 type skipPayWithBalanceRedisLockCtxKey struct{}
 
 func contextWithSkipPayWithBalanceRedisLock(parent context.Context) context.Context {
@@ -1227,7 +1290,10 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 		return nil
 	}
-	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency, true)
+
+	debitAmount := graph.Round(inv.GetTotal(), invCurrency.Precision, invCurrency.Rounding)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, debitAmount), inv.GetAccount(), invCurrency, true, metaForNoCloudInvoicePayment(inv))
+
 	if err != nil {
 		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
@@ -1388,7 +1454,11 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		}
 		return nil
 	}
-	_, errTr = s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency, true)
+	_, errTr = s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency, true, &applyTransactionMeta{
+		TransactionType: "invoice payment",
+		WhmcsInvoiceID:  invId,
+		Description:     fmt.Sprintf("Payment for WHMCS invoice #%d", invId),
+	})
 	if errTr != nil {
 		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(errTr))
@@ -1965,6 +2035,73 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 	return connect.NewResponse(&pb.SendInvoiceEmailResponse{}), nil
 }
 
+const bitrixDomainResourceKey = "bitrix_domain"
+
+type invoiceLineInstance interface {
+	GetResources() map[string]*structpb.Value
+	GetConfig() map[string]*structpb.Value
+}
+
+func stringFromStructpbValue(v *structpb.Value) string {
+	if v == nil {
+		return ""
+	}
+	if s := strings.TrimSpace(v.GetStringValue()); s != "" {
+		return s
+	}
+	iface := v.AsInterface()
+	if iface == nil {
+		return ""
+	}
+	if s, ok := iface.(string); ok {
+		return strings.TrimSpace(s)
+	}
+	return strings.TrimSpace(fmt.Sprint(iface))
+}
+
+func bitrixPortalFromInstanceMaps(resources, config map[string]*structpb.Value) string {
+	if resources != nil {
+		if v, ok := resources[bitrixDomainResourceKey]; ok {
+			if s := stringFromStructpbValue(v); s != "" {
+				return s
+			}
+		}
+	}
+	if config != nil {
+		if v, ok := config[bitrixDomainResourceKey]; ok {
+			if s := stringFromStructpbValue(v); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+func bitrixPortalFromInvoiceLineInstance(inst invoiceLineInstance) string {
+	if inst == nil {
+		return ""
+	}
+	return bitrixPortalFromInstanceMaps(inst.GetResources(), inst.GetConfig())
+}
+
+func formatInstanceStartInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance) string {
+	base := strings.TrimSpace(fmt.Sprintf("%s%s", invoicePrefix, productTitle))
+	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
+		return fmt.Sprintf("%s (%s)", base, portal)
+	}
+	return base
+}
+
+func formatRenewInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance, expireDate, untilDate time.Time, fDateNum func(int) string) string {
+	dates := fmt.Sprintf("%s.%s.%d - %s.%s.%d",
+		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
+		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
+	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
+		return strings.TrimSpace(fmt.Sprintf("%s%s(%s) (%s)", invoicePrefix, productTitle, portal, dates))
+	}
+	return strings.TrimSpace(fmt.Sprintf("%s%s(%s)", invoicePrefix, productTitle, dates))
+}
+
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateRenewalInvoice")
 	requester := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -2118,10 +2255,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
-	renewDescription := fmt.Sprintf("%s%s(%s.%s.%d - %s.%s.%d)", invoicePrefix, productTitle,
-		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
-		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
-	renewDescription = strings.TrimSpace(renewDescription)
+	renewDescription := formatRenewInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate, fDateNum)
 
 	tax := acc.GetTaxRate()
 	invCost := initCost
@@ -2217,7 +2351,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 
 	switch inv.GetType() {
 	case pb.ActionType_BALANCE:
-		tr, err := s.applyTransaction(ctx, -inv.GetSubtotal(), inv.GetAccount(), inv.GetCurrency(), false)
+		tr, err := s.applyTransaction(ctx, -inv.GetSubtotal(), inv.GetAccount(), inv.GetCurrency(), false, metaForTopUpInvoicePaid(inv))
 		if err != nil {
 			return inv, fmt.Errorf("failed to apply transaction: %w", err)
 		}
@@ -2268,7 +2402,11 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				log.Error("Failed to convert cost", zap.Error(err))
 				return inv, fmt.Errorf("failed to convert cost: %w", err)
 			}
-			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency(), false)
+			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency(), false, &applyTransactionMeta{
+				TransactionType: "transaction top-up",
+				InstanceUUID:    i,
+				Description:     fmt.Sprintf("Instance start balance credit (%s)", i),
+			})
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
@@ -2325,7 +2463,7 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 			log.Error("Failed to get transaction", zap.Error(err))
 			return nil, fmt.Errorf("failed to get transaction: %w", err)
 		}
-		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency(), false); err != nil {
+		if tr, err = s.applyTransaction(ctx, -tr.GetTotal(), tr.GetAccount(), tr.GetCurrency(), false, metaForInvoiceRefund(inv)); err != nil {
 			log.Error("Failed to apply transaction", zap.Error(err))
 			return nil, fmt.Errorf("failed to apply transaction: %w", err)
 		}
