@@ -2026,22 +2026,58 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 
 const bitrixDomainResourceKey = "bitrix_domain"
 
-func bitrixPortalFromInstanceResources(resources map[string]*structpb.Value) string {
-	if resources == nil {
-		return ""
-	}
-	v, ok := resources[bitrixDomainResourceKey]
-	if !ok || v == nil {
-		return ""
-	}
-	return strings.TrimSpace(v.GetStringValue())
+type invoiceLineInstance interface {
+	GetResources() map[string]*structpb.Value
+	GetConfig() map[string]*structpb.Value
 }
 
-func formatRenewInvoiceLineDescription(invoicePrefix, productTitle string, resources map[string]*structpb.Value, expireDate, untilDate time.Time, fDateNum func(int) string) string {
+func stringFromStructpbValue(v *structpb.Value) string {
+	if v == nil {
+		return ""
+	}
+	if s := strings.TrimSpace(v.GetStringValue()); s != "" {
+		return s
+	}
+	iface := v.AsInterface()
+	if iface == nil {
+		return ""
+	}
+	if s, ok := iface.(string); ok {
+		return strings.TrimSpace(s)
+	}
+	return strings.TrimSpace(fmt.Sprint(iface))
+}
+
+func bitrixPortalFromInstanceMaps(resources, config map[string]*structpb.Value) string {
+	if resources != nil {
+		if v, ok := resources[bitrixDomainResourceKey]; ok {
+			if s := stringFromStructpbValue(v); s != "" {
+				return s
+			}
+		}
+	}
+	if config != nil {
+		if v, ok := config[bitrixDomainResourceKey]; ok {
+			if s := stringFromStructpbValue(v); s != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+func bitrixPortalFromInvoiceLineInstance(inst invoiceLineInstance) string {
+	if inst == nil {
+		return ""
+	}
+	return bitrixPortalFromInstanceMaps(inst.GetResources(), inst.GetConfig())
+}
+
+func formatRenewInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance, expireDate, untilDate time.Time, fDateNum func(int) string) string {
 	dates := fmt.Sprintf("%s.%s.%d - %s.%s.%d",
 		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
 		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
-	if portal := bitrixPortalFromInstanceResources(resources); portal != "" {
+	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
 		return strings.TrimSpace(fmt.Sprintf("%s%s(%s) (%s)", invoicePrefix, productTitle, portal, dates))
 	}
 	return strings.TrimSpace(fmt.Sprintf("%s%s(%s)", invoicePrefix, productTitle, dates))
@@ -2200,7 +2236,7 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
-	renewDescription := formatRenewInvoiceLineDescription(invoicePrefix, productTitle, inst.GetResources(), expireDate, untilDate, fDateNum)
+	renewDescription := formatRenewInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate, fDateNum)
 
 	tax := acc.GetTaxRate()
 	invCost := initCost
