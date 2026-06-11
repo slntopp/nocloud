@@ -43,6 +43,18 @@ import (
 
 var invoicesPaidMutex = &sync.Mutex{}
 
+func firstInvoiceInstance(inv *graph.Invoice) string {
+	if inv == nil {
+		return ""
+	}
+	for _, id := range inv.GetInstances() {
+		if id = strings.TrimSpace(id); id != "" {
+			return id
+		}
+	}
+	return ""
+}
+
 func metaForNoCloudInvoicePayment(inv *graph.Invoice) *applyTransactionMeta {
 	if inv == nil {
 		return nil
@@ -55,6 +67,7 @@ func metaForNoCloudInvoicePayment(inv *graph.Invoice) *applyTransactionMeta {
 		TransactionType: "invoice payment",
 		InvoiceUUID:     inv.GetUuid(),
 		InvoiceNumber:   strings.TrimSpace(inv.GetNumber()),
+		InstanceUUID:    firstInvoiceInstance(inv),
 		Description:     fmt.Sprintf("Payment for invoice %s", num),
 	}
 }
@@ -71,6 +84,7 @@ func metaForTopUpInvoicePaid(inv *graph.Invoice) *applyTransactionMeta {
 		TransactionType: "invoice top-up",
 		InvoiceUUID:     inv.GetUuid(),
 		InvoiceNumber:   strings.TrimSpace(inv.GetNumber()),
+		InstanceUUID:    firstInvoiceInstance(inv),
 		Description:     fmt.Sprintf("Top-up invoice %s", num),
 	}
 }
@@ -87,6 +101,7 @@ func metaForInvoiceRefund(inv *graph.Invoice) *applyTransactionMeta {
 		TransactionType: "correct",
 		InvoiceUUID:     inv.GetUuid(),
 		InvoiceNumber:   strings.TrimSpace(inv.GetNumber()),
+		InstanceUUID:    firstInvoiceInstance(inv),
 		Description:     fmt.Sprintf("Reversal (invoice %s)", num),
 	}
 }
