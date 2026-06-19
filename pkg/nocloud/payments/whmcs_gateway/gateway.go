@@ -298,42 +298,55 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 		amount[i] = floatAsString(price)
 	}
 
-	applyWhmcsUpdate := func(includeStatus bool) error {
+	applyWhmcsUpdate := func(includeStatus bool, syncLineItems bool) error {
 		updBody := body
 		if includeStatus {
 			updBody.Status = ptr(statusToWhmcs(inv.Status))
 		} else {
 			updBody.Status = nil
 		}
+		if !syncLineItems {
+			updBody.DeleteLineIds = nil
+			updBody.TaxRate = 0
+		}
 		q, qErr := query.Values(updBody)
 		if qErr != nil {
 			return qErr
 		}
-		for i := range inv.GetItems() {
-			q.Set(fmt.Sprintf("newitemdescription[%d]", i), description[i])
-			q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%.2f", amount[i]))
-			q.Set(fmt.Sprintf("newitemtaxed[%d]", i), isTaxed)
+		if syncLineItems {
+			for i := range inv.GetItems() {
+				q.Set(fmt.Sprintf("newitemdescription[%d]", i), description[i])
+				q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%.2f", amount[i]))
+				q.Set(fmt.Sprintf("newitemtaxed[%d]", i), isTaxed)
+			}
 		}
 		_, qErr = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
 		return qErr
 	}
 
+	balancePaidSynced := false
 	if paidWithBalance && invoiceWasPaid {
-		if err = applyWhmcsUpdate(false); err != nil {
+		if err = applyWhmcsUpdate(false, true); err != nil {
 			return err
 		}
 		payAmount := graph.Round(inv.GetSubtotal(), cur.Precision, cur.Rounding)
 		if err = g.PayInvoice(ctx, int(id.GetNumberValue()), true, payAmount); err != nil {
 			return fmt.Errorf("failed to pay invoice: %w", err)
 		}
+		if err = applyWhmcsUpdate(true, false); err != nil {
+			return err
+		}
+		balancePaidSynced = true
 	} else if inv.Status != statusToNoCloud(whmcsInv.Status) && invoiceWasPaid {
 		if err = g.PayInvoice(ctx, int(id.GetNumberValue()), false); err != nil {
 			return fmt.Errorf("failed to pay invoice: %w", err)
 		}
 	}
 
-	if err = applyWhmcsUpdate(true); err != nil {
-		return err
+	if !balancePaidSynced {
+		if err = applyWhmcsUpdate(true, true); err != nil {
+			return err
+		}
 	}
 
 	if !invoiceWasPaid && sendEmail {
