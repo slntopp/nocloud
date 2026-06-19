@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.14.0
 	connectrpc.com/grpchealth v1.3.0
 	github.com/Pallinder/go-randomdata v1.2.0
-	github.com/arangodb/go-driver v1.6.2
+	github.com/arangodb/go-driver v1.6.9
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/google/go-querystring v1.1.0
@@ -23,7 +23,7 @@ require (
 	github.com/slntopp/nocloud-proto v0.0.0-20260401161042-703807c58664
 	github.com/spf13/viper v1.18.2
 	github.com/stoewer/go-strcase v1.3.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 	github.com/tiendc/go-csvlib v1.0.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
 	github.com/wI2L/jsondiff v0.5.2
