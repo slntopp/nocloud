@@ -530,7 +530,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 				<td class="r">%s</td>
 			</tr>`,
 			i+1,
-			html.EscapeString(it.GetDescription()),
+			html.EscapeString(fmt.Sprintf("%s - %d %s x %s", it.GetDescription(), it.GetAmount(), it.GetUnit(), formatMoney(invoiceBody.GetCurrency(), unitPrice))),
 			it.GetAmount(),
 			html.EscapeString(it.GetUnit()),
 			formatMoney(invoiceBody.GetCurrency(), unitPrice),
