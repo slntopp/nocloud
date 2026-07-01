@@ -388,7 +388,22 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
-	startDescription := formatInstanceStartInvoiceLineDescription(invoicePrefix, productTitle, instance)
+	var startDescription string
+	if period := product.GetPeriod(); period > 0 {
+		expire := now
+		if instance.GetCreated() > 0 {
+			expire = instance.GetCreated()
+		}
+		var started int64
+		if instance.GetMeta() != nil {
+			started = instance.GetMeta().GetStarted()
+		}
+		expireDate := time.Unix(expire, 0)
+		untilDate := computeBillingUntilDate(expire, period, started)
+		startDescription = formatInvoiceLineDescription(invoicePrefix, productTitle, instance, expireDate, untilDate)
+	} else {
+		startDescription = formatInvoiceLineDescriptionWithoutDates(invoicePrefix, productTitle, instance)
+	}
 
 	tax := acc.GetTaxRate()
 	invCost := initCost
