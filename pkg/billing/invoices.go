@@ -1298,8 +1298,10 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 		return nil
 	}
+
 	debitAmount := graph.Round(inv.GetTotal(), invCurrency.Precision, invCurrency.Rounding)
 	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, debitAmount), inv.GetAccount(), invCurrency, true, metaForNoCloudInvoicePayment(inv))
+
 	if err != nil {
 		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
@@ -2043,6 +2045,7 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 
 const bitrixDomainResourceKey = "bitrix_domain"
 
+
 const (
 	billingMonthSecs = 3600 * 24 * 30
 	billingDaySecs   = 3600 * 24
@@ -2050,6 +2053,7 @@ const (
 
 type invoiceLineInstance interface {
 	GetTitle() string
+
 	GetResources() map[string]*structpb.Value
 	GetConfig() map[string]*structpb.Value
 }
@@ -2288,7 +2292,9 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
+
 	renewDescription := formatInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate)
+
 
 	tax := acc.GetTaxRate()
 	invCost := initCost

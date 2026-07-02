@@ -388,6 +388,7 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
+
 	var startDescription string
 	if period := product.GetPeriod(); period > 0 {
 		expire := now

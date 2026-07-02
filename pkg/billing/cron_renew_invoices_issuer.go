@@ -369,6 +369,7 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 		invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 		productTitle := product.GetTitle() + " "
+
 		renewDescription := formatInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate)
 
 		billingData.RenewalData[inst.GetUuid()] = graph.RenewalData{
