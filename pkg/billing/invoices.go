@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
+	"math"
+	"slices"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/arangodb/go-driver"
 	epb "github.com/slntopp/nocloud-proto/events"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
@@ -18,12 +25,6 @@ import (
 	"github.com/wI2L/jsondiff"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/metadata"
-	"html"
-	"math"
-	"slices"
-	"strings"
-	"sync"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/slntopp/nocloud-proto/access"
@@ -933,6 +934,8 @@ func (s *BillingServiceServer) updateInvoiceStatusUnderMutex(ctx context.Context
 	var strNum string
 	var num int
 	var wasForced bool
+	var paidFromBalanceCtx bool
+	var skipFiscalInvoiceNumber bool
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -966,14 +969,18 @@ payment:
 		_ = accGroup.InvoiceOrderSettings.NewTemplate
 		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
 	}
-	strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
-	if err != nil {
-		log.Error("Failed to get next number", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get next number")
+	paidFromBalanceCtx, _ = ctx.Value("paid-with-balance").(bool)
+	skipFiscalInvoiceNumber = paidFromBalanceCtx
+	if !skipFiscalInvoiceNumber {
+		strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
+		if err != nil {
+			log.Error("Failed to get next number", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get next number")
+		}
+		newInv.Number = strNum
+		newInv.NumericNumber = num
+		newInv.NumberTemplate = invConf.Template
 	}
-	newInv.Number = strNum
-	newInv.NumericNumber = num
-	newInv.NumberTemplate = invConf.Template
 
 quit:
 	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
@@ -1221,8 +1228,9 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 	}
 
+	debitNet := graph.Round(inv.GetSubtotal(), invCurrency.Precision, invCurrency.Rounding)
 	rounded := graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-	if rounded < inv.GetTotal() {
+	if rounded < debitNet {
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
@@ -1261,11 +1269,11 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 		}
 	}
 	rounded = graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-	if rounded < inv.GetTotal() {
+	if rounded < debitNet {
 		log.Error("Insufficient balance after marking invoice paid (concurrent spend?)",
 			zap.String("invoice", inv.GetUuid()),
 			zap.Float64("balance_rounded", rounded),
-			zap.Float64("invoice_total", inv.GetTotal()))
+			zap.Float64("invoice_subtotal", inv.GetSubtotal()))
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
@@ -2037,9 +2045,71 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 
 const bitrixDomainResourceKey = "bitrix_domain"
 
+
+const (
+	billingMonthSecs = 3600 * 24 * 30
+	billingDaySecs   = 3600 * 24
+)
+
 type invoiceLineInstance interface {
+	GetTitle() string
+
 	GetResources() map[string]*structpb.Value
 	GetConfig() map[string]*structpb.Value
+}
+
+func invoiceLineServiceName(invoicePrefix, productTitle string, inst invoiceLineInstance) string {
+	name := strings.TrimSpace(fmt.Sprintf("%s%s", invoicePrefix, productTitle))
+	if inst != nil {
+		if title := strings.TrimSpace(inst.GetTitle()); title != "" {
+			name = fmt.Sprintf("%s - %s", name, title)
+		}
+	}
+	return name
+}
+
+func invoiceDateNum(d int) string {
+	if d < 10 {
+		return fmt.Sprintf("0%d", d)
+	}
+	return fmt.Sprintf("%d", d)
+}
+
+func computeBillingUntilDate(expire, period, started int64) time.Time {
+	expireDate := time.Unix(expire, 0)
+	var untilDate time.Time
+	if period == billingMonthSecs {
+		if started > 0 {
+			untilDate = time.Unix(per.GetNextDate(expire, per.BillingMonth, started), 0)
+		} else {
+			untilDate = expireDate.AddDate(0, 1, 0)
+		}
+	} else {
+		untilDate = expireDate.Add(time.Duration(period) * time.Second)
+	}
+	if untilDate.Unix()-expireDate.Unix() > billingDaySecs {
+		untilDate = untilDate.AddDate(0, 0, -1)
+	}
+	return untilDate
+}
+
+func formatInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance, expireDate, untilDate time.Time) string {
+	name := invoiceLineServiceName(invoicePrefix, productTitle, inst)
+	dates := fmt.Sprintf("%s.%s.%d - %s.%s.%d",
+		invoiceDateNum(expireDate.Day()), invoiceDateNum(int(expireDate.Month())), expireDate.Year(),
+		invoiceDateNum(untilDate.Day()), invoiceDateNum(int(untilDate.Month())), untilDate.Year())
+	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
+		return strings.TrimSpace(fmt.Sprintf("%s (%s) (%s)", name, portal, dates))
+	}
+	return strings.TrimSpace(fmt.Sprintf("%s (%s)", name, dates))
+}
+
+func formatInvoiceLineDescriptionWithoutDates(invoicePrefix, productTitle string, inst invoiceLineInstance) string {
+	name := invoiceLineServiceName(invoicePrefix, productTitle, inst)
+	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
+		return fmt.Sprintf("%s (%s)", name, portal)
+	}
+	return name
 }
 
 func stringFromStructpbValue(v *structpb.Value) string {
@@ -2082,24 +2152,6 @@ func bitrixPortalFromInvoiceLineInstance(inst invoiceLineInstance) string {
 		return ""
 	}
 	return bitrixPortalFromInstanceMaps(inst.GetResources(), inst.GetConfig())
-}
-
-func formatInstanceStartInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance) string {
-	base := strings.TrimSpace(fmt.Sprintf("%s%s", invoicePrefix, productTitle))
-	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
-		return fmt.Sprintf("%s (%s)", base, portal)
-	}
-	return base
-}
-
-func formatRenewInvoiceLineDescription(invoicePrefix, productTitle string, inst invoiceLineInstance, expireDate, untilDate time.Time, fDateNum func(int) string) string {
-	dates := fmt.Sprintf("%s.%s.%d - %s.%s.%d",
-		fDateNum(expireDate.Day()), fDateNum(int(expireDate.Month())), expireDate.Year(),
-		fDateNum(untilDate.Day()), fDateNum(int(untilDate.Month())), untilDate.Year())
-	if portal := bitrixPortalFromInvoiceLineInstance(inst); portal != "" {
-		return strings.TrimSpace(fmt.Sprintf("%s%s(%s) (%s)", invoicePrefix, productTitle, portal, dates))
-	}
-	return strings.TrimSpace(fmt.Sprintf("%s%s(%s)", invoicePrefix, productTitle, dates))
 }
 
 func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *connect.Request[pb.CreateRenewalInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
@@ -2220,27 +2272,12 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	}
 
 	var untilDate time.Time
-	const monthSecs = 3600 * 24 * 30
-	const daySecs = 3600 * 24
-	if period == monthSecs {
-		if inst.GetMeta() != nil && inst.GetMeta().Started > 0 {
-			untilDate = time.Unix(per.GetNextDate(expire, per.BillingMonth, inst.GetMeta().Started), 0)
-		} else {
-			untilDate = expireDate.AddDate(0, 1, 0)
+	untilDate = computeBillingUntilDate(expire, period, func() int64 {
+		if inst.GetMeta() != nil {
+			return inst.GetMeta().Started
 		}
-	} else {
-		untilDate = expireDate.Add(time.Duration(period) * time.Second)
-	}
-	if untilDate.Unix()-expireDate.Unix() > daySecs {
-		untilDate = untilDate.AddDate(0, 0, -1)
-	}
-
-	fDateNum := func(d int) string {
-		if d < 10 {
-			return fmt.Sprintf("0%d", d)
-		}
-		return fmt.Sprintf("%d", d)
-	}
+		return 0
+	}())
 
 	var dueDate = expire
 	if dueDate < now {
@@ -2255,7 +2292,9 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
-	renewDescription := formatRenewInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate, fDateNum)
+
+	renewDescription := formatInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate)
+
 
 	tax := acc.GetTaxRate()
 	invCost := initCost

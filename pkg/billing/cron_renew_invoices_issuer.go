@@ -13,7 +13,6 @@ import (
 	"github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/nocloud/periods"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -296,12 +295,6 @@ var errNothingToRenew = fmt.Errorf("nothing to renew")
 
 func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *zap.Logger, asDraft bool, _acc *graph.Account, data []*instanceExpData, defCurr *pb.Currency) error {
 	now := time.Now().Unix()
-	fDateNum := func(d int) string {
-		if d < 10 {
-			return fmt.Sprintf("0%d", d)
-		}
-		return fmt.Sprintf("%d", d)
-	}
 
 	acc, err := s.accounts.GetAccountOrOwnerAccountIfPresent(ctx, _acc.GetUuid())
 	if err != nil {
@@ -343,7 +336,6 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		expirations = make([]int64, 0)
 	)
 	const monthSecs = 3600 * 24 * 30
-	const daySecs = 3600 * 24
 	billingData := graph.BillingData{
 		RenewalData: make(map[string]graph.RenewalData),
 	}
@@ -362,19 +354,12 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		initCost *= rate
 
 		expireDate := time.Unix(d.ExpireAt, 0)
-		var untilDate time.Time
-		if d.Period == monthSecs {
-			if inst.GetMeta() != nil && inst.GetMeta().Started > 0 {
-				untilDate = time.Unix(periods.GetNextDate(d.ExpireAt, periods.BillingMonth, inst.GetMeta().Started), 0)
-			} else {
-				untilDate = expireDate.AddDate(0, 1, 0)
+		untilDate := computeBillingUntilDate(d.ExpireAt, d.Period, func() int64 {
+			if inst.GetMeta() != nil {
+				return inst.GetMeta().Started
 			}
-		} else {
-			untilDate = expireDate.Add(time.Duration(d.Period) * time.Second)
-		}
-		if untilDate.Unix()-expireDate.Unix() > daySecs {
-			untilDate = untilDate.AddDate(0, 0, -1)
-		}
+			return 0
+		}())
 
 		bp := inst.GetBillingPlan()
 		product, hasProduct := bp.GetProducts()[inst.GetProduct()]
@@ -384,7 +369,8 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 		invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 		productTitle := product.GetTitle() + " "
-		renewDescription := formatRenewInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate, fDateNum)
+
+		renewDescription := formatInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate)
 
 		billingData.RenewalData[inst.GetUuid()] = graph.RenewalData{
 			ExpirationTs: d.ExpireAt,
