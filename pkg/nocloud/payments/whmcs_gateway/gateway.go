@@ -167,7 +167,7 @@ func (g *WhmcsGateway) CreateInvoice(ctx context.Context, inv *pb.Invoice, noEma
 		}
 		price = graph.Round(price, cur.Precision, cur.Rounding)
 
-		q.Set(fmt.Sprintf("itemdescription%d", i+1), item.GetDescription())
+		q.Set(fmt.Sprintf("itemdescription%d", i+1), formatWhmcsItemDescription(item, inv.GetCurrency().GetCode()))
 		q.Set(fmt.Sprintf("itemamount%d", i+1), fmt.Sprintf("%.2f", price))
 		q.Set(fmt.Sprintf("itemtaxed%d", i+1), taxed)
 	}
@@ -302,7 +302,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 		}
 		price = graph.Round(price, cur.Precision, cur.Rounding)
 
-		description[i] = item.GetDescription()
+		description[i] = formatWhmcsItemDescription(item, inv.GetCurrency().GetCode())
 		amount[i] = floatAsString(price)
 		taxed[i] = isTaxed
 	}
@@ -750,4 +750,31 @@ skipStatus:
 		return fmt.Errorf("error syncWhmcsInvoice: failed to update invoice: %w", err)
 	}
 	return nil
+}
+
+func formatWhmcsItemDescription(item *pb.Item, currencyCode string) string {
+	if item == nil {
+		return ""
+	}
+	desc := strings.TrimSpace(item.GetDescription())
+	amount := item.GetAmount()
+	unit := strings.TrimSpace(item.GetUnit())
+	if amount <= 0 || unit == "" {
+		return desc
+	}
+	if amount == 1 {
+		switch strings.ToLower(unit) {
+		case "pcs", "szt", "szt.":
+			return desc
+		}
+	}
+	priceStr := fmt.Sprintf("%.2f", item.GetPrice())
+	if item.GetPrice() == float64(int64(item.GetPrice())) {
+		priceStr = fmt.Sprintf("%d", int64(item.GetPrice()))
+	}
+	suffix := fmt.Sprintf(" - %d %s x %s", amount, unit, priceStr)
+	if code := strings.TrimSpace(currencyCode); code != "" {
+		suffix += " " + code
+	}
+	return desc + suffix
 }
