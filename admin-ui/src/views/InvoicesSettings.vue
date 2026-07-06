@@ -63,6 +63,15 @@
           v-model="newSettings.force_require_phone_verification"
           label="Force Require Phone Verification"
         />
+
+        <v-switch
+          :loading="isSettingsLoading"
+          v-model="newSettings.whmcs_paid_on_balance_payment"
+          label="Mark WHMCS invoice as paid on balance payment"
+        />
+        <div class="text-caption text--secondary mb-4">
+          Off: NoCloud Paid, WHMCS stays Unpaid (proforma). On: both NoCloud and WHMCS Paid.
+        </div>
       </v-col>
       <v-divider vertical></v-divider>
       <v-col cols="6">

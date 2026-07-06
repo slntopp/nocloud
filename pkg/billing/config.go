@@ -2,13 +2,14 @@ package billing
 
 import (
 	"context"
+	"time"
+
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	spb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
-	"time"
 )
 
 // Settings Key storing billing configuration
@@ -75,6 +76,7 @@ type InvoicesConf struct {
 	TopUpItemMessage              string  `json:"top_up_item_message"`
 	TaxIncluded                   bool    `json:"tax_included"`
 	ForceRequirePhoneVerification bool    `json:"require_phone_verification"`
+	WhmcsPaidOnBalancePayment     bool    `json:"whmcs_paid_on_balance_payment"`
 
 	InvoiceFrom InvoiceFromFields `json:"invoice_from_fields"`
 	LogoURL     string            `json:"logo_url"`

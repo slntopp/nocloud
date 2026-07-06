@@ -127,6 +127,8 @@ func (s *BillingServiceServer) ProcessInvoiceWhmcsSync(log *zap.Logger, ctx cont
 
 	if event.GetData()["paid-with-balance"].GetBoolValue() {
 		ctx = context.WithValue(ctx, "paid-with-balance", true)
+		invConf := MakeInvoicesConf(log, &s.settingsClient)
+		ctx = context.WithValue(ctx, whmcs_gateway.WhmcsPaidOnBalancePaymentKey, invConf.WhmcsPaidOnBalancePayment)
 	}
 	var oldStatus bpb.BillingStatus
 	if old, ok := event.GetData()["old_status"]; ok {
