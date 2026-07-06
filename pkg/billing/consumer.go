@@ -22,7 +22,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 )
@@ -150,6 +149,21 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 		return nil
 	}
 
+	invPeek, err := s.invoices.Get(ctx, event.GetUuid())
+	if err != nil {
+		return fmt.Errorf("failed to get invoice: %w", err)
+	}
+	accountID := invPeek.GetAccount()
+	if accountID == "" {
+		return fmt.Errorf("invoice has empty account")
+	}
+
+	return s.withPayWithBalanceLockExec(ctx, accountID, log.Named("invoiceStatusActions"), func(lockCtx context.Context) error {
+		return s.processInvoiceStatusActionLocked(log, lockCtx, event)
+	})
+}
+
+func (s *BillingServiceServer) processInvoiceStatusActionLocked(log *zap.Logger, ctx context.Context, event *epb.Event) error {
 	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
 	ctx, err := graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
@@ -376,8 +390,23 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	invoicePrefixVal, _ := bp.GetMeta()["prefix"]
 	invoicePrefix := invoicePrefixVal.GetStringValue() + " "
 	productTitle := product.GetTitle() + " "
-	startDescription := fmt.Sprintf("%s%s", invoicePrefix, productTitle)
-	startDescription = strings.TrimSpace(startDescription)
+
+	var startDescription string
+	if period := product.GetPeriod(); period > 0 {
+		expire := now
+		if instance.GetCreated() > 0 {
+			expire = instance.GetCreated()
+		}
+		var started int64
+		if instance.GetMeta() != nil {
+			started = instance.GetMeta().GetStarted()
+		}
+		expireDate := time.Unix(expire, 0)
+		untilDate := computeBillingUntilDate(expire, period, started)
+		startDescription = formatInvoiceLineDescription(invoicePrefix, productTitle, instance, expireDate, untilDate)
+	} else {
+		startDescription = formatInvoiceLineDescriptionWithoutDates(invoicePrefix, productTitle, instance)
+	}
 
 	tax := acc.GetTaxRate()
 	invCost := initCost

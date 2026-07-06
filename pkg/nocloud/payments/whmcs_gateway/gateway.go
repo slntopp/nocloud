@@ -5,13 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/go-querystring/query"
-	"github.com/google/uuid"
-	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
-	ps "github.com/slntopp/nocloud/pkg/pubsub"
-	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,6 +13,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/google/go-querystring/query"
+	"github.com/google/uuid"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
+	ps "github.com/slntopp/nocloud/pkg/pubsub"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type NoCloudInvoicesManager interface {
@@ -254,18 +255,22 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 	}
 
 	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
+
 	whmcsPaidOnBalance, _ := ctx.Value(WhmcsPaidOnBalancePaymentKey).(bool)
 	if paidWithBalance && inv.Status == pb.BillingStatus_PAID && !whmcsPaidOnBalance {
 		return nil
+ dev
 	}
 
 	invoiceWasPaid := inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID))
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 	tax := inv.GetTaxOptions().GetTaxRate() * 100
+
 	if paidWithBalance && whmcsPaidOnBalance {
 		tax = 0
 	}
+
 	isTaxed := "0"
 	if tax > 0 {
 		isTaxed = "1"
