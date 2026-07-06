@@ -1,12 +1,15 @@
 package whmcs_gateway
 
 import (
-	pb "github.com/slntopp/nocloud-proto/billing"
 	"math"
 	"time"
+
+	pb "github.com/slntopp/nocloud-proto/billing"
 )
 
 const equalFloatsEpsilon = 1e-5
+
+const WhmcsPaidOnBalancePaymentKey = "whmcs-paid-on-balance-payment"
 
 func ptr[T any](v T) *T {
 	return &v
