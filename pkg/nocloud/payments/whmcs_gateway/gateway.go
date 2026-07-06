@@ -259,7 +259,6 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 	whmcsPaidOnBalance, _ := ctx.Value(WhmcsPaidOnBalancePaymentKey).(bool)
 	if paidWithBalance && inv.Status == pb.BillingStatus_PAID && !whmcsPaidOnBalance {
 		return nil
- dev
 	}
 
 	invoiceWasPaid := inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID))
