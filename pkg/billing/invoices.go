@@ -827,6 +827,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	var strNum string
 	var num int
 	var wasForced bool
+	var paidFromBalanceCtx bool
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
@@ -860,18 +861,19 @@ payment:
 		_ = accGroup.InvoiceOrderSettings.NewTemplate
 		resetMode = accGroup.InvoiceOrderSettings.ResetCounterMode
 	}
-	strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
-	if err != nil {
-		log.Error("Failed to get next number", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get next number")
+	paidFromBalanceCtx, _ = ctx.Value("paid-with-balance").(bool)
+	if !paidFromBalanceCtx {
+		strNum, num, wasForced, err = s.GetNewNumber(log, invoicesByPaymentDate, time.Unix(newInv.Payment, 0).In(time.Local), template, resetMode, boundGroup)
+		if err != nil {
+			log.Error("Failed to get next number", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get next number")
+		}
+		newInv.Number = strNum
+		newInv.NumericNumber = num
+		newInv.NumberTemplate = invConf.Template
 	}
-	newInv.Number = strNum
-	newInv.NumericNumber = num
-	newInv.NumberTemplate = invConf.Template
 
 quit:
-	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
-
 	_newInv := proto.Clone(newInv.Invoice).(*pb.Invoice)
 	if newInv.Meta == nil {
 		newInv.Meta = map[string]*structpb.Value{}
@@ -880,7 +882,7 @@ quit:
 		newInv.Meta[forcedNumberMetaKey] = structpb.NewNumberValue(float64(num))
 		newInv.Meta[forcedNumberDateMetaKey] = structpb.NewNumberValue(float64(time.Now().Unix()))
 	}
-	newInv.Meta["paid_with_balance"] = structpb.NewBoolValue(paidWithBalance)
+	newInv.Meta["paid_with_balance"] = structpb.NewBoolValue(paidFromBalanceCtx)
 	newInv.Transactions = nil
 	newInv.Instances = nil
 	newInv.Items = nil
@@ -900,7 +902,7 @@ quit:
 		Uuid: old.GetUuid(),
 		Key:  billing.InvoiceStatusToKey(newStatus),
 		Data: map[string]*structpb.Value{
-			"paid-with-balance": structpb.NewBoolValue(paidWithBalance),
+			"paid-with-balance": structpb.NewBoolValue(paidFromBalanceCtx),
 			"gw-callback":       structpb.NewBoolValue(payments.GetGatewayCallbackValue(ctx, req.Header())),
 			"old_status":        structpb.NewNumberValue(float64(oldStatus)),
 		},
@@ -1126,7 +1128,8 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 	}
 
 	rounded := graph.Round(balance, invCurrency.Precision, invCurrency.Rounding)
-	if rounded < inv.GetTotal() {
+	debitNet := graph.Round(inv.GetSubtotal(), invCurrency.Precision, invCurrency.Rounding)
+	if rounded < debitNet {
 		return nil, status.Error(codes.FailedPrecondition, "Not enough balance to perform operation")
 	}
 
@@ -1168,7 +1171,7 @@ func (s *BillingServiceServer) PayWithBalance(ctx context.Context, r *connect.Re
 		}
 		return nil
 	}
-	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, inv.GetTotal()), inv.GetAccount(), invCurrency)
+	tr, err := s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, debitNet), inv.GetAccount(), invCurrency)
 	if err != nil {
 		abort()
 		log.Error("Failed to create transaction. INVOICE WAS PAID, ACTIONS WERE APPLIED, BUT USER HAVEN'T LOSE BALANCE", zap.Error(err))
