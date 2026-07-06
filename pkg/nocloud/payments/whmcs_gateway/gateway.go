@@ -253,23 +253,21 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 		body.Date = ptr(time.Unix(inv.Created, 0).Format("2006-01-02"))
 	}
 
-	body.Status = nil
-	invoiceWasPaid := inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID))
-	if inv.Status != statusToNoCloud(whmcsInv.Status) {
-		if invoiceWasPaid {
-			paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
-			if err = g.PayInvoice(ctx, int(id.GetNumberValue()), paidWithBalance); err != nil {
-				return fmt.Errorf("failed to pay invoice: %w", err)
-			}
-		}
+	paidWithBalance, _ := ctx.Value("paid-with-balance").(bool)
+	whmcsPaidOnBalance, _ := ctx.Value(WhmcsPaidOnBalancePaymentKey).(bool)
+	if paidWithBalance && inv.Status == pb.BillingStatus_PAID && !whmcsPaidOnBalance {
+		return nil
 	}
-	body.Status = ptr(statusToWhmcs(inv.Status))
+
+	invoiceWasPaid := inv.Status == pb.BillingStatus_PAID && strings.ToLower(whmcsInv.Status) != strings.ToLower(statusToWhmcs(pb.BillingStatus_PAID))
 
 	body.Notes = ptr(inv.GetMeta()["note"].GetStringValue())
 	tax := inv.GetTaxOptions().GetTaxRate() * 100
-	_taxed := tax > 0
+	if paidWithBalance && whmcsPaidOnBalance {
+		tax = 0
+	}
 	isTaxed := "0"
-	if _taxed {
+	if tax > 0 {
 		isTaxed = "1"
 	}
 
@@ -289,13 +287,11 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 	}
 	body.DeleteLineIds = toDelete
 
-	// From new list of items
 	description := make(map[int]string)
 	amount := make(map[int]floatAsString)
-	taxed := make(map[int]string)
 	for i, item := range inv.GetItems() {
 		var price float64
-		if g.taxExcluded {
+		if (paidWithBalance && whmcsPaidOnBalance) || g.taxExcluded {
 			price = item.GetPrice() * float64(item.GetAmount())
 		} else {
 			price = item.GetPrice()*float64(item.GetAmount()) + item.GetPrice()*float64(item.GetAmount())*(tax/100)
@@ -304,21 +300,68 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 
 		description[i] = formatWhmcsItemDescription(item, inv.GetCurrency().GetCode())
 		amount[i] = floatAsString(price)
-		taxed[i] = isTaxed
 	}
 
-	q, err := query.Values(body)
-	if err != nil {
-		return err
+	applyWhmcsUpdate := func(includeStatus bool, syncLineItems bool) error {
+		updBody := body
+		if includeStatus {
+			updBody.Status = ptr(statusToWhmcs(inv.Status))
+		} else {
+			updBody.Status = nil
+		}
+		if !syncLineItems {
+			updBody.DeleteLineIds = nil
+			updBody.TaxRate = 0
+		}
+		q, qErr := query.Values(updBody)
+		if qErr != nil {
+			return qErr
+		}
+		if syncLineItems {
+			for i := range inv.GetItems() {
+				q.Set(fmt.Sprintf("newitemdescription[%d]", i), description[i])
+				q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%.2f", amount[i]))
+				q.Set(fmt.Sprintf("newitemtaxed[%d]", i), isTaxed)
+			}
+		}
+		_, qErr = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+		return qErr
 	}
-	for i := range inv.GetItems() {
-		q.Set(fmt.Sprintf("newitemdescription[%d]", i), description[i])
-		q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%.2f", amount[i]))
-		q.Set(fmt.Sprintf("newitemtaxed[%d]", i), isTaxed)
+
+	balancePaidSynced := false
+	if paidWithBalance && whmcsPaidOnBalance && invoiceWasPaid {
+		if err = applyWhmcsUpdate(false, true); err != nil {
+			return err
+		}
+		payAmount := graph.Round(inv.GetSubtotal(), cur.Precision, cur.Rounding)
+		if err = g.PayInvoice(ctx, int(id.GetNumberValue()), true, payAmount); err != nil {
+			return fmt.Errorf("failed to pay invoice: %w", err)
+		}
+		if err = applyWhmcsUpdate(true, false); err != nil {
+			return err
+		}
+		balancePaidSynced = true
+	} else if inv.Status != statusToNoCloud(whmcsInv.Status) && invoiceWasPaid {
+		if err = g.PayInvoice(ctx, int(id.GetNumberValue()), false); err != nil {
+			return fmt.Errorf("failed to pay invoice: %w", err)
+		}
 	}
-	_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
-	if err != nil {
-		return err
+
+	if !balancePaidSynced {
+		body.Status = ptr(statusToWhmcs(inv.Status))
+		q, err := query.Values(body)
+		if err != nil {
+			return err
+		}
+		for i := range inv.GetItems() {
+			q.Set(fmt.Sprintf("newitemdescription[%d]", i), description[i])
+			q.Set(fmt.Sprintf("newitemamount[%d]", i), fmt.Sprintf("%.2f", amount[i]))
+			q.Set(fmt.Sprintf("newitemtaxed[%d]", i), isTaxed)
+		}
+		_, err = sendRequestToWhmcs[InvoiceResponse](http.MethodPost, reqUrl.String()+"?"+q.Encode(), nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !invoiceWasPaid && sendEmail {
@@ -331,7 +374,7 @@ func (g *WhmcsGateway) UpdateInvoice(ctx context.Context, inv *pb.Invoice, oldSt
 	return nil
 }
 
-func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int, payWithBalance ...bool) error {
+func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int, payWithBalance bool, amountOverride ...float64) error {
 	reqUrl, err := url.Parse(g.baseUrl)
 	if err != nil {
 		return err
@@ -345,9 +388,7 @@ func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int, payWi
 		return nil
 	}
 
-	isPayWithBalance := len(payWithBalance) > 0 && payWithBalance[0]
-
-	if isPayWithBalance {
+	if payWithBalance {
 		// Update invoice payment method first, then pay it
 		updBody := g.buildUpdateInvoiceQueryBase(whmcsInvoiceId)
 		updBody.PaymentMethod = &balancePayMethod
@@ -365,10 +406,12 @@ func (g *WhmcsGateway) PayInvoice(ctx context.Context, whmcsInvoiceId int, payWi
 	body.TransId = uuid.New().String()
 	body.Date = time.Now().Format("2006-01-02 15:04:05")
 	body.Gateway = "system"
-	if isPayWithBalance {
+	if payWithBalance {
 		body.Gateway = balancePayMethod
 	}
-	if inv.Balance <= 0 {
+	if len(amountOverride) > 0 && amountOverride[0] > 0 {
+		body.Amount = ptr(floatAsString(amountOverride[0]))
+	} else if inv.Balance <= 0 {
 		body.Amount = ptr(inv.Total)
 	}
 
