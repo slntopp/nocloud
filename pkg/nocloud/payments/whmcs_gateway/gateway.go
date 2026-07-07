@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -55,6 +56,7 @@ const getInvoicesBatchSize = 10000 // WHMCS throws memory limit exception nearly
 const BalancePayMethod = "balancepay"
 
 var balancePayMethod = BalancePayMethod
+var whmcsDescriptionSuffixRe = regexp.MustCompile(`\s-\s\d+\s.+\sx\s[0-9]+(?:\.[0-9]{1,2})?(?:\s[A-Z]{3})?$`)
 
 func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool, payPrecheck func(context.Context, *pb.Invoice, graph.Account) error) *WhmcsGateway {
 	return &WhmcsGateway{
@@ -752,7 +754,8 @@ skipStatus:
 		for i, ncItem := range ncItems {
 			ncPrice := ncItem.Price * float64(ncItem.Amount)
 			ncPrice = graph.Round(ncPrice, cur.Precision, cur.Rounding)
-			if item.Description == ncItem.Description && compareFloat(price, ncPrice, int(cur.Precision)) {
+			if normalizeWhmcsComparableDescription(item.Description) == normalizeWhmcsComparableDescription(ncItem.Description) &&
+				compareFloat(price, ncPrice, int(cur.Precision)) {
 				found = true
 				index = i
 				break
@@ -824,4 +827,10 @@ func formatWhmcsItemDescription(item *pb.Item, currencyCode string) string {
 		suffix += " " + code
 	}
 	return desc + suffix
+}
+
+func normalizeWhmcsComparableDescription(desc string) string {
+	desc = strings.TrimSpace(desc)
+	desc = whmcsDescriptionSuffixRe.ReplaceAllString(desc, "")
+	return strings.TrimSpace(desc)
 }
