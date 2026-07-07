@@ -11,6 +11,7 @@ import (
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/invoicei18n"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"github.com/slntopp/nocloud/pkg/locales"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/aswords"
@@ -530,7 +531,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 				<td class="r">%s</td>
 			</tr>`,
 			i+1,
-			html.EscapeString(fmt.Sprintf("%s - %d %s x %s", it.GetDescription(), it.GetAmount(), it.GetUnit(), formatMoney(invoiceBody.GetCurrency(), unitPrice))),
+			html.EscapeString(fmt.Sprintf("%s - %d %s x %s", whmcs_gateway.StripItemDescriptionSuffixes(it.GetDescription()), it.GetAmount(), it.GetUnit(), formatMoney(invoiceBody.GetCurrency(), unitPrice))),
 			it.GetAmount(),
 			html.EscapeString(it.GetUnit()),
 			formatMoney(invoiceBody.GetCurrency(), unitPrice),

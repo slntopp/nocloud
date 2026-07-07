@@ -58,6 +58,19 @@ const BalancePayMethod = "balancepay"
 var balancePayMethod = BalancePayMethod
 var whmcsDescriptionSuffixRe = regexp.MustCompile(`\s-\s\d+\s.+\sx\s[0-9]+(?:\.[0-9]{1,2})?(?:\s[A-Z]{3})?$`)
 
+func StripItemDescriptionSuffixes(desc string) string {
+	desc = strings.TrimSpace(desc)
+	for {
+		stripped := whmcsDescriptionSuffixRe.ReplaceAllString(desc, "")
+		stripped = strings.TrimSpace(stripped)
+		if stripped == desc {
+			break
+		}
+		desc = stripped
+	}
+	return desc
+}
+
 func NewWhmcsGateway(data WhmcsData, acc graph.AccountsController, curr graph.CurrencyController, invMan NoCloudInvoicesManager, whmcsTaxExcluded bool, payPrecheck func(context.Context, *pb.Invoice, graph.Account) error) *WhmcsGateway {
 	return &WhmcsGateway{
 		m:           &sync.Mutex{},
@@ -806,7 +819,7 @@ func formatWhmcsItemDescription(item *pb.Item, currencyCode string) string {
 	if item == nil {
 		return ""
 	}
-	desc := strings.TrimSpace(item.GetDescription())
+	desc := StripItemDescriptionSuffixes(item.GetDescription())
 	amount := item.GetAmount()
 	unit := strings.TrimSpace(item.GetUnit())
 	if amount <= 0 || unit == "" {
@@ -830,7 +843,5 @@ func formatWhmcsItemDescription(item *pb.Item, currencyCode string) string {
 }
 
 func normalizeWhmcsComparableDescription(desc string) string {
-	desc = strings.TrimSpace(desc)
-	desc = whmcsDescriptionSuffixRe.ReplaceAllString(desc, "")
-	return strings.TrimSpace(desc)
+	return StripItemDescriptionSuffixes(desc)
 }
