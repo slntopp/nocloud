@@ -30,9 +30,23 @@
         </v-col>
         <v-col cols="3">
           <icons-autocomplete
+            v-if="!isIconUrl"
             label="Preview icon"
             :value="showcase.icon"
             @input:value="showcase.icon = $event"
+          />
+          <v-text-field
+            v-else
+            label="Icon PNG URL"
+            clearable
+            v-model="showcase.icon"
+          />
+
+          <v-switch
+            class="mt-0 mb-1"
+            hide-details
+            v-model="isIconUrl"
+            label="URL"
           />
         </v-col>
         <v-col cols="2">
@@ -182,6 +196,7 @@ const showcase = ref({
   meta: {
     type: "",
     iconColor: "",
+    iconIsUrl: false,
   },
 });
 
@@ -192,6 +207,7 @@ const isLoading = ref(false);
 const defaultLocation = ref("");
 const isSaveLoading = ref(false);
 const isPlansLoading = ref(false);
+const isIconUrl = ref(false);
 
 const plansBySpMap = ref(new Map());
 
@@ -211,7 +227,7 @@ const locations = computed(() =>
         id: getNewLocationKey(location),
       })),
     };
-  }, {})
+  }, {}),
 );
 
 const filteredLocations = computed(() => {
@@ -224,7 +240,7 @@ const filteredLocations = computed(() => {
   Object.entries(locations.value).forEach(([i, value]) => {
     const plan = getPlan(
       showcase.value.items[i].servicesProvider,
-      showcase.value.items[i].plan
+      showcase.value.items[i].plan,
     );
 
     if (!plan) return;
@@ -240,12 +256,12 @@ const allLocations = computed(() =>
       ...result,
       ...locations.filter(({ id }) =>
         showcase.value.items[i].locations?.find(
-          (location) => id === (location.id ?? location)
-        )
+          (location) => id === (location.id ?? location),
+        ),
       ),
     ],
-    []
-  )
+    [],
+  ),
 );
 
 const setShowcase = () => {
@@ -257,6 +273,7 @@ const setShowcase = () => {
   if (!showcase.value.meta) {
     showcase.value.meta = {};
   }
+  isIconUrl.value = !!showcase.value.meta.iconIsUrl;
 
   if (!Array.isArray(showcase.value.items)) {
     showcase.value.items = [];
@@ -287,7 +304,7 @@ onMounted(async () => {
 const save = async () => {
   try {
     const data = JSON.parse(JSON.stringify(showcase.value));
-
+    data.meta.iconColor = data.meta.iconColor || undefined;
     data.items.pop();
     data.locations = [];
     Object.entries(filteredLocations.value).forEach(([i, value]) => {
@@ -295,14 +312,14 @@ const save = async () => {
       const item = data.items[i];
       const locs = value
         .filter(({ id }) =>
-          item.locations?.find((location) => (location.id ?? location) === id)
+          item.locations?.find((location) => (location.id ?? location) === id),
         )
         .map((location) => ({
           ...location,
           sp: undefined,
           id: location.id.replace(
             data.title.replaceAll(" ", "_"),
-            data.newTitle.replaceAll(" ", "_")
+            data.newTitle.replaceAll(" ", "_"),
           ),
         }));
 
@@ -396,7 +413,7 @@ const fetchPlans = async () => {
               sp,
               store.getters["plans/plansClient"].listPlans({
                 spUuid: sp,
-              })
+              }),
             );
 
             const data = await plansBySpMap.value.get(sp);
@@ -405,7 +422,7 @@ const fetchPlans = async () => {
         } catch {
           plansBySpMap.value.delete(sp);
         }
-      })
+      }),
     );
   } finally {
     setTimeout(() => {
@@ -415,6 +432,9 @@ const fetchPlans = async () => {
 };
 
 watch(() => showcase.value.items, fetchPlans, { deep: true });
+watch(isIconUrl, () => {
+  showcase.value.meta.iconIsUrl = isIconUrl.value;
+});
 </script>
 
 <style scoped lang="scss">

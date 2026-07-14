@@ -13,8 +13,10 @@
         <v-btn class="ml-3" :disabled="!newPlans" @click="setRefreshedPlans"
           >Set api plans</v-btn
         >
-        <v-btn class="ml-3" @click="setSellToTab(true)">Enable all</v-btn>
-        <v-btn class="ml-3" @click="setSellToTab(false)">Disable all</v-btn>
+        <template v-if="tabs[tabsIndex] !== 'Custom addons'">
+          <v-btn class="ml-3" @click="setSellToTab(true)">Enable all</v-btn>
+          <v-btn class="ml-3" @click="setSellToTab(false)">Disable all</v-btn>
+        </template>
       </div>
       <div class="mr-10">
         <v-text-field
@@ -123,6 +125,32 @@
           </template>
           <template v-slot:[`item.public`]="{ item }">
             <v-switch v-model="item.public" />
+          </template>
+
+          <template v-slot:expanded-item="{ headers, item }">
+            <td :colspan="headers.length" class="py-2">
+              <div>
+                <strong>Installation fee: </strong>
+                <v-text-field
+                  dense
+                  style="width: 200px; display: inline-block"
+                  :suffix="defaultCurrency?.code"
+                  v-model="item.installation_fee"
+                />
+              </div>
+              <div>
+                <strong>Datacenters:</strong>
+                {{ item.datacenter?.join(", ") || "Any" }}
+              </div>
+              <div>
+                <strong>Available addons:</strong>
+                {{ item.addons?.join(", ") || "None" }}
+              </div>
+              <div>
+                <strong>Available OS:</strong>
+                {{ item.os?.join(", ") || "None" }}
+              </div>
+            </td>
           </template>
         </nocloud-table>
 
@@ -301,20 +329,35 @@ const filtredPlans = computed(() => {
   );
 });
 
-const filtredAddons = computed(() => {
-  if (!searchParam.value) return addons.value;
+const soldPlans = computed(() => plans.value.filter((plan) => plan.public));
 
-  return addons.value.filter((addon) =>
-    addon.name.toLowerCase().includes(searchParam.value.toLowerCase())
-  );
+const filtredAddons = computed(() => {
+  let result = addons.value.filter((addon) => {
+    const addonKey = addon.id.split(" ")[1];
+    return soldPlans.value.some((plan) => plan.addons?.includes(addonKey));
+  });
+
+  if (searchParam.value) {
+    result = result.filter((addon) =>
+      addon.name.toLowerCase().includes(searchParam.value.toLowerCase())
+    );
+  }
+
+  return result;
 });
 
 const filtredImages = computed(() => {
-  if (!searchParam.value) return images.value;
-
-  return images.value.filter((image) =>
-    image.name.toLowerCase().includes(searchParam.value.toLowerCase())
+  let result = images.value.filter((image) =>
+    soldPlans.value.some((plan) => plan.os?.includes(image.id))
   );
+
+  if (searchParam.value) {
+    result = result.filter((image) =>
+      image.name.toLowerCase().includes(searchParam.value.toLowerCase())
+    );
+  }
+
+  return result;
 });
 
 const testConfig = () => {
@@ -599,6 +642,7 @@ const changeAddons = ({ backup, disk, snapshot }) => {
             name: productName,
             value: realAddon.value || newPrice,
             public: !!realAddon.public,
+            uuid: realAddon.uuid,
             id,
           });
         }
@@ -661,6 +705,7 @@ const changeImages = ({ windows }) => {
           price: { value: basePrice || 0 },
           value: realAddon?.value || price || 0,
           public: realAddon ? realAddon.public : true,
+          uuid: realAddon?.uuid,
           tariff,
           id: key,
           duration,
@@ -727,25 +772,22 @@ const changeMode = (modeValue, { id, group }) => {
 const setSellToTab = (status) => {
   switch (tabs.value[tabsIndex.value]) {
     case "Addons": {
-      setSellToValue(addons.value, status);
+      setSellToValue(addons, status);
       break;
     }
     case "OS": {
-      setSellToValue(images.value, status);
+      setSellToValue(images, status);
       break;
     }
     case "Tariffs": {
-      setSellToValue(plans.value, status);
+      setSellToValue(plans, status);
       break;
     }
   }
 };
 
-const setSellToValue = (value, status) => {
-  value = value.map((p) => {
-    p.public = status;
-    return p;
-  });
+const setSellToValue = (targetRef, status) => {
+  targetRef.value = targetRef.value.map((p) => ({ ...p, public: status }));
 };
 
 const convertPrice = (price) => {
@@ -809,28 +851,28 @@ const initializeData = async () => {
     )
   ).toJson();
 
-  const newAddonsArray = [];
+  const newAddonsMap = new Map();
   addonsData
     .filter((addon) => addon.meta?.type != "os")
     .forEach((addon) =>
-      newAddonsArray.push(
-        ...Object.keys(addon.periods).map((period) => {
-          const duration = periodsDurationMap[period];
-          const { key: planCode, basePrices } = addon.meta;
-          return {
-            ...addon,
-            duration,
-            planCode,
-            price: { value: basePrices[period] },
-            value: addon.periods[period],
-            name: addon.title,
-            id: [duration, planCode].join(" "),
-            uuid: addon.uuid,
-          };
-        })
-      )
+      Object.keys(addon.periods).forEach((period) => {
+        const duration = periodsDurationMap[period];
+        const { key: planCode, basePrices } = addon.meta;
+        const id = [duration, planCode].join(" ");
+        newAddonsMap.set(id, {
+          ...addon,
+          duration,
+          planCode,
+          price: { value: basePrices[period] },
+          value: addon.periods[period],
+          name: addon.title,
+          public: !!addon.public,
+          id,
+          uuid: addon.uuid,
+        });
+      })
     );
-  addons.value = newAddonsArray;
+  addons.value = [...newAddonsMap.values()];
 
   plans.value = Object.keys(props.template.products || {}).map((key) => {
     const [duration, planCode] = key.split(" ");
@@ -858,33 +900,34 @@ const initializeData = async () => {
         .map((addon) => addon?.meta.key),
       name: product.title,
       apiName,
+      public: !!product.public,
       id: key,
     };
   });
 
-  const newImagesArray = [];
+  const newImagesMap = new Map();
   addonsData
     .filter((addon) => addon.meta?.type == "os")
     .forEach((addon) =>
-      newImagesArray.push(
-        ...Object.keys(addon.periods).map((period) => {
-          const duration = periodsDurationMap[period];
-          const { key, basePrices, tariff } = addon.meta;
-          return {
-            ...addon,
-            duration,
-            price: { value: basePrices[period] },
-            value: addon.periods[period],
-            name: addon.title,
-            tariff,
-            id: key,
-            uuid: addon.uuid,
-          };
-        })
-      )
+      Object.keys(addon.periods).forEach((period) => {
+        const duration = periodsDurationMap[period];
+        const { key, basePrices, tariff } = addon.meta;
+        const mapKey = [key, tariff, duration].join(" ");
+        newImagesMap.set(mapKey, {
+          ...addon,
+          duration,
+          price: { value: basePrices[period] },
+          value: addon.periods[period],
+          name: addon.title,
+          public: !!addon.public,
+          tariff,
+          id: key,
+          uuid: addon.uuid,
+        });
+      })
     );
 
-  images.value = newImagesArray;
+  images.value = [...newImagesMap.values()];
 };
 
 watch(
@@ -899,14 +942,13 @@ watch(tabsIndex, () => {
   searchParam.value = "";
 });
 
-onMounted(() => {
+onMounted(async () => {
   emit("changeFee", props.template.fee);
-
-  refreshPlans();
 
   planAddons.value = [...(props.template.addons || [])];
 
-  initializeData();
+  await initializeData();
+  refreshPlans();
 });
 
 defineExpose({

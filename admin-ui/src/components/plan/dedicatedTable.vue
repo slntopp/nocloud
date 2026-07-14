@@ -189,6 +189,12 @@
               />
             </template>
 
+            <template v-slot:[`item.data-table-expand`]="{ item, isExpanded, expand }">
+              <v-icon v-if="item.installation_fee" @click="expand(!isExpanded)">
+                {{ isExpanded ? "mdi-chevron-up" : "mdi-chevron-down" }}
+              </v-icon>
+            </template>
+
             <template v-slot:expanded-item="{ headers, item }">
               <template v-if="item.installation_fee">
                 <td></td>
