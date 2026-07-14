@@ -27,23 +27,12 @@
           >invoice settings</v-btn
         >
 
-        <v-dialog style="height: 100%">
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn
-              color="background-light"
-              class="mr-2 mb-2 action-btn"
-              v-on="on"
-              v-bind="attrs"
-            >
-              chats settings
-            </v-btn>
-          </template>
-          <plugin-iframe
-            style="height: 80vh"
-            url="/cc.ui/"
-            :params="{ redirect: 'settings' }"
-          />
-        </v-dialog>
+        <v-btn
+          color="background-light"
+          class="mr-2 mb-2 action-btn"
+          to="/settings/chats"
+          >chats settings</v-btn
+        >
 
         <v-btn
           color="background-light"
@@ -119,7 +108,6 @@ import { addToClipboard, filterArrayIncludes, getShortName } from "@/functions";
 
 import noCloudTable from "@/components/table.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import PluginIframe from "@/components/plugin/iframe.vue";
 import ServicesWidget from "@/components/widgets/services";
 import HealthWidget from "@/components/widgets/health";
 import RoutinesWidget from "@/components/widgets/routines";
@@ -181,7 +169,6 @@ export default {
   components: {
     "nocloud-table": noCloudTable,
     ConfirmDialog,
-    PluginIframe,
     ServicesWidget,
     HealthWidget,
     RoutinesWidget,

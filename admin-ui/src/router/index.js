@@ -215,6 +215,14 @@ const routes = [
     },
   },
   {
+    path: "/settings/chats",
+    name: "ChatsSetting",
+    component: () => import("../views/ChatsSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/plugin/:title",
     name: "Plugin",
     component: () => import("../views/PluginPage.vue"),
