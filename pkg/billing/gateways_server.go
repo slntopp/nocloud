@@ -459,7 +459,38 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 		if s == "" {
 			return ""
 		}
+		s = strings.ReplaceAll(s, "\r\n", "\n")
+		s = strings.ReplaceAll(s, "\r", "\n")
 		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br/>")
+	}
+	formatInvoiceItemDescription := func(it *pb.Item) string {
+		base := whmcs_gateway.StripItemDescriptionSuffixes(it.GetDescription())
+		amount := it.GetAmount()
+		unit := strings.TrimSpace(it.GetUnit())
+		unitPrice := it.GetPrice()
+
+		var sb strings.Builder
+		if base != "" {
+			sb.WriteString(escapeWithBR(base))
+		}
+		if amount <= 0 || unit == "" {
+			return sb.String()
+		}
+		if amount == 1 {
+			switch strings.ToLower(unit) {
+			case "pcs", "szt", "szt.":
+				return sb.String()
+			}
+		}
+		qtyLine := html.EscapeString(fmt.Sprintf("%d %s x %s", amount, unit, formatMoney(invoiceBody.GetCurrency(), unitPrice)))
+		if sb.Len() > 0 {
+			sb.WriteString(`<div class="descr-qty">`)
+			sb.WriteString(qtyLine)
+			sb.WriteString(`</div>`)
+		} else {
+			sb.WriteString(qtyLine)
+		}
+		return sb.String()
 	}
 
 	var (
@@ -531,7 +562,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 				<td class="r">%s</td>
 			</tr>`,
 			i+1,
-			html.EscapeString(fmt.Sprintf("%s - %d %s x %s", whmcs_gateway.StripItemDescriptionSuffixes(it.GetDescription()), it.GetAmount(), it.GetUnit(), formatMoney(invoiceBody.GetCurrency(), unitPrice))),
+			formatInvoiceItemDescription(it),
 			it.GetAmount(),
 			html.EscapeString(it.GetUnit()),
 			formatMoney(invoiceBody.GetCurrency(), unitPrice),
@@ -663,7 +694,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 *{box-sizing:border-box}
 body{margin:0;background:var(--soft);color:var(--fg);font:14px/1.45 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif}
 .wrapper{max-width:790px;margin:24px auto;padding:16px}
-.card{background:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.04);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.card{background:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.04);border:1px solid var(--line);border-radius:10px;overflow:hidden;max-width:100%%}
 .header{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:12px;min-width:220px}
 .brand img{height:40px;object-fit:contain}
@@ -683,13 +714,15 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
 @media (max-width:700px){.info{grid-template-columns:1fr}}
 .info .block{padding:12px;background:#fff}
 .info .block h4{margin:0 0 8px 0}
-.table{width:100%%;border-collapse:collapse;margin:0;padding:0}
-.table-wrap{padding:12px 20px}
+.table{width:100%%;border-collapse:collapse;margin:0;padding:0;table-layout:fixed}
+.table-wrap{padding:12px 20px;max-width:100%%;overflow-x:auto}
 th,td{border:1px solid var(--line);padding:8px 10px;vertical-align:top}
 th{background:#f8fafc;text-align:left;font-weight:600}
-td.c{text-align:center}
-td.r{text-align:right}
-td.item .descr{white-space:pre-wrap}
+td.c,th.c{text-align:center;white-space:nowrap}
+td.r,th.r{text-align:right;white-space:nowrap}
+td.item,th.item{overflow:hidden;min-width:0}
+td.item .descr{line-height:1.45;word-wrap:break-word;overflow-wrap:anywhere;word-break:break-all;hyphens:auto}
+td.item .descr-qty{margin-top:6px;color:var(--muted);font-size:12px;font-weight:600;word-break:normal}
 tfoot td{font-weight:600}
 .totals{display:grid;grid-template-columns:2fr 1fr;gap:16px;padding:8px 20px;border-top:1px solid var(--line);align-items:end}
 @media (max-width:700px){.totals{grid-template-columns:1fr}}
@@ -799,15 +832,15 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		<table class="table">
 			<thead>
 				<tr>
-					<th class="c" style="width:36px">#</th>
-					<th>$table.item</th>
-					<th class="c" style="width:64px">$table.qty</th>
-					<th class="c" style="width:64px">$table.unit</th>
-					<th class="r" style="width:120px">$table.unit_price</th>
-					<th class="r" style="width:120px">$table.price</th>
-					<th class="c" style="width:80px">$table.vat</th>
-					<th class="r" style="width:120px">$table.amount</th>
-					<th class="r" style="width:120px">$table.total</th>
+					<th class="c" style="width:32px">#</th>
+					<th class="item">$table.item</th>
+					<th class="c" style="width:48px">$table.qty</th>
+					<th class="c" style="width:48px">$table.unit</th>
+					<th class="r" style="width:88px">$table.unit_price</th>
+					<th class="r" style="width:88px">$table.price</th>
+					<th class="c" style="width:56px">$table.vat</th>
+					<th class="r" style="width:88px">$table.amount</th>
+					<th class="r" style="width:88px">$table.total</th>
 				</tr>
 			</thead>
 			<tbody>
