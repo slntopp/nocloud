@@ -91,8 +91,32 @@ func (s *PubSub) ConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col strin
 	go s.Consumer(col, msgs)
 }
 
+// updateDataQuery persists an instance data snapshot published by a driver.
+//
+// Payment-critical date keys (last_monitoring, next_payment_date and their
+// per-resource *_last_monitoring / *_next_payment_date variants) are treated as
+// monotonic: a stale writer (e.g. a monitoring tick that started before a
+// renewal committed) can never move them backwards. For those keys we keep
+// MAX(stored, incoming), so a paid renewal is never clobbered regardless of
+// message ordering between the monitoring and billing flows.
+//
+// A writer that legitimately needs to move a date backwards (e.g. cancel_renew)
+// sets the transient "_authoritative_dates" flag in the payload to bypass the
+// guard. The flag is stripped before persisting.
 const updateDataQuery = `
-UPDATE DOCUMENT(@@collection, @key) WITH { data: MERGE(@data, { is_monitored: true }) } IN @@collection
+LET force = @data["_authoritative_dates"] == true
+LET incoming = UNSET(@data, "_authoritative_dates")
+LET stored = DOCUMENT(@@collection, @key).data
+LET guards = MERGE(APPEND([{}], (
+    FOR k IN ATTRIBUTES(incoming)
+        FILTER k == "last_monitoring"
+            OR k == "next_payment_date"
+            OR RIGHT(k, 16) == "_last_monitoring"
+            OR RIGHT(k, 18) == "_next_payment_date"
+        FILTER IS_NUMBER(incoming[k]) AND IS_NUMBER(stored[k])
+        RETURN { [k]: MAX([stored[k], incoming[k]]) }
+)))
+UPDATE DOCUMENT(@@collection, @key) WITH { data: MERGE(incoming, force ? {} : guards, { is_monitored: true }) } IN @@collection
 `
 
 func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
