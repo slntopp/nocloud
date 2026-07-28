@@ -621,10 +621,10 @@ const changePlans = ({ plans: plansData, catalog }) => {
   return result;
 };
 
-const changeAddons = ({ backup, disk, snapshot }) => {
+const changeAddons = ({ backup, disk, snapshot, storage = [] }) => {
   const result = [];
 
-  [backup, disk, snapshot].forEach((el) => {
+  [backup, disk, snapshot, storage].forEach((el) => {
     el.forEach(({ prices, planCode, productName }) => {
       prices.forEach(({ pricingMode, price, duration }) => {
         const isMonthly = duration === "P1M" && pricingMode === "default";
@@ -794,6 +794,25 @@ const convertPrice = (price) => {
   return convertFrom(price, { code: "PLN" });
 };
 
+const STORAGE_PRODUCTS = ["vps-option-storage-remote", "vps-option-storage-local"];
+
+// vps-2027 storage (Local/Remote) isn't fetched as its own list like backup/disk/snapshot,
+// but it's already present in the raw catalog, so pull it from there.
+const getStorageAddons = (catalog) =>
+  catalog.addons
+    .filter((p) => STORAGE_PRODUCTS.includes(p.product))
+    .map((p) => ({
+      planCode: p.planCode,
+      productName: p.invoiceName,
+      prices: p.pricings
+        .filter((pr) => pr.capacities.includes("renew"))
+        .map((pr) => ({
+          pricingMode: pr.mode,
+          duration: pr.mode === "upfront12" ? "P1Y" : "P1M",
+          price: { value: pr.price },
+        })),
+    }));
+
 const refreshPlans = async () => {
   try {
     isRefreshLoading.value = true;
@@ -803,7 +822,10 @@ const refreshPlans = async () => {
     });
 
     newPlans.value = changePlans(meta);
-    newAddons.value = changeAddons(meta);
+    newAddons.value = changeAddons({
+      ...meta,
+      storage: getStorageAddons(meta.catalog),
+    });
     newImages.value = changeImages(meta);
 
     if (
