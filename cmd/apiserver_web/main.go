@@ -22,6 +22,7 @@ import (
 
 	"github.com/rs/cors"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
+	consentpb "github.com/slntopp/nocloud-proto/consent"
 	dnspb "github.com/slntopp/nocloud-proto/dns"
 	edgepb "github.com/slntopp/nocloud-proto/edge"
 	eventspb "github.com/slntopp/nocloud-proto/events"
@@ -205,6 +206,18 @@ func main() {
 	)
 	if err != nil {
 		log.Fatal("Failed to register AccountGroupsService gateway", zap.Error(err))
+	}
+
+	// ConsentService
+	log.Info("Registering ConsentService Gateway")
+	err = consentpb.RegisterConsentServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register ConsentService gateway", zap.Error(err))
 	}
 
 	// ServicesService
