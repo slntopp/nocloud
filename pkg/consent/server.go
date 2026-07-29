@@ -90,11 +90,26 @@ func (s *ConsentServer) List(ctx context.Context, req *pb.ListRequest) (*pb.List
 }
 
 func clientIP(ctx context.Context) string {
-	if md, ok := metadata.FromIncomingContext(ctx); ok {
-		if fwd := md.Get("x-forwarded-for"); len(fwd) > 0 {
-			return fwd[0]
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+
+	// Set by apiserver_web's HTTP-layer middleware for POST /consent, from the
+	// original request, before it's re-forwarded as an internal gRPC call — takes
+	// priority since the plain x-forwarded-for below reflects the internal hop too.
+	if ip := md.Get("x-client-ip"); len(ip) > 0 && ip[0] != "" {
+		return ip[0]
+	}
+
+	if fwd := md.Get("x-forwarded-for"); len(fwd) > 0 {
+		// grpc-gateway joins the chain as "<original client>, <next hop>, ...";
+		// the leftmost entry is the one closest to the actual visitor.
+		if ip := strings.TrimSpace(strings.Split(fwd[0], ",")[0]); ip != "" {
+			return ip
 		}
 	}
+
 	if p, ok := peer.FromContext(ctx); ok && p.Addr != nil {
 		return p.Addr.String()
 	}

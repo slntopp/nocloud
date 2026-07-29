@@ -18,6 +18,8 @@ import (
 	"context"
 	"crypto/tls"
 	http_server "github.com/slntopp/nocloud/pkg/nocloud/http"
+	"net"
+	"net/http"
 	"strings"
 
 	"github.com/rs/cors"
@@ -51,6 +53,7 @@ var (
 	adminUiHost string
 
 	apiserver        string
+	registryHost     string
 	corsAllowed      []string
 	insecure_enabled bool
 	with_block       bool
@@ -71,6 +74,12 @@ func init() {
 	adminUiHost = viper.GetString("ADMIN_UI_HOST")
 
 	apiserver = viper.GetString("APISERVER_HOST")
+	// REGISTRY_HOST lets ConsentService dial the registry service directly
+	// (e.g. "registry:8000"), skipping the internal proxy hop that otherwise
+	// overwrites X-Forwarded-For with the proxy's own address. Defaults to
+	// APISERVER_HOST so this is a no-op unless explicitly set.
+	viper.SetDefault("REGISTRY_HOST", apiserver)
+	registryHost = viper.GetString("REGISTRY_HOST")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 	insecure_enabled = viper.GetBool("INSECURE")
 	with_block = viper.GetBool("WITH_BLOCK")
@@ -209,11 +218,11 @@ func main() {
 	}
 
 	// ConsentService
-	log.Info("Registering ConsentService Gateway")
+	log.Info("Registering ConsentService Gateway", zap.String("endpoint", registryHost))
 	err = consentpb.RegisterConsentServiceHandlerFromEndpoint(
 		context.Background(),
 		gwmux,
-		apiserver,
+		registryHost,
 		opts,
 	)
 	if err != nil {
@@ -340,7 +349,7 @@ func main() {
 			"grpc-metadata-nocloud-primary-currency-precision-override", "nocloud-primary-currency-precision-override"},
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
 		AllowCredentials: true,
-	}).Handler(gwmux)
+	}).Handler(withConsentClientIP(gwmux))
 
 	// AdminUI Handler
 	ui_handler := cors.New(cors.Options{
@@ -357,4 +366,36 @@ func main() {
 	}()
 	log.Info("Serving gRPC-Gateway on " + gatewayHost)
 	http_server.Serve(log, gatewayHost, wsproxy.WebsocketProxy(handler))
+}
+
+// withConsentClientIP captures the real visitor IP for POST /consent at the point
+// this instance receives the original HTTP request, before it's re-forwarded as an
+// internal gRPC call (which would otherwise overwrite X-Forwarded-For with the
+// address of that internal hop). Scoped to /consent only — every other route is
+// passed through untouched.
+func withConsentClientIP(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/consent" {
+			r.Header.Set("Grpc-Metadata-X-Client-Ip", realClientIP(r))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func realClientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if ip := strings.TrimSpace(strings.Split(xff, ",")[0]); ip != "" {
+			return ip
+		}
+	}
+	if ip := r.Header.Get("CF-Connecting-IP"); ip != "" {
+		return ip
+	}
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
