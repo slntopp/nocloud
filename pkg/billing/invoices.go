@@ -1397,6 +1397,15 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.Internal, "Internal error. Couldn't find your invoice")
 	}
 
+	pending, err := s.hasPendingWhmcsSyncInvoice(ctx, requester)
+	if err != nil {
+		log.Error("Failed to check pending WHMCS sync invoices", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error. Couldn't verify invoice state")
+	}
+	if pending {
+		return nil, status.Error(codes.FailedPrecondition, "Invoice is being synchronized. Please try again in a few seconds.")
+	}
+
 	acc, err := s.accounts.Get(ctx, requester)
 	if err != nil {
 		log.Warn("Failed to get account", zap.Error(err))
@@ -2572,4 +2581,44 @@ func (s *BillingServiceServer) executePostRefundActions(ctx context.Context, log
 	}
 
 	return inv, nil
+}
+
+func invoiceHasWhmcsID(meta map[string]*structpb.Value) bool {
+	if meta == nil {
+		return false
+	}
+	id, ok := meta["whmcs_invoice_id"]
+	if !ok || id == nil {
+		return false
+	}
+	if id.GetNumberValue() > 0 {
+		return true
+	}
+	return id.GetStringValue() != ""
+}
+
+func isPendingWhmcsSyncInvoice(inv *pb.Invoice) bool {
+	if inv.GetStatus() != pb.BillingStatus_UNPAID {
+		return false
+	}
+	meta := inv.GetMeta()
+	if meta == nil || !meta["whmcs_sync_required"].GetBoolValue() {
+		return false
+	}
+	return !invoiceHasWhmcsID(meta)
+}
+
+func (s *BillingServiceServer) hasPendingWhmcsSyncInvoice(ctx context.Context, accountID string) (bool, error) {
+	invoices, err := s.invoices.List(ctx, accountID, map[string]interface{}{
+		"status": pb.BillingStatus_UNPAID,
+	})
+	if err != nil {
+		return false, err
+	}
+	for _, inv := range invoices {
+		if isPendingWhmcsSyncInvoice(inv.Invoice) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
