@@ -1379,8 +1379,28 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.InvalidArgument, "Can't pay this invoice. Try again later or contact support")
 	}
 
-	ncInv, err := s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
-	if err == nil {
+	const maxRetries = 5
+	const retryInterval = 500 * time.Millisecond
+
+	var ncInv *pb.Invoice
+	var lookupErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		ncInv, lookupErr = s.whmcsGateway.GetInvoiceByWhmcsId(int(invId))
+		if lookupErr == nil {
+			break
+		}
+		if !errors.Is(whmcs_gateway.ErrNotFound, lookupErr) {
+			log.Error("Failed to ensure that whmcs invoice exists in NoCloud", zap.Error(lookupErr))
+			return nil, status.Error(codes.Internal, "Internal error. Couldn't find your invoice")
+		}
+		if attempt < maxRetries {
+			log.Debug("NoCloud invoice not yet linked to WHMCS invoice, retrying",
+				zap.Int64("whmcs_id", invId), zap.Int("attempt", attempt+1))
+			time.Sleep(retryInterval)
+		}
+	}
+
+	if ncInv != nil {
 		log.Info("Found NoCloud invoice with this whmcs_id. Redirecting to pay it on NoCloud", zap.Int64("whmcs_id", invId))
 		invNc, errGet := s.invoices.Get(ctx, ncInv.GetUuid())
 		if errGet != nil {
@@ -1392,9 +1412,14 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		}
 		return s.executeNocloudPayWithBalance(ctx, invNc, log)
 	}
-	if !errors.Is(whmcs_gateway.ErrNotFound, err) {
-		log.Error("Failed to ensure that whmcs invoice exists in NoCloud", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Internal error. Couldn't find your invoice")
+
+	pending, err := s.hasPendingWhmcsSyncInvoice(ctx, requester)
+	if err != nil {
+		log.Error("Failed to check pending WHMCS sync invoices", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Internal error. Couldn't verify invoice state")
+	}
+	if pending {
+		return nil, status.Error(codes.FailedPrecondition, "Invoice is being synchronized. Please try again in a few seconds.")
 	}
 
 	pending, err := s.hasPendingWhmcsSyncInvoice(ctx, requester)
