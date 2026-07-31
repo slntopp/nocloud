@@ -351,76 +351,78 @@ const listOptions = computed(() => {
   const filters = {};
   const datekeys = ["created", "data.next_payment_date"];
 
-  for (const key of Object.keys(filter.value)) {
-    const value = filter.value[key];
+  if (!props.noSearch) {
+    for (const key of Object.keys(filter.value)) {
+      const value = filter.value[key];
 
-    if (
-      !value ||
-      (Array.isArray(value) && !value.length) ||
-      (typeof value === "object" && !Object.keys(value).length)
-    ) {
-      continue;
+      if (
+        !value ||
+        (Array.isArray(value) && !value.length) ||
+        (typeof value === "object" && !Object.keys(value).length)
+      ) {
+        continue;
+      }
+
+      if (value?.to || value?.from) {
+        const total = {};
+        if (value?.to) {
+          total.to = +value?.to;
+        }
+        if (value?.from) {
+          total.from = +value?.from;
+        }
+
+        filters[key] = total;
+        continue;
+      }
+
+      if (datekeys.includes(key)) {
+        let dates = [];
+
+        if (value[0]) {
+          dates.push(new Date(value[0]).getTime() / 1000);
+        }
+        if (value[1]) {
+          dates.push(new Date(value[1]).getTime() / 1000);
+        }
+
+        dates = dates.sort();
+
+        const result = { from: dates[0] };
+        if (dates[1]) {
+          result.to = dates[1];
+        }
+        filters[key] = result;
+        continue;
+      }
+
+      if (key === "account_groups") {
+        const groups = filter.value[key].filter((v) => v !== "no_group");
+        const hasNoGroup = filter.value[key].includes("no_group");
+        if (groups.length) {
+          filters[key] = groups;
+        }
+        if (hasNoGroup) {
+          filters["no_group"] = true;
+        }
+      } else {
+        filters[key] = filter.value[key];
+      }
     }
 
-    if (value?.to || value?.from) {
-      const total = {};
-      if (value?.to) {
-        total.to = +value?.to;
-      }
-      if (value?.from) {
-        total.from = +value?.from;
-      }
-
-      filters[key] = total;
-      continue;
+    if (searchParam.value) {
+      filters.search_param = searchParam.value;
     }
-
-    if (datekeys.includes(key)) {
-      let dates = [];
-
-      if (value[0]) {
-        dates.push(new Date(value[0]).getTime() / 1000);
-      }
-      if (value[1]) {
-        dates.push(new Date(value[1]).getTime() / 1000);
-      }
-
-      dates = dates.sort();
-
-      const result = { from: dates[0] };
-      if (dates[1]) {
-        result.to = dates[1];
-      }
-      filters[key] = result;
-      continue;
-    }
-
-    if (key === "account_groups") {
-      const groups = filter.value[key].filter((v) => v !== "no_group");
-      const hasNoGroup = filter.value[key].includes("no_group");
-      if (groups.length) {
-        filters[key] = groups;
-      }
-      if (hasNoGroup) {
-        filters["no_group"] = true;
-      }
-    } else {
-      filters[key] = filter.value[key];
-    }
-  }
-
-  if (searchParam.value) {
-    filters.search_param = searchParam.value;
   }
 
   //more priority
   for (const key in customFilter.value) {
     const value = customFilter.value[key];
-    if (
-      value === undefined ||
-      value === null ||
-      (Array.isArray(value) && !value.length)
-    ) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    if (Array.isArray(value) && !value.length) {
+      delete filters[key];
       continue;
     }
     filters[key] = value;
@@ -694,8 +696,13 @@ const updateEditValues = async (values) => {
   }
 };
 
-watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
-watch([options, refetch, searchParam], fetchInstancesDebounce);
+if (props.noSearch) {
+  watch(customFilter, fetchInstancesDebounce, { deep: true });
+  watch([options, refetch], fetchInstancesDebounce);
+} else {
+  watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
+  watch([options, refetch, searchParam], fetchInstancesDebounce);
+}
 
 watch(instances, () => {
   instances.value.forEach(async ({ account: uuid }) => {

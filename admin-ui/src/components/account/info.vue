@@ -307,9 +307,9 @@ const accountGroup = ref(null);
 const phoneVerified = ref(!!account.value.isPhoneVerified);
 const instancesCustomFilter = computed(() => ({
   account: [uuid.value],
-  ...(showDeletedInstances.value
-    ? {}
-    : { "state.state": [0, 1, 2, 3, 4, 6, 7, 8] }),
+  "state.state": showDeletedInstances.value
+    ? []
+    : [0, 1, 2, 3, 4, 6, 7, 8],
 }));
 
 const onPhoneVerifiedChange = async (val) => {
