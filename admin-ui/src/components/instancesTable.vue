@@ -350,9 +350,10 @@ const searchParam = computed(() => store.getters["appSearch/param"]);
 const listOptions = computed(() => {
   const filters = {};
   const datekeys = ["created", "data.next_payment_date"];
+  const sourceFilter = props.noSearch ? {} : filter.value;
 
-  for (const key of Object.keys(filter.value)) {
-    const value = filter.value[key];
+  for (const key of Object.keys(sourceFilter)) {
+    const value = sourceFilter[key];
 
     if (
       !value ||
@@ -396,8 +397,8 @@ const listOptions = computed(() => {
     }
 
     if (key === "account_groups") {
-      const groups = filter.value[key].filter((v) => v !== "no_group");
-      const hasNoGroup = filter.value[key].includes("no_group");
+      const groups = sourceFilter[key].filter((v) => v !== "no_group");
+      const hasNoGroup = sourceFilter[key].includes("no_group");
       if (groups.length) {
         filters[key] = groups;
       }
@@ -405,11 +406,11 @@ const listOptions = computed(() => {
         filters["no_group"] = true;
       }
     } else {
-      filters[key] = filter.value[key];
+      filters[key] = sourceFilter[key];
     }
   }
 
-  if (searchParam.value) {
+  if (!props.noSearch && searchParam.value) {
     filters.search_param = searchParam.value;
   }
 
