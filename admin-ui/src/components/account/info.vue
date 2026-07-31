@@ -333,6 +333,7 @@ onMounted(() => {
   uuid.value = account.value.uuid;
   accountGroup.value = account.value.accountGroup;
   keys.value = account.value.data?.ssh_keys || [];
+  store.dispatch("services/fetch", { showDeleted: true });
   store.dispatch("accountGroups/fetch");
   store.dispatch("servicesProviders/fetch", { anonymously: true });
   fetchNamespace();
@@ -471,21 +472,8 @@ const permanentLock = async () => {
   const newStatus = "PERMANENT_LOCK";
   statusChangeValue.value = newStatus;
   try {
-    if (!accountNamespace.value?.uuid) {
-      await fetchNamespace();
-    }
-    const ns = accountNamespace.value?.uuid;
-    if (!ns) {
-      throw new Error("Account namespace not found");
-    }
-
-    await store.dispatch("services/fetch", {
-      showDeleted: true,
-      filters: { namespace: ns },
-    });
-
     const accountServices = services.value.filter(
-      (s) => s.access.namespace === ns
+      (s) => s.access.namespace === accountNamespace.value?.uuid
     );
 
     const servicesForDown = accountServices.filter((s) => s.status !== "INIT");
