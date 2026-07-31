@@ -415,7 +415,15 @@ const listOptions = computed(() => {
 
   //more priority
   for (const key in customFilter.value) {
-    filters[key] = customFilter.value[key];
+    const value = customFilter.value[key];
+    if (
+      value === undefined ||
+      value === null ||
+      (Array.isArray(value) && !value.length)
+    ) {
+      continue;
+    }
+    filters[key] = value;
   }
 
   return {
@@ -561,7 +569,7 @@ const setOptions = (newOptions) => {
 const fetchInstances = async () => {
   fetchError.value = "";
   try {
-    if (!isUniqueFetched.value) {
+    if (!props.noSearch && !isUniqueFetched.value) {
       fetchUnique();
     }
 
