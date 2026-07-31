@@ -16,10 +16,15 @@ limitations under the License.
 package instances
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
+	go_sync "sync"
+	"time"
+
+	"connectrpc.com/connect"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/health"
 	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
@@ -31,10 +36,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
-	"slices"
-	"strings"
-	go_sync "sync"
-	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/notes"
@@ -1058,7 +1059,15 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER sp._key in @%s`, key)
+			query += fmt.Sprintf(` FILTER LENGTH(
+				FOR sp_node IN 1 OUTBOUND ig
+					GRAPH @permissions_graph
+					OPTIONS {order: "bfs", uniqueVertices: "global"}
+					FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
+					FILTER sp_node._key in @%s
+					LIMIT 1
+					RETURN 1
+			) > 0`, key)
 			bindVars[key] = values
 		} else if key == "billing_plan" {
 			values := val.GetListValue().AsSlice()
@@ -1251,6 +1260,14 @@ LET instances = (
 	    FILTER IS_SAME_COLLECTION(@instances, node)
 
         LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+
+		// Filters first — skip expensive SP lookup for non-matching nodes.
+		%s
+
         LET sp = LAST (
             FOR sp_node IN 1 OUTBOUND ig
 	            GRAPH @permissions_graph
@@ -1258,11 +1275,7 @@ LET instances = (
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
 	            RETURN sp_node
         )
-        LET srv = path.vertices[-3]._key
-        LET ns = path.vertices[-4]._key
-        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
-		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
-		
+
 		%s
 		
 		RETURN {
@@ -1321,11 +1334,10 @@ func (s *InstancesServer) List(ctx context.Context, _req *connect.Request[pb.Lis
 
 	customOrder := req.GetCustomOrder().GetListValue().AsSlice()
 	slices.Reverse(customOrder)
-	query += getSortQuery(req.GetField(), req.GetSort(), customOrder, bindVars)
+	filtersQuery := getFiltersQuery(req.GetFilters(), bindVars)
+	sortQuery := getSortQuery(req.GetField(), req.GetSort(), customOrder, bindVars)
 
-	query += getFiltersQuery(req.GetFilters(), bindVars)
-
-	query = fmt.Sprintf(listInstancesQuery, query)
+	query = fmt.Sprintf(listInstancesQuery, filtersQuery, sortQuery)
 
 	s.log.Debug("Query", zap.Any("q", query))
 	s.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
@@ -1376,6 +1388,13 @@ LET instances = (
 	    FILTER IS_SAME_COLLECTION(@instances, node)
 
         LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+
+		%s
+
         LET sp = LAST (
             FOR sp_node IN 1 OUTBOUND ig
 	            GRAPH @permissions_graph
@@ -1383,12 +1402,6 @@ LET instances = (
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
 	            RETURN sp_node
         )
-        LET srv = path.vertices[-3]._key
-        LET ns = path.vertices[-4]._key
-        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
-		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
-		
-		%s
 		
 		RETURN {
 			instance: MERGE(node, { 

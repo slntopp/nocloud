@@ -561,7 +561,7 @@ const setOptions = (newOptions) => {
 const fetchInstances = async () => {
   fetchError.value = "";
   try {
-    if (!isUniqueFetched.value) {
+    if (!props.noSearch && !isUniqueFetched.value) {
       fetchUnique();
     }
 
