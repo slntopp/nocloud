@@ -200,10 +200,7 @@
       table-name="account-instances-table"
       no-search
       :show-select="false"
-      :custom-filter="{
-        account: [uuid],
-        'state.state': !!showDeletedInstances ? [] : [0, 1, 2, 3, 4, 6, 7, 8],
-      }"
+      :custom-filter="instancesCustomFilter"
     />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
@@ -308,6 +305,12 @@ const statusChangeValue = ref("");
 const viewport = ref(window.innerWidth);
 const accountGroup = ref(null);
 const phoneVerified = ref(!!account.value.isPhoneVerified);
+const instancesCustomFilter = computed(() => ({
+  account: [uuid.value],
+  ...(showDeletedInstances.value
+    ? {}
+    : { "state.state": [0, 1, 2, 3, 4, 6, 7, 8] }),
+}));
 
 const onPhoneVerifiedChange = async (val) => {
   try {
