@@ -1422,15 +1422,6 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 		return nil, status.Error(codes.FailedPrecondition, "Invoice is being synchronized. Please try again in a few seconds.")
 	}
 
-	pending, err := s.hasPendingWhmcsSyncInvoice(ctx, requester)
-	if err != nil {
-		log.Error("Failed to check pending WHMCS sync invoices", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Internal error. Couldn't verify invoice state")
-	}
-	if pending {
-		return nil, status.Error(codes.FailedPrecondition, "Invoice is being synchronized. Please try again in a few seconds.")
-	}
-
 	acc, err := s.accounts.Get(ctx, requester)
 	if err != nil {
 		log.Warn("Failed to get account", zap.Error(err))
