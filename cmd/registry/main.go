@@ -20,6 +20,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/slntopp/nocloud/pkg/account_groups"
+	"github.com/slntopp/nocloud/pkg/consent"
 	grpc_server "github.com/slntopp/nocloud/pkg/nocloud/grpc"
 	"github.com/slntopp/nocloud/pkg/nocloud/ssh"
 	"github.com/spf13/viper"
@@ -37,6 +38,7 @@ import (
 	accounting "github.com/slntopp/nocloud/pkg/registry"
 	"github.com/slntopp/nocloud/pkg/sessions"
 
+	consentpb "github.com/slntopp/nocloud-proto/consent"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	pb "github.com/slntopp/nocloud-proto/registry"
 	sspb "github.com/slntopp/nocloud-proto/sessions"
@@ -185,6 +187,9 @@ func main() {
 	groups_server := account_groups.NewAccountGroupsServer(log, db)
 	pb.RegisterNamespacesServiceServer(s, namespaces_server)
 	pb.RegisterAccountGroupsServiceServer(s, groups_server)
+
+	consent_server := consent.NewConsentServer(log, db)
+	consentpb.RegisterConsentServiceServer(s, consent_server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
