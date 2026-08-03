@@ -288,6 +288,10 @@ onMounted(() => {
       instancesTypes.value.push(type);
     }
   });
+
+  if (!instancesTypes.value.includes("bots")) {
+    instancesTypes.value.push("bots");
+  }
 });
 
 const headers = computed(() => {
