@@ -417,11 +417,11 @@ const listOptions = computed(() => {
   //more priority
   for (const key in customFilter.value) {
     const value = customFilter.value[key];
-    if (
-      value === undefined ||
-      value === null ||
-      (Array.isArray(value) && !value.length)
-    ) {
+    if (value === undefined || value === null) {
+      continue;
+    }
+    if (Array.isArray(value) && !value.length) {
+      delete filters[key];
       continue;
     }
     filters[key] = value;
@@ -695,8 +695,13 @@ const updateEditValues = async (values) => {
   }
 };
 
-watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
-watch([options, refetch, searchParam], fetchInstancesDebounce);
+if (props.noSearch) {
+  watch(customFilter, fetchInstancesDebounce, { deep: true });
+  watch([options, refetch], fetchInstancesDebounce);
+} else {
+  watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
+  watch([options, refetch, searchParam], fetchInstancesDebounce);
+}
 
 watch(instances, () => {
   instances.value.forEach(async ({ account: uuid }) => {
