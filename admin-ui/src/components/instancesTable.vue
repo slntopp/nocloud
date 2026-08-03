@@ -101,14 +101,17 @@
 
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
       <router-link
+        v-if="item.billingPlan?.uuid"
         :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
       >
         {{ getShortName(value) }}
       </router-link>
+      <span v-else>{{ getShortName(value) || "-" }}</span>
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
       <router-link
+        v-if="item.billingPlan?.uuid"
         :to="{
           name: 'Plan',
           params: {
@@ -116,8 +119,12 @@
           },
         }"
       >
-        {{ getShortName(item.billingPlan.products[item.product]?.title) }}
+        {{
+          getShortName(item.billingPlan?.products?.[item.product]?.title) ||
+          "-"
+        }}
       </router-link>
+      <span v-else>-</span>
     </template>
 
     <template v-slot:[`item.email`]="{ item }">
@@ -350,10 +357,9 @@ const searchParam = computed(() => store.getters["appSearch/param"]);
 const listOptions = computed(() => {
   const filters = {};
   const datekeys = ["created", "data.next_payment_date"];
-  const sourceFilter = props.noSearch ? {} : filter.value;
 
-  for (const key of Object.keys(sourceFilter)) {
-    const value = sourceFilter[key];
+  for (const key of Object.keys(filter.value)) {
+    const value = filter.value[key];
 
     if (
       !value ||
@@ -397,8 +403,8 @@ const listOptions = computed(() => {
     }
 
     if (key === "account_groups") {
-      const groups = sourceFilter[key].filter((v) => v !== "no_group");
-      const hasNoGroup = sourceFilter[key].includes("no_group");
+      const groups = filter.value[key].filter((v) => v !== "no_group");
+      const hasNoGroup = filter.value[key].includes("no_group");
       if (groups.length) {
         filters[key] = groups;
       }
@@ -406,11 +412,11 @@ const listOptions = computed(() => {
         filters["no_group"] = true;
       }
     } else {
-      filters[key] = sourceFilter[key];
+      filters[key] = filter.value[key];
     }
   }
 
-  if (!props.noSearch && searchParam.value) {
+  if (searchParam.value) {
     filters.search_param = searchParam.value;
   }
 

@@ -306,10 +306,10 @@ const viewport = ref(window.innerWidth);
 const accountGroup = ref(null);
 const phoneVerified = ref(!!account.value.isPhoneVerified);
 const instancesCustomFilter = computed(() => ({
-  account: [uuid.value],
-  ...(showDeletedInstances.value
-    ? {}
-    : { "state.state": [0, 1, 2, 3, 4, 6, 7, 8] }),
+  account: [account.value.uuid],
+  "state.state": showDeletedInstances.value
+    ? [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    : [0, 1, 2, 3, 4, 6, 7, 8],
 }));
 
 const onPhoneVerifiedChange = async (val) => {
