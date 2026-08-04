@@ -568,9 +568,19 @@ const setOptions = (newOptions) => {
     }
   }
 
+  const prev = JSON.stringify(options.value);
+  const next = JSON.stringify(newOptions);
   page.value = newOptions.page;
-  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
+  if (prev !== next) {
+    console.log("[instancesTable] setOptions CHANGED", {
+      prev: JSON.parse(prev || "{}"),
+      next: JSON.parse(next),
+      page: newOptions.page,
+    });
+    console.trace("[instancesTable] setOptions caller");
     options.value = newOptions;
+  } else {
+    console.log("[instancesTable] setOptions same (ignored)");
   }
 };
 
@@ -578,53 +588,69 @@ let fetchDebounceTimer = null;
 let fetchInFlight = false;
 let pendingFetch = false;
 
-const scheduleFetch = () => {
+const scheduleFetch = (reason = "scheduleFetch") => {
+  console.log("[instancesTable] scheduleFetch", reason);
+  console.trace("[instancesTable] scheduleFetch caller");
   if (fetchDebounceTimer) {
     clearTimeout(fetchDebounceTimer);
   }
   fetchDebounceTimer = setTimeout(() => {
     fetchDebounceTimer = null;
-    fetchInstances();
+    fetchInstances(reason + "→timer");
   }, 300);
 };
 
-const fetchInstances = async () => {
+const fetchInstances = async (reason = "fetchInstances") => {
   if (fetchInFlight) {
     pendingFetch = true;
+    console.log("[instancesTable] fetch coalesced (in flight)", {
+      reason,
+      pendingFetch,
+      listOptions: JSON.parse(JSON.stringify(listOptions.value)),
+    });
     return;
   }
 
   fetchInFlight = true;
   try {
-    let requested;
     do {
       pendingFetch = false;
-      requested = JSON.parse(JSON.stringify(listOptions.value));
       fetchError.value = "";
+      console.log("[instancesTable] fetchInstances RUN", {
+        reason,
+        showDeleted: props.showDeleted,
+        listOptions: JSON.parse(JSON.stringify(listOptions.value)),
+      });
+      console.trace("[instancesTable] fetchInstances caller");
       try {
         if (!props.noSearch && !isUniqueFetched.value) {
           fetchUnique();
         }
-        await store.dispatch("instances/fetch", requested);
+        await store.dispatch("instances/fetch", listOptions.value);
       } catch (e) {
         fetchError.value = e.message;
       }
-    } while (
-      pendingFetch ||
-      JSON.stringify(listOptions.value) !== JSON.stringify(requested)
-    );
+    } while (pendingFetch);
   } finally {
     fetchInFlight = false;
+    console.log("[instancesTable] fetchInstances DONE", {
+      reason,
+      storeLoading: store.getters["instances/isLoading"],
+      storeTotal: store.getters["instances/total"],
+      storeLen: store.getters["instances/all"].length,
+    });
   }
 };
 
 const fetchForShowDeletedToggle = () => {
+  console.log("[instancesTable] showDeleted toggle", props.showDeleted);
+  console.trace("[instancesTable] showDeleted watcher");
   if (fetchDebounceTimer) {
     clearTimeout(fetchDebounceTimer);
     fetchDebounceTimer = null;
   }
   page.value = 1;
-  fetchInstances();
+  fetchInstances("showDeleted-toggle");
 };
 
 const fetchUnique = async () => {
@@ -641,8 +667,6 @@ const fetchUnique = async () => {
     isUniqueFetched.value = false;
   }
 };
-
-const fetchInstancesDebounce = scheduleFetch;
 
 const getPeriod = (instance) => {
   if (isInstancePayg(instance)) {
@@ -742,12 +766,22 @@ const updateEditValues = async (values) => {
 };
 
 if (props.noSearch) {
-  watch(customFilter, scheduleFetch, { deep: true });
-  watch([options, refetch], scheduleFetch);
+  watch(
+    customFilter,
+    () => scheduleFetch("watch:customFilter"),
+    { deep: true },
+  );
+  watch([options, refetch], () => scheduleFetch("watch:options|refetch"));
   watch(() => props.showDeleted, fetchForShowDeletedToggle);
 } else {
-  watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
-  watch([options, refetch, searchParam], fetchInstancesDebounce);
+  watch(
+    [filter, customFilter],
+    () => scheduleFetch("watch:filter|customFilter"),
+    { deep: true },
+  );
+  watch([options, refetch, searchParam], () =>
+    scheduleFetch("watch:options|refetch|search"),
+  );
 }
 
 watch(instances, () => {
