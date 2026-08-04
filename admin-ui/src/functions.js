@@ -771,6 +771,7 @@ export function isInstancePayg(inst) {
 }
 
 export function getShortName(name = "", maxLength = 30) {
+  name = name == null ? "" : String(name);
   return name.length > maxLength + 3
     ? name.slice(0, maxLength - 3) + "..."
     : name;

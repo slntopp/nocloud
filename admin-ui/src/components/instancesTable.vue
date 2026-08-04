@@ -618,7 +618,7 @@ const getPeriod = (instance) => {
 
   const period = getBillingPeriod(Number(instance.period));
 
-  return period || "Unknown";
+  return typeof period === "string" && period ? period : "Unknown";
 };
 
 const getExpirationDate = (instance) => {
@@ -630,9 +630,9 @@ const getExpirationDate = (instance) => {
 const getOSName = (instance) => {
   const id = instance.config?.template_id;
 
-  if (!id) return;
+  if (!id && id !== 0) return;
   return servicesProviders.value.find(({ uuid }) => uuid === instance.sp)
-    ?.publicData.templates[id]?.name;
+    ?.publicData?.templates?.[id]?.name;
 };
 
 const getServiceProvider = (uuid) => {
