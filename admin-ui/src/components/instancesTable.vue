@@ -122,16 +122,14 @@
         {{
           getShortName(
             item.billingPlan?.products?.[item.product]?.title || item.product,
-          )
+          ) || "-"
         }}
       </router-link>
       <span v-else>
         {{
           getShortName(
-            item.billingPlan?.products?.[item.product]?.title ||
-              item.product ||
-              "-",
-          )
+            item.billingPlan?.products?.[item.product]?.title || item.product,
+          ) || "-"
         }}
       </span>
     </template>
