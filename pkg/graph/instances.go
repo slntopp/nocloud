@@ -846,7 +846,7 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 			}
 			if addon.Action != nil && addon.Action.GetPlaybook() != "" {
 				c := pb.Context{
-					Instance: inst.GetUuid(),
+					Instance: uuid,
 					Sp:       sp,
 					Event:    "START",
 					Addon:    &a,
@@ -1032,7 +1032,7 @@ func (ctrl *instancesController) UpdateWithPatch(ctx context.Context, _ string, 
 			}
 			if addon.Action != nil && addon.Action.GetPlaybook() != "" {
 				c := pb.Context{
-					Instance: inst.GetUuid(),
+					Instance: uuid,
 					Sp:       sp,
 					Event:    "START",
 					Addon:    &a,

@@ -162,6 +162,9 @@
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field dense style="width: 200px" v-model="item.name" />
+          </template>
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value) }}
           </template>
