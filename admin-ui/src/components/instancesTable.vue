@@ -201,7 +201,6 @@
 import nocloudTable from "@/components/table.vue";
 import {
   convertDateToTimeZone,
-  debounce,
   formatDateToTimestamp,
   formatPrice,
   formatSecondsToDate,
@@ -229,6 +228,7 @@ const props = defineProps({
   showSelect: { type: Boolean, default: true },
   openInNewTab: { type: Boolean, default: false },
   noSearch: { type: Boolean, default: false },
+  showDeleted: { type: Boolean, default: undefined },
   customFilter: { type: Object, default: () => {} },
 });
 const { value, refetch, showSelect, openInNewTab, customFilter } =
@@ -437,10 +437,17 @@ const listOptions = computed(() => {
     filters[key] = value;
   }
 
+  if (props.noSearch && props.showDeleted !== undefined) {
+    delete filters["state.state"];
+    filters["state.state"] = props.showDeleted
+      ? [0, 1, 2, 3, 4, 5, 6, 7, 8]
+      : [0, 1, 2, 3, 4, 6, 7, 8];
+  }
+
   return {
     filters: filters,
     page: page.value,
-    limit: options.value.itemsPerPage,
+    limit: options.value.itemsPerPage || 15,
     field: options.value.sortBy?.[0],
     sort:
       options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
@@ -577,17 +584,56 @@ const setOptions = (newOptions) => {
   }
 };
 
+const isShowDeletedFetch = ref(false);
+let fetchDebounceTimer = null;
+
+const scheduleFetch = () => {
+  if (fetchDebounceTimer) {
+    clearTimeout(fetchDebounceTimer);
+  }
+  fetchDebounceTimer = setTimeout(() => {
+    fetchDebounceTimer = null;
+    if (isShowDeletedFetch.value) {
+      return;
+    }
+    fetchInstances();
+  }, 300);
+};
+
 const fetchInstances = async () => {
   fetchError.value = "";
+  const showDeletedAtStart = props.showDeleted;
   try {
     if (!props.noSearch && !isUniqueFetched.value) {
       fetchUnique();
     }
 
-    console.log(listOptions.value);
     await store.dispatch("instances/fetch", listOptions.value);
+
+    if (
+      props.noSearch &&
+      props.showDeleted !== undefined &&
+      props.showDeleted !== showDeletedAtStart
+    ) {
+      return;
+    }
   } catch (e) {
     fetchError.value = e.message;
+  }
+};
+
+const fetchForShowDeletedToggle = async () => {
+  if (fetchDebounceTimer) {
+    clearTimeout(fetchDebounceTimer);
+    fetchDebounceTimer = null;
+  }
+
+  page.value = 1;
+  isShowDeletedFetch.value = true;
+  try {
+    await fetchInstances();
+  } finally {
+    isShowDeletedFetch.value = false;
   }
 };
 
@@ -606,7 +652,7 @@ const fetchUnique = async () => {
   }
 };
 
-const fetchInstancesDebounce = debounce(fetchInstances, 300);
+const fetchInstancesDebounce = scheduleFetch;
 
 const getPeriod = (instance) => {
   if (isInstancePayg(instance)) {
@@ -706,8 +752,14 @@ const updateEditValues = async (values) => {
 };
 
 if (props.noSearch) {
-  watch(customFilter, fetchInstancesDebounce, { deep: true });
-  watch([options, refetch], fetchInstancesDebounce);
+  watch(customFilter, scheduleFetch, { deep: true });
+  watch([options, refetch], () => {
+    if (isShowDeletedFetch.value) {
+      return;
+    }
+    scheduleFetch();
+  });
+  watch(() => props.showDeleted, fetchForShowDeletedToggle);
 } else {
   watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
   watch([options, refetch, searchParam], fetchInstancesDebounce);
