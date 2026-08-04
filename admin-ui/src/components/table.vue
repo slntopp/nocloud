@@ -564,15 +564,6 @@ export default {
       if (this.tableName) {
         this.saveSortBy(options);
       }
-      if (this.tableName === "account-instances-table") {
-        console.log("[nocloud-table] update:options", this.tableName, {
-          page: options.page,
-          itemsPerPage: options.itemsPerPage,
-          sortBy: [...(options.sortBy || [])],
-          sortDesc: [...(options.sortDesc || [])],
-        });
-        console.trace("[nocloud-table] update:options caller");
-      }
       this.$emit("update:options", options);
     },
     saveSortBy(options) {

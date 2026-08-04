@@ -101,23 +101,39 @@
 
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
       <router-link
+        v-if="item.billingPlan?.uuid"
         :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
       >
         {{ getShortName(value) }}
       </router-link>
+      <span v-else>{{ getShortName(value) || "-" }}</span>
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
       <router-link
+        v-if="item.billingPlan?.uuid"
         :to="{
           name: 'Plan',
           params: {
-            planId: item.billingPlan?.uuid,
+            planId: item.billingPlan.uuid,
           },
         }"
       >
-        {{ getShortName(item.billingPlan.products[item.product]?.title) }}
+        {{
+          getShortName(
+            item.billingPlan?.products?.[item.product]?.title || item.product,
+          )
+        }}
       </router-link>
+      <span v-else>
+        {{
+          getShortName(
+            item.billingPlan?.products?.[item.product]?.title ||
+              item.product ||
+              "-",
+          )
+        }}
+      </span>
     </template>
 
     <template v-slot:[`item.email`]="{ item }">
@@ -194,6 +210,7 @@
 import nocloudTable from "@/components/table.vue";
 import {
   convertDateToTimeZone,
+  debounce,
   formatDateToTimestamp,
   formatPrice,
   formatSecondsToDate,
@@ -221,7 +238,6 @@ const props = defineProps({
   showSelect: { type: Boolean, default: true },
   openInNewTab: { type: Boolean, default: false },
   noSearch: { type: Boolean, default: false },
-  showDeleted: { type: Boolean, default: undefined },
   customFilter: { type: Object, default: () => {} },
 });
 const { value, refetch, showSelect, openInNewTab, customFilter } =
@@ -427,13 +443,6 @@ const listOptions = computed(() => {
     filters[key] = value;
   }
 
-  if (props.noSearch && props.showDeleted !== undefined) {
-    delete filters["state.state"];
-    filters["state.state"] = props.showDeleted
-      ? [0, 1, 2, 3, 4, 5, 6, 7, 8]
-      : [0, 1, 2, 3, 4, 6, 7, 8];
-  }
-
   return {
     filters: filters,
     page: page.value,
@@ -568,89 +577,23 @@ const setOptions = (newOptions) => {
     }
   }
 
-  const prev = JSON.stringify(options.value);
-  const next = JSON.stringify(newOptions);
   page.value = newOptions.page;
-  if (prev !== next) {
-    console.log("[instancesTable] setOptions CHANGED", {
-      prev: JSON.parse(prev || "{}"),
-      next: JSON.parse(next),
-      page: newOptions.page,
-    });
-    console.trace("[instancesTable] setOptions caller");
+  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
-  } else {
-    console.log("[instancesTable] setOptions same (ignored)");
   }
 };
 
-let fetchDebounceTimer = null;
-let fetchInFlight = false;
-let pendingFetch = false;
-
-const scheduleFetch = (reason = "scheduleFetch") => {
-  console.log("[instancesTable] scheduleFetch", reason);
-  console.trace("[instancesTable] scheduleFetch caller");
-  if (fetchDebounceTimer) {
-    clearTimeout(fetchDebounceTimer);
-  }
-  fetchDebounceTimer = setTimeout(() => {
-    fetchDebounceTimer = null;
-    fetchInstances(reason + "→timer");
-  }, 300);
-};
-
-const fetchInstances = async (reason = "fetchInstances") => {
-  if (fetchInFlight) {
-    pendingFetch = true;
-    console.log("[instancesTable] fetch coalesced (in flight)", {
-      reason,
-      pendingFetch,
-      listOptions: JSON.parse(JSON.stringify(listOptions.value)),
-    });
-    return;
-  }
-
-  fetchInFlight = true;
+const fetchInstances = async () => {
+  fetchError.value = "";
   try {
-    do {
-      pendingFetch = false;
-      fetchError.value = "";
-      console.log("[instancesTable] fetchInstances RUN", {
-        reason,
-        showDeleted: props.showDeleted,
-        listOptions: JSON.parse(JSON.stringify(listOptions.value)),
-      });
-      console.trace("[instancesTable] fetchInstances caller");
-      try {
-        if (!props.noSearch && !isUniqueFetched.value) {
-          fetchUnique();
-        }
-        await store.dispatch("instances/fetch", listOptions.value);
-      } catch (e) {
-        fetchError.value = e.message;
-      }
-    } while (pendingFetch);
-  } finally {
-    fetchInFlight = false;
-    console.log("[instancesTable] fetchInstances DONE", {
-      reason,
-      storeLoading: store.getters["instances/isLoading"],
-      storeTotal: store.getters["instances/total"],
-      storeLen: store.getters["instances/all"].length,
-    });
-  }
-};
+    if (!props.noSearch && !isUniqueFetched.value) {
+      fetchUnique();
+    }
 
-const fetchForShowDeletedToggle = () => {
-  console.log("[instancesTable] showDeleted toggle", props.showDeleted);
-  console.trace("[instancesTable] showDeleted watcher");
-  if (fetchDebounceTimer) {
-    clearTimeout(fetchDebounceTimer);
-    fetchDebounceTimer = null;
+    await store.dispatch("instances/fetch", listOptions.value);
+  } catch (e) {
+    fetchError.value = e.message;
   }
-  page.value = 1;
-  fetchInstances("showDeleted-toggle");
 };
 
 const fetchUnique = async () => {
@@ -667,6 +610,8 @@ const fetchUnique = async () => {
     isUniqueFetched.value = false;
   }
 };
+
+const fetchInstancesDebounce = debounce(fetchInstances, 300);
 
 const getPeriod = (instance) => {
   if (isInstancePayg(instance)) {
@@ -765,23 +710,12 @@ const updateEditValues = async (values) => {
   }
 };
 
-if (props.noSearch) {
-  watch(
-    customFilter,
-    () => scheduleFetch("watch:customFilter"),
-    { deep: true },
-  );
-  watch([options, refetch], () => scheduleFetch("watch:options|refetch"));
-  watch(() => props.showDeleted, fetchForShowDeletedToggle);
+watch(customFilter, fetchInstancesDebounce, { deep: true });
+if (!props.noSearch) {
+  watch(filter, fetchInstancesDebounce, { deep: true });
+  watch([options, refetch, searchParam], fetchInstancesDebounce);
 } else {
-  watch(
-    [filter, customFilter],
-    () => scheduleFetch("watch:filter|customFilter"),
-    { deep: true },
-  );
-  watch([options, refetch, searchParam], () =>
-    scheduleFetch("watch:options|refetch|search"),
-  );
+  watch([options, refetch], fetchInstancesDebounce);
 }
 
 watch(instances, () => {

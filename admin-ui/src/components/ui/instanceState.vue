@@ -29,7 +29,7 @@ const state = computed(() => {
 });
 
 const isDetached = computed(() => {
-  return template.value?.status.toLowerCase() === "detached";
+  return template.value?.status?.toLowerCase() === "detached";
 });
 
 const isFreezed = computed(() => {
