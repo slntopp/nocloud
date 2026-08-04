@@ -276,6 +276,7 @@ const headers = ref([
 const addons = ref([]);
 const addonsHeaders = ref([
   { text: "Addon", value: "name" },
+  { text: "API title", value: "apiName" },
   {
     text: "Payment",
     value: "duration",
@@ -403,6 +404,7 @@ const changePlan = async (plan) => {
           },
           key: addonkey,
           type: "addon",
+          apiName: addon.apiName,
         },
       };
     }
@@ -642,7 +644,8 @@ const changeAddons = ({ backup, disk, snapshot, storage = [] }) => {
           result.push({
             price: { value: newPrice },
             duration,
-            name: productName,
+            name: realAddon.name || productName,
+            apiName: productName,
             value: realAddon.value || newPrice,
             public: !!realAddon.public,
             uuid: realAddon.uuid,
@@ -891,6 +894,7 @@ const initializeData = async () => {
           price: { value: basePrices[period] },
           value: addon.periods[period],
           name: addon.title,
+          apiName: addon.meta?.apiName,
           public: !!addon.public,
           id,
           uuid: addon.uuid,

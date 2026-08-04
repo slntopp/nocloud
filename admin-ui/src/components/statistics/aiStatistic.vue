@@ -28,14 +28,16 @@
     >
       <template v-slot:content>
         <default-chart
-          ref="chartRef"
           description="AI statistics"
           :type="type"
           :series="series"
           :categories="categories"
           :summary="summary"
-          :options="chartOptions"
           :stacked="fields !== 'revenue'"
+          :value-formatter="valueFormatter"
+          :tooltip-formatter="tooltipFormatter"
+          :legend-formatter="fields !== 'revenue' ? legendFormatter : null"
+          :on-point-click="onColumnClick"
         />
       </template>
 
@@ -191,29 +193,17 @@ import { formatToYYMMDD } from "@/functions";
 import api from "@/api";
 import router from "../../router";
 import useCurrency from "@/hooks/useCurrency";
+import {
+  statisticPeriodProps,
+  statisticPeriodEmits,
+} from "@/hooks/useStatisticChart";
 
 const store = useStore();
 
-const props = defineProps({
-  period: { type: Array, default: () => [] },
-  periodType: { type: String, default: "month" },
-  type: { type: String, default: "bar" },
-  periods: { type: Object, default: () => ({ first: [], second: [] }) },
-  periodOffset: { type: Number, default: 0 },
-  periodsFirstOffset: { type: Number, default: 0 },
-  periodsSecondOffset: { type: Number, default: -1 },
-});
+const props = defineProps(statisticPeriodProps);
 const { period, periodType, periods, type } = toRefs(props);
 
-const emit = defineEmits([
-  "update:period",
-  "update:periods",
-  "update:period-type",
-  "update:type",
-  "update:period-offset",
-  "update:periods-first-offset",
-  "update:periods-second-offset",
-]);
+const emit = defineEmits(statisticPeriodEmits);
 
 const durationOptions = [{ label: "Month", value: "month" }];
 
@@ -258,8 +248,6 @@ const aiConfig = ref({ models: [] });
 
 const isSelectedPointOpen = ref(false);
 const selectedDataPoints = ref([]);
-
-const chartRef = ref(null);
 
 const processedDataCache = new Map();
 const CACHE_MAX_SIZE = 3;
@@ -335,62 +323,57 @@ const currentModels = computed(() => {
   );
 });
 
-const chartOptions = computed(() => {
-  const options = {
-    tooltip: {
-      enabled: true,
-      shared: true,
-      intersect: false,
-      theme: store.getters["app/theme"],
-      custom: function ({ dataPointIndex, w }) {
-        const defaultCurrencyCode = defaultCurrency.value.code;
-        const fullAccountsMap = fullAccounts.value;
-        const categories = w.globals.labels;
-        const category = categories[dataPointIndex];
+const valueFormatter = (val) => val?.toFixed?.(2) ?? val;
 
-        let data = JSON.parse(JSON.stringify(series.value));
+const legendFormatter = (name) => {
+  const total = summary.value[name];
+  const label =
+    fields.value === "accounts" ? fullAccounts.value.get(name)?.label || name : name;
+  return `${label} ${total} ${defaultCurrency.value.code}`;
+};
 
-        data = data
-          .map((serie, index) => ({ ...serie, index }))
-          .sort((a, b) => {
-            const valA = a.data?.[dataPointIndex] || 0;
-            const valB = b.data?.[dataPointIndex] || 0;
-            return valB - valA;
-          })
-          .slice(0, 5);
+const tooltipFormatter = (params) => {
+  const list = Array.isArray(params) ? params : [params];
+  const dataPointIndex = list[0]?.dataIndex;
+  const category = list[0]?.axisValueLabel ?? categories.value[dataPointIndex];
 
-        let html = `<div class="apexcharts-tooltip-title">Date: ${category}</div>`;
-        for (let i = 0; i < data.length; i++) {
-          const val = data[i].data?.[dataPointIndex];
-          if (val == null) continue;
+  const defaultCurrencyCode = defaultCurrency.value.code;
+  const fullAccountsMap = fullAccounts.value;
 
-          let seriesName = w.globals.seriesNames[data[i].index];
+  const rows = series.value
+    .map((serie, index) => ({ ...serie, index }))
+    .sort((a, b) => (b.data?.[dataPointIndex] || 0) - (a.data?.[dataPointIndex] || 0))
+    .slice(0, 5);
 
-          const color = w.globals.colors[data[i].index];
+  let html = `<div style="font-weight:600;margin-bottom:4px;">Date: ${category}</div>`;
 
-          const meta = data[i]?.meta?.[dataPointIndex] || {};
+  for (const row of rows) {
+    const val = row.data?.[dataPointIndex];
+    if (val == null) continue;
 
-          const { accounts = [], agents = [], models = [] } = meta;
+    const color = list.find((p) => p.seriesIndex === row.index)?.color;
+    const meta = row.meta?.[dataPointIndex] || {};
+    const { accounts = [], agents = [], models = [] } = meta;
 
-          let accountLinks = accounts
-            .map((id) => {
-              const label = fullAccountsMap.get(id)?.label || id;
-              return `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`;
-            })
-            .join(", ");
+    let seriesName = row.name;
+    let accountLinks = accounts
+      .map((id) => {
+        const label = fullAccountsMap.get(id)?.label || id;
+        return `<a href="${window.location.origin}/admin/accounts/${id}">${label}</a>`;
+      })
+      .join(", ");
 
-          const agentsList = agents.join(", ");
-          let modelsList = models.join(", ");
+    const agentsList = agents.join(", ");
+    let modelsList = models.join(", ");
 
-          if (fields.value === "accounts") {
-            seriesName =
-              fullAccounts.value.get(seriesName)?.label || seriesName;
-            accountLinks = null;
-          } else if (fields.value === "models") {
-            modelsList = null;
-          }
+    if (fields.value === "accounts") {
+      seriesName = fullAccounts.value.get(seriesName)?.label || seriesName;
+      accountLinks = null;
+    } else if (fields.value === "models") {
+      modelsList = null;
+    }
 
-          html += `
+    html += `
         <div style="margin: 6px 0;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span style="background:${color};width:10px;height:10px;border-radius:50%;display:inline-block;"></span>
@@ -403,51 +386,10 @@ const chartOptions = computed(() => {
           </div>
         </div>
       `;
-        }
-
-        return html;
-      },
-      style: {
-        fontSize: "14px",
-        fontFamily: "Inter, sans-serif",
-      },
-    },
-
-    yaxis: {
-      labels: {
-        formatter: function (val) {
-          return val?.toFixed(2);
-        },
-      },
-    },
-    chart: {
-      events: {
-        dataPointSelection: onColumnClick,
-      },
-      animations: {
-        enabled: false,
-      },
-    },
-  };
-
-  if (fields.value !== "revenue") {
-    options.legend = {
-      formatter: (val) => {
-        const total = summary.value[val];
-
-        if (fields.value === "accounts") {
-          return `${fullAccounts.value.get(val)?.label || val} ${total} ${
-            defaultCurrency.value.code
-          }`;
-        }
-
-        return `${val} ${total} ${defaultCurrency.value.code}`;
-      },
-    };
   }
 
-  return options;
-});
+  return html;
+};
 
 async function fetchData() {
   isDataLoading.value = true;
@@ -494,8 +436,7 @@ function getValue(value) {
   return Number(num.toFixed(precision));
 }
 
-const onColumnClick = (...args) => {
-  const { dataPointIndex } = args[2];
+const onColumnClick = ({ dataIndex: dataPointIndex }) => {
   const points = series.value
     .map((serie) => ({
       series: serie.name,
@@ -614,14 +555,6 @@ watch([chartData, fields], () => {
     series.value = cached.series;
     categories.value = cached.categories;
     summary.value = cached.summary;
-
-    if (chartRef.value) {
-      chartRef.value.updateChart(
-        cached.series,
-        cached.categories,
-        cached.summary,
-      );
-    }
     return;
   }
 
@@ -782,14 +715,6 @@ watch([chartData, fields], () => {
     categories: newCategories.map((c) => c.toString().split("T")[0]),
     summary: newSummary,
   });
-
-  if (chartRef.value) {
-    chartRef.value.updateChart(
-      newSeries,
-      newCategories.map((c) => c.toString().split("T")[0]),
-      newSummary,
-    );
-  }
 });
 
 watch(

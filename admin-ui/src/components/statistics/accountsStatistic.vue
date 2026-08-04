@@ -38,33 +38,18 @@
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
 import { ref, toRefs, watch } from "vue";
-import { useStore } from "@/store";
-import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
-import { formatToYYMMDD } from "@/functions";
+import {
+  statisticPeriodProps,
+  statisticPeriodEmits,
+  useStatisticData,
+  buildComparablePeriodSeries,
+} from "@/hooks/useStatisticChart";
 
-const store = useStore();
-
-const props = defineProps({
-  period: { type: Array, default: () => [] },
-  periodType: { type: String, default: "month" },
-  type: { type: String, default: "bar" },
-  periods: { type: Object, default: () => ({ first: [], second: [] }) },
-  periodOffset: { type: Number, default: 0 },
-  periodsFirstOffset: { type: Number, default: 0 },
-  periodsSecondOffset: { type: Number, default: -1 },
-});
+const props = defineProps(statisticPeriodProps);
 const { period, periodType, periods, type } = toRefs(props);
 
-const emit = defineEmits([
-  "update:period",
-  "update:periods",
-  "update:period-type",
-  "update:type",
-  "update:period-offset",
-  "update:periods-first-offset",
-  "update:periods-second-offset",
-]);
+const emit = defineEmits(statisticPeriodEmits);
 
 const comparable = ref(true);
 const allFields = ref([
@@ -77,36 +62,13 @@ const fields = ref("created");
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
-const chartData = ref();
 
-const isDataLoading = ref(false);
-
-async function fetchData() {
-  isDataLoading.value = true;
-
-  try {
-    chartData.value = await store.dispatch("statistic/getForChart", {
-      entity: "accounts",
-      periodType: periodType.value,
-      periods: !comparable.value
-        ? [period.value]
-        : [periods.value.first, periods.value.second],
-    });
-  } finally {
-    isDataLoading.value = false;
-  }
-}
-
-const fetchDataDebounced = debounce(fetchData, 1000);
-
-debounce(fetchData, 100)();
-
-watch([period, comparable, periods], () => {
-  if (!chartData.value) {
-    fetchData();
-  } else {
-    fetchDataDebounced();
-  }
+const { chartData, isDataLoading } = useStatisticData({
+  entity: "accounts",
+  periodType,
+  period,
+  periods,
+  comparable,
 });
 
 watch(comparable, () => {
@@ -149,39 +111,14 @@ watch([chartData, fields], () => {
       summary.value[serie.name] = tempData[0].summary?.[serie.id] || 0;
     });
   } else {
-    Object.keys(periods.value).forEach((key) => {
-      newSeries.push({
-        name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
-          periods.value[key][1]
-        )}`,
-        data: [],
-      });
-    });
-
-    for (
-      let index = 0;
-      index <
-      Math.max(
-        tempData[0]?.timeseries?.length || 0,
-        tempData[1]?.timeseries?.length || 0
-      );
-      index++
-    ) {
-      const first = tempData[0]?.timeseries?.[index];
-      const second = tempData[1]?.timeseries?.[index];
-
-      if (!newCategories.includes(index + 1)) {
-        newCategories.push(index + 1);
-      }
-
-      newSeries[0].data.push(first?.[fields.value] || 0);
-      newSeries[1].data.push(second?.[fields.value] || 0);
-    }
-
-    newSeries.forEach((serie) => {
-      summary.value[serie.name] =
-        serie.data.reduce((acc, a) => acc + a, 0) || 0;
-    });
+    const cmp = buildComparablePeriodSeries(
+      tempData,
+      periods.value,
+      fields.value
+    );
+    newSeries.push(...cmp.series);
+    newCategories.push(...cmp.categories);
+    Object.assign(summary.value, cmp.summary);
   }
 
   series.value = newSeries;

@@ -30,6 +30,7 @@
         :series="series"
         :categories="categories"
         :summary="summary"
+        :value-formatter="getFormattedPrice"
       />
     </template>
 
@@ -49,30 +50,18 @@
 import StatisticItem from "@/components/statistics/statisticItem.vue";
 import { computed, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
-import { formatToYYMMDD } from "@/functions";
+import {
+  statisticPeriodProps,
+  statisticPeriodEmits,
+  useStatisticData,
+  buildComparablePeriodSeries,
+} from "@/hooks/useStatisticChart";
 
-const props = defineProps({
-  period: { type: Array, default: () => [] },
-  periodType: { type: String, default: "month" },
-  type: { type: String, default: "bar" },
-  periods: { type: Object, default: () => ({ first: [], second: [] }) },
-  periodOffset: { type: Number, default: 0 },
-  periodsFirstOffset: { type: Number, default: 0 },
-  periodsSecondOffset: { type: Number, default: -1 },
-});
+const props = defineProps(statisticPeriodProps);
 const { period, periodType, periods, type } = toRefs(props);
 
-const emit = defineEmits([
-  "update:period",
-  "update:periods",
-  "update:period-type",
-  "update:type",
-  "update:period-offset",
-  "update:periods-first-offset",
-  "update:periods-second-offset",
-]);
+const emit = defineEmits(statisticPeriodEmits);
 
 const store = useStore();
 
@@ -83,7 +72,6 @@ const allFields = ref([
   { label: "Total", value: "total" },
 ]);
 
-const data = ref({});
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
@@ -95,7 +83,14 @@ const seriesTypes = [
 ];
 
 const comparable = ref(true);
-const isDataLoading = ref(false);
+
+const { chartData: data, isDataLoading } = useStatisticData({
+  entity: "services_revenue",
+  periodType,
+  period,
+  periods,
+  comparable,
+});
 
 function switchFields(type, comparable) {
   if (type === "type") {
@@ -109,45 +104,17 @@ function switchFields(type, comparable) {
 
 function getPrice(c, id) {
   if (id === "total") {
-    return (c.revenue || 0) + (c.revenue_new || 0);
+    return (c?.revenue || 0) + (c?.revenue_new || 0);
   } else {
-    return c[id] || 0;
+    return c?.[id] || 0;
   }
 }
 
 function getFormattedPrice(price) {
-  return [price.toFixed(0), defaultCurrency.value.code].join("");
+  return [(price || 0).toFixed(0), defaultCurrency.value.code].join("");
 }
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
-
-async function fetchData() {
-  isDataLoading.value = true;
-
-  try {
-    data.value = await store.dispatch("statistic/getForChart", {
-      entity: "services_revenue",
-      periodType: periodType.value,
-      periods: !comparable.value
-        ? [period.value]
-        : [periods.value.first, periods.value.second],
-    });
-  } finally {
-    isDataLoading.value = false;
-  }
-}
-
-const fetchDataDebounced = debounce(fetchData, 1000);
-
-debounce(fetchData, 100)();
-
-watch([period, periods, comparable], () => {
-  if (!data.value) {
-    fetchData();
-  } else {
-    fetchDataDebounced();
-  }
-});
 
 watch(seriesType, (val) => {
   comparable.value = false;
@@ -187,17 +154,13 @@ watch([data, seriesType, fields], () => {
           index = newSeries.length - 1;
         }
 
-        newSeries[index].data.push(
-          getFormattedPrice(getPrice(ts, fields.value) || 0)
-        );
+        newSeries[index].data.push(getPrice(ts, fields.value));
       });
     });
 
     summary.value = Object.keys(tempData[0].summary || {}).reduce(
       (acc, key) => {
-        acc[key] = getFormattedPrice(
-          getPrice(tempData[0].summary[key], fields.value) || 0
-        );
+        acc[key] = getPrice(tempData[0].summary[key], fields.value);
         return acc;
       },
       {}
@@ -223,20 +186,16 @@ watch([data, seriesType, fields], () => {
 
       newSeries.forEach((series) => {
         series.data.push(
-          getFormattedPrice(
-            current.reduce((acc, c) => acc + getPrice(c, series.id), 0) || 0
-          )
+          current.reduce((acc, c) => acc + getPrice(c, series.id), 0)
         );
       });
     });
 
     summary.value = {};
     newSeries.forEach((serie) => {
-      summary.value[serie.name] = getFormattedPrice(
-        Object.keys(tempData[0].summary || {}).reduce(
-          (acc, key) => acc + getPrice(tempData[0].summary[key], serie.id),
-          0
-        ) || 0
+      summary.value[serie.name] = Object.keys(tempData[0].summary || {}).reduce(
+        (acc, key) => acc + getPrice(tempData[0].summary[key], serie.id),
+        0
       );
     });
   } else {
@@ -259,41 +218,10 @@ watch([data, seriesType, fields], () => {
       datas.push({ timeseries: timeseries });
     });
 
-    Object.keys(periods.value).forEach((key) => {
-      newSeries.push({
-        name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
-          periods.value[key][1]
-        )}`,
-        data: [],
-      });
-    });
-
-    for (
-      let index = 0;
-      index <
-      Math.max(
-        datas[0]?.timeseries?.length || 0,
-        datas[1]?.timeseries?.length || 0
-      );
-      index++
-    ) {
-      const first = datas[0]?.timeseries?.[index];
-      const second = datas[1]?.timeseries?.[index];
-
-      if (!newCategories.includes(index + 1)) {
-        newCategories.push(index + 1);
-      }
-
-      newSeries[0].data.push(first?.[fields.value] || 0);
-      newSeries[1].data.push(second?.[fields.value] || 0);
-    }
-
-    newSeries.forEach((serie) => {
-      summary.value[serie.name] = getFormattedPrice(
-        serie.data.reduce((acc, a) => acc + (a || 0), 0) || 0
-      );
-      serie.data = serie.data.map((v) => getFormattedPrice(v));
-    });
+    const cmp = buildComparablePeriodSeries(datas, periods.value, fields.value);
+    newSeries.push(...cmp.series);
+    newCategories.push(...cmp.categories);
+    summary.value = cmp.summary;
   }
 
   series.value = newSeries;
