@@ -765,7 +765,7 @@ export function getDatesPeriod(period = "day") {
 
 export function isInstancePayg(inst) {
   return (
-    (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") ||
+    (inst.type === "ione" && inst.billingPlan?.kind === "DYNAMIC") ||
     inst.type === "openai"
   );
 }

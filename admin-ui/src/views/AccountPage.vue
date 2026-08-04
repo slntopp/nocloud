@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import config from "@/config.js";
@@ -75,11 +75,6 @@ const accountTitle = computed(() => {
 
 const accountLoading = computed(() => {
   return store.getters["accounts/isLoading"];
-});
-
-watch(accountLoading, (v) => {
-  console.log("[AccountPage] accountLoading →", v);
-  console.trace("[AccountPage] accountLoading change");
 });
 
 const tabItems = computed(() => [
