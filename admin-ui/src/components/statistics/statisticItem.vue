@@ -1,17 +1,10 @@
 <template>
   <div class="chart_container">
     <div class="chart_options">
-      <div
-        class="d-flex"
-        :style="{
-          'max-width': '250px',
-          'margin-top': '10px',
-          'align-items': comparable ? 'start' : 'center',
-        }"
-      >
+      <div class="periods_block" :class="{ 'is-comparable': comparable }">
         <template v-if="!comparable">
           <span
-            class="period_title mr-2"
+            class="period_title"
             :style="`background-color: ${colors[0]};`"
           >
           </span>
@@ -98,58 +91,53 @@
         </div>
       </div>
 
-      <div class="d-flex alingn-center">
+      <div class="controls_block">
         <slot name="options" />
-        <div style="display: flex; flex-wrap: wrap">
-          <v-select
-            v-if="allFields.length"
-            hide-details
-            class="ml-2"
-            style="max-width: 150px"
-            label="Fields"
-            :multiple="fieldsMultiple"
-            :value="fields"
-            @input="emit('input:fields', $event)"
-            :items="allFields"
-            item-text="label"
-            item-value="value"
-          >
-            <template v-slot:selection="{ item, index }">
-              <span v-if="index === 0">{{ item.label }}</span>
-              <span v-if="index === 1" class="grey--text text-caption">
-                (+{{ fields?.length - 1 }} others)
-              </span>
-            </template>
-          </v-select>
-          <v-select
-            class="ml-2"
-            style="width: 150px"
-            :value="periodType"
-            @input="emit('input:period-type', $event)"
-            :items="durationOptions"
-            item-text="label"
-            hide-details
-            item-value="value"
-          />
-          <v-select
-            class="ml-2"
-            style="width: 75px"
-            :value="type"
-            @input="emit('input:type', $event)"
-            :items="typeOptions"
-            item-text="label"
-            hide-details
-            item-value="value"
-          />
-          <v-switch
-            v-if="periods && !notComparable"
-            class="ml-2 mr-2"
-            label="Comparison"
-            hide-details
-            :input-value="comparable"
-            @change="emit('input:comparable', $event)"
-          />
-        </div>
+        <v-select
+          v-if="allFields.length"
+          hide-details
+          class="control_field control_field--fields"
+          label="Fields"
+          :multiple="fieldsMultiple"
+          :value="fields"
+          @input="emit('input:fields', $event)"
+          :items="allFields"
+          item-text="label"
+          item-value="value"
+        >
+          <template v-slot:selection="{ item, index }">
+            <span v-if="index === 0">{{ item.label }}</span>
+            <span v-if="index === 1" class="grey--text text-caption">
+              (+{{ fields?.length - 1 }} others)
+            </span>
+          </template>
+        </v-select>
+        <v-select
+          class="control_field control_field--period-type"
+          :value="periodType"
+          @input="emit('input:period-type', $event)"
+          :items="durationOptions"
+          item-text="label"
+          hide-details
+          item-value="value"
+        />
+        <v-select
+          class="control_field control_field--chart-type"
+          :value="type"
+          @input="emit('input:type', $event)"
+          :items="typeOptions"
+          item-text="label"
+          hide-details
+          item-value="value"
+        />
+        <v-switch
+          v-if="periods && !notComparable"
+          class="control_field control_field--comparison"
+          label="Comparison"
+          hide-details
+          :input-value="comparable"
+          @change="emit('input:comparable', $event)"
+        />
       </div>
     </div>
     <div class="chart">
@@ -158,7 +146,7 @@
         v-else
         class="mx-auto pa-5"
         width="100%"
-        height="600"
+        height="70vh"
         type="image"
       ></v-skeleton-loader>
     </div>
@@ -369,8 +357,11 @@ watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
 }
 
 .chart_container {
-  margin: 0px 20px;
-  width: 90% !important;
+  margin: 0px auto;
+  width: 100%;
+  max-width: 1600px;
+  padding: 0 20px;
+  box-sizing: border-box;
 
   h3 {
     margin: 0px;
@@ -379,27 +370,112 @@ watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
   .chart_options {
     margin-bottom: 10px;
     display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 12px;
+
+    .periods_block {
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+      max-width: 100%;
+
+      &.is-comparable {
+        align-items: flex-start;
+      }
+    }
 
     .current_periods {
       display: flex;
       flex-direction: column;
+      min-width: 0;
     }
 
     .period_title {
       width: 50px;
       height: 20px;
+      flex-shrink: 0;
     }
 
     .current_duration {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
+
       .current_duration_info {
         font-size: 1rem;
         text-align: center;
         margin: 0px 10px;
+        white-space: nowrap;
       }
     }
+
+    .controls_block {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      justify-content: flex-end;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .control_field {
+      flex: 0 1 auto;
+      min-width: 90px;
+
+      &--fields {
+        max-width: 220px;
+        flex-basis: 180px;
+      }
+
+      &--period-type {
+        max-width: 170px;
+        flex-basis: 150px;
+      }
+
+      &--chart-type {
+        max-width: 110px;
+        flex-basis: 90px;
+      }
+
+      &--comparison {
+        flex-basis: auto;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  .chart {
+    width: 100%;
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 900px) {
+  .chart_container {
+    padding: 0 12px;
+
+    .chart_options {
+      flex-direction: column;
+      align-items: stretch;
+
+      .controls_block {
+        justify-content: flex-start;
+      }
+
+      .control_field {
+        flex-basis: 140px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .chart_container .chart_options .current_duration_info {
+    font-size: 0.85rem;
+    margin: 0 4px;
   }
 }
 </style>

@@ -26,7 +26,8 @@
         :series="series"
         :categories="categories"
         :summary="summary"
-        :options="chartOptions"
+        :legend-formatter="legendFormatter"
+        :tooltip-formatter="seriesType === 'users' ? tooltipFormatter : null"
       />
     </template>
 
@@ -44,41 +45,25 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { computed, ref, toRefs, watch } from "vue";
-import { useStore } from "@/store";
-import { debounce } from "@/functions";
+import { ref, toRefs, watch } from "vue";
 import api from "@/api";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
-import { formatToYYMMDD } from "@/functions";
+import {
+  statisticPeriodProps,
+  statisticPeriodEmits,
+  useStatisticData,
+  buildComparablePeriodSeries,
+} from "@/hooks/useStatisticChart";
 
-const store = useStore();
-
-const props = defineProps({
-  period: { type: Array, default: () => [] },
-  periodType: { type: String, default: "month" },
-  type: { type: String, default: "bar" },
-  periods: { type: Object, default: () => ({ first: [], second: [] }) },
-  periodOffset: { type: Number, default: 0 },
-  periodsFirstOffset: { type: Number, default: 0 },
-  periodsSecondOffset: { type: Number, default: -1 },
-});
+const props = defineProps(statisticPeriodProps);
 const { period, periodType, periods, type } = toRefs(props);
 
-const emit = defineEmits([
-  "update:period",
-  "update:periods",
-  "update:period-type",
-  "update:type",
-  "update:period-offset",
-  "update:periods-first-offset",
-  "update:periods-second-offset",
-]);
+const emit = defineEmits(statisticPeriodEmits);
 
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
 const accounts = ref({});
-const chartData = ref();
 const seriesType = ref("amount");
 const seriesTypes = [
   { label: "By users", value: "users" },
@@ -86,62 +71,36 @@ const seriesTypes = [
 ];
 const comparable = ref(true);
 
-const isDataLoading = ref(false);
-
-const chartOptions = computed(() => {
-  const result = {
-    legend: {
-      formatter: (val, opts) => {
-        const account = accounts.value[val] ?? { title: val };
-
-        return `${account.title} ${
-          summary.value[series.value[opts.seriesIndex]?.name]
-            ? summary.value[series.value[opts.seriesIndex]?.name]
-            : ""
-        }`;
-      },
-    },
-  };
-
-  if (seriesType.value === "users") {
-    result['tooltip'] = {
-      y: {
-        title: {
-          formatter: (seriesName) => accounts.value[seriesName]?.title,
-        },
-      },
-    };
-  }
-  return result;
+const { chartData, isDataLoading } = useStatisticData({
+  entity: "ticket-responses",
+  periodType,
+  period,
+  periods,
+  comparable,
 });
 
-async function fetchData() {
-  isDataLoading.value = true;
+const legendFormatter = (name) => {
+  const account = accounts.value[name] ?? { title: name };
+  const total = summary.value[name];
+  return `${account.title}${total ? `   ${total}` : ""}`;
+};
 
-  try {
-    chartData.value = await store.dispatch("statistic/getForChart", {
-      entity: "ticket-responses",
-      periodType: periodType.value,
-      periods: !comparable.value
-        ? [period.value]
-        : [periods.value.first, periods.value.second],
-    });
-  } finally {
-    isDataLoading.value = false;
-  }
-}
+const tooltipFormatter = (params) => {
+  const list = Array.isArray(params) ? params : [params];
+  const header = list[0]?.axisValueLabel ?? list[0]?.name ?? "";
 
-const fetchDataDebounced = debounce(fetchData, 1000);
+  const rows = list
+    .filter((p) => p.value != null && p.value !== "")
+    .map(
+      (p) =>
+        `<div style="display:flex;align-items:center;gap:6px;margin:2px 0;">` +
+        `<span style="width:8px;height:8px;border-radius:50%;background:${p.color};display:inline-block;"></span>` +
+        `<span>${accounts.value[p.seriesName]?.title ?? p.seriesName}: <b>${p.value}</b></span></div>`
+    )
+    .join("");
 
-debounce(fetchData, 100)();
-
-watch([period, periods, comparable], () => {
-  if (!chartData.value) {
-    fetchData();
-  } else {
-    fetchDataDebounced();
-  }
-});
+  return `<div style="font-weight:600;margin-bottom:4px;">${header}</div>${rows}`;
+};
 
 watch(seriesType, () => {
   comparable.value = false;
@@ -215,39 +174,14 @@ watch([chartData, seriesType], async ([value]) => {
     });
 
     if (comparable.value) {
-      Object.keys(periods.value).forEach((key) => {
-        newSeries.push({
-          name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
-            periods.value[key][1]
-          )}`,
-          data: [],
-        });
-      });
-
-      for (
-        let index = 0;
-        index <
-        Math.max(
-          datas[0]?.timeseries?.length || 0,
-          datas[1]?.timeseries?.length || 0
-        );
-        index++
-      ) {
-        const first = datas[0]?.timeseries?.[index];
-        const second = datas[1]?.timeseries?.[index];
-
-        if (!newCategories.includes(index + 1)) {
-          newCategories.push(index + 1);
-        }
-
-        newSeries[0].data.push(first?.responses || 0);
-        newSeries[1].data.push(second?.responses || 0);
-      }
-
-      newSeries.forEach((serie) => {
-        summary.value[serie.name] =
-          serie.data.reduce((acc, a) => acc + a, 0) || 0;
-      });
+      const cmp = buildComparablePeriodSeries(
+        datas,
+        periods.value,
+        "responses"
+      );
+      newSeries.push(...cmp.series);
+      newCategories.push(...cmp.categories);
+      summary.value = cmp.summary;
     } else {
       newSeries.push({
         name: "Responses",
