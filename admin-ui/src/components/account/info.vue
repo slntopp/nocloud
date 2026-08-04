@@ -200,8 +200,10 @@
       table-name="account-instances-table"
       no-search
       :show-select="false"
-      :show-deleted="showDeletedInstances"
-      :custom-filter="instancesCustomFilter"
+      :custom-filter="{
+        account: [uuid],
+        'state.state': !!showDeletedInstances ? [] : [0, 1, 2, 3, 4, 6, 7, 8],
+      }"
     />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
@@ -301,28 +303,11 @@ const keys = ref([]);
 const selected = ref([]);
 const isVisible = ref(false);
 const isEditLoading = ref(false);
+const showDeletedInstances = ref(false);
 const statusChangeValue = ref("");
 const viewport = ref(window.innerWidth);
 const accountGroup = ref(null);
 const phoneVerified = ref(!!account.value.isPhoneVerified);
-const showDeletedStorageKey = () =>
-  `account-show-deleted:${account.value.uuid}`;
-const showDeletedInstances = ref(
-  sessionStorage.getItem(showDeletedStorageKey()) === "1",
-);
-watch(showDeletedInstances, (value) => {
-  sessionStorage.setItem(showDeletedStorageKey(), value ? "1" : "0");
-});
-watch(
-  () => account.value.uuid,
-  () => {
-    showDeletedInstances.value =
-      sessionStorage.getItem(showDeletedStorageKey()) === "1";
-  },
-);
-const instancesCustomFilter = computed(() => ({
-  account: [account.value.uuid],
-}));
 
 const onPhoneVerifiedChange = async (val) => {
   try {
