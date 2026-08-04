@@ -574,8 +574,9 @@ const setOptions = (newOptions) => {
   }
 };
 
-const isShowDeletedFetch = ref(false);
 let fetchDebounceTimer = null;
+let fetchInFlight = false;
+let pendingFetch = false;
 
 const scheduleFetch = () => {
   if (fetchDebounceTimer) {
@@ -583,48 +584,47 @@ const scheduleFetch = () => {
   }
   fetchDebounceTimer = setTimeout(() => {
     fetchDebounceTimer = null;
-    if (isShowDeletedFetch.value) {
-      return;
-    }
     fetchInstances();
   }, 300);
 };
 
 const fetchInstances = async () => {
-  fetchError.value = "";
-  const showDeletedAtStart = props.showDeleted;
+  if (fetchInFlight) {
+    pendingFetch = true;
+    return;
+  }
+
+  fetchInFlight = true;
   try {
-    if (!props.noSearch && !isUniqueFetched.value) {
-      fetchUnique();
-    }
-
-    await store.dispatch("instances/fetch", listOptions.value);
-
-    if (
-      props.noSearch &&
-      props.showDeleted !== undefined &&
-      props.showDeleted !== showDeletedAtStart
-    ) {
-      return;
-    }
-  } catch (e) {
-    fetchError.value = e.message;
+    let requested;
+    do {
+      pendingFetch = false;
+      requested = JSON.parse(JSON.stringify(listOptions.value));
+      fetchError.value = "";
+      try {
+        if (!props.noSearch && !isUniqueFetched.value) {
+          fetchUnique();
+        }
+        await store.dispatch("instances/fetch", requested);
+      } catch (e) {
+        fetchError.value = e.message;
+      }
+    } while (
+      pendingFetch ||
+      JSON.stringify(listOptions.value) !== JSON.stringify(requested)
+    );
+  } finally {
+    fetchInFlight = false;
   }
 };
 
-const fetchForShowDeletedToggle = async () => {
+const fetchForShowDeletedToggle = () => {
   if (fetchDebounceTimer) {
     clearTimeout(fetchDebounceTimer);
     fetchDebounceTimer = null;
   }
-
   page.value = 1;
-  isShowDeletedFetch.value = true;
-  try {
-    await fetchInstances();
-  } finally {
-    isShowDeletedFetch.value = false;
-  }
+  fetchInstances();
 };
 
 const fetchUnique = async () => {
@@ -743,12 +743,7 @@ const updateEditValues = async (values) => {
 
 if (props.noSearch) {
   watch(customFilter, scheduleFetch, { deep: true });
-  watch([options, refetch], () => {
-    if (isShowDeletedFetch.value) {
-      return;
-    }
-    scheduleFetch();
-  });
+  watch([options, refetch], scheduleFetch);
   watch(() => props.showDeleted, fetchForShowDeletedToggle);
 } else {
   watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
