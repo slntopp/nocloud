@@ -11,7 +11,7 @@ export default {
     loading: false,
     total: 0,
 
-    currentRequestId: null,
+    fetchSeq: 0,
   },
   mutations: {
     setInstances(state, instances) {
@@ -35,8 +35,7 @@ export default {
   },
   actions: {
     async fetch({ commit, state, getters }, params) {
-      const requestId = Date.now();
-      state.currentRequestId = requestId;
+      const requestId = ++state.fetchSeq;
 
       commit("setLoading", true);
       try {
@@ -44,7 +43,7 @@ export default {
           ListInstancesRequest.fromJson(params),
         );
 
-        if (requestId !== state.currentRequestId) return;
+        if (requestId !== state.fetchSeq) return;
 
         const instances = response.pool.map((i) => ({
           ...i,
@@ -56,7 +55,7 @@ export default {
         commit("setTotal", Number(response.count));
         return instances;
       } finally {
-        if (requestId === state.currentRequestId) {
+        if (requestId === state.fetchSeq) {
           commit("setLoading", false);
         }
       }
