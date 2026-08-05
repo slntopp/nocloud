@@ -1013,6 +1013,12 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	if request.Data != nil {
 		m := request.Data.AsMap()
 		applyTaxRate(m)
+		normalizeDateCreate(m, true)
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	} else {
+		m := map[string]any{}
+		normalizeDateCreate(m, true)
 		structMap, _ := structpb.NewStruct(m)
 		request.Data = structMap
 	}
@@ -1148,6 +1154,12 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 	if request.Data != nil {
 		m := request.Data.AsMap()
 		applyTaxRate(m)
+		normalizeDateCreate(m, true)
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	} else {
+		m := map[string]any{}
+		normalizeDateCreate(m, true)
 		structMap, _ := structpb.NewStruct(m)
 		request.Data = structMap
 	}
@@ -1277,6 +1289,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 			log.Debug("Merging data")
 			mergedData := MergeMaps(acc.Data.AsMap(), requestData)
 			applyTaxRate(mergedData)
+			normalizeDateCreate(mergedData, false)
 			patch["data"] = mergedData
 		}
 	}

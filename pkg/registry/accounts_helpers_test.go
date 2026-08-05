@@ -55,3 +55,23 @@ func TestMergeMaps(t *testing.T) {
 		t.Fatalf("value was updated incorrectly, expected length to be 2, got: %d", l)
 	}
 }
+
+func TestNormalizeDateCreate(t *testing.T) {
+	m := map[string]any{"date_create": "1704067200"}
+	normalizeDateCreate(m, false)
+	if m["date_create"] != float64(1704067200) {
+		t.Fatalf("expected numeric date_create, got %#v", m["date_create"])
+	}
+
+	empty := map[string]any{}
+	normalizeDateCreate(empty, false)
+	if _, ok := empty["date_create"]; ok {
+		t.Fatal("update path must not invent date_create")
+	}
+
+	create := map[string]any{}
+	normalizeDateCreate(create, true)
+	if _, ok := create["date_create"].(float64); !ok {
+		t.Fatalf("create path must set date_create number, got %#v", create["date_create"])
+	}
+}
