@@ -523,7 +523,11 @@ func listAccounts[T Accessible](
 	var noGroup bool
 
 	if field != "" && sort != "" {
-		insert += fmt.Sprintf("SORT node.%s %s\n", field, sort)
+		if field == "data.date_create" {
+			insert += fmt.Sprintf("SORT TO_NUMBER(node.data.date_create) %s\n", sort)
+		} else {
+			insert += fmt.Sprintf("SORT node.%s %s\n", field, sort)
+		}
 	}
 
 	for key, val := range filters {
@@ -542,12 +546,12 @@ func listAccounts[T Accessible](
 				values := val.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %f`, split[1], from)
+					insert += fmt.Sprintf(` FILTER TO_NUMBER(node.data["%s"]) >= %f`, split[1], from)
 				}
 
 				if val, ok := values["to"]; ok {
 					to := val.(float64)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, split[1], to)
+					insert += fmt.Sprintf(` FILTER TO_NUMBER(node.data["%s"]) <= %f`, split[1], to)
 				}
 			} else if split[1] == "whmcs_id" {
 				insert += fmt.Sprintf(` FILTER node.data["%s"] == %d`, split[1], int(val.GetNumberValue()))
