@@ -239,6 +239,7 @@ FILTER IS_SAME_COLLECTION(@groups, group)
         FOR instance IN OUTBOUND group
         GRAPH @permissions
         FILTER IS_SAME_COLLECTION(@instances, instance)
+        FILTER instance.status != @del_status
 			LET bp = DOCUMENT(CONCAT(@bps, "/", instance.billing_plan.uuid))
 			RETURN MERGE(instance, { 
 				uuid: instance._key, 
@@ -267,6 +268,7 @@ func (ctrl *servicesProvidersController) GetGroups(ctx context.Context, sp *Serv
 		"instances":      schema.INSTANCES_COL,
 		"up_status":      stpb.NoCloudStatus_UP,
 		"suspend_status": stpb.NoCloudStatus_SUS,
+		"del_status":     stpb.NoCloudStatus_DEL,
 	}
 
 	query := listDeployedGroupsQueryWithInstances
