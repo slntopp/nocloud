@@ -3,14 +3,17 @@ package billing
 import (
 	"context"
 	"errors"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/types"
 	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
-	"reflect"
-	"time"
 )
 
 func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, log *zap.Logger) {
@@ -92,7 +95,54 @@ func (s *BillingServiceServer) WhmcsInvoicesSyncerCronJob(ctx context.Context, l
 		delCount++
 	}
 
-	log.Info("Finished WHMCS Invoices syncer cron job", zap.Int("deleted", delCount))
+	syncCtx := context.WithValue(ctx, types.GatewayCallback, true)
+	statusSynced := 0
+	for _, inv := range ncInvoices {
+		if inv.Meta == nil {
+			continue
+		}
+		whmcsIdVal, ok := inv.GetMeta()["whmcs_invoice_id"]
+		if !ok || whmcsIdVal == nil {
+			continue
+		}
+		whmcsId := int(whmcsIdVal.GetNumberValue())
+		if whmcsId == 0 {
+			if s := strings.TrimSpace(whmcsIdVal.GetStringValue()); s != "" {
+				parsed, err := strconv.Atoi(s)
+				if err != nil {
+					continue
+				}
+				whmcsId = parsed
+			}
+		}
+		if whmcsId == 0 {
+			continue
+		}
+		whmcsInvoice, ok := ids[whmcsId]
+		if !ok {
+			continue
+		}
+		if inv.Status == pb.BillingStatus_TERMINATED && strings.EqualFold(whmcsInvoice.Status, "Cancelled") {
+			continue
+		}
+		if inv.Status == whmcs_gateway.StatusToNoCloud(whmcsInvoice.Status) {
+			continue
+		}
+		if err = s.whmcsGateway.SyncWhmcsInvoice(syncCtx, whmcsId); err != nil {
+			log.Error("Error syncing invoice status from WHMCS",
+				zap.Int("whmcs_id", whmcsId),
+				zap.String("nc_uuid", inv.GetUuid()),
+				zap.String("nc_status", inv.Status.String()),
+				zap.String("whmcs_status", whmcsInvoice.Status),
+				zap.Error(err))
+			continue
+		}
+		statusSynced++
+	}
+
+	log.Info("Finished WHMCS Invoices syncer cron job",
+		zap.Int("deleted", delCount),
+		zap.Int("status_synced", statusSynced))
 	return
 
 	whmcsIdToInvoice := make(map[int]struct{})
