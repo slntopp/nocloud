@@ -83,6 +83,10 @@ func statusToWhmcs(status pb.BillingStatus) string {
 }
 
 func statusToNoCloud(status string) pb.BillingStatus {
+	return StatusToNoCloud(status)
+}
+
+func StatusToNoCloud(status string) pb.BillingStatus {
 	switch strings.ToLower(status) {
 	case "draft":
 		return pb.BillingStatus_DRAFT
