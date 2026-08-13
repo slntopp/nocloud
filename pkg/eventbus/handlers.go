@@ -53,6 +53,7 @@ var handlers = map[string]EventHandler{
 	"invoice_published":           nil,
 	"invoice_paid":                nil,
 	"overdue_ticket":              OverdueTicketHandler,
+	"drive_mismatch_ticket":       OverdueTicketHandler,
 }
 
 var getInstanceAccount = `
@@ -385,10 +386,24 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		return nil, fmt.Errorf("overdue ticket: sign token: %w", err)
 	}
 
+	topic := formatOverdueTicketTopic(info)
+	message := formatOverdueTicketMessage(info)
+	if event.GetKey() == "drive_mismatch_ticket" {
+		name := stripOverdueBillingDecor(info.Instance)
+		if name == "" {
+			name = event.GetUuid()
+		}
+		d := event.GetData()
+		topic = fmt.Sprintf("Рассинхрон диска: %s", name)
+		message = fmt.Sprintf("Рассинхрон диска: NoCloud %.0f GB, OpenNebula %.0f GB.\nИнстанс: %s (%s)\nVMID: %.0f\nКлиенту начисляется возврат за диск. Проверьте размеры.",
+			d["nocloud_gb"].GetNumberValue(), d["one_gb"].GetNumberValue(),
+			info.Instance, event.GetUuid(), d["vmid"].GetNumberValue())
+	}
+
 	createPayload := map[string]any{
 		"owner":  info.Account,
 		"users":  []string{info.Account},
-		"topic":  formatOverdueTicketTopic(info),
+		"topic":  topic,
 		"status": 0,
 	}
 	var deptWhmcsID string
@@ -466,7 +481,7 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 
 	sendStatus, sendBody, err := overdueCCPost(ctx, "/cc.MessagesAPI/Send", map[string]any{
 		"chat":    chatUUID,
-		"content": formatOverdueTicketMessage(info),
+		"content": message,
 		"kind":    0,
 	}, sendToken)
 	if err != nil {
