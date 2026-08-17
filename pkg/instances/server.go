@@ -16,10 +16,15 @@ limitations under the License.
 package instances
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
+	go_sync "sync"
+	"time"
+
+	"connectrpc.com/connect"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/health"
 	rpb "github.com/slntopp/nocloud-proto/registry/accounts"
@@ -31,10 +36,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/sync"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
-	"slices"
-	"strings"
-	go_sync "sync"
-	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/notes"
@@ -352,6 +353,12 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
 	}
 
+	if req.GetInstance().GetData() != nil &&
+		!s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
+		log.Warn("Dropping tenant-supplied instance data", zap.String("requestor", requester))
+		req.Instance.Data = nil
+	}
+
 	if req.AutoAssign {
 		return s.createWithAutoAssign(ctx, req, requester)
 	}
@@ -540,6 +547,14 @@ func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.U
 	if instance.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	if !s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
+		if req.GetInstance().GetData() != nil {
+			log.Warn("Dropping tenant-supplied instance data",
+				zap.String("uuid", instance.GetUuid()), zap.String("requestor", requestor))
+			req.Instance.Data = nil
+		}
 	}
 
 	err = s.ctrl.UpdateWithPatch(ctx, "", req.GetInstance(), instance.Instance)
