@@ -602,7 +602,13 @@ const changePlans = ({ plans: plansData, catalog }) => {
           price: { value: newPrice },
           name: realProduct.name || productName,
           apiName: productName,
-          resources: { cpu, ram, drive_size, drive_type },
+          resources: {
+            cpu,
+            ram,
+            drive_size,
+            drive_type,
+            network: getNetworkSpeed(planCode),
+          },
           group:
             realProduct.group ||
             productName.replace(/VPS[\W0-9]/, "").split(/[\W0-9]/)[0],
@@ -801,6 +807,14 @@ const convertPrice = (price) => {
 };
 
 const STORAGE_PRODUCTS = ["vps-option-storage-remote", "vps-option-storage-local"];
+
+// vps-2027 public network port speed (Mbps) - not exposed by the OVH catalog API, per OVH's own vps-2027 spec sheet.
+const VPS_2027_NETWORK_MBPS = { 1: 500, 2: 1000, 3: 2000, 4: 3000 };
+
+const getNetworkSpeed = (planCode) => {
+  const [, model] = planCode.match(/vps-2027-model(\d)/) || [];
+  return model ? VPS_2027_NETWORK_MBPS[model] : undefined;
+};
 
 // vps-2027 storage (Local/Remote) isn't fetched as its own list like backup/disk/snapshot,
 // but it's already present in the raw catalog, so pull it from there.

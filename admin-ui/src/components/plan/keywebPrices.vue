@@ -82,6 +82,10 @@
                 <v-text-field suffix="GB" v-model="item.disk" />
               </template>
 
+              <template v-slot:[`item.traffic`]="{ item }">
+                <v-text-field suffix="TB" v-model="item.traffic" />
+              </template>
+
               <template v-slot:[`item.sell`]="{ item }">
                 <v-switch v-model="item.sell" />
               </template>
@@ -222,6 +226,7 @@ const headers = ref([
   { text: "Cpu", value: "cpu", width: "100" },
   { text: "Ram", value: "ram", width: "75" },
   { text: "Disk", value: "disk", width: "90" },
+  { text: "Traffic", value: "traffic", width: "90" },
   { text: "Incoming price", value: "basePrice", width: "75" },
   { text: "Sale price", value: "price", width: "200" },
   { text: "Sell", value: "sell", width: "100" },
@@ -391,6 +396,10 @@ onMounted(async () => {
           disk:
             realProducts[duration]?.resources?.disk ||
             defaultResources[`${p.integration}_${p.name}`].disk ||
+            0,
+          traffic:
+            realProducts[duration]?.resources?.traffic ||
+            defaultResources[`${p.integration}_${p.name}`].traffic ||
             0,
           price: realProducts[duration]?.price || basePrice,
           basePrice,
@@ -566,6 +575,7 @@ const save = async () => {
           cpu: t.cpu,
           ram: t.ram,
           disk: t.disk,
+          traffic: t.traffic,
         },
         addons: [...addons.values()],
         meta: {
