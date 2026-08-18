@@ -16,14 +16,15 @@ limitations under the License.
 package services
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"reflect"
 	"sync"
 	"time"
+
+	"connectrpc.com/connect"
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
@@ -45,6 +46,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type ServicesServer struct {
@@ -354,6 +356,8 @@ func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[p
 	service := request.GetService()
 	contexts := make(map[string]*InstancesGroupDriverContext)
 
+	s.keepProviderOwnedData(ctx, log, requestor, service, nil)
+
 	testResult, err := s.DoTestServiceConfig(ctx, log, service)
 	if err != nil {
 		return nil, err
@@ -447,6 +451,13 @@ func (s *ServicesServer) Update(ctx context.Context, _service *connect.Request[p
 		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
 	}
 
+	stored, err := s.ctrl.Get(ctx, requestor, service.GetUuid())
+	if err != nil {
+		log.Debug("Error getting Service from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not found")
+	}
+	s.keepProviderOwnedData(ctx, log, requestor, service, stored)
+
 	err = s.ctrl.Update(ctx, service, true)
 	if err != nil {
 		log.Error("Error while updating service", zap.Error(err))
@@ -459,6 +470,30 @@ func (s *ServicesServer) Update(ctx context.Context, _service *connect.Request[p
 		return nil, status.Error(codes.NotFound, "Service not Found in DB after Patch")
 	}
 	return connect.NewResponse(service), nil
+}
+
+func (s *ServicesServer) keepProviderOwnedData(ctx context.Context, log *zap.Logger, requestor string, service, stored *pb.Service) {
+	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return
+	}
+
+	storedData := make(map[string]map[string]*structpb.Value)
+	for _, group := range stored.GetInstancesGroups() {
+		for _, inst := range group.GetInstances() {
+			storedData[inst.GetUuid()] = inst.GetData()
+		}
+	}
+
+	for _, group := range service.GetInstancesGroups() {
+		for _, inst := range group.GetInstances() {
+			data := storedData[inst.GetUuid()]
+			if !reflect.DeepEqual(inst.GetData(), data) {
+				log.Warn("Dropping tenant-supplied instance data",
+					zap.String("instance", inst.GetUuid()), zap.String("requestor", requestor))
+			}
+			inst.Data = data
+		}
+	}
 }
 
 func (s *ServicesServer) Up(ctx context.Context, _request *connect.Request[pb.UpRequest]) (*connect.Response[pb.UpResponse], error) {

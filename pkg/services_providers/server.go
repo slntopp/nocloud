@@ -18,10 +18,11 @@ package services_providers
 import (
 	"context"
 	"fmt"
+	"time"
+
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
-	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -544,10 +545,23 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	return &sppb.UnbindPlanResponse{}, nil
 }
 
+var anonymousInvokeMethods = map[string]struct{}{
+	"get_domains":      {},
+	"get_domain_price": {},
+}
+
 func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
 	log := s.log.Named("Invoke")
 	requestor, _ := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
+
+	if requestor == "" {
+		if _, ok := anonymousInvokeMethods[req.GetMethod()]; !ok {
+			log.Warn("Unauthenticated Invoke of non-public method",
+				zap.String("method", req.GetMethod()), zap.String("sp", req.GetUuid()))
+			return nil, status.Error(codes.Unauthenticated, "Authentication required")
+		}
+	}
 
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
