@@ -156,6 +156,7 @@
 
         <nocloud-table
           v-else-if="tab === 'Addons'"
+          item-key="id"
           :show-select="false"
           :items="filtredAddons"
           :headers="addonsHeaders"
@@ -186,6 +187,7 @@
 
         <nocloud-table
           v-else-if="tab === 'OS'"
+          item-key="rowId"
           :show-select="false"
           :items="filtredImages"
           :headers="imagesHeaders"
@@ -365,7 +367,9 @@ const filtredImages = computed(() => {
 });
 
 const testConfig = () => {
-  if (!plans.value.every(({ group }) => groups.value.includes(group))) {
+  const soldPlans = plans.value.filter((plan) => plan.public);
+
+  if (!soldPlans.every(({ group }) => groups.value.includes(group))) {
     return "You must select a group for the tariff!";
   }
 };
@@ -388,6 +392,12 @@ const changePlan = async (plan) => {
       existedAddon.periods[props.getPeriod(addon.duration)] = addon.value;
       existedAddon.meta.basePrices[props.getPeriod(addon.duration)] =
         addon.price.value;
+      // this period's occurrence may carry the real uuid even when an earlier
+      // (e.g. newly-unlocked P1Y) occurrence of the same addon didn't - don't drop it
+      if (addon.uuid && !existedAddon.uuid) {
+        existedAddon.uuid = addon.uuid;
+        existedAddon.type = "update";
+      }
       data = existedAddon;
       return;
     } else {
@@ -405,6 +415,10 @@ const changePlan = async (plan) => {
           key: addonkey,
           type: "addon",
           apiName: addon.apiName,
+          // one backup addon from the line is mandatory - none of them are free, so it can't rely on the price===0 heuristic
+          ...(addonkey.startsWith("option-auto-backup")
+            ? { required: true }
+            : {}),
         },
       };
     }
@@ -430,6 +444,10 @@ const changePlan = async (plan) => {
       existedAddon.periods[props.getPeriod(addon.duration)] = addon.value;
       existedAddon.meta.basePrices[props.getPeriod(addon.duration)] =
         addon.price.value;
+      if (addon.uuid && !existedAddon.uuid) {
+        existedAddon.uuid = addon.uuid;
+        existedAddon.type = "update";
+      }
       data = existedAddon;
       return;
     } else {
@@ -544,7 +562,12 @@ const changePlans = ({ plans: plansData, catalog }) => {
       return;
     }
 
-    prices.forEach(({ pricingMode, price, duration }) => {
+    prices.forEach(({ pricingMode, price, duration: rawDuration }) => {
+      // OVH sometimes reports duration "P1M" even for the upfront12 (annual commitment) renew price,
+      // and in that case price.value is the monthly rate, not the yearly total - unlike the normal P1Y entries.
+      const isAnnualBilledMonthly =
+        pricingMode === "upfront12" && rawDuration === "P1M";
+      const duration = isAnnualBilledMonthly ? "P1Y" : rawDuration;
       const isMonthly = duration === "P1M" && pricingMode === "default";
       const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
@@ -553,7 +576,9 @@ const changePlans = ({ plans: plansData, catalog }) => {
         const realProduct = plans.value.find((p) => p.id === id) || {};
 
         const code = planCode;
-        const newPrice = convertPrice(price.value);
+        const newPrice = convertPrice(
+          isAnnualBilledMonthly ? price.value * 12 : price.value
+        );
 
         const { configurations, addonFamilies } = catalog.plans.find(
           ({ planCode }) => planCode === code
@@ -608,6 +633,8 @@ const changePlans = ({ plans: plansData, catalog }) => {
             drive_size,
             drive_type,
             network: getNetworkSpeed(planCode),
+            // 0 is the sentinel for unlimited traffic, not "unknown"
+            traffic: isVps2027(planCode) ? 0 : undefined,
           },
           group:
             realProduct.group ||
@@ -637,7 +664,10 @@ const changeAddons = ({ backup, disk, snapshot, storage = [] }) => {
 
   [backup, disk, snapshot, storage].forEach((el) => {
     el.forEach(({ prices, planCode, productName }) => {
-      prices.forEach(({ pricingMode, price, duration }) => {
+      prices.forEach(({ pricingMode, price, duration: rawDuration }) => {
+        const isAnnualBilledMonthly =
+          pricingMode === "upfront12" && rawDuration === "P1M";
+        const duration = isAnnualBilledMonthly ? "P1Y" : rawDuration;
         const isMonthly = duration === "P1M" && pricingMode === "default";
         const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
@@ -645,7 +675,9 @@ const changeAddons = ({ backup, disk, snapshot, storage = [] }) => {
           const id = `${duration} ${planCode}`;
           const realAddon = addons.value.find((a) => a.id === id) || {};
 
-          const newPrice = convertPrice(price.value);
+          const newPrice = convertPrice(
+            isAnnualBilledMonthly ? price.value * 12 : price.value
+          );
 
           result.push({
             price: { value: newPrice },
@@ -721,6 +753,7 @@ const changeImages = ({ windows }) => {
           tariff,
           id: key,
           duration,
+          rowId: [key, tariff, duration].join(" "),
         });
       });
     })
@@ -810,6 +843,8 @@ const STORAGE_PRODUCTS = ["vps-option-storage-remote", "vps-option-storage-local
 
 // vps-2027 public network port speed (Mbps) - not exposed by the OVH catalog API, per OVH's own vps-2027 spec sheet.
 const VPS_2027_NETWORK_MBPS = { 1: 500, 2: 1000, 3: 2000, 4: 3000 };
+
+const isVps2027 = (planCode) => /vps-2027-model\d/.test(planCode);
 
 const getNetworkSpeed = (planCode) => {
   const [, model] = planCode.match(/vps-2027-model(\d)/) || [];
@@ -966,6 +1001,7 @@ const initializeData = async () => {
           tariff,
           id: key,
           uuid: addon.uuid,
+          rowId: mapKey,
         });
       })
     );
