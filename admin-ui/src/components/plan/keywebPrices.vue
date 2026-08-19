@@ -303,18 +303,26 @@ onMounted(async () => {
       Object.keys(addonsAnnotations).forEach((key) => {
         const metaKey = addonsAnnotations[key];
         p.configOptions[metaKey]?.configurableSubOptions.forEach((c) => {
-          if (!p.pricing?.configOptions?.[metaKey]?.[c.optionname]) {
+          const pricing = p.pricing?.configOptions?.[metaKey]?.[c.optionname];
+          // KeyWeb sometimes lists a newer OS template (configOptions) without ever
+          // adding a pricing row for it. Every OS template that DOES have pricing is
+          // free (0 on all periods), so assume the same for non-Windows ones missing it
+          // rather than hiding them entirely.
+          const isFreeOsFallback =
+            key === "os" &&
+            !pricing &&
+            !c.optionname.toLowerCase().includes("windows");
+
+          if (!pricing && !isFreeOsFallback) {
             return;
           }
 
-          const basePriceYearly = convertFrom(
-            +p.pricing.configOptions[metaKey][c.optionname].annually,
-            { code: "EUR" }
-          );
-          const basePriceMonthly = convertFrom(
-            +p.pricing.configOptions[metaKey][c.optionname].monthly,
-            { code: "EUR" }
-          );
+          const basePriceYearly = isFreeOsFallback
+            ? 0
+            : convertFrom(+pricing.annually, { code: "EUR" });
+          const basePriceMonthly = isFreeOsFallback
+            ? 0
+            : convertFrom(+pricing.monthly, { code: "EUR" });
 
           const data = {
             name: c.optionname,

@@ -1,7 +1,7 @@
 <template>
   <billing-label
     :due-date="dueDate"
-    :tariff-price="instancePrice"
+    :tariff-price="tariffPrice"
     :template="template"
     :addons-price="addonsPrices"
     :account="account"
@@ -23,8 +23,7 @@ const dueDate = computed(() => {
   return formatSecondsToDate(+props.template?.data?.next_payment_date);
 });
 
-const instancePrice = computed(() => props.template.estimate);
-
+const tariffPrice = ref();
 const addonsPrices = ref({});
 
 onMounted(() => {
@@ -35,10 +34,14 @@ onMounted(() => {
       (prices[a.title] =
         a.periods[
           template.value.billingPlan.products[template.value.product]?.period
-        ])
+        ]),
   );
 
   addonsPrices.value = prices;
+
+  tariffPrice.value =
+    (template.value.estimate || 0) -
+    Object.keys(prices).reduce((acc, key) => acc + prices[key], 0);
 });
 </script>
 
