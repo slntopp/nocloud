@@ -274,7 +274,15 @@ export default {
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
       if (!this.canAddPin) {
-        this.$emit("errorAddPin");
+        this.$emit("errorAddPin", "Error: Choose the region");
+        return;
+      }
+      // ponytail: dupe check over markers, not template.locations, so unsaved pins count too
+      if (
+        this.region &&
+        this.markers.some((m) => m.extra?.region === this.region)
+      ) {
+        this.$emit("errorAddPin", "Error: This region is already taken");
         return;
       }
       if (target.id) {
@@ -324,7 +332,7 @@ export default {
         if (this.multiSelect) {
           this.markers.push({
             ...marker,
-            extra: { region: this.region },
+            extra: { ...marker.extra, region: this.region },
           });
         } else {
           this.markers = [marker];
@@ -341,7 +349,10 @@ export default {
     },
     mouseEnterHandler(id) {
       this.selected = id;
-      this.$emit("pinHover", id);
+      this.$emit(
+        "pinHover",
+        this.markers.find((m) => m.id === id)?.extra?.region
+      );
       this.$refs.map.mouseEnterHandler(id, null, true);
     },
     mouseLeaveHandler(id) {

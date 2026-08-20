@@ -31,7 +31,7 @@
     <support-map
       @errorAddPin="errorAddPin"
       :activePinTitle="activePinTitle"
-      :canAddPin="true"
+      :canAddPin="!!selectedRegion"
       :multiSelect="true"
       :error="mapError"
       :template="template"
@@ -59,20 +59,12 @@ const mapError = ref();
 const selectedType = ref("ovh vps");
 const isRegionLoading = ref(false);
 
-const onPinHover = (id) => {
-  if (allRegions.value) {
-    const location = template.value.locations.find((el) => el.id === id);
-
-    selectedRegion.value = allRegions.value.indexOf(location?.extra?.region);
-  }
+const onPinHover = (region) => {
+  selectedRegion.value = region ?? "";
 };
-const errorAddPin = () => {
+const errorAddPin = (message) => {
   mapError.value = "";
-  if (selectedLocation.value) {
-    mapError.value = "Error: This region alredy taken";
-  } else {
-    mapError.value = "Error: Choose the region";
-  }
+  mapError.value = message;
 };
 const onSavePin = () => {
   selectedRegion.value = null;
