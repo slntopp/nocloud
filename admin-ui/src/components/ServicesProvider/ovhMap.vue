@@ -11,35 +11,18 @@
       <div v-if="isRegionLoading" class="spinner">
         <v-progress-circular size="40" color="primary" indeterminate />
       </div>
-
-      <v-select
-        v-else
-        flat
-        v-model="selectedRegion"
-        :items="allRegions"
-        label="regions"
-      />
-      <!--      <v-list v-else flat dark color="rgba(12, 12, 60, 0.9)">-->
-      <!--        <v-subheader>REGIONS</v-subheader>-->
-      <!--        <v-list-item-group mandatory v-model="selectedRegion" color="primary">-->
-      <!--          <v-list-item v-for="(item, i) in allRegions" :key="i">-->
-      <!--            {{ item }}-->
-      <!--          </v-list-item>-->
-      <!--        </v-list-item-group>-->
-      <!--      </v-list>-->
+      <div v-else class="hint">
+        Click on a country to add a location, then pick its OVH region in the
+        popup settings.
+      </div>
     </div>
     <support-map
-      @errorAddPin="errorAddPin"
-      :activePinTitle="activePinTitle"
-      :canAddPin="!!selectedRegion"
       :multiSelect="true"
       :error="mapError"
       :template="template"
-      @set-locations="setLocations"
+      :regions="allRegions"
       :type="selectedType"
-      :region="selectedRegion"
-      @save="onSavePin"
-      @pinHover="onPinHover"
+      @set-locations="setLocations"
     />
   </div>
 </template>
@@ -47,38 +30,16 @@
 <script setup>
 import supportMap from "./map.vue";
 import api from "@/api.js";
-import { ref, defineProps, toRefs, computed, watch, onMounted } from "vue";
+import { ref, defineProps, toRefs, watch, onMounted } from "vue";
 
 const props = defineProps({ template: { required: true, type: Object } });
 const { template } = toRefs(props);
 
-const selectedRegion = ref("");
 const allRegions = ref([]);
 const types = ref(["ovh vps", "ovh cloud", "ovh dedicated"]);
 const mapError = ref();
 const selectedType = ref("ovh vps");
 const isRegionLoading = ref(false);
-
-const onPinHover = (region) => {
-  selectedRegion.value = region ?? "";
-};
-const errorAddPin = (message) => {
-  mapError.value = "";
-  mapError.value = message;
-};
-const onSavePin = () => {
-  selectedRegion.value = null;
-  mapError.value = "";
-};
-const activePinTitle = computed(() => selectedLocation.value?.title || "");
-const selectedLocation = computed(() =>
-  template.value.locations.find(
-    (l) =>
-      l.extra?.region &&
-      selectedRegion.value &&
-      l.extra?.region === selectedRegion.value
-  )
-);
 
 onMounted(() => {
   fetchRegions();
@@ -117,6 +78,11 @@ const setLocations = (locations) => {
   display: grid;
   grid-template-columns: 150px 1fr;
   grid-column-gap: 20px;
+}
+.hint {
+  margin-top: 10px;
+  font-size: 12px;
+  opacity: 0.7;
 }
 .spinner {
   margin-top: 150px;

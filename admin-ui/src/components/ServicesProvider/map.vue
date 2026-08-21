@@ -52,14 +52,24 @@
                   </v-icon>
                 </template>
                 <v-card class="pa-4" color="background-light">
-                  <v-text-field
+                  <v-select
+                    v-if="regions.length"
                     class="mt-7"
+                    dense
+                    label="Region *"
+                    :items="regionItems(marker)"
+                    :error="!marker.extra.region"
+                    v-model="marker.extra.region"
+                    @change="(region) => onRegionChange(marker, region)"
+                  />
+
+                  <v-text-field
+                    :class="regions.length ? '' : 'mt-7'"
                     dense
                     label="Title"
                     v-model="marker.title"
                     :ref="`textField_${marker.id}`"
                     @keyup.enter="(e) => onEnterHandler(marker.id, e)"
-                    @input="(e) => inputHandler(e, marker)"
                   />
 
                   <color-picker label="Color" v-model="marker.extra.color" />
@@ -71,7 +81,15 @@
                   />
 
                   <v-card-actions class="justify-end">
-                    <v-btn @click.stop="saveAndClose(marker.id)"> Edit </v-btn>
+                    <v-btn text @click.stop="startMove(marker.id)">
+                      <v-icon left>mdi-cursor-move</v-icon> Move
+                    </v-btn>
+                    <v-btn
+                      :disabled="regions.length > 0 && !marker.extra.region"
+                      @click.stop="saveAndClose(marker.id)"
+                    >
+                      Done
+                    </v-btn>
                   </v-card-actions>
                 </v-card>
               </v-dialog>
@@ -121,10 +139,8 @@ export default {
   name: "support-map",
   props: {
     template: { type: Object, required: true },
-    region: { type: String, default: "" },
+    regions: { type: Array, default: () => [] },
     multiSelect: { type: Boolean, default: false },
-    activePinTitle: { type: String, default: "" },
-    canAddPin: { type: Boolean, default: true },
     error: { type: String, default: "" },
     type: { type: String, default: "" },
   },
@@ -136,6 +152,7 @@ export default {
     markersSave: [],
     markers: [],
     item: {},
+    movingId: "",
   }),
   methods: {
     formatText(tag, id) {
@@ -190,13 +207,59 @@ export default {
       ref.blur();
       e.stopPropagation();
     },
-    inputHandler(e, marker) {
-      this.markers = this.markers.map((m) => {
-        if (m.id === marker.id) {
-          m.title = !e ? " " : e.trim();
-        }
-        return m;
+    regionItems(marker) {
+      const taken = this.markers
+        .filter((m) => m.id !== marker.id)
+        .map((m) => m.extra?.region);
+
+      return this.regions.map((region) => ({
+        text: region,
+        value: region,
+        disabled: taken.includes(region),
+      }));
+    },
+    onRegionChange(marker, region) {
+      if (!marker.title?.trim()) marker.title = region;
+    },
+    startMove(id) {
+      this.movingId = id;
+      this.saveAndClose(id);
+      this.showSnackbarSuccess({
+        message: "Click on the map to move this location",
       });
+    },
+    // ponytail: nc-map refits and zooms on every markers change; snapshot the
+    // viewport and put it back so adding/removing a pin does not jump the map
+    preserveView() {
+      const map = this.$refs.map;
+      const viewport = map?.$refs.viewport;
+
+      if (!viewport) return;
+      const transform = viewport.getAttribute("transform");
+      const { scale } = map;
+
+      this.$nextTick(() => {
+        map.scale = scale;
+        viewport.setAttribute("transform", transform);
+      });
+    },
+    eventCoords(offsetX, offsetY) {
+      const kx = this.widthMap / (this.widthMap * this.scale);
+      const ky = this.heightMap / (this.heightMap * this.scale);
+      const transform = this.$refs.map.$refs.viewport
+        .getAttribute("transform")
+        .split(" ");
+
+      return {
+        x:
+          parseInt(offsetX * kx - parseInt(transform[4]) / this.scale) -
+          12 -
+          this.scale * 0.12,
+        y:
+          parseInt(offsetY * ky - parseInt(transform[5]) / this.scale) -
+          35 -
+          this.scale * 0.07,
+      };
     },
     delMarker(e, id, x, y) {
       e.stopPropagation();
@@ -206,8 +269,21 @@ export default {
           this.selected = "";
         }
       });
+      this.preserveView();
     },
     saveCountry() {
+      const noRegion = this.regions.length
+        ? this.markers.find((el) => !el.extra?.region)
+        : null;
+
+      if (noRegion) {
+        this.openDialog(noRegion.id);
+        this.showSnackbarError({
+          message: "Error: Choose a region for every location.",
+        });
+        return;
+      }
+
       let error = 0;
       this.markers.forEach((el) => {
         if (el.title && !el.title.trim()) {
@@ -260,12 +336,26 @@ export default {
 
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
     },
+    dialog(id) {
+      const ref = this.$refs["edit-dialog." + id];
+
+      return Array.isArray(ref) ? ref[0] : ref;
+    },
     saveAndClose(id) {
-      if (this.$refs["edit-dialog." + id]) {
-        this.$refs["edit-dialog." + id].isActive = false;
-      }
+      const dialog = this.dialog(id);
+
+      if (dialog) dialog.isActive = false;
+    },
+    openDialog(id) {
+      this.mouseEnterHandler(id);
+      this.$nextTick(() => {
+        const dialog = this.dialog(id);
+
+        if (dialog) dialog.isActive = true;
+      });
     },
     cancelSelectedCountry() {
+      this.movingId = "";
       this.changeLocations();
       if (this.markers.length < 2) {
         this.selected = this.markers[0]?.id;
@@ -273,86 +363,51 @@ export default {
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
-      if (!this.canAddPin) {
-        this.$emit("errorAddPin", "Error: Choose the region");
+      if (!target.id) return false;
+
+      if (this.movingId) {
+        const marker = this.markers.find((m) => m.id === this.movingId);
+        const { x, y } = this.eventCoords(offsetX, offsetY);
+
+        this.movingId = "";
+        if (!marker) return false;
+        marker.x = x;
+        marker.y = y;
+        marker.extra.country = target.id;
+        this.mouseEnterHandler(marker.id);
         return;
       }
-      // ponytail: dupe check over markers, not template.locations, so unsaved pins count too
-      if (
-        this.region &&
-        this.markers.some((m) => m.extra?.region === this.region)
-      ) {
-        this.$emit("errorAddPin", "Error: This region is already taken");
-        return;
-      }
-      if (target.id) {
-        this.selected = this.region ? `${target.id}-${this.region}` : target.id;
-      } else {
+
+      const { x, y } = this.eventCoords(offsetX, offsetY);
+
+      if (this.markers.some((el) => el.x == x && el.y == y)) {
         return false;
       }
-      let stop = false;
 
-      const kx = this.widthMap / (this.widthMap * this.scale);
-      const ky = this.heightMap / (this.heightMap * this.scale);
-      const w = this.$refs.map.$refs.viewport
-        .getAttribute("transform")
-        .split(" ")[4];
-      const h = this.$refs.map.$refs.viewport
-        .getAttribute("transform")
-        .split(" ")[5];
-      const x =
-        parseInt(offsetX * kx - parseInt(w) / this.scale) -
-        12 -
-        this.scale * 0.12;
-      const y =
-        parseInt(offsetY * ky - parseInt(h) / this.scale) -
-        35 -
-        this.scale * 0.07;
-
-      this.markers.forEach((el) => {
-        if (el.x == x && el.y == y) {
-          stop = true;
-        }
-      });
-
-      if (stop) {
-        return false;
-      }
+      this.selected = `${target.id}-${Date.now()}`;
 
       setTimeout(() => {
         const marker = {
-          id: this.selected + Date.now(),
+          id: this.selected,
           type: this.type || this.item.type,
           title: " ",
-          extra: { country: target.id },
+          extra: { country: target.id, region: "", color: "", link: "" },
           x,
           y,
         };
 
         if (this.multiSelect) {
-          this.markers.push({
-            ...marker,
-            extra: { ...marker.extra, region: this.region },
-          });
+          this.markers.push(marker);
         } else {
           this.markers = [marker];
         }
+        this.preserveView();
 
-        this.mouseEnterHandler(marker.id);
-
-        setTimeout(() => {
-          const ref = this.$refs["textField_" + marker.id]?.[0];
-
-          ref?.focus();
-        }, 200);
+        this.openDialog(marker.id);
       }, 10);
     },
     mouseEnterHandler(id) {
       this.selected = id;
-      this.$emit(
-        "pinHover",
-        this.markers.find((m) => m.id === id)?.extra?.region
-      );
       this.$refs.map.mouseEnterHandler(id, null, true);
     },
     mouseLeaveHandler(id) {
@@ -360,9 +415,12 @@ export default {
     },
     changeLocations() {
       this.item = JSON.parse(JSON.stringify(this.template));
-      this.markers = this.template.locations.filter(
-        (l) => !this.type || this.type === l.type
-      );
+      this.markers = this.template.locations
+        .filter((l) => !this.type || this.type === l.type)
+        .map((l) => ({
+          ...l,
+          extra: { region: "", color: "", link: "", ...l.extra },
+        }));
     },
   },
   mounted() {
@@ -384,14 +442,11 @@ export default {
       if (message === "") return;
       this.showSnackbarError({ message });
     },
-    activePinTitle(value) {
-      this.selected =
-        this.markers?.find(({ title }) => title === value)?.id ?? "";
-    },
     template() {
       this.changeLocations();
     },
     type() {
+      this.movingId = "";
       this.changeLocations();
     },
   },
