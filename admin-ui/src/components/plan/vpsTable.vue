@@ -354,7 +354,12 @@ const filtredAddons = computed(() => {
 
 const filtredImages = computed(() => {
   let result = images.value.filter((image) =>
-    soldPlans.value.some((plan) => plan.os?.includes(image.id))
+    soldPlans.value.some(
+      (plan) =>
+        plan.os?.includes(image.id) &&
+        (!image.tariff ||
+          image.tariff === `option-windows-${plan.planCode.replace("vps-", "")}`)
+    )
   );
 
   if (searchParam.value) {
@@ -716,15 +721,28 @@ const changeImages = ({ windows }) => {
 
           if (!product || !product?.prices) return;
 
-          const data = product.prices.find(
-            (price) =>
-              price.duration === duration &&
+          // OVH sometimes reports duration "P1M" even for the upfront12 (annual
+          // commitment) price - same quirk as the tariffs/addons above.
+          const data = product.prices.find((price) => {
+            const isAnnualBilledMonthly =
+              price.pricingMode === "upfront12" && price.duration === "P1M";
+            const normalizedDuration = isAnnualBilledMonthly
+              ? "P1Y"
+              : price.duration;
+
+            return (
+              normalizedDuration === duration &&
               ["upfront12", "default"].includes(price.pricingMode)
-          );
+            );
+          });
           if (!data) return;
           const { price: priceObject } = data;
+          const isAnnualBilledMonthly =
+            data.pricingMode === "upfront12" && data.duration === "P1M";
           tariff = product.planCode;
-          const newPrice = convertPrice(priceObject.value);
+          const newPrice = convertPrice(
+            isAnnualBilledMonthly ? priceObject.value * 12 : priceObject.value
+          );
           price = newPrice;
           basePrice = newPrice;
         }
