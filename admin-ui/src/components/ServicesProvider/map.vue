@@ -207,19 +207,28 @@ export default {
       ref.blur();
       e.stopPropagation();
     },
-    regionItems(marker) {
-      const taken = this.markers
+    takenRegions(marker) {
+      return this.markers
         .filter((m) => m.id !== marker.id)
         .map((m) => m.extra?.region);
+    },
+    regionItems(marker) {
+      // ponytail: used regions are only labelled, not disabled — with more pins
+      // than free regions the whole list would go grey
+      const taken = this.takenRegions(marker);
 
       return this.regions.map((region) => ({
-        text: region,
+        text: taken.includes(region) ? `${region} (already used)` : region,
         value: region,
-        disabled: taken.includes(region),
       }));
     },
     onRegionChange(marker, region) {
       if (!marker.title?.trim()) marker.title = region;
+      if (this.takenRegions(marker).includes(region)) {
+        this.showSnackbarError({
+          message: `Warning: ${region} is already used by another location`,
+        });
+      }
     },
     startMove(id) {
       this.movingId = id;
