@@ -334,7 +334,7 @@ const fetchLicences = async () => {
         is_trial_expired:
           item.read_only_is_trial &&
           item.trial_ends_at &&
-          new Date(item.trial_ends_at).getDate() < new Date().getDate(),
+          new Date(item.trial_ends_at).getTime() < Date.now(),
       };
     });
     totalLicences.value = payload.total || 0;
