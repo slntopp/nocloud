@@ -1012,7 +1012,13 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 	if request.Data != nil {
 		m := request.Data.AsMap()
-		m["tax_rate"] = stdSettings.BaseTaxRate
+		applyTaxRate(m)
+		normalizeDateCreate(m, true)
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	} else {
+		m := map[string]any{}
+		normalizeDateCreate(m, true)
 		structMap, _ := structpb.NewStruct(m)
 		request.Data = structMap
 	}
@@ -1147,7 +1153,13 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 
 	if request.Data != nil {
 		m := request.Data.AsMap()
-		m["tax_rate"] = stdSettings.BaseTaxRate
+		applyTaxRate(m)
+		normalizeDateCreate(m, true)
+		structMap, _ := structpb.NewStruct(m)
+		request.Data = structMap
+	} else {
+		m := map[string]any{}
+		normalizeDateCreate(m, true)
 		structMap, _ := structpb.NewStruct(m)
 		request.Data = structMap
 	}
@@ -1265,22 +1277,23 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	var requestData map[string]any
 	if request.Data == nil {
 		log.Debug("Data patch is not present, skipping")
-		goto patch
+	} else {
+		requestData = request.Data.AsMap()
+
+		if len(request.Data.AsMap()) == 0 {
+			log.Debug("Data patch is empty, wiping data")
+			patch["data"] = nil
+		} else {
+			// Remove phone keys from request data
+			delete(requestData, "phone_new")
+			log.Debug("Merging data")
+			mergedData := MergeMaps(acc.Data.AsMap(), requestData)
+			applyTaxRate(mergedData)
+			normalizeDateCreate(mergedData, false)
+			patch["data"] = mergedData
+		}
 	}
-	requestData = request.Data.AsMap()
 
-	if len(request.Data.AsMap()) == 0 {
-		log.Debug("Data patch is empty, wiping data")
-		patch["data"] = nil
-		goto patch
-	}
-
-	// Remove phone keys from request data
-	delete(requestData, "phone_new")
-	log.Debug("Merging data")
-	patch["data"] = MergeMaps(acc.Data.AsMap(), requestData)
-
-patch:
 	if len(patch) == 0 {
 		log.Debug("Resulting patch is empty")
 		return nil, status.Error(codes.InvalidArgument, "Nothing changed")
