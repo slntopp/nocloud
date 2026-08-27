@@ -453,6 +453,10 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 			d["nocloud_gb"].GetNumberValue(), d["one_gb"].GetNumberValue(),
 			info.Instance, event.GetUuid(), d["vmid"].GetNumberValue())
 	}
+	if event.GetKey() == "drive_mismatch_ticket" {
+		topic = formatDriveMismatchTicketTopic(info, event.GetUuid())
+		message = formatDriveMismatchTicketMessage(info, event.GetUuid(), event.GetData())
+	}
 
 	createPayload := map[string]any{
 		"owner":  info.Account,
