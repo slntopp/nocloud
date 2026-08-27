@@ -67,8 +67,9 @@
                     :class="regions.length ? '' : 'mt-7'"
                     dense
                     label="Title"
-                    v-model="marker.title"
+                    :value="marker.title"
                     :ref="`textField_${marker.id}`"
+                    @input="(title) => setTitle(marker.id, title)"
                     @keyup.enter="(e) => onEnterHandler(marker.id, e)"
                   />
 
@@ -207,6 +208,16 @@ export default {
       ref.blur();
       e.stopPropagation();
     },
+    // ponytail: nc-map hands the popup slot a shallow copy of the marker
+    // ({ ...marker, svgId }), so writing a primitive like title straight to it
+    // is dropped on the next re-render. extra survives (same object), title
+    // must go back into this.markers by id.
+    setTitle(id, title) {
+      const marker = this.markers.find((m) => m.id === id);
+
+      // an empty title hides the whole popup (v-if), taking this dialog with it
+      if (marker) marker.title = title || " ";
+    },
     takenRegions(marker) {
       return this.markers
         .filter((m) => m.id !== marker.id)
@@ -223,7 +234,7 @@ export default {
       }));
     },
     onRegionChange(marker, region) {
-      if (!marker.title?.trim()) marker.title = region;
+      if (!marker.title?.trim()) this.setTitle(marker.id, region);
       if (this.takenRegions(marker).includes(region)) {
         this.showSnackbarError({
           message: `Warning: ${region} is already used by another location`,
