@@ -53,6 +53,7 @@ var handlers = map[string]EventHandler{
 	"invoice_published":           nil,
 	"invoice_paid":                nil,
 	"overdue_ticket":              OverdueTicketHandler,
+	"renew_failed_ticket":         OverdueTicketHandler,
 }
 
 var getInstanceAccount = `
@@ -344,6 +345,38 @@ func formatOverdueTicketMessage(info EventInfo) string {
 		clientName, formatOverdueServiceDetails(info))
 }
 
+func formatRenewFailedTicketTopic(info EventInfo) string {
+	name := stripOverdueBillingDecor(info.Instance)
+	if name == "" {
+		name = stripOverdueBillingDecor(info.Product)
+	}
+	return fmt.Sprintf("Ошибка продления домена: %s", name)
+}
+
+func formatRenewFailedTicketMessage(info EventInfo, action, errText string) string {
+	clientName := info.AccountTitle
+	if clientName == "" {
+		clientName = info.Account
+	}
+	if action == "" {
+		action = "free_renew"
+	}
+	if errText == "" {
+		errText = "неизвестная ошибка регистратора"
+	}
+	return fmt.Sprintf(`Здравствуйте.
+
+Уважаемый %s, сообщаем, что что-то пошло не так при продлении услуги: "%s".
+
+Событие: продление домена (%s)
+Ошибка: %s
+
+Счёт уже оплачен, но регистратор не продлил домен. Служба поддержки уведомлена, повторные попытки продолжаются автоматически.
+
+С уважением, служба поддержки.`,
+		clientName, formatOverdueServiceDetails(info), action, errText)
+}
+
 func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	if overdueCCHost == "" {
 		log.Warn("CC_HOST not set, skipping overdue ticket creation")
@@ -385,10 +418,18 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		return nil, fmt.Errorf("overdue ticket: sign token: %w", err)
 	}
 
+	topic := formatOverdueTicketTopic(info)
+	message := formatOverdueTicketMessage(info)
+	if event.GetKey() == "renew_failed_ticket" {
+		data := event.GetData()
+		topic = formatRenewFailedTicketTopic(info)
+		message = formatRenewFailedTicketMessage(info, data["action"].GetStringValue(), data["error"].GetStringValue())
+	}
+
 	createPayload := map[string]any{
 		"owner":  info.Account,
 		"users":  []string{info.Account},
-		"topic":  formatOverdueTicketTopic(info),
+		"topic":  topic,
 		"status": 0,
 	}
 	var deptWhmcsID string
@@ -466,7 +507,7 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 
 	sendStatus, sendBody, err := overdueCCPost(ctx, "/cc.MessagesAPI/Send", map[string]any{
 		"chat":    chatUUID,
-		"content": formatOverdueTicketMessage(info),
+		"content": message,
 		"kind":    0,
 	}, sendToken)
 	if err != nil {
