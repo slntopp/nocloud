@@ -15,6 +15,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
 	"slices"
 	"time"
@@ -436,15 +437,28 @@ func (s *BillingServiceServer) createRenewalInvoice(ctx context.Context, log *za
 		log.Warn("Total less than 0, skipping invoice creation. Wtf?")
 		return errNothingToRenew
 	}
-	resp, err := s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
-		IsSendEmail: true,
-		Invoice:     inv.Invoice,
-	}))
+
+	accInvoices, err := s.invoices.List(ctx, acc.GetUuid())
 	if err != nil {
-		log.Error("Error creating invoice", zap.Error(err))
-		return fmt.Errorf("error creating invoice: %w", err)
+		log.Error("Error listing invoices when looking for merge target", zap.Error(err))
+		return fmt.Errorf("error listing invoices: %w", err)
 	}
-	log.Info("Created invoice", zap.String("uuid", resp.Msg.GetUuid()), zap.Int("item_count", len(inv.Items)))
+	if existing := findMergeableRenewalInvoice(filterInvoices(accInvoices), dueDate); existing != nil {
+		if _, err = s.appendRenewalToExistingInvoice(ctx, log, existing, inv); err != nil {
+			log.Error("Error merging renewal into existing invoice", zap.Error(err), zap.String("invoice", existing.GetUuid()))
+			return fmt.Errorf("error merging renewal invoice: %w", err)
+		}
+	} else {
+		resp, err := s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
+			IsSendEmail: true,
+			Invoice:     inv.Invoice,
+		}))
+		if err != nil {
+			log.Error("Error creating invoice", zap.Error(err))
+			return fmt.Errorf("error creating invoice: %w", err)
+		}
+		log.Info("Created invoice", zap.String("uuid", resp.Msg.GetUuid()), zap.Int("item_count", len(inv.Items)))
+	}
 
 	// Reset all forced dates because invoice is created
 	for _, d := range data {
@@ -488,4 +502,84 @@ func filterInstances(instances []*ipb.Instance) []*ipb.Instance {
 		filteredInstances = append(filteredInstances, inst)
 	}
 	return filteredInstances
+}
+
+func findMergeableRenewalInvoice(invoices []*graph.Invoice, deadline int64) *graph.Invoice {
+	var found *graph.Invoice
+	for _, inv := range invoices {
+		if inv == nil || inv.Invoice == nil {
+			continue
+		}
+		if inv.GetType() != pb.ActionType_INSTANCE_RENEWAL {
+			continue
+		}
+		if inv.GetStatus() != pb.BillingStatus_UNPAID && inv.GetStatus() != pb.BillingStatus_DRAFT {
+			continue
+		}
+		if inv.Meta == nil || !inv.Meta["auto_created"].GetBoolValue() {
+			continue
+		}
+		if inv.GetDeadline() != deadline {
+			continue
+		}
+		if found == nil || inv.GetCreated() < found.GetCreated() {
+			found = inv
+		}
+	}
+	return found
+}
+
+func (s *BillingServiceServer) appendRenewalToExistingInvoice(ctx context.Context, log *zap.Logger, existing *graph.Invoice, add *graph.Invoice) (*graph.Invoice, error) {
+	merged, skipped := prepareMergedRenewalInvoice(existing, add)
+	if skipped {
+		log.Info("Existing invoice already contains all instances, skip merge", zap.String("invoice", existing.GetUuid()))
+		return existing, nil
+	}
+
+	resp, err := s.UpdateInvoice(ctxWithRoot(ctx), connect.NewRequest(&pb.UpdateInvoiceRequest{
+		Invoice:     merged,
+		IsSendEmail: true,
+	}))
+	if err != nil {
+		return nil, err
+	}
+	existing.Invoice = resp.Msg
+	log.Info("Merged renewal into existing invoice",
+		zap.String("uuid", existing.GetUuid()),
+		zap.Int("item_count", len(existing.GetItems())))
+	return existing, nil
+}
+
+func prepareMergedRenewalInvoice(existing *graph.Invoice, add *graph.Invoice) (*pb.Invoice, bool) {
+	newInstances := make([]string, 0)
+	for _, id := range add.GetInstances() {
+		if id != "" && !slices.Contains(existing.GetInstances(), id) {
+			newInstances = append(newInstances, id)
+		}
+	}
+	if len(newInstances) == 0 {
+		return existing.Invoice, true
+	}
+
+	target := proto.Clone(existing.Invoice).(*pb.Invoice)
+	target.Instances = append(target.GetInstances(), newInstances...)
+	target.Items = append(target.GetItems(), add.GetItems()...)
+
+	tgt := &graph.Invoice{Invoice: target}
+	src := &graph.Invoice{Invoice: add.Invoice}
+	tgtBD := tgt.BillingData()
+	srcBD := src.BillingData()
+	if tgtBD == nil {
+		tgtBD = &graph.BillingData{RenewalData: map[string]graph.RenewalData{}}
+	}
+	if tgtBD.RenewalData == nil {
+		tgtBD.RenewalData = map[string]graph.RenewalData{}
+	}
+	if srcBD != nil && srcBD.RenewalData != nil {
+		for k, v := range srcBD.RenewalData {
+			tgtBD.RenewalData[k] = v
+		}
+	}
+	tgt.SetBillingData(tgtBD)
+	return tgt.Invoice, false
 }
