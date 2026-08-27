@@ -2069,7 +2069,6 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 
 const bitrixDomainResourceKey = "bitrix_domain"
 
-
 const (
 	billingMonthSecs = 3600 * 24 * 30
 	billingDaySecs   = 3600 * 24
@@ -2318,7 +2317,6 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 	productTitle := product.GetTitle() + " "
 
 	renewDescription := formatInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate)
-
 
 	tax := acc.GetTaxRate()
 	invCost := initCost
