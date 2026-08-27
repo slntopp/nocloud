@@ -279,6 +279,11 @@ export function getSecondsByDays(days) {
 }
 
 export function getState(item) {
+  // ponytail: instance is logically deleted (status DEL) — the driver may still
+  // bounce through FAILURE while tearing down the underlying resource, but that's
+  // not a real error from the user's perspective, so always show DELETED here.
+  if (item.status === "DEL") return "DELETED";
+
   if (!item.state) return item?.data?.is_monitored ? "ERROR" : "LCM_INIT";
   if (!item.state.state)
     return item?.state?.meta?.lcm_state_str
