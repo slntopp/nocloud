@@ -770,12 +770,13 @@ export function getDatesPeriod(period = "day") {
 
 export function isInstancePayg(inst) {
   return (
-    (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") ||
+    (inst.type === "ione" && inst.billingPlan?.kind === "DYNAMIC") ||
     inst.type === "openai"
   );
 }
 
 export function getShortName(name = "", maxLength = 30) {
+  name = name == null ? "" : String(name);
   return name.length > maxLength + 3
     ? name.slice(0, maxLength - 3) + "..."
     : name;

@@ -435,14 +435,23 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 
 	topic := formatOverdueTicketTopic(info)
 	message := formatOverdueTicketMessage(info)
+
 	if event.GetKey() == "renew_failed_ticket" {
 		data := event.GetData()
 		topic = formatRenewFailedTicketTopic(info)
 		message = formatRenewFailedTicketMessage(info, data["action"].GetStringValue(), data["error"].GetStringValue())
-	}
+
+  }
 	if event.GetKey() == "drive_mismatch_ticket" {
-		topic = formatDriveMismatchTicketTopic(info, event.GetUuid())
-		message = formatDriveMismatchTicketMessage(info, event.GetUuid(), event.GetData())
+		name := stripOverdueBillingDecor(info.Instance)
+		if name == "" {
+			name = event.GetUuid()
+		}
+		d := event.GetData()
+		topic = fmt.Sprintf("Рассинхрон диска: %s", name)
+		message = fmt.Sprintf("Рассинхрон диска: NoCloud %.0f GB, OpenNebula %.0f GB.\nИнстанс: %s (%s)\nVMID: %.0f\nКлиенту начисляется возврат за диск. Проверьте размеры.",
+			d["nocloud_gb"].GetNumberValue(), d["one_gb"].GetNumberValue(),
+			info.Instance, event.GetUuid(), d["vmid"].GetNumberValue())
 	}
 
 	createPayload := map[string]any{

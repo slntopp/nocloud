@@ -38,54 +38,84 @@
       :options.sync="tableOptions"
       :server-items-length="totalLicences"
     >
-      <template v-slot:[`item.app_key`]="{ value }">
-        <router-link
-          v-if="!isPlansLoading"
-          :to="{ name: 'Plan', params: { planId: value } }"
-        >
-          {{ getPlan(value)?.title }}
-        </router-link>
-        <v-skeleton-loader type="text" v-else />
+      <template v-slot:[`item.app_key`]="{ value, item }">
+        <template v-if="value">
+          <router-link
+            v-if="!isPlansLoading"
+            :to="{ name: 'Plan', params: { planId: value } }"
+          >
+            {{
+              item.licence_metadata?.display_plan_name ||
+              getPlan(value)?.title ||
+              value
+            }}
+          </router-link>
+          <v-skeleton-loader type="text" v-else />
+        </template>
+        <span v-else>—</span>
       </template>
 
       <template v-slot:[`item.tariff_key`]="{ value, item }">
         <span v-if="!isPlansLoading">
-          {{ getProduct(item.app_key, value, item.licence_metadata) }}
+          {{
+            value
+              ? getProduct(item.app_key, value, item.licence_metadata)
+              : "—"
+          }}
         </span>
         <v-skeleton-loader type="text" v-else />
       </template>
 
       <template v-slot:[`item.account`]="{ item }">
-        <router-link
-          v-if="!isAccountsLoading && !isInstancesLoading"
-          :to="{
-            name: 'Account',
-            params: {
-              accountId: getAccount(item.licence_metadata?.nocloud_instance)
-                ?.uuid,
-            },
-          }"
-        >
-          {{ getAccount(item.licence_metadata?.nocloud_instance)?.title }}
-        </router-link>
-        <v-skeleton-loader type="text" v-else />
+        <template v-if="linkedInstanceId(item)">
+          <template v-if="isBrokenLink(item)">
+            <span class="error--text">Deleted</span>
+          </template>
+          <template v-else>
+            <router-link
+              v-if="!isAccountsLoading && !isInstancesLoading"
+              :to="{
+                name: 'Account',
+                params: {
+                  accountId:
+                    item.licence_metadata?.nocloud_account ||
+                    getAccount(linkedInstanceId(item))?.uuid,
+                },
+              }"
+            >
+              {{
+                getAccount(linkedInstanceId(item))?.title ||
+                item.licence_metadata?.nocloud_account ||
+                "—"
+              }}
+            </router-link>
+            <v-skeleton-loader type="text" v-else />
+          </template>
+        </template>
+        <span v-else class="grey--text">Trial</span>
       </template>
 
       <template v-slot:[`item.instance`]="{ item }">
-        <router-link
-          v-if="!isInstancesLoading"
-          :to="{
-            name: 'Instance',
-            params: { instanceId: item.licence_metadata?.nocloud_instance },
-          }"
-        >
-          {{
-            getInstance(item.licence_metadata?.nocloud_instance)?.instance
-              ?.title
-          }}
-        </router-link>
-
-        <v-skeleton-loader type="text" v-else />
+        <template v-if="linkedInstanceId(item)">
+          <template v-if="isBrokenLink(item)">
+            <span class="error--text">Deleted</span>
+          </template>
+          <template v-else>
+            <router-link
+              v-if="!isInstancesLoading"
+              :to="{
+                name: 'Instance',
+                params: { instanceId: linkedInstanceId(item) },
+              }"
+            >
+              {{
+                getInstance(linkedInstanceId(item))?.instance?.title || "—"
+              }}
+            </router-link>
+            <v-skeleton-loader type="text" v-else />
+          </template>
+        </template>
+        <span v-else class="grey--text">Trial</span>
       </template>
 
       <template v-slot:[`item.due_date`]="{ item }">
@@ -235,13 +265,24 @@ const getPlan = (uuid) => {
 };
 
 const getAccount = (instanceUuid) => {
-  const accountId = getInstance(instanceUuid)?.account;
-
+  const cached = instances.value[instanceUuid];
+  if (!cached || cached.broken) return null;
+  const accountId =
+    cached.account ||
+    // legacy shape
+    cached.instance?.account;
   return accounts.value[accountId];
 };
 
 const getInstance = (uuid) => {
   return instances.value[uuid];
+};
+
+const linkedInstanceId = (item) => item?.licence_metadata?.nocloud_instance;
+
+const isBrokenLink = (item) => {
+  const id = linkedInstanceId(item);
+  return !!(id && instances.value[id]?.broken);
 };
 
 const getProduct = (plan, product, meta) => {
@@ -394,6 +435,8 @@ watch(
 
 watch(licences, () => {
   licences.value.forEach(async ({ app_key: uuid }) => {
+    if (!uuid) return;
+
     isPlansLoading.value = true;
     try {
       if (!plans.value[uuid]) {
@@ -412,6 +455,8 @@ watch(licences, () => {
 
   licences.value.forEach(async (license) => {
     const instanceId = license.licence_metadata?.nocloud_instance;
+    if (!instanceId) return;
+
     isInstancesLoading.value = true;
     try {
       if (!instances.value[instanceId]) {
@@ -422,8 +467,17 @@ watch(licences, () => {
         instances.value[instanceId] = await instances.value[instanceId];
       }
     } catch (e) {
-      console.error(`Error fetching instance ${instanceId}:`, e);
-      delete instances.value[instanceId];
+      const code = e?.code ?? e?.status ?? e?.statusCode;
+      const isNotFound =
+        code === 404 ||
+        code === "NotFound" ||
+        /not found/i.test(String(e?.message || e));
+      if (isNotFound) {
+        instances.value[instanceId] = { broken: true, uuid: instanceId };
+      } else {
+        console.error(`Error fetching instance ${instanceId}:`, e);
+        delete instances.value[instanceId];
+      }
     } finally {
       isInstancesLoading.value = Object.values(instances.value).some(
         (acc) => acc instanceof Promise,
@@ -436,7 +490,10 @@ watch(
   isInstancesLoading,
   () => {
     Object.values(instances.value).forEach(async (instance) => {
+      if (!instance || instance instanceof Promise || instance.broken) return;
+
       const accountId = instance.account;
+      if (!accountId) return;
 
       isAccountsLoading.value = true;
       try {

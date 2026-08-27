@@ -115,16 +115,23 @@
         :to="{
           name: 'Plan',
           params: {
-            planId: item.billingPlan?.uuid,
+            planId: item.billingPlan.uuid,
           },
         }"
       >
         {{
-          getShortName(item.billingPlan?.products?.[item.product]?.title) ||
-          "-"
-        }}
-      </router-link>
-      <span v-else>-</span>
+    getShortName(
+      item.billingPlan?.products?.[item.product]?.title || item.product,
+    ) || "-"
+  }}
+</router-link>
+<span v-else>
+  {{
+    getShortName(
+      item.billingPlan?.products?.[item.product]?.title || item.product,
+    ) || "-"
+  }}
+</span>
     </template>
 
     <template v-slot:[`item.email`]="{ item }">
@@ -440,7 +447,7 @@ const listOptions = computed(() => {
   return {
     filters: filters,
     page: page.value,
-    limit: options.value.itemsPerPage,
+    limit: options.value.itemsPerPage || 15,
     field: options.value.sortBy?.[0],
     sort:
       options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
@@ -584,7 +591,6 @@ const fetchInstances = async () => {
       fetchUnique();
     }
 
-    console.log(listOptions.value);
     await store.dispatch("instances/fetch", listOptions.value);
   } catch (e) {
     fetchError.value = e.message;
@@ -615,7 +621,7 @@ const getPeriod = (instance) => {
 
   const period = getBillingPeriod(Number(instance.period));
 
-  return period || "Unknown";
+  return typeof period === "string" && period ? period : "Unknown";
 };
 
 const getExpirationDate = (instance) => {
@@ -627,9 +633,9 @@ const getExpirationDate = (instance) => {
 const getOSName = (instance) => {
   const id = instance.config?.template_id;
 
-  if (!id) return;
+  if (!id && id !== 0) return;
   return servicesProviders.value.find(({ uuid }) => uuid === instance.sp)
-    ?.publicData.templates[id]?.name;
+    ?.publicData?.templates?.[id]?.name;
 };
 
 const getServiceProvider = (uuid) => {
@@ -705,12 +711,12 @@ const updateEditValues = async (values) => {
   }
 };
 
-if (props.noSearch) {
-  watch(customFilter, fetchInstancesDebounce, { deep: true });
-  watch([options, refetch], fetchInstancesDebounce);
-} else {
-  watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
+watch(customFilter, fetchInstancesDebounce, { deep: true });
+if (!props.noSearch) {
+  watch(filter, fetchInstancesDebounce, { deep: true });
   watch([options, refetch, searchParam], fetchInstancesDebounce);
+} else {
+  watch([options, refetch], fetchInstancesDebounce);
 }
 
 watch(instances, () => {

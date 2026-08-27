@@ -680,7 +680,7 @@ func (g *WhmcsGateway) SendEmail(_ context.Context, template string, relatedID i
 	return nil
 }
 
-func (g *WhmcsGateway) _SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {
+func (g *WhmcsGateway) SyncWhmcsInvoice(ctx context.Context, invoiceId int) error {
 	return g.syncWhmcsInvoice(ctx, invoiceId)
 }
 
