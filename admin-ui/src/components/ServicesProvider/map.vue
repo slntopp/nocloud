@@ -281,35 +281,18 @@ export default {
       this.preserveView();
     },
     saveCountry() {
-      const noRegion = this.regions.length
-        ? this.markers.find((el) => !el.extra?.region)
-        : null;
-
-      if (noRegion) {
-        this.openDialog(noRegion.id);
-        this.showSnackbarError({
-          message: "Error: Choose a region for every location.",
-        });
-        return;
-      }
-
-      let error = 0;
+      // ponytail: nothing here blocks the save — legacy pins have blank titles
+      // and no region, and refusing the whole map made them unfixable.
+      // Blank titles fall back to the region, missing regions only warn.
       this.markers.forEach((el) => {
-        if (el.title && !el.title.trim()) {
-          const ref = this.$refs["textField_" + el.id]?.[0];
-          this.mouseEnterHandler(el.id);
-          setTimeout(() => {
-            ref?.focus();
-          }, 100);
-          error = 1;
-        }
+        el.title =
+          el.title?.trim() || el.extra?.region || el.extra?.country || " ";
       });
-      if (error) {
-        this.showSnackbarError({
-          message: "Error: Enter location names.",
-        });
-        return;
-      }
+
+      const noRegion = this.regions.length
+        ? this.markers.filter((el) => !el.extra?.region)
+        : [];
+
       this.$emit("save", this.item);
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
@@ -328,9 +311,19 @@ export default {
       api.servicesProviders
         .update(this.item.uuid, this.item)
         .then((data) => {
-          this.showSnackbarSuccess({
-            message: "Service edited successfully",
-          });
+          if (noRegion.length) {
+            this.showSnackbarError({
+              message: `Saved, but ${
+                noRegion.length
+              } location(s) have no region and will not match any OVH datacenter: ${noRegion
+                .map(({ title }) => title)
+                .join(", ")}`,
+            });
+          } else {
+            this.showSnackbarSuccess({
+              message: "Service edited successfully",
+            });
+          }
           this.$emit("set-locations", data.locations);
         })
         .catch((err) => {
@@ -400,7 +393,12 @@ export default {
           id: this.selected,
           type: this.type || this.item.type,
           title: " ",
-          extra: { country: target.id, region: "", color: "", link: "" },
+          extra: {
+            country: target.id,
+            region: "",
+            color: undefined,
+            link: undefined,
+          },
           x,
           y,
         };
@@ -428,7 +426,7 @@ export default {
         .filter((l) => !this.type || this.type === l.type)
         .map((l) => ({
           ...l,
-          extra: { region: "", color: "", link: "", ...l.extra },
+          extra: { region: "", color: undefined, link: undefined, ...l.extra },
         }));
     },
   },
