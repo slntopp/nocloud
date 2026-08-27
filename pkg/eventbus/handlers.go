@@ -378,6 +378,20 @@ func formatRenewFailedTicketMessage(info EventInfo, action, errText string) stri
 		clientName, formatOverdueServiceDetails(info), action, errText)
 }
 
+func formatDriveMismatchTicketTopic(info EventInfo, instanceUUID string) string {
+	name := stripOverdueBillingDecor(info.Instance)
+	if name == "" {
+		name = instanceUUID
+	}
+	return fmt.Sprintf("Рассинхрон диска: %s", name)
+}
+
+func formatDriveMismatchTicketMessage(info EventInfo, instanceUUID string, d map[string]*structpb.Value) string {
+	return fmt.Sprintf("Рассинхрон диска: NoCloud %.0f GB, OpenNebula %.0f GB.\nИнстанс: %s (%s)\nVMID: %.0f\nКлиенту начисляется возврат за диск. Проверьте размеры.",
+		d["nocloud_gb"].GetNumberValue(), d["one_gb"].GetNumberValue(),
+		info.Instance, instanceUUID, d["vmid"].GetNumberValue())
+}
+
 func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	if overdueCCHost == "" {
 		log.Warn("CC_HOST not set, skipping overdue ticket creation")
@@ -426,6 +440,7 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		data := event.GetData()
 		topic = formatRenewFailedTicketTopic(info)
 		message = formatRenewFailedTicketMessage(info, data["action"].GetStringValue(), data["error"].GetStringValue())
+
   }
 	if event.GetKey() == "drive_mismatch_ticket" {
 		name := stripOverdueBillingDecor(info.Instance)
@@ -437,7 +452,10 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		message = fmt.Sprintf("Рассинхрон диска: NoCloud %.0f GB, OpenNebula %.0f GB.\nИнстанс: %s (%s)\nVMID: %.0f\nКлиенту начисляется возврат за диск. Проверьте размеры.",
 			d["nocloud_gb"].GetNumberValue(), d["one_gb"].GetNumberValue(),
 			info.Instance, event.GetUuid(), d["vmid"].GetNumberValue())
-
+	}
+	if event.GetKey() == "drive_mismatch_ticket" {
+		topic = formatDriveMismatchTicketTopic(info, event.GetUuid())
+		message = formatDriveMismatchTicketMessage(info, event.GetUuid(), event.GetData())
 	}
 
 	createPayload := map[string]any{
