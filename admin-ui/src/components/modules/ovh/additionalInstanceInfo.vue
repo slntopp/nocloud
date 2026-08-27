@@ -20,18 +20,28 @@
 
       <v-col>
         <v-text-field
-          readonly
+          append-icon="mdi-pencil"
+          @input="
+            emit('update', {
+              key: 'config.username',
+              value: $event,
+            })
+          "
+          :value="template.config.username"
           label="Login"
-          :value="template.state.meta?.login"
-          @click:append="addToClipboard(template.state.meta?.login)"
-          append-icon="mdi-content-copy"
         />
       </v-col>
 
       <v-col>
         <password-text-field
-          readonly
-          :value="template.state.meta?.password"
+          :readonly="false"
+          @input="
+            emit('update', {
+              key: 'config.password',
+              value: $event,
+            })
+          "
+          :value="template.config.password"
           copy
         />
       </v-col>
