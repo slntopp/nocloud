@@ -241,6 +241,9 @@ const spTypes = computed(() => {
   switch (provider.value.type) {
     case "ione":
       return () => import("@/components/modules/ione/serviceProviderInfo.vue");
+    case "proxmox":
+      return () =>
+        import("@/components/modules/proxmox/serviceProviderInfo.vue");
     case "ovh":
       return () => import("@/components/modules/ovh/serviceProviderInfo.vue");
     default:

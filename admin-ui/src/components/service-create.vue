@@ -227,7 +227,7 @@ export default {
     currentInstancesGroups: {},
     currentInstancesGroupsIndex: -1,
     prevInstancesGroupsIndex: -1,
-    types: ["ione", "custom"],
+    types: ["ione", "proxmox", "custom"],
     templates: {},
     plans: {
       list: [],
