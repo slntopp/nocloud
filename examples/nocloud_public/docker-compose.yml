@@ -203,13 +203,14 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       BILLING_HOST: billing:8000
-      DRIVERS: driver-ione:8080 driver-virtual:8080
+      DRIVERS: driver-ione:8080 driver-virtual:8080 driver-proxmox:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       REDIS_HOST: redis_settings:6379
     depends_on:
       - db
       - billing
       - driver-ione
+      - driver-proxmox
     networks:
       - proxy
       - arangodb
@@ -243,12 +244,13 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
-      DRIVERS: driver-ione:8080 driver-virtual:8080
+      DRIVERS: driver-ione:8080 driver-virtual:8080 driver-proxmox:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       REDIS_HOST: redis_settings:6379
     depends_on:
       - db
       - driver-ione
+      - driver-proxmox
     networks:
       - proxy
       - arangodb
@@ -455,6 +457,27 @@ services:
       DRIVER_TYPE_KEY: empty
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       REDIS_HOST: redis_settings:6379
+
+  driver-proxmox:
+    container_name: driver-proxmox
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+    image: ghcr.io/slntopp/nocloud-driver-proxmox:latest
+    networks:
+      grpc-internal:
+      mq:
+      redis:
+    environment:
+      LOG_LEVEL: 0
+      DRIVER_TYPE_KEY: proxmox
+      SIGNING_KEY: "${SIGNING_KEY}"
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      REDIS_HOST: redis_settings:6379
+      VNC_PORT: 8010
+      CONSOLE_PUBLIC_URL: "${CONSOLE_PUBLIC_URL:-}"
 
 networks:
   proxy:

@@ -395,6 +395,14 @@ export default {
         .then((res) => {
           this.token = res.meta.token;
           this.desktopName = this.instance?.title ?? "Unknown";
+          const type =
+            this.instance?.type || this.instance?.billingPlan?.type;
+
+          if (type === "proxmox") {
+            this.url = (res.meta.url || "").replace(/^http/, "ws");
+            this.connect(res.meta.token);
+            return;
+          }
 
           this.url = `wss://${
             this.instance.sp

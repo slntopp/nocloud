@@ -535,6 +535,51 @@ export default {
           },
           ...this.baseVmControls,
         ],
+        proxmox: [
+          {
+            action: "start",
+            type: "method",
+            component: () => import("@/components/dialogs/startInstance.vue"),
+            method: this.startInstance,
+            disabled: this.proxmoxActions?.start,
+          },
+          {
+            action: "poweroff",
+            disabled: this.proxmoxActions?.poweroff,
+            icon: "mdi-stop",
+          },
+          {
+            action: "resume",
+            title: "Unsuspend",
+            disabled: this.proxmoxActions?.resume,
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume", date),
+          },
+          {
+            action: "suspend",
+            disabled: this.proxmoxActions?.suspend,
+            icon: "mdi-power-sleep",
+          },
+          {
+            action: "reboot",
+            disabled: this.proxmoxActions?.reboot,
+            icon: "mdi-restart",
+          },
+          {
+            action: "pause",
+            disabled: this.proxmoxActions?.pause,
+            icon: "mdi-pause",
+          },
+          {
+            action: "vnc",
+            title: "Console",
+            disabled: this.proxmoxActions?.vnc,
+            icon: "mdi-console",
+          },
+          ...this.baseVmControls,
+        ],
         "ovh dedicated": [
           {
             action: "start",
@@ -852,6 +897,36 @@ export default {
           this.template.state.meta?.lcm_state === 21 ||
           this.template.state.meta?.lcm_state === 6,
         start: true,
+      };
+    },
+    proxmoxActions() {
+      if (
+        !this.template?.state ||
+        !this.template.config?.auto_start ||
+        this.isDetached
+      ) {
+        return {
+          start: this.template.config?.auto_start,
+          resume: true,
+          poweroff: true,
+          reboot: true,
+          suspend: true,
+          pause: true,
+          vnc: true,
+        };
+      }
+      const st = this.template.state.state;
+      const running = st === "RUNNING";
+      const suspended = st === "SUSPENDED";
+      const pending = st === "PENDING";
+      return {
+        start: running || pending,
+        poweroff: !running,
+        reboot: !running,
+        resume: !suspended,
+        suspend: suspended || pending,
+        pause: !running,
+        vnc: !running,
       };
     },
     ovhActions() {

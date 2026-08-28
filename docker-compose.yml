@@ -123,7 +123,7 @@ services:
       SETTINGS_HOST: settings:8000
       BILLING_HOST: billing:8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-      DRIVERS: driver-ione:8080 # your drivers here
+      DRIVERS: driver-ione:8080 driver-proxmox:8080 # your drivers here
     depends_on:
       - db
       - billing
@@ -157,7 +157,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-      DRIVERS: driver-ione:8080 # your drivers here
+      DRIVERS: driver-ione:8080 driver-proxmox:8080 # your drivers here
     networks:
       - proxy
       - arangodb
@@ -357,6 +357,23 @@ services:
   #     RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
   #     LOG_LEVEL: -1
   #     REDIS_HOST: redis:6379
+
+  # driver-proxmox:
+  #   container_name: driver-proxmox
+  #   restart: always
+  #   image: ghcr.io/slntopp/nocloud-driver-proxmox:latest
+  #   networks:
+  #     - grpc-internal
+  #     - mq
+  #     - redis
+  #   environment:
+  #     DRIVER_TYPE_KEY: proxmox
+  #     SIGNING_KEY: "${SIGNING_KEY}"
+  #     RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+  #     LOG_LEVEL: -1
+  #     REDIS_HOST: redis:6379
+  #     VNC_PORT: 8010
+  #     CONSOLE_PUBLIC_URL: "${CONSOLE_PUBLIC_URL:-}"
 
 networks:
   proxy:
