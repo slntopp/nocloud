@@ -169,7 +169,7 @@ func (s *PaymentGatewayServer) HandleViewInvoice(writer http.ResponseWriter, req
 	writer.Header().Set("Pragma", "no-cache")
 	writer.Header().Set("Expires", "0")
 	writer.WriteHeader(http.StatusOK)
-	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false)))
+	_, _ = writer.Write([]byte(generateViewInvoiceHTML(InvoiceBody, Gateways, Supplier, Buyer, LogoURL, languageCode, invoice.GetStatus() != pb.BillingStatus_UNPAID, false, invConf.WhmcsPaidOnBalancePayment)))
 }
 
 func buildBuyerSection(name string, dataMap map[string]any, languageCode string) InvoiceFromFields {
@@ -297,7 +297,7 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 			http.Error(writer, "Failed to get payment gateway: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		pdfBytes, err := GenerateInvoicePDF(InvoiceBody, gws, Supplier, Buyer, LogoURL, languageCode)
+		pdfBytes, err := GenerateInvoicePDF(InvoiceBody, gws, Supplier, Buyer, LogoURL, languageCode, invConf.WhmcsPaidOnBalancePayment)
 		if err != nil {
 			http.Error(writer, "Failed to generate invoice PDF: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -313,8 +313,8 @@ func (s *PaymentGatewayServer) HandlePaymentAction(writer http.ResponseWriter, r
 	}
 }
 
-func GenerateInvoicePDF(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier InvoiceFromFields, buyer InvoiceFromFields, logoURL, lang string) ([]byte, error) {
-	htmlRaw := generateViewInvoiceHTML(invoiceBody, paymentGateways, supplier, buyer, logoURL, lang, true, true)
+func GenerateInvoicePDF(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier InvoiceFromFields, buyer InvoiceFromFields, logoURL, lang string, whmcsPaidOnBalancePayment bool) ([]byte, error) {
+	htmlRaw := generateViewInvoiceHTML(invoiceBody, paymentGateways, supplier, buyer, logoURL, lang, true, true, whmcsPaidOnBalancePayment)
 	gotenbergHost := viper.GetString("GOTENBERG_HOST")
 	if gotenbergHost == "" {
 		return nil, fmt.Errorf("GOTENBERG_HOST is empty")
@@ -394,7 +394,7 @@ type pg struct {
 	HTML  string
 }
 
-func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier InvoiceFromFields, buyer InvoiceFromFields, logoURL string, lang string, omitPmPanel bool, omitGwPanel bool) string {
+func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.PaymentGateway, supplier InvoiceFromFields, buyer InvoiceFromFields, logoURL string, lang string, omitPmPanel bool, omitGwPanel bool, whmcsPaidOnBalancePayment bool) string {
 	l := invoicei18n.Lang(lang)
 
 	statusKey := func(st pb.BillingStatus) string {
@@ -683,7 +683,7 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 	var reverseChargeHTML string
 	isPaidInvoice := invoiceBody.GetStatus() == pb.BillingStatus_PAID ||
 		invoiceBody.GetStatus() == pb.BillingStatus_RETURNED
-	if vatLabel == "NP" && isPaidInvoice {
+	if vatLabel == "NP" && isPaidInvoice && !whmcsPaidOnBalancePayment {
 		reverseChargeHTML = `<div class="note small reverse-charge">
 $footer.reverse_charge<br>
 $footer.electronic_valid
