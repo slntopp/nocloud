@@ -16,6 +16,9 @@ limitations under the License.
 package registry
 
 import (
+	"strconv"
+	"time"
+
 	"github.com/slntopp/nocloud-proto/access"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -42,6 +45,49 @@ func MergeMaps[K comparable](old map[K]interface{}, new map[K]interface{}) map[K
 	}
 
 	return result
+}
+
+// normalizeDateCreate ensures data.date_create is a unix timestamp number.
+// Historical WHMCS sync stored it as a string, which breaks AQL numeric filters/sorts.
+// If setIfMissing is true and the field is absent/empty, it is set to now (Create/SignUp).
+func normalizeDateCreate(m map[string]any, setIfMissing bool) {
+	if m == nil {
+		return
+	}
+	v, ok := m["date_create"]
+	if !ok || v == nil || v == "" {
+		if setIfMissing {
+			m["date_create"] = float64(time.Now().Unix())
+		}
+		return
+	}
+	switch t := v.(type) {
+	case float64:
+		if t == 0 && setIfMissing {
+			m["date_create"] = float64(time.Now().Unix())
+		}
+	case string:
+		n, err := strconv.ParseFloat(t, 64)
+		if err != nil || n == 0 {
+			if setIfMissing {
+				m["date_create"] = float64(time.Now().Unix())
+			} else {
+				delete(m, "date_create")
+			}
+		} else {
+			m["date_create"] = n
+		}
+	case int64:
+		m["date_create"] = float64(t)
+	case int:
+		m["date_create"] = float64(t)
+	case int32:
+		m["date_create"] = float64(t)
+	default:
+		if setIfMissing {
+			m["date_create"] = float64(time.Now().Unix())
+		}
+	}
 }
 
 const accountPostCreateSettingsKey = "post-create-account"

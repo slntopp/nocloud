@@ -53,6 +53,8 @@ var handlers = map[string]EventHandler{
 	"invoice_published":           nil,
 	"invoice_paid":                nil,
 	"overdue_ticket":              OverdueTicketHandler,
+	"renew_failed_ticket":         OverdueTicketHandler,
+	"drive_mismatch_ticket":       OverdueTicketHandler,
 }
 
 var getInstanceAccount = `
@@ -329,6 +331,52 @@ func formatOverdueTicketMessage(info EventInfo) string {
 		clientName, formatOverdueServiceDetails(info))
 }
 
+func formatRenewFailedTicketTopic(info EventInfo) string {
+	name := stripOverdueBillingDecor(info.Instance)
+	if name == "" {
+		name = stripOverdueBillingDecor(info.Product)
+	}
+	return fmt.Sprintf("Ошибка продления домена: %s", name)
+}
+
+func formatRenewFailedTicketMessage(info EventInfo, action, errText string) string {
+	clientName := info.AccountTitle
+	if clientName == "" {
+		clientName = info.Account
+	}
+	if action == "" {
+		action = "free_renew"
+	}
+	if errText == "" {
+		errText = "неизвестная ошибка регистратора"
+	}
+	return fmt.Sprintf(`Здравствуйте.
+
+Уважаемый %s, сообщаем, что что-то пошло не так при продлении услуги: "%s".
+
+Событие: продление домена (%s)
+Ошибка: %s
+
+Счёт уже оплачен, но регистратор не продлил домен. Служба поддержки уведомлена, повторные попытки продолжаются автоматически.
+
+С уважением, служба поддержки.`,
+		clientName, formatOverdueServiceDetails(info), action, errText)
+}
+
+func formatDriveMismatchTicketTopic(info EventInfo, instanceUUID string) string {
+	name := stripOverdueBillingDecor(info.Instance)
+	if name == "" {
+		name = instanceUUID
+	}
+	return fmt.Sprintf("Рассинхрон диска: %s", name)
+}
+
+func formatDriveMismatchTicketMessage(info EventInfo, instanceUUID string, d map[string]*structpb.Value) string {
+	return fmt.Sprintf("Рассинхрон диска: NoCloud %.0f GB, OpenNebula %.0f GB.\nИнстанс: %s (%s)\nVMID: %.0f\nКлиенту начисляется возврат за диск. Проверьте размеры.",
+		d["nocloud_gb"].GetNumberValue(), d["one_gb"].GetNumberValue(),
+		info.Instance, instanceUUID, d["vmid"].GetNumberValue())
+}
+
 func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	if overdueCCHost == "" {
 		log.Warn("CC_HOST not set, skipping overdue ticket creation")
@@ -374,53 +422,80 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 	if err != nil {
 		log.Warn("overdue ticket: failed to load chat settings, using env/hardcoded defaults", zap.Error(err))
 	}
-	ticketConf := overdueAutoTicketConf{
-		Enabled:    true,
-		Department: overdueDepartmentKey,
-		SenderUUID: overdueWhmcsSenderUUID,
-	}
-	if defaults != nil {
-		fromUI := defaults.autoTicketConf()
-		ticketConf.Enabled = fromUI.Enabled
-		if fromUI.Department != "" {
-			ticketConf.Department = fromUI.Department
-		}
-		if fromUI.SenderUUID != "" {
-			ticketConf.SenderUUID = fromUI.SenderUUID
-		}
-		ticketConf.Admins = fromUI.Admins
-		ticketConf.Responsible = fromUI.Responsible
-		ticketConf.Topic = fromUI.Topic
-		ticketConf.Message = fromUI.Message
-		ticketConf.DefaultDelayHours = fromUI.DefaultDelayHours
-		ticketConf.Delays = fromUI.Delays
-		ticketConf.ExcludedPlans = fromUI.ExcludedPlans
-	}
-	if !ticketConf.Enabled {
-		log.Info("overdue ticket: disabled in chat settings, skipping")
-		event.Type = "noop"
-		return event, nil
-	}
-	if ticketConf.isPlanExcluded(info.PlanUUID) {
-		log.Info("overdue ticket: skipped, price model is excluded",
-			zap.String("instance", event.GetUuid()),
-			zap.String("plan_uuid", info.PlanUUID),
-			zap.String("plan_title", info.PlanTitle))
-		event.Type = "noop"
-		return event, nil
-	}
-	if _, period := resolveOverdueDueAndPeriod(event.GetData(), info); period == 0 {
-		log.Info("overdue ticket: skipped, product has no billing period (one-time)",
-			zap.String("instance", event.GetUuid()))
-		event.Type = "noop"
-		return event, nil
-	}
-	if skipOverdueTicketUntilDelay(log, ticketConf, event.GetData(), info) {
-		event.Type = "noop"
-		return event, nil
-	}
 
-	topic, message := resolveOverdueTicketTexts(ticketConf, info)
+	var (
+		topic, message string
+		ticketConf     overdueAutoTicketConf
+	)
+
+	switch event.GetKey() {
+	case "renew_failed_ticket":
+		data := event.GetData()
+		topic = formatRenewFailedTicketTopic(info)
+		message = formatRenewFailedTicketMessage(info, data["action"].GetStringValue(), data["error"].GetStringValue())
+		ticketConf = overdueAutoTicketConf{
+			Enabled:    true,
+			Department: overdueDepartmentKey,
+			SenderUUID: overdueWhmcsSenderUUID,
+		}
+
+	case "drive_mismatch_ticket":
+		topic = formatDriveMismatchTicketTopic(info, event.GetUuid())
+		message = formatDriveMismatchTicketMessage(info, event.GetUuid(), event.GetData())
+		ticketConf = overdueAutoTicketConf{
+			Enabled:    true,
+			Department: overdueDepartmentKey,
+			SenderUUID: overdueWhmcsSenderUUID,
+		}
+	default: // overdue_ticket
+		ticketConf = overdueAutoTicketConf{
+			Enabled:    true,
+			Department: overdueDepartmentKey,
+			SenderUUID: overdueWhmcsSenderUUID,
+		}
+		if defaults != nil {
+			fromUI := defaults.autoTicketConf()
+			ticketConf.Enabled = fromUI.Enabled
+			if fromUI.Department != "" {
+				ticketConf.Department = fromUI.Department
+			}
+			if fromUI.SenderUUID != "" {
+				ticketConf.SenderUUID = fromUI.SenderUUID
+			}
+			ticketConf.Admins = fromUI.Admins
+			ticketConf.Responsible = fromUI.Responsible
+			ticketConf.Topic = fromUI.Topic
+			ticketConf.Message = fromUI.Message
+			ticketConf.DefaultDelayHours = fromUI.DefaultDelayHours
+			ticketConf.Delays = fromUI.Delays
+			ticketConf.ExcludedPlans = fromUI.ExcludedPlans
+		}
+		if !ticketConf.Enabled {
+			log.Info("overdue ticket: disabled in chat settings, skipping")
+			event.Type = "noop"
+			return event, nil
+		}
+		if ticketConf.isPlanExcluded(info.PlanUUID) {
+			log.Info("overdue ticket: skipped, price model is excluded",
+				zap.String("instance", event.GetUuid()),
+				zap.String("plan_uuid", info.PlanUUID),
+				zap.String("plan_title", info.PlanTitle))
+			event.Type = "noop"
+			return event, nil
+		}
+		if _, period := resolveOverdueDueAndPeriod(event.GetData(), info); period == 0 {
+			log.Info("overdue ticket: skipped, product has no billing period (one-time)",
+				zap.String("instance", event.GetUuid()))
+			event.Type = "noop"
+			return event, nil
+		}
+		if skipOverdueTicketUntilDelay(log, ticketConf, event.GetData(), info) {
+			event.Type = "noop"
+			return event, nil
+		}
+		topic, message = resolveOverdueTicketTexts(ticketConf, info)
+}
+
 	createPayload := map[string]any{
 		"owner":  info.Account,
 		"users":  []string{info.Account},
@@ -518,8 +593,10 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		return event, nil
 	}
 
-	if err := markOverdueTicketCreated(ctx, db, event.GetUuid()); err != nil {
-		log.Warn("overdue ticket: failed to persist created flag", zap.Error(err), zap.String("instance", event.GetUuid()))
+	if event.GetKey() == "overdue_ticket" {
+		if err := markOverdueTicketCreated(ctx, db, event.GetUuid()); err != nil {
+			log.Warn("overdue ticket: failed to persist created flag", zap.Error(err), zap.String("instance", event.GetUuid()))
+		}
 	}
 
 	chatUUID, err := parseChatUUIDFromCreate(createBody)
