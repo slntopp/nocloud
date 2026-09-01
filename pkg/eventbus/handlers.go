@@ -104,7 +104,9 @@ RETURN {
 	account_title: account.title,
 	service: srv.title, 
 	instance: doc.title, 
-	product: doc.product, 
+	product: doc.product,
+	plan_uuid: doc.billing_plan == null ? "" : doc.billing_plan.uuid,
+	plan_title: doc.billing_plan == null ? "" : doc.billing_plan.title,
 	period: product_conf == null ? 0 : product_conf.period,
 	next_payment_date: doc.data.next_payment_date,
 	due: doc.data.next_payment_date != null && doc.data.next_payment_date != 0
@@ -123,6 +125,8 @@ type EventInfo struct {
 	Service         string  `json:"service"`
 	Instance        string  `json:"instance"`
 	Product         string  `json:"product,omitempty"`
+	PlanUUID        string  `json:"plan_uuid,omitempty"`
+	PlanTitle       string  `json:"plan_title,omitempty"`
 	Ips             []any   `json:"ips,omitempty"`
 	NextPaymentDate float64 `json:"next_payment_date,omitempty"`
 	Period          float64 `json:"period,omitempty"`
@@ -388,9 +392,20 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		ticketConf.Responsible = fromUI.Responsible
 		ticketConf.Topic = fromUI.Topic
 		ticketConf.Message = fromUI.Message
+		ticketConf.DefaultDelayHours = fromUI.DefaultDelayHours
+		ticketConf.Delays = fromUI.Delays
+		ticketConf.ExcludedPlans = fromUI.ExcludedPlans
 	}
 	if !ticketConf.Enabled {
 		log.Info("overdue ticket: disabled in chat settings, skipping")
+		event.Type = "noop"
+		return event, nil
+	}
+	if ticketConf.isPlanExcluded(info.PlanUUID) {
+		log.Info("overdue ticket: skipped, price model is excluded",
+			zap.String("instance", event.GetUuid()),
+			zap.String("plan_uuid", info.PlanUUID),
+			zap.String("plan_title", info.PlanTitle))
 		event.Type = "noop"
 		return event, nil
 	}

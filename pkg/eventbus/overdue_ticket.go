@@ -15,17 +15,18 @@ import (
 )
 
 const (
-	autoTicketEnabledKey     = "auto_ticket.enabled"
-	autoTicketDepartmentKey  = "auto_ticket.department"
-	autoTicketTopicKey       = "auto_ticket.topic"
-	autoTicketMessageKey     = "auto_ticket.message"
-	autoTicketSenderKey      = "auto_ticket.sender_uuid"
-	autoTicketAdminsKey      = "auto_ticket.admins"
-	autoTicketResponsibleKey = "auto_ticket.responsible"
-	autoTicketDelayHoursKey  = "auto_ticket.delay_hours"
-	autoTicketDelaysKey      = "auto_ticket.delays"
-	defaultOverdueDelayHours = int64(24)
-	overduePeriodMatchWindow = int64(2 * 24 * 3600)
+	autoTicketEnabledKey       = "auto_ticket.enabled"
+	autoTicketDepartmentKey    = "auto_ticket.department"
+	autoTicketTopicKey         = "auto_ticket.topic"
+	autoTicketMessageKey       = "auto_ticket.message"
+	autoTicketSenderKey        = "auto_ticket.sender_uuid"
+	autoTicketAdminsKey        = "auto_ticket.admins"
+	autoTicketResponsibleKey   = "auto_ticket.responsible"
+	autoTicketDelayHoursKey    = "auto_ticket.delay_hours"
+	autoTicketDelaysKey        = "auto_ticket.delays"
+	autoTicketExcludedPlansKey = "auto_ticket.excluded_plans"
+	defaultOverdueDelayHours   = int64(24)
+	overduePeriodMatchWindow   = int64(2 * 24 * 3600)
 )
 
 type overdueCCDefaults struct {
@@ -59,6 +60,7 @@ type overdueAutoTicketConf struct {
 	SenderUUID        string
 	DefaultDelayHours int64
 	Delays            []overdueDelayRule
+	ExcludedPlans     []string
 }
 
 type pbEventData map[string]*structpb.Value
@@ -117,7 +119,25 @@ func parseOverdueAutoTicket(values map[string]string) overdueAutoTicketConf {
 			conf.Admins = append(conf.Admins, uuid)
 		}
 	}
+	for _, part := range strings.Split(values[autoTicketExcludedPlansKey], ",") {
+		if uuid := strings.TrimSpace(part); uuid != "" {
+			conf.ExcludedPlans = append(conf.ExcludedPlans, uuid)
+		}
+	}
 	return conf
+}
+
+func (c overdueAutoTicketConf) isPlanExcluded(planUUID string) bool {
+	planUUID = strings.TrimSpace(planUUID)
+	if planUUID == "" || len(c.ExcludedPlans) == 0 {
+		return false
+	}
+	for _, excluded := range c.ExcludedPlans {
+		if strings.TrimSpace(excluded) == planUUID {
+			return true
+		}
+	}
+	return false
 }
 
 func (c overdueAutoTicketConf) delaySeconds(period int64) int64 {
