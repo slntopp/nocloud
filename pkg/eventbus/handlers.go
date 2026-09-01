@@ -394,6 +394,12 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		event.Type = "noop"
 		return event, nil
 	}
+	if _, period := resolveOverdueDueAndPeriod(event.GetData(), info); period == 0 {
+		log.Info("overdue ticket: skipped, product has no billing period (one-time)",
+			zap.String("instance", event.GetUuid()))
+		event.Type = "noop"
+		return event, nil
+	}
 	if skipOverdueTicketUntilDelay(log, ticketConf, event.GetData(), info) {
 		event.Type = "noop"
 		return event, nil
