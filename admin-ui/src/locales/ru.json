@@ -9,6 +9,27 @@
       "sched": "Opennebula host scheduler rules. For example:{\"default\": \"ID=\"2\"\"} - all VMs will be placed on host ID=2.{\"default\": \"ID=\"2\" | ID=\"13\"\"}- the host will be chosen between 2 and 13 according to the scheduler opennebula policy. Read more: https://docs.opennebula.io/6.4/installation_and_configuration/opennebula_services/scheduler.html",
       "sched_ds": "Opennebula datastore scheduler rules. For example:{\"nvme\": \"ID=\"10\"\"\"ssd\": \"ID=\"11\"\"\"hdd\": \"ID=\"12\"\"\"sata\": \"ID=\"13\"\"}- the datastore will be chosen between 10-13 according to the one selected when ordering in the application. Read more: https://docs.opennebula.io/6.4/installation_and_configuration/opennebula_services/scheduler.html",
       "private_vnet_ban": "disabled \\ enabled"
+    },
+    "proxmox": {
+      "host": "API любой ноды Proxmox VE, только https: https://pve.example.com:8006. Одной ноды достаточно — API кластерное.",
+      "auth_mode": "Для VNC-консоли нужны user + password (vncwebsocket PVE не принимает API-токены). Для всего остального достаточно токена.",
+      "user": "Пользователь PVE в формате user@realm, например nocloud@pve. Роль должна содержать VM.Allocate, VM.Clone, VM.Config.*, VM.PowerMgmt, VM.Snapshot, VM.Console, VM.Audit, Datastore.AllocateSpace, Datastore.Audit, Sys.Audit, Pool.Audit.",
+      "pass": "Пароль пользователя PVE.",
+      "token_id": "ID API-токена в формате user@realm!tokenname (Datacenter → Permissions → API Tokens).",
+      "token_secret": "Секрет, который PVE показывает один раз при создании токена.",
+      "insecure": "Не проверять TLS-сертификат (самоподписанный сертификат PVE). В продакшене лучше указать ca_cert.",
+      "ca_cert": "PEM сертификата CA, которым подписан сертификат PVE.",
+      "pool": "Пул ресурсов PVE, в который добавляются новые ВМ (необязательно).",
+      "sched": "Правила размещения по нодам. Ключи: default и HCPU (когда plan.meta.highCPU). Значение: {\"nodes\": [\"pve1\",\"pve2\"], \"strategy\": \"least_used\"|\"round_robin\", \"reserve_ram_mb\": 2048}. Пустой nodes = все онлайн-ноды.",
+      "sched_ds": "Сторадж по типу диска из заказа: {\"SSD\": \"local-zfs\", \"HDD\": \"nas\"}. Сторадж должен быть на целевой ноде и разрешать images.",
+      "public_ip_pool": "Статические публичные адреса, выдаются через cloud-init: {\"ranges\": [\"a.b.c.10-a.b.c.50\", \"x.y.z.0/24\"], \"gateway\": \"a.b.c.1\", \"prefix\": 24 (или netmask), \"dns\": [\"1.1.1.1\"], \"bridge\": \"vmbr0\", \"vlan_tag\": 0}. Адреса, уже прописанные в ipconfig любой ВМ, пропускаются.",
+      "private_vnet_ban": "Отключить приватные сети (ips_private игнорируется).",
+      "private_vnet_tmpl": "Приватный пул в том же формате, что публичный (обычно другой bridge или vlan_tag).",
+      "full_clone": "Full clone копирует диск (по умолчанию). Linked clone быстрее, но шаблон должен оставаться на том же сторадже и его нельзя удалять.",
+      "vmid_range": "Ограничить диапазон VMID, которые выдаёт драйвер, например 1000–1999. Пусто = /cluster/nextid.",
+      "suspend_mode": "Что делает биллинговый suspend: гибернация (suspend to disk, по умолчанию), выключение или пауза в RAM.",
+      "qemu_agent_required": "Скрывать шаблоны без qemu-guest-agent. Агент нужен для реальных IP, дополнительных IP и статистики гостя.",
+      "min_drive_size": "Лимиты по типу диска в МБ, например {\"SSD\": 10240}. Размер диска шаблона — всегда нижняя граница."
     }
   }
 }

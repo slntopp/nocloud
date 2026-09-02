@@ -535,23 +535,25 @@ export default {
           },
           ...this.baseVmControls,
         ],
+        // Same buttons/action names as IONE: the driver emits OpenNebula-like
+        // state/lcm_state in state.meta (path A), so ioneActions applies as is.
         proxmox: [
           {
             action: "start",
             type: "method",
             component: () => import("@/components/dialogs/startInstance.vue"),
             method: this.startInstance,
-            disabled: this.proxmoxActions?.start,
+            disabled: this.ioneActions?.start,
           },
           {
             action: "poweroff",
-            disabled: this.proxmoxActions?.poweroff,
+            disabled: this.ioneActions?.poweroff,
             icon: "mdi-stop",
           },
           {
             action: "resume",
             title: "Unsuspend",
-            disabled: this.proxmoxActions?.resume,
+            disabled: this.ioneActions?.resume,
             type: "method",
             component: () =>
               import("@/components/dialogs/unsuspendInstance.vue"),
@@ -559,24 +561,25 @@ export default {
           },
           {
             action: "suspend",
-            disabled: this.proxmoxActions?.suspend,
+            disabled: this.ioneActions?.suspend,
             icon: "mdi-power-sleep",
           },
           {
             action: "reboot",
-            disabled: this.proxmoxActions?.reboot,
+            disabled: this.ioneActions?.reboot,
             icon: "mdi-restart",
-          },
-          {
-            action: "pause",
-            disabled: this.proxmoxActions?.pause,
-            icon: "mdi-pause",
           },
           {
             action: "vnc",
             title: "Console",
-            disabled: this.proxmoxActions?.vnc,
+            disabled: this.ioneActions?.vnc,
             icon: "mdi-console",
+          },
+          {
+            action: "migrate",
+            title: "Migrate",
+            component: () => import("@/components/dialogs/migrateInstance.vue"),
+            disabled: !this.template.data?.vmid && !this.template.data?.vm_id,
           },
           ...this.baseVmControls,
         ],
@@ -897,36 +900,6 @@ export default {
           this.template.state.meta?.lcm_state === 21 ||
           this.template.state.meta?.lcm_state === 6,
         start: true,
-      };
-    },
-    proxmoxActions() {
-      if (
-        !this.template?.state ||
-        !this.template.config?.auto_start ||
-        this.isDetached
-      ) {
-        return {
-          start: this.template.config?.auto_start,
-          resume: true,
-          poweroff: true,
-          reboot: true,
-          suspend: true,
-          pause: true,
-          vnc: true,
-        };
-      }
-      const st = this.template.state.state;
-      const running = st === "RUNNING";
-      const suspended = st === "SUSPENDED";
-      const pending = st === "PENDING";
-      return {
-        start: running || pending,
-        poweroff: !running,
-        reboot: !running,
-        resume: !suspended,
-        suspend: suspended || pending,
-        pause: !running,
-        vnc: !running,
       };
     },
     ovhActions() {
