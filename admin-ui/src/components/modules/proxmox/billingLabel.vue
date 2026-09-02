@@ -1,48 +1,14 @@
 <template>
-  <billing-label
-    :due-date="dueDate"
-    :tariff-price="instancePrice"
-    :template="template"
-    :addons-price="addonsPrices"
-    :account="account"
-    @update="emit('update', $event)"
-  />
+  <!-- Shared with IONE (TZ §18.1). -->
+  <ione-billing-label v-bind="$attrs" @update="$emit('update', $event)" />
 </template>
 
-<script setup>
-import { computed, onMounted, ref, toRefs } from "vue";
-import { formatSecondsToDate } from "@/functions";
-import billingLabel from "@/components/ui/billingLabel.vue";
+<script>
+import IoneBillingLabel from "@/components/modules/ione/billingLabel.vue";
 
-const props = defineProps(["template", "account", "addons"]);
-const emit = defineEmits(["update"]);
-
-const { template, addons } = toRefs(props);
-
-const dueDate = computed(() => {
-  return formatSecondsToDate(+props.template?.data?.next_payment_date) || "-";
-});
-
-const instancePrice = ref(0);
-const addonsPrices = ref({});
-
-onMounted(() => {
-  const prices = {};
-
-  addons.value.forEach(
-    (a) =>
-      (prices[a.title] =
-        a.periods[
-          template.value.billingPlan.products[template.value.product]?.period
-        ])
-  );
-
-  addonsPrices.value = prices;
-
-  instancePrice.value =
-    (template.value.estimate || 0) -
-    Object.keys(prices).reduce((acc, key) => acc + prices[key], 0);
-});
+export default {
+  name: "proxmox-billing-label",
+  components: { IoneBillingLabel },
+  inheritAttrs: false,
+};
 </script>
-
-<style scoped></style>

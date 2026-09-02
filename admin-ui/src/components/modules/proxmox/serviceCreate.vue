@@ -18,7 +18,7 @@
           </v-text-field>
         </v-col>
         <v-col class="d-flex justify-end">
-          <v-btn @click="() => remove(index)"> remove</v-btn>
+          <v-btn @click="() => remove(index)"> remove </v-btn>
         </v-col>
       </v-row>
 
@@ -55,7 +55,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue(index + '.resources.ram', +newVal)"
-            label="ram (MB)"
+            label="ram"
             v-model="instance.resources.ram"
             type="number"
           >
@@ -76,8 +76,30 @@
             @change="
               (newVal) => setValue(index + '.resources.drive_size', +newVal)
             "
-            label="drive size (MB)"
+            label="drive size"
             v-model="instance.resources.drive_size"
+            type="number"
+          >
+          </v-text-field>
+        </v-col>
+        <v-col cols="6">
+          <v-text-field
+            @change="
+              (newVal) => setValue(index + '.resources.ips_public', +newVal)
+            "
+            label="ips public"
+            v-model="instance.resources.ips_public"
+            type="number"
+          >
+          </v-text-field>
+        </v-col>
+        <v-col cols="6">
+          <v-text-field
+            @change="
+              (newVal) => setValue(index + '.resources.ips_private', +newVal)
+            "
+            label="ips private"
+            v-model="instance.resources.ips_private"
             type="number"
           >
           </v-text-field>
@@ -125,17 +147,19 @@ export default {
       config: {
         template_id: "",
         password: "",
-        auto_start: true,
-        auto_renew: true,
       },
       resources: {
         cpu: 1,
         ram: 1024,
-        drive_type: "ssd",
-        drive_size: 20480,
+        drive_type: "SSD",
+        drive_size: 10000,
+        ips_public: 0,
+        ips_private: 0,
       },
       billing_plan: {},
     },
+    types: ["SSD", "HDD"],
+    // instances: []
   }),
   methods: {
     addProducts(instance) {
@@ -202,7 +226,7 @@ export default {
 
       for (const [key, value] of Object.entries(this.getOsTemplates)) {
         if (value.name === newVal) {
-          osId = value.id ?? key;
+          osId = key;
           break;
         }
       }
@@ -231,15 +255,7 @@ export default {
 
       if (!sp) return {};
 
-      const t = sp.publicData?.templates;
-      if (Array.isArray(t)) {
-        const map = {};
-        t.forEach((os) => {
-          map[os.id] = os;
-        });
-        return map;
-      }
-      return t || {};
+      return sp.publicData.templates;
     },
 
     getOsNames() {
@@ -280,3 +296,5 @@ function setToValue(obj, value, path) {
   obj[path[i]] = value;
 }
 </script>
+
+<style></style>
