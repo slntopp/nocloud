@@ -27,6 +27,8 @@
   "summary.to_pay": "Do zapłaty",
 
   "footer.invoice_id": "ID faktury",
+  "footer.reverse_charge": "Odwrotne obciążenie (Reverse Charge) — Zgodnie z art. 194 i 196 Dyrektywy Rady 2006/112/WE obowiązek podatkowy w zakresie VAT spoczywa na nabywcy usługi.",
+  "footer.electronic_valid": "Niniejsza faktura została wystawiona elektronicznie i jest ważna bez podpisu oraz pieczęci.",
 
   "invoice.status.paid": "OPŁACONA",
   "invoice.status.unpaid": "NIEOPŁACONA",

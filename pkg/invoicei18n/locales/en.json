@@ -27,6 +27,8 @@
   "summary.to_pay": "To pay",
 
   "footer.invoice_id": "Invoice ID",
+  "footer.reverse_charge": "Reverse Charge - According to Article 194, 196 of Council Directive 2006/112/EEC, VAT liability rests with the service recipient.",
+  "footer.electronic_valid": "This invoice has been generated electronically and is valid without a signature or stamp.",
 
   "invoice.status.paid": "PAID",
   "invoice.status.unpaid": "UNPAID",

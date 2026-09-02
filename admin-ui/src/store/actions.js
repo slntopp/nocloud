@@ -46,7 +46,7 @@ export default {
     },
     async openVnc({ dispatch }, { uuid, type }) {
       let action = "start_vnc";
-      if (type === "ione") {
+      if (type === "ione" || type === "proxmox") {
         router.push({
           name: "Vnc",
           params: { instanceId: uuid },

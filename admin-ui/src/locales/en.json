@@ -9,6 +9,27 @@
       "sched": "Opennebula host scheduler rules. For example:{\"default\": \"ID=\"2\"\"} - all VMs will be placed on host ID=2.{\"default\": \"ID=\"2\" | ID=\"13\"\"}- the host will be chosen between 2 and 13 according to the scheduler opennebula policy. Read more: https://docs.opennebula.io/6.4/installation_and_configuration/opennebula_services/scheduler.html",
       "sched_ds": "Opennebula datastore scheduler rules. For example:{\"nvme\": \"ID=\"10\"\"\"ssd\": \"ID=\"11\"\"\"hdd\": \"ID=\"12\"\"\"sata\": \"ID=\"13\"\"}- the datastore will be chosen between 10-13 according to the one selected when ordering in the application. Read more: https://docs.opennebula.io/6.4/installation_and_configuration/opennebula_services/scheduler.html",
       "private_vnet_ban": "disabled \\ enabled"
+    },
+    "proxmox": {
+      "host": "Proxmox VE API endpoint of any cluster node, https only: https://pve.example.com:8006. One node is enough: the API is cluster-wide.",
+      "auth_mode": "User + password is required for the VNC console (PVE vncwebsocket rejects API tokens). An API token works for everything else.",
+      "user": "PVE user in user@realm form, e.g. nocloud@pve. Needs role with VM.Allocate, VM.Clone, VM.Config.*, VM.PowerMgmt, VM.Snapshot, VM.Console, VM.Audit, Datastore.AllocateSpace, Datastore.Audit, Sys.Audit, Pool.Audit.",
+      "pass": "Password of the PVE user.",
+      "token_id": "API token id in user@realm!tokenname form (Datacenter → Permissions → API Tokens).",
+      "token_secret": "Secret shown once when the token is created.",
+      "insecure": "Skip TLS certificate verification (self-signed PVE certificate). Prefer ca_cert in production.",
+      "ca_cert": "PEM of the CA that signed the PVE certificate.",
+      "pool": "PVE resource pool new VMs are added to (optional).",
+      "sched": "Node placement rules. Keys: default and HCPU (used when plan.meta.highCPU). Value: {\"nodes\": [\"pve1\",\"pve2\"], \"strategy\": \"least_used\"|\"round_robin\", \"reserve_ram_mb\": 2048}. Empty nodes = all online nodes.",
+      "sched_ds": "Storage per drive type as ordered in the app: {\"SSD\": \"local-zfs\", \"HDD\": \"nas\"}. Storage must exist on the target node and allow images.",
+      "public_ip_pool": "Static public addresses handed out via cloud-init: {\"ranges\": [\"a.b.c.10-a.b.c.50\", \"x.y.z.0/24\"], \"gateway\": \"a.b.c.1\", \"prefix\": 24 (or netmask), \"dns\": [\"1.1.1.1\"], \"bridge\": \"vmbr0\", \"vlan_tag\": 0}. Addresses already set in ipconfig of any VM are skipped.",
+      "private_vnet_ban": "Disable private networking (ips_private is ignored).",
+      "private_vnet_tmpl": "Private pool, same format as the public one (usually another bridge or vlan_tag).",
+      "full_clone": "Full clone copies the disk (default). Linked clone is faster but the template must stay on the same storage and cannot be deleted.",
+      "vmid_range": "Restrict VMIDs the driver may allocate, e.g. 1000–1999. Empty = /cluster/nextid.",
+      "suspend_mode": "What billing suspend does: hibernate (suspend to disk, default), power off, or pause in RAM.",
+      "qemu_agent_required": "Hide templates without qemu-guest-agent. The agent is needed for real IPs, extra IPs and guest stats.",
+      "min_drive_size": "Per drive type limits in MB, e.g. {\"SSD\": 10240}. Template disk size is always the lower bound."
     }
   }
 }

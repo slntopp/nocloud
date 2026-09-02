@@ -4,24 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/arangodb/go-driver"
-	"github.com/gorilla/mux"
-	accesspb "github.com/slntopp/nocloud-proto/access"
-	pb "github.com/slntopp/nocloud-proto/billing"
-	settingspb "github.com/slntopp/nocloud-proto/settings"
-	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/invoicei18n"
-	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
-	"github.com/slntopp/nocloud/pkg/locales"
-	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/aswords"
-	"github.com/slntopp/nocloud/pkg/nocloud/auth"
-	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
-	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
-	"golang.org/x/exp/maps"
 	"html"
 	"io"
 	"math"
@@ -32,6 +14,25 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/arangodb/go-driver"
+	"github.com/gorilla/mux"
+	accesspb "github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/invoicei18n"
+	"github.com/slntopp/nocloud/pkg/locales"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/aswords"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+	"github.com/slntopp/nocloud/pkg/nocloud/payments/whmcs_gateway"
+	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
+	"github.com/slntopp/nocloud/pkg/nocloud/rest_auth"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
+	"golang.org/x/exp/maps"
 )
 
 type PaymentGatewayType string
@@ -679,6 +680,16 @@ func generateViewInvoiceHTML(invoiceBody *pb.Invoice, paymentGateways []*pb.Paym
 		}
 	}
 
+	var reverseChargeHTML string
+	isPaidInvoice := invoiceBody.GetStatus() == pb.BillingStatus_PAID ||
+		invoiceBody.GetStatus() == pb.BillingStatus_RETURNED
+	if vatLabel == "NP" && isPaidInvoice {
+		reverseChargeHTML = `<div class="note small reverse-charge">
+$footer.reverse_charge<br>
+$footer.electronic_valid
+</div>`
+	}
+
 	var b strings.Builder
 	_, _ = fmt.Fprintf(&b, `<!doctype html>
 <html lang="%s">
@@ -736,6 +747,7 @@ tfoot td{font-weight:600}
 footer{padding:10px 20px}
 hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 .note{padding:12px 20px}
+.note.reverse-charge{font-size:11px;line-height:1.4;color:var(--muted);padding-top:4px}
 
   .card-sup{
     background:#fff;
@@ -859,6 +871,8 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 
 	%s
 
+	%s
+
 	<footer class="small">
 		$footer.invoice_id: %s
 	</footer>
@@ -914,6 +928,7 @@ hr.sep{border:0;border-top:1px solid var(--line);margin:0}
 		CapitalizeWords(totalAsWords),
 		invoiceBody.GetCurrency().GetCode(),
 		ksefNumberHTML,
+		reverseChargeHTML,
 		html.EscapeString(coalesce(invoiceBody.GetUuid(), "")),
 		// JS data
 		invoiceBody.GetCurrency().GetCode(),

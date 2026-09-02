@@ -140,7 +140,11 @@
           />
         </v-col>
 
-        <v-col v-if="plan.type === 'ione'" cols="1" class="align-center d-flex">
+        <v-col
+          v-if="plan.type === 'ione' || plan.type === 'proxmox'"
+          cols="1"
+          class="align-center d-flex"
+        >
           <v-subheader> High CPU </v-subheader>
           <v-switch style="width: fit-content" v-model="plan.meta.highCPU" />
         </v-col>
