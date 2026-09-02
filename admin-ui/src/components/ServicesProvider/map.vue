@@ -336,6 +336,9 @@ export default {
             });
           }
           this.$emit("set-locations", data.locations);
+          // the page reads the provider from the store, so without this the
+          // saved pins are gone again on the next tab switch
+          this.$store.dispatch("servicesProviders/fetchById", this.item.uuid);
         })
         .catch((err) => {
           this.showSnackbarError({
@@ -439,6 +442,11 @@ export default {
           ...l,
           extra: { region: "", color: undefined, link: undefined, ...l.extra },
         }));
+      // nc-map ignores `not-scale` in its markers watcher and calls setScale(),
+      // which sets scale = 6 and then throws on an empty markers array — the
+      // transform is never applied, so scale and the viewport desync and every
+      // click lands at the wrong coordinates. Pin the view instead.
+      this.preserveView();
     },
   },
   mounted() {
