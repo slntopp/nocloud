@@ -194,6 +194,14 @@
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field
+              dense
+              style="width: 200px"
+              :value="item.name"
+              @input="(name) => setImageName(item, name)"
+            />
+          </template>
           <template v-slot:[`item.tariff`]="{ value }">
             {{ value || "Any" }}
           </template>
@@ -295,6 +303,7 @@ const addonsHeaders = ref([
 const images = ref([]);
 const imagesHeaders = ref([
   { text: "OS", value: "name" },
+  { text: "API title", value: "id" },
   { text: "Tariff", value: "tariff" },
   { text: "Incoming price", value: "price.value" },
   { text: "Sale price", value: "value" },
@@ -358,7 +367,8 @@ const filtredImages = computed(() => {
       (plan) =>
         plan.os?.includes(image.id) &&
         (!image.tariff ||
-          image.tariff === `option-windows-${plan.planCode.replace("vps-", "")}`)
+          image.tariff ===
+            `option-windows-${plan.planCode.replace("vps-", "")}`)
     )
   );
 
@@ -702,6 +712,14 @@ const changeAddons = ({ backup, disk, snapshot, storage = [] }) => {
   return result;
 };
 
+// both periods of one OS live in a single addon (key + tariff), so its title
+// is shared - keep the rows in sync instead of letting the first one win
+const setImageName = (image, name) => {
+  images.value.forEach((el) => {
+    if (el.id === image.id && el.tariff === image.tariff) el.name = name;
+  });
+};
+
 const changeImages = ({ windows }) => {
   const newImagesArray = [];
 
@@ -763,7 +781,7 @@ const changeImages = ({ windows }) => {
         );
 
         newImagesArray.push({
-          name: key,
+          name: realAddon?.name || key,
           price: { value: basePrice || 0 },
           value: realAddon?.value || price || 0,
           public: realAddon ? realAddon.public : true,
@@ -857,7 +875,10 @@ const convertPrice = (price) => {
   return convertFrom(price, { code: "PLN" });
 };
 
-const STORAGE_PRODUCTS = ["vps-option-storage-remote", "vps-option-storage-local"];
+const STORAGE_PRODUCTS = [
+  "vps-option-storage-remote",
+  "vps-option-storage-local",
+];
 
 // vps-2027 public network port speed (Mbps) - not exposed by the OVH catalog API, per OVH's own vps-2027 spec sheet.
 const VPS_2027_NETWORK_MBPS = { 1: 500, 2: 1000, 3: 2000, 4: 3000 };
