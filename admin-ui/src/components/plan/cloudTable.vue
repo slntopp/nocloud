@@ -89,6 +89,9 @@
           table-name="cloud-images"
           sort-desc
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field style="min-width: 200px" v-model="item.name" />
+          </template>
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
               :key="item.apiName"
@@ -178,6 +181,7 @@ const capabilitiesHeaders = ref([
 const imagesHeaders = ref([
   { text: "ID", value: "id" },
   { text: "Title", value: "name" },
+  { text: "API title", value: "apiName" },
   { text: "Type", value: "type" },
   { text: "Size", value: "size" },
   { text: "Сreation date", value: "creationDate" },
@@ -299,13 +303,17 @@ const fetchImages = async () => {
       },
     });
     images.value[selectedRegion.value] = meta.images.map((i) => {
+      const saved = Object.values(template.value.products)
+        .filter((p) => p.meta?.region === selectedRegion.value)
+        .flatMap((p) => p.meta?.os || [])
+        .find((o) => o.id === i.id);
+
       return {
         ...i,
-        enabled: !!Object.keys(template.value.products).find(
-          (k) =>
-            template.value.products[k].meta?.region === selectedRegion.value &&
-            template.value.products[k].meta?.os?.find((o) => i.id === o.id)
-        ),
+        // the saved title is the renamed one; keep the catalog name visible too
+        name: saved?.name || i.name,
+        apiName: i.name,
+        enabled: !!saved,
       };
     });
   } catch {
