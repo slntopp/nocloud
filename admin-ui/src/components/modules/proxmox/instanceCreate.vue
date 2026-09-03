@@ -132,6 +132,20 @@
             :disabled="privateBanned"
           />
         </v-col>
+        <v-col cols="12">
+          <v-combobox
+            multiple
+            small-chips
+            deletable-chips
+            label="Requested public IPs (optional, like ONE NIC IP=)"
+            :hint="requestHint"
+            persistent-hint
+            :items="freePublicIPs"
+            :value="requestedIPs"
+            :rules="[requestRule]"
+            @change="setRequested"
+          />
+        </v-col>
 
         <v-col cols="6" v-if="tarrifAddons.length > 0">
           <v-autocomplete
@@ -249,6 +263,42 @@ const sp = computed(() =>
 const privateBanned = computed(
   () => !!sp.value?.vars?.private_vnet_ban?.value?.default
 );
+
+// ---- requested leases (config.ips_public_request), suggestions from the lease table ----
+const freePublicIPs = ref([]);
+const requestedIPs = computed(() => {
+  const v = instance.value.config?.ips_public_request;
+  if (Array.isArray(v)) return v;
+  if (typeof v === "string" && v) return v.split(",").map((s) => s.trim()).filter(Boolean);
+  return [];
+});
+const requestHint = computed(() => {
+  const n = +instance.value.resources?.ips_public || 0;
+  const free = sp.value?.publicData?.public_ips?.free;
+  return `${requestedIPs.value.length}/${n} requested` + (free !== undefined ? `, ${free} free in the public network` : "");
+});
+const requestRule = (val) =>
+  !val || val.length <= (+instance.value.resources?.ips_public || 0) || "more addresses requested than resources.ips_public";
+const setRequested = (list) => {
+  const ips = (list || []).map((s) => String(s).trim()).filter(Boolean);
+  setValue("config.ips_public_request", ips.length ? ips : undefined);
+};
+const fetchFreeIPs = async () => {
+  if (!spUuid.value) return;
+  try {
+    const { meta } = await api.servicesProviders.action({
+      action: "get_leases",
+      uuid: spUuid.value,
+      params: { network: "public" },
+    });
+    freePublicIPs.value = (meta?.networks?.public?.leases || [])
+      .filter((l) => l.state === "free")
+      .map((l) => l.ip);
+  } catch {
+    freePublicIPs.value = [];
+  }
+};
+watch(spUuid, fetchFreeIPs, { immediate: true });
 
 const osTemplates = computed(() => {
   if (!sp.value) return {};
