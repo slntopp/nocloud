@@ -256,6 +256,20 @@ export default {
       const key = VAR_BY_KIND[kind];
       const value = { ...(this.template.vars?.[key]?.value || {}) };
       const pool = { ...(value.default || {}) };
+      // migrate: the AR list is the single source of truth, a stale `ranges` must not linger
+      if (!Array.isArray(pool.ars)) {
+        pool.ars = (this.networks[kind]?.ars || []).map(({ id, ip, size, gateway, prefix, bridge, vlan_tag, dns }) => {
+          const ar = { id, ip, size };
+          if (gateway) ar.gateway = gateway;
+          if (prefix) ar.prefix = prefix;
+          if (bridge) ar.bridge = bridge;
+          if (vlan_tag) ar.vlan_tag = vlan_tag;
+          if (dns && dns.length) ar.dns = dns;
+          return ar;
+        });
+      }
+      delete pool.ranges;
+      delete pool.range;
       return { key, value, pool };
     },
     async savePool(kind, pool) {
