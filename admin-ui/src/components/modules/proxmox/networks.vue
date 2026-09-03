@@ -1,7 +1,8 @@
 <template>
-  <div>
+  <v-card color="background-light" class="pa-5" elevation="0">
     <div class="d-flex align-center mb-2">
-      <v-card-title class="px-0">Virtual networks:</v-card-title>
+      <span class="text-h6">Virtual networks</span>
+      <span class="text--secondary ml-3">address ranges · leases · holds (as OpenNebula vnets)</span>
       <v-spacer />
       <v-btn small text :loading="isLoading" @click="load">
         <v-icon small left>mdi-refresh</v-icon>refresh leases
@@ -172,7 +173,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </div>
+  </v-card>
 </template>
 
 <script>
