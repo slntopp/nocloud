@@ -121,6 +121,13 @@ export default {
           component: () => import("@/components/ServicesProvider/licences.vue"),
         });
 
+      // ONE-style virtual networks: address ranges, leases, hold/release
+      if (this.sp?.type === "proxmox")
+        tabs.splice(3, 0, {
+          title: "Networks",
+          component: () => import("@/components/modules/proxmox/networks.vue"),
+        });
+
       return tabs;
     },
     title() {
