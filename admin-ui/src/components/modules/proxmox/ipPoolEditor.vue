@@ -177,6 +177,10 @@ export default {
     },
     set(key, val) {
       const pool = { ...this.pool, [key]: val };
+      if (key === "ars") {
+        delete pool.ranges;
+        delete pool.range;
+      }
       if (val === "" || val === null || val === undefined || (Array.isArray(val) && !val.length)) {
         if (key !== "ars") delete pool[key];
       }
