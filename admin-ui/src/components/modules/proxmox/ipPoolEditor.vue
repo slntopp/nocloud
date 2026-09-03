@@ -97,6 +97,7 @@
       <div class="text-caption mt-2">
         {{ totalAddresses }} addresses in {{ ars.length }} range(s), {{ (pool.holds || []).length }} on hold
       </div>
+      <v-alert v-if="overlapError" dense text type="error" class="mt-2">{{ overlapError }}</v-alert>
     </template>
   </v-card>
 </template>
@@ -129,6 +130,26 @@ export default {
     totalAddresses() {
       return this.ars.reduce((s, ar) => s + (+ar.size || 0), 0);
     },
+    overlapError() {
+      const spans = this.ars
+        .map((ar) => {
+          const lo = ip2n(ar.ip);
+          return lo === null ? null : { id: ar.id, lo, hi: lo + (+ar.size || 1) - 1 };
+        })
+        .filter(Boolean);
+      for (let i = 0; i < spans.length; i++) {
+        for (let j = i + 1; j < spans.length; j++) {
+          if (spans[i].lo <= spans[j].hi && spans[j].lo <= spans[i].hi) {
+            return `Range ${spans[i].id} overlaps range ${spans[j].id}: an address may belong to one range only`;
+          }
+        }
+      }
+      const outside = (this.pool.holds || []).find((h) => {
+        const n = ip2n(h);
+        return n === null || !spans.some((s) => n >= s.lo && n <= s.hi);
+      });
+      return outside ? `Hold ${outside} is not inside any range` : "";
+    },
   },
   methods: {
     required(v) {
@@ -156,6 +177,10 @@ export default {
     },
     set(key, val) {
       const pool = { ...this.pool, [key]: val };
+      if (key === "ars") {
+        delete pool.ranges;
+        delete pool.range;
+      }
       if (val === "" || val === null || val === undefined || (Array.isArray(val) && !val.length)) {
         if (key !== "ars") delete pool[key];
       }

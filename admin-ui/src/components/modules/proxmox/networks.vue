@@ -24,6 +24,7 @@
             <v-chip x-small color="success" outlined>free {{ net.free }}</v-chip>
             <v-chip x-small color="info" outlined>used {{ net.used }}</v-chip>
             <v-chip x-small color="warning" outlined>hold {{ net.hold }}</v-chip>
+            <v-chip v-if="conflicts(kind)" x-small color="error">conflict {{ conflicts(kind) }}</v-chip>
             <v-chip x-small outlined>total {{ net.total }}</v-chip>
           </div>
         </v-expansion-panel-header>
@@ -90,6 +91,7 @@
               <v-btn x-small value="free">free</v-btn>
               <v-btn x-small value="used">used</v-btn>
               <v-btn x-small value="hold">hold</v-btn>
+              <v-btn x-small value="conflict" :disabled="!conflicts(kind)">conflict{{ conflicts(kind) ? ` (${conflicts(kind)})` : "" }}</v-btn>
             </v-btn-toggle>
             <v-text-field
               v-model="search[kind]"
@@ -123,7 +125,12 @@
               <v-chip x-small :color="stateColor(item.state)" outlined>{{ item.state }}</v-chip>
             </template>
             <template v-slot:[`item.vm`]="{ item }">
-              <span v-if="item.vmid">{{ item.vmid }} · {{ item.vm || "-" }} @ {{ item.node }}</span>
+              <template v-if="item.owners">
+                <div v-for="o in item.owners" :key="o.vmid" class="error--text">
+                  {{ o.vmid }} · {{ o.vm || "-" }} @ {{ o.node }}
+                </div>
+              </template>
+              <span v-else-if="item.vmid">{{ item.vmid }} · {{ item.vm || "-" }} @ {{ item.node }}</span>
               <span v-else class="text--disabled">-</span>
             </template>
             <template v-slot:[`item.instance`]="{ item }">
@@ -237,8 +244,11 @@ export default {
           (!q || [l.ip, l.vm, l.instance, l.node, String(l.vmid)].some((x) => (x || "").toLowerCase().includes(q)))
       );
     },
+    conflicts(kind) {
+      return (this.networks[kind]?.leases || []).filter((l) => l.state === "conflict").length;
+    },
     stateColor(s) {
-      return { free: "success", used: "info", hold: "warning" }[s] || "";
+      return { free: "success", used: "info", hold: "warning", conflict: "error" }[s] || "";
     },
 
     // ---- persistence: edit the pool inside SP vars, exactly what the driver reads ----
@@ -246,16 +256,37 @@ export default {
       const key = VAR_BY_KIND[kind];
       const value = { ...(this.template.vars?.[key]?.value || {}) };
       const pool = { ...(value.default || {}) };
+      // migrate: the AR list is the single source of truth, a stale `ranges` must not linger
+      if (!Array.isArray(pool.ars)) {
+        pool.ars = (this.networks[kind]?.ars || []).map(({ id, ip, size, gateway, prefix, bridge, vlan_tag, dns }) => {
+          const ar = { id, ip, size };
+          if (gateway) ar.gateway = gateway;
+          if (prefix) ar.prefix = prefix;
+          if (bridge) ar.bridge = bridge;
+          if (vlan_tag) ar.vlan_tag = vlan_tag;
+          if (dns && dns.length) ar.dns = dns;
+          return ar;
+        });
+      }
+      delete pool.ranges;
+      delete pool.range;
       return { key, value, pool };
     },
     async savePool(kind, pool) {
       const { key, value } = this.poolVar(kind);
+      const body = {
+        ...this.template,
+        vars: { ...this.template.vars, [key]: { value: { ...value, default: pool } } },
+      };
       this.isSaving = true;
       try {
-        await api.servicesProviders.update(this.template.uuid, {
-          ...this.template,
-          vars: { ...this.template.vars, [key]: { value: { ...value, default: pool } } },
-        });
+        // Update does not re-validate on the core side: ask the driver first
+        // (overlapping ranges, hold outside ranges, public/private clash, …)
+        const test = await api.servicesProviders.testConfig(body);
+        if (test && test.result === false) {
+          throw new Error(test.error || "driver rejected the network configuration");
+        }
+        await api.servicesProviders.update(this.template.uuid, body);
         await this.$store.dispatch("servicesProviders/fetchById", this.template.uuid);
         await this.load();
         this.$store.commit("snackbar/showSnackbarSuccess", { message: "Network updated" });
