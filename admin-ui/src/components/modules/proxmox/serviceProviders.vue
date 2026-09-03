@@ -169,20 +169,21 @@
       </v-col>
     </v-row>
 
-    <!-- Networking -->
+    <!-- Networking: ONE-style virtual networks (address ranges, holds) -->
     <v-row>
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.public_ip_pool">
-          Public IP pool
+          Public network
         </subheader-with-info>
         <div class="text-caption">
-          default: {ranges: ["a.b.c.10-a.b.c.50", "x.y.z.0/24"], gateway, prefix|netmask, dns, bridge, vlan_tag}
+          bridge / gateway / prefix / DNS for guests, address ranges (first IP + size) and holds — as in OpenNebula virtual networks
         </div>
       </v-col>
       <v-col cols="8">
-        <json-editor
-          :json="getJSON('public_ip_pool')"
-          @changeValue="(v) => changeJSON('public_ip_pool', v)"
+        <ip-pool-editor
+          title="public_ip_pool"
+          :value="getJSON('public_ip_pool').default"
+          @input="(v) => changeJSON('public_ip_pool', { ...getJSON('public_ip_pool'), default: v })"
         />
         <div v-if="errors.public_ip_pool" class="error--text">
           {{ errors.public_ip_pool }}
@@ -207,14 +208,15 @@
     <v-row v-if="!getDefault('private_vnet_ban')">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.private_vnet_tmpl">
-          Private IP pool
+          Private network
         </subheader-with-info>
-        <div class="text-caption">same format as the public pool, usually another bridge / vlan_tag</div>
+        <div class="text-caption">same model as the public one, usually another bridge / vlan_tag</div>
       </v-col>
       <v-col cols="8">
-        <json-editor
-          :json="getJSON('private_vnet_tmpl')"
-          @changeValue="(v) => changeJSON('private_vnet_tmpl', v)"
+        <ip-pool-editor
+          title="private_vnet_tmpl"
+          :value="getJSON('private_vnet_tmpl').default"
+          @input="(v) => changeJSON('private_vnet_tmpl', { ...getJSON('private_vnet_tmpl'), default: v })"
         />
       </v-col>
     </v-row>
@@ -312,21 +314,22 @@
 <script>
 import JsonEditor from "@/components/JsonEditor.vue";
 import subheaderWithInfo from "@/components/ui/subheaderWithInfo.vue";
+import IpPoolEditor from "./ipPoolEditor.vue";
 
 const DEFAULT_VARS = {
   sched: { default: { strategy: "least_used", reserve_ram_mb: 2048 } },
   sched_ds: { default: { SSD: "local-lvm" } },
   public_ip_pool: {
-    default: { ranges: [], gateway: "", prefix: 24, dns: ["1.1.1.1"], bridge: "vmbr0" },
+    default: { ars: [], holds: [], gateway: "", prefix: 24, dns: ["1.1.1.1"], bridge: "vmbr0" },
   },
-  private_vnet_tmpl: { default: { ranges: [], prefix: 24, bridge: "vmbr1" } },
+  private_vnet_tmpl: { default: { ars: [], holds: [], prefix: 24, bridge: "vmbr1" } },
   min_drive_size: { default: {} },
   max_drive_size: { default: {} },
 };
 
 export default {
   name: "servicesProviders-create-proxmox",
-  components: { JsonEditor, subheaderWithInfo },
+  components: { JsonEditor, subheaderWithInfo, IpPoolEditor },
   props: {
     secrets: { type: Object, default: () => ({}) },
     vars: { type: Object, default: () => ({}) },
@@ -431,10 +434,17 @@ export default {
         errors.sched_ds = "sched_ds.default must map drive types to storages";
       }
       const pool = vars.public_ip_pool?.value?.default;
-      if (!pool || !Array.isArray(pool.ranges) || pool.ranges.length === 0) {
-        errors.public_ip_pool = "public_ip_pool.default.ranges is required";
+      const hasSpace =
+        (Array.isArray(pool?.ars) && pool.ars.some((ar) => ar.ip && ar.size > 0)) ||
+        (Array.isArray(pool?.ranges) && pool.ranges.length > 0);
+      if (!pool || !hasSpace) {
+        errors.public_ip_pool = "public network needs at least one address range (first IP + size)";
       } else if (!pool.gateway) {
-        errors.public_ip_pool = "public_ip_pool.default.gateway is required";
+        errors.public_ip_pool = "public network gateway is required";
+      } else if (!pool.bridge) {
+        errors.public_ip_pool = "public network bridge is required";
+      } else if (!(pool.prefix > 0 && pool.prefix <= 32)) {
+        errors.public_ip_pool = "public network prefix is required (1..32)";
       }
       const sched = vars.sched?.value?.default;
       if (sched && typeof sched !== "object") {

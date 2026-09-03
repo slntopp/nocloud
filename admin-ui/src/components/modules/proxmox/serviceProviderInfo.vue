@@ -55,22 +55,8 @@
       </v-col>
     </v-row>
 
-    <!-- Networking -->
-    <v-card-title class="px-0 mb-3">Networking (static pools):</v-card-title>
-    <v-row class="mb-7">
-      <v-col cols="12" lg="6" v-for="(pool, kind) in ipPools" :key="kind">
-        <div class="title_progress">
-          <span>{{ kind }} IPs</span>
-          <div>
-            <span>{{ pool.used }}</span> / <span>{{ pool.total }}</span>
-          </div>
-        </div>
-        <v-progress-linear :value="percent(pool.used, pool.total)" :color="poolColor(pool)" height="20">
-          <template v-slot:default="{ value }"><strong>{{ value }}%</strong></template>
-        </v-progress-linear>
-        <div class="text-caption mt-1">free: {{ pool.free }}</div>
-      </v-col>
-    </v-row>
+    <!-- Networking: ONE-style virtual networks with address ranges, leases, holds -->
+    <proxmox-networks :template="template" class="mb-7" />
 
     <!-- Storages -->
     <v-card-title class="px-0 mb-3">Storages:</v-card-title>
@@ -155,8 +141,11 @@
 </template>
 
 <script>
+import ProxmoxNetworks from "./networks.vue";
+
 export default {
   name: "service-provider-proxmox",
+  components: { ProxmoxNetworks },
   props: { template: { type: Object, required: true } },
   computed: {
     publicData() {
@@ -183,23 +172,11 @@ export default {
     orphans() {
       return this.publicData.orphans || [];
     },
-    ipPools() {
-      const out = {};
-      if (this.publicData.public_ips) out.public = this.publicData.public_ips;
-      if (this.publicData.private_ips?.total) out.private = this.publicData.private_ips;
-      return out;
-    },
   },
   methods: {
     percent(used, total) {
       if (!total) return 0;
       return Math.min(100, Math.round(((+used || 0) / +total) * 100));
-    },
-    poolColor(pool) {
-      const p = this.percent(pool.used, pool.total);
-      if (p >= 95) return "red";
-      if (p > 80) return "orange";
-      return "green";
     },
     uptime(sec) {
       if (!sec) return "-";
