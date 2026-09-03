@@ -316,6 +316,22 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import subheaderWithInfo from "@/components/ui/subheaderWithInfo.vue";
 import IpPoolEditor from "./ipPoolEditor.vue";
 
+const ip2n = (ip) => {
+  const p = String(ip || "").split(".").map(Number);
+  if (p.length !== 4 || p.some((x) => Number.isNaN(x) || x < 0 || x > 255)) return null;
+  return ((p[0] << 24) >>> 0) + (p[1] << 16) + (p[2] << 8) + p[3];
+};
+// true when two address ranges share at least one address
+const overlapping = (ars) => {
+  const spans = (ars || [])
+    .map((ar) => {
+      const lo = ip2n(ar.ip);
+      return lo === null ? null : { lo, hi: lo + (+ar.size || 1) - 1 };
+    })
+    .filter(Boolean);
+  return spans.some((a, i) => spans.some((b, j) => j > i && a.lo <= b.hi && b.lo <= a.hi));
+};
+
 const DEFAULT_VARS = {
   sched: { default: { strategy: "least_used", reserve_ram_mb: 2048 } },
   sched_ds: { default: { SSD: "local-lvm" } },
@@ -445,6 +461,12 @@ export default {
         errors.public_ip_pool = "public network bridge is required";
       } else if (!(pool.prefix > 0 && pool.prefix <= 32)) {
         errors.public_ip_pool = "public network prefix is required (1..32)";
+      } else if (overlapping(pool.ars)) {
+        errors.public_ip_pool = "public network has overlapping address ranges";
+      }
+      const priv = vars.private_vnet_tmpl?.value?.default;
+      if (!vars.private_vnet_ban?.value?.default && priv && overlapping([...(priv.ars || []), ...(pool?.ars || [])])) {
+        errors.private_vnet_tmpl = "private network shares addresses with the public one";
       }
       const sched = vars.sched?.value?.default;
       if (sched && typeof sched !== "object") {
