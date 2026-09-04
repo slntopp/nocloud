@@ -1,103 +1,116 @@
 <template>
-  <v-card outlined class="pa-3" color="background">
-    <div class="d-flex align-center mb-2">
-      <span class="subtitle-1">{{ title }}</span>
+  <v-card outlined class="pool-editor pa-4" color="background">
+    <div class="d-flex align-center mb-1">
+      <span class="subtitle-1 font-weight-medium">{{ title }}</span>
       <v-spacer />
-      <v-switch
-        dense
-        hide-details
-        class="mt-0"
-        label="JSON"
-        :input-value="rawMode"
-        @change="rawMode = !!$event"
-      />
+      <v-btn icon small :title="rawMode ? 'form' : 'edit as JSON'" @click="rawMode = !rawMode">
+        <v-icon small>{{ rawMode ? "mdi-form-select" : "mdi-code-json" }}</v-icon>
+      </v-btn>
     </div>
 
     <json-editor v-if="rawMode" :json="pool" @changeValue="emitPool($event)" />
 
     <template v-else>
-      <!-- Network (guest) attributes: what ONE puts on the Virtual Network -->
+      <!-- Network attributes -->
+      <div class="section-label">Network</div>
       <v-row dense>
-        <v-col cols="12" md="3">
-          <v-text-field dense label="Bridge" placeholder="vmbr0" :value="pool.bridge" :rules="[required]" @change="set('bridge', $event)" />
+        <v-col cols="8">
+          <v-text-field dense outlined hide-details="auto" label="Bridge" placeholder="vmbr0" :value="pool.bridge" :rules="[required]" @change="set('bridge', $event)" />
         </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field dense type="number" label="VLAN tag" placeholder="0" :value="pool.vlan_tag || ''" @change="set('vlan_tag', +$event || 0)" />
+        <v-col cols="4">
+          <v-text-field dense outlined hide-details="auto" type="number" label="VLAN tag" placeholder="none" :value="pool.vlan_tag || ''" @change="set('vlan_tag', +$event || 0)" />
         </v-col>
-        <v-col cols="12" md="3">
-          <v-text-field dense label="Gateway" placeholder="185.66.69.1" :value="pool.gateway" :rules="[ipRule]" @change="set('gateway', $event)" />
+        <v-col cols="8">
+          <v-text-field dense outlined hide-details="auto" label="Gateway" placeholder="185.66.69.1" :value="pool.gateway" :rules="[ipRule]" @change="set('gateway', $event)" />
         </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field dense type="number" label="Prefix" placeholder="24" :value="pool.prefix" :rules="[required, prefixRule]" @change="set('prefix', +$event)" />
+        <v-col cols="4">
+          <v-text-field dense outlined hide-details="auto" type="number" label="Prefix" placeholder="24" prefix="/" :value="pool.prefix" :rules="[required, prefixRule]" @change="set('prefix', +$event)" />
         </v-col>
-        <v-col cols="12" md="2">
-          <v-text-field dense label="DNS" placeholder="1.1.1.1, 8.8.8.8" :value="(pool.dns || []).join(', ')" @change="set('dns', splitList($event))" />
+        <v-col cols="12">
+          <v-text-field dense outlined hide-details="auto" label="DNS servers" placeholder="1.1.1.1, 8.8.8.8" :value="(pool.dns || []).join(', ')" @change="set('dns', splitList($event))" />
         </v-col>
       </v-row>
 
-      <!-- Address Ranges -->
-      <div class="d-flex align-center mt-2">
-        <span class="subtitle-2">Address ranges</span>
+      <!-- Address ranges -->
+      <div class="d-flex align-center mt-4 mb-1">
+        <span class="section-label mb-0">Address ranges</span>
         <v-spacer />
-        <v-btn x-small text @click="addAR"><v-icon small left>mdi-plus</v-icon>add range</v-btn>
+        <v-btn x-small text color="primary" @click="addAR">
+          <v-icon x-small left>mdi-plus</v-icon>add range
+        </v-btn>
       </div>
-      <v-simple-table dense>
-        <thead>
-          <tr>
-            <th style="width: 50px">AR</th>
-            <th>First IP</th>
-            <th style="width: 110px">Size</th>
-            <th>Last IP</th>
-            <th>Overrides (gateway / prefix / bridge / vlan)</th>
-            <th style="width: 40px"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(ar, i) in ars" :key="i">
-            <td>{{ ar.id }}</td>
-            <td>
-              <v-text-field dense hide-details :value="ar.ip" :rules="[ipRule]" placeholder="185.66.69.141" @change="setAR(i, 'ip', $event)" />
-            </td>
-            <td>
-              <v-text-field dense hide-details type="number" min="1" :value="ar.size" @change="setAR(i, 'size', Math.max(1, +$event || 1))" />
-            </td>
-            <td class="text--secondary">{{ lastIP(ar) }}</td>
-            <td>
-              <div class="d-flex" style="gap: 6px">
-                <v-text-field dense hide-details style="max-width: 130px" placeholder="gateway" :value="ar.gateway" @change="setAR(i, 'gateway', $event)" />
-                <v-text-field dense hide-details style="max-width: 60px" type="number" placeholder="/" :value="ar.prefix || ''" @change="setAR(i, 'prefix', +$event || 0)" />
-                <v-text-field dense hide-details style="max-width: 90px" placeholder="bridge" :value="ar.bridge" @change="setAR(i, 'bridge', $event)" />
-                <v-text-field dense hide-details style="max-width: 60px" type="number" placeholder="vlan" :value="ar.vlan_tag || ''" @change="setAR(i, 'vlan_tag', +$event || 0)" />
-              </div>
-            </td>
-            <td>
-              <v-btn icon x-small @click="removeAR(i)"><v-icon small>mdi-delete</v-icon></v-btn>
-            </td>
-          </tr>
-          <tr v-if="!ars.length">
-            <td colspan="6" class="text--secondary">No address ranges — add at least one (first IP + size), like ONE's AR IP/SIZE.</td>
-          </tr>
-        </tbody>
-      </v-simple-table>
+
+      <div v-if="!ars.length" class="text--secondary text-body-2 py-2">
+        No ranges yet. A range is a first address and a size — like an OpenNebula AR.
+      </div>
+
+      <v-card v-for="(ar, i) in ars" :key="i" outlined class="ar-row mb-2" color="background-light">
+        <v-row dense align="center" class="px-3 pt-2">
+          <v-col cols="auto">
+            <v-chip small label outlined class="ar-id">AR {{ ar.id }}</v-chip>
+          </v-col>
+          <v-col>
+            <v-text-field dense outlined hide-details="auto" label="First IP" placeholder="185.66.69.141" :value="ar.ip" :rules="[required, ipRule]" @change="setAR(i, 'ip', $event)" />
+          </v-col>
+          <v-col cols="3">
+            <v-text-field dense outlined hide-details="auto" type="number" min="1" label="Size" :value="ar.size" @change="setAR(i, 'size', Math.max(1, +$event || 1))" />
+          </v-col>
+          <v-col cols="auto">
+            <v-btn icon small :color="expanded[i] ? 'primary' : ''" title="per-range overrides" @click="toggle(i)">
+              <v-icon small>mdi-tune-variant</v-icon>
+            </v-btn>
+            <v-btn icon small title="remove range" @click="removeAR(i)">
+              <v-icon small>mdi-close</v-icon>
+            </v-btn>
+          </v-col>
+        </v-row>
+        <div class="px-4 pb-2 text-caption text--secondary">
+          <template v-if="lastIP(ar)">{{ ar.ip }} – {{ lastIP(ar) }} · {{ ar.size }} address{{ ar.size === 1 ? "" : "es" }}</template>
+          <template v-else>enter the first address</template>
+          <span v-if="hasOverrides(ar)"> · overrides: {{ overridesSummary(ar) }}</span>
+        </div>
+        <v-expand-transition>
+          <div v-show="expanded[i]" class="px-3 pb-3">
+            <div class="text-caption text--secondary mb-1">Overrides for this range (empty = inherit from network)</div>
+            <v-row dense>
+              <v-col cols="8">
+                <v-text-field dense outlined hide-details label="Gateway" :value="ar.gateway" @change="setAR(i, 'gateway', $event)" />
+              </v-col>
+              <v-col cols="4">
+                <v-text-field dense outlined hide-details type="number" label="Prefix" prefix="/" :value="ar.prefix || ''" @change="setAR(i, 'prefix', +$event || 0)" />
+              </v-col>
+              <v-col cols="8">
+                <v-text-field dense outlined hide-details label="Bridge" :value="ar.bridge" @change="setAR(i, 'bridge', $event)" />
+              </v-col>
+              <v-col cols="4">
+                <v-text-field dense outlined hide-details type="number" label="VLAN tag" :value="ar.vlan_tag || ''" @change="setAR(i, 'vlan_tag', +$event || 0)" />
+              </v-col>
+            </v-row>
+          </div>
+        </v-expand-transition>
+      </v-card>
 
       <!-- Holds -->
+      <div class="section-label mt-4">Holds</div>
       <v-combobox
-        class="mt-3"
         dense
+        outlined
         multiple
         small-chips
         deletable-chips
-        label="Holds (addresses that are never assigned)"
-        hint="type an IP and press Enter"
+        hide-details="auto"
+        placeholder="type an IP and press Enter"
+        hint="addresses inside the ranges that must never be assigned"
         persistent-hint
         :value="pool.holds || []"
         @change="set('holds', ($event || []).map((s) => String(s).trim()).filter(Boolean))"
       />
 
-      <div class="text-caption mt-2">
-        {{ totalAddresses }} addresses in {{ ars.length }} range(s), {{ (pool.holds || []).length }} on hold
+      <div class="d-flex align-center mt-3 text-caption text--secondary">
+        <v-icon x-small class="mr-1">mdi-ip-network-outline</v-icon>
+        {{ totalAddresses }} addresses in {{ ars.length }} range{{ ars.length === 1 ? "" : "s" }} · {{ (pool.holds || []).length }} on hold
       </div>
-      <v-alert v-if="overlapError" dense text type="error" class="mt-2">{{ overlapError }}</v-alert>
+      <v-alert v-if="overlapError" dense text type="error" class="mt-2 mb-0">{{ overlapError }}</v-alert>
     </template>
   </v-card>
 </template>
@@ -119,7 +132,7 @@ export default {
     value: { type: Object, default: () => ({}) },
     title: { type: String, default: "Network" },
   },
-  data: () => ({ rawMode: false }),
+  data: () => ({ rawMode: false, expanded: {} }),
   computed: {
     pool() {
       return this.value || {};
@@ -140,7 +153,7 @@ export default {
       for (let i = 0; i < spans.length; i++) {
         for (let j = i + 1; j < spans.length; j++) {
           if (spans[i].lo <= spans[j].hi && spans[j].lo <= spans[i].hi) {
-            return `Range ${spans[i].id} overlaps range ${spans[j].id}: an address may belong to one range only`;
+            return `AR ${spans[i].id} overlaps AR ${spans[j].id}: an address may belong to one range only`;
           }
         }
       }
@@ -171,6 +184,17 @@ export default {
       const n = ip2n(ar.ip);
       if (n === null || !ar.size) return "";
       return n2ip(n + (+ar.size || 1) - 1);
+    },
+    hasOverrides(ar) {
+      return !!(ar.gateway || ar.prefix || ar.bridge || ar.vlan_tag);
+    },
+    overridesSummary(ar) {
+      return [ar.gateway && `gw ${ar.gateway}`, ar.prefix && `/${ar.prefix}`, ar.bridge, ar.vlan_tag && `vlan ${ar.vlan_tag}`]
+        .filter(Boolean)
+        .join(", ");
+    },
+    toggle(i) {
+      this.$set(this.expanded, i, !this.expanded[i]);
     },
     emitPool(pool) {
       this.$emit("input", pool);
@@ -210,7 +234,7 @@ export default {
     },
   },
   created() {
-    // migrate legacy `ranges` into ARs once, so the table has something to show
+    // migrate legacy `ranges` into ARs once, so the list has something to show
     if (!Array.isArray(this.pool.ars) && Array.isArray(this.pool.ranges) && this.pool.ranges.length) {
       const ars = [];
       let id = 0;
@@ -236,3 +260,19 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.section-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+  margin-bottom: 6px;
+}
+.ar-id {
+  font-family: monospace;
+}
+.ar-row {
+  border-radius: 8px;
+}
+</style>
