@@ -41,26 +41,67 @@
           :items="oldPricesResources"
           :show-select="false"
         >
-          <template v-slot:[`item.header`]="{ item }">
-            <v-text-field type="number" dense v-model.number="item.price" />
-          </template>
           <template v-slot:[`item.price`]="{ item }">
             <v-text-field type="number" dense v-model.number="item.price" />
           </template>
         </nocloud-table>
 
         <div v-else-if="tab === 'Prices'">
-          <div class="d-flex justify-space-between align-center">
+          <div class="toolbar">
             <v-text-field
-              style="max-width: 400px"
+              class="toolbar__search"
+              dense
+              outlined
+              hide-details
+              clearable
+              prepend-inner-icon="mdi-magnify"
               v-model="searchParam"
               label="Search"
-            ></v-text-field>
-            <v-btn :loading="isFillLoading" @click="fillConfig"
+            />
+            <v-select
+              class="toolbar__select"
+              dense
+              outlined
+              hide-details
+              multiple
+              clearable
+              label="Types"
+              :items="availableTypes"
+              v-model="typesFilter"
+            />
+            <v-select
+              class="toolbar__select"
+              dense
+              outlined
+              hide-details
+              multiple
+              clearable
+              label="Providers"
+              :items="availableProviders"
+              v-model="providersFilter"
+            />
+            <v-switch
+              class="toolbar__switch"
+              dense
+              hide-details
+              label="Only enabled"
+              v-model="onlyEnabled"
+            />
+            <v-switch
+              class="toolbar__switch"
+              dense
+              hide-details
+              label="Hide broken"
+              v-model="hideBroken"
+            />
+            <span class="toolbar__counter"
+              >{{ newPricesResourcesFiltred.length }} /
+              {{ newPricesResources.length }}</span
+            >
+            <v-btn small outlined :loading="isFillLoading" @click="fillConfig"
               >Fill config</v-btn
             >
-
-            <v-btn :loading="isExportLoading" @click="exportToXlsx"
+            <v-btn small outlined :loading="isExportLoading" @click="exportToXlsx"
               >Export to XLSX</v-btn
             >
           </div>
@@ -70,33 +111,49 @@
             :show-select="false"
           >
             <template v-slot:[`item.name`]="{ item }">
-              <v-text-field dense v-model="item.name" />
+              <v-text-field
+                class="cell-input"
+                dense
+                hide-details
+                v-model="item.name"
+              />
             </template>
 
             <template v-slot:[`item.disabled`]="{ item }">
               <v-switch
+                class="cell-switch"
                 :key="item.key"
                 dense
+                hide-details
                 :input-value="!item.disabled"
                 @change="changeDisabled(item, $event)"
               />
             </template>
 
             <template v-slot:[`item.key`]="{ item }">
-              {{ getShortName(item.key) }}
+              <v-tooltip top :disabled="item.key === getShortName(item.key)">
+                <template v-slot:activator="{ on, attrs }">
+                  <span v-bind="attrs" v-on="on">{{
+                    getShortName(item.key)
+                  }}</span>
+                </template>
+                <span>{{ item.key }}</span>
+              </v-tooltip>
             </template>
 
             <template v-slot:[`item.visibility`]="{ item }">
               <v-select
+                class="cell-input"
                 dense
+                hide-details
                 :items="['api_only', 'public', 'private']"
                 v-model="item.visibility"
               />
             </template>
 
             <template v-slot:[`item.billing`]="{ item }">
-              <v-btn icon @click="openBillingSettings(item)">
-                <v-icon> mdi-menu-open </v-icon>
+              <v-btn icon small @click="openBillingSettings(item)">
+                <v-icon small>mdi-tune-variant</v-icon>
               </v-btn>
             </template>
 
@@ -105,10 +162,9 @@
                 <v-chip
                   v-for="type in item.types"
                   :key="type"
-                  class="ml-1"
+                  class="mr-1 my-1"
                   style="color: white"
-                  small
-                  dense
+                  x-small
                   :color="typesColorMap[type]"
                   >{{ type }}</v-chip
                 >
@@ -117,207 +173,234 @@
             </template>
 
             <template v-slot:[`item.state.state`]="{ item }">
-              <v-tooltip left>
+              <v-tooltip left :disabled="!item.state?.error_messages?.length">
                 <template v-slot:activator="{ on, attrs }">
                   <v-chip
-                    dense
+                    x-small
                     v-bind="attrs"
                     v-on="on"
                     style="color: white"
-                    y
-                    :color="item.state?.state === 'broken' ? 'red' : 'green'"
-                    >{{ item.state?.state }}</v-chip
+                    :color="stateColor(item)"
+                    >{{ item.state?.state || "unknown" }}</v-chip
                   >
                 </template>
-                <span
-                  v-for="message in item.state.error_messages"
+                <div
+                  v-for="message in item.state?.error_messages || []"
                   :key="message"
-                  ><tr />
-                  {{ message }}</span
                 >
+                  {{ message }}
+                </div>
               </v-tooltip>
             </template>
 
             <template v-slot:[`item.provider`]="{ item }">
-              <v-chip dense color="blue">{{ item.provider }}</v-chip>
+              <v-chip x-small style="color: white" color="blue">{{
+                item.provider
+              }}</v-chip>
             </template>
           </nocloud-table>
 
-          <v-dialog width="70%" v-model="isBillingSettingsOpen">
-            <v-card
-              class="pa-5"
-              color="background-light"
-              style="min-height: 60vh"
-            >
-              <v-card-title class="key_title"
-                >{{ currentBillingSettings.name }}
-              </v-card-title>
-              <v-select
-                outlined
-                chips
-                label="Types"
-                :items="availableTypes"
-                multiple
-                v-model="currentBillingSettings.types"
-              />
+          <v-dialog max-width="840px" scrollable v-model="isBillingSettingsOpen">
+            <v-card class="billing-card" color="background-light">
+              <div class="billing-card__head">
+                <div class="billing-card__title">
+                  <div class="billing-card__name">
+                    {{ currentBillingSettings.name }}
+                  </div>
+                  <div class="billing-card__key">
+                    {{ currentBillingSettings.key }}
+                  </div>
+                </div>
+                <v-select
+                  class="billing-card__types"
+                  dense
+                  outlined
+                  hide-details
+                  multiple
+                  label="Types"
+                  :items="availableTypes"
+                  v-model="currentBillingSettings.types"
+                />
+              </div>
 
-              <v-row v-for="key in Object.keys(fieldsForAdd)" :key="key">
-                <v-col cols="12">
-                  <v-card-title class="key_title" style="padding: 0px">{{
-                    keyLabelMap[key]
-                  }}</v-card-title>
-                </v-col>
-                <v-col cols="12">
-                  <v-row
-                    align="center"
-                    v-for="field in fieldsForAdd[key]"
-                    :key="field.key"
+              <v-card-text class="billing-card__body">
+                <div v-if="!Object.keys(fieldsForAdd).length" class="hint">
+                  Select at least one type to configure prices.
+                </div>
+
+                <div v-else class="price-grid">
+                  <div class="price-grid__head"></div>
+                  <div
+                    class="price-grid__head price-grid__head--num"
+                    v-for="{ key: priceKey, label } in priceKeys"
+                    :key="priceKey"
                   >
-                    <template v-if="field.type === 'number'">
-                      <v-col cols="2" :key="field.subkey">
-                        <span class="key_text">{{ field.subkey }}</span>
-                      </v-col>
+                    {{ label }}
+                  </div>
 
-                      <v-col
-                        v-for="{
-                          key: priceKey,
-                          label: priceLabel,
-                        } in priceKeys"
-                        cols="5"
-                        :key="`${field.subkey}-${priceKey}`"
-                      >
+                  <template v-for="group in Object.keys(fieldsForAdd)">
+                    <div class="price-grid__group" :key="group">
+                      {{ keyLabelMap[group] || group }}
+                    </div>
+
+                    <template v-for="field in fieldsForAdd[group]">
+                      <template v-if="field.type === 'number'">
+                        <div class="price-grid__label" :key="field.subkey">
+                          <span>{{ fieldLabel(field) }}</span>
+                          <v-tooltip right max-width="320">
+                            <template v-slot:activator="{ on, attrs }">
+                              <v-icon
+                                class="price-grid__hint"
+                                small
+                                v-bind="attrs"
+                                v-on="on"
+                                >mdi-help-circle-outline</v-icon
+                              >
+                            </template>
+                            <span>{{ fieldHint(field) }}</span>
+                          </v-tooltip>
+                        </div>
                         <v-text-field
-                          hide-details
+                          v-for="{ key: priceKey } in priceKeys"
+                          :key="`${field.subkey}-${priceKey}`"
+                          class="price-field"
                           dense
                           outlined
+                          hide-details
                           type="number"
-                          :label="priceLabel"
-                          :value="
-                            currentBillingSettings.billing[field.key][
-                              [field.subkey]
-                            ].price[priceKey]
-                          "
-                          @input="
-                            currentBillingSettings.billing[field.key][
-                              [field.subkey]
-                            ].price[priceKey] = +$event
-                          "
+                          :suffix="defaultCurrency?.code"
+                          :readonly="priceKey === 'amount'"
+                          :filled="priceKey === 'amount'"
+                          :value="priceOf(field)[priceKey]"
+                          @input="setPrice(priceOf(field), $event)"
                         />
-                      </v-col>
-                    </template>
-                    <v-col v-else :key="field.subkey" cols="12">
-                      <div>
-                        <span class="key_text"
-                          >Table for {{ field.subkey }}</span
-                        >
+                      </template>
+
+                      <template v-else>
+                        <div class="price-grid__group" :key="field.subkey">
+                          {{ fieldLabel(field) }}
+                          <v-tooltip right max-width="320">
+                            <template v-slot:activator="{ on, attrs }">
+                              <v-icon
+                                class="price-grid__hint"
+                                small
+                                v-bind="attrs"
+                                v-on="on"
+                                >mdi-help-circle-outline</v-icon
+                              >
+                            </template>
+                            <span>{{ fieldHint(field) }}</span>
+                          </v-tooltip>
+                        </div>
+
                         <template
                           v-for="key in Object.keys(
                             currentBillingSettings.billing[field.key][
-                              [field.subkey]
+                              field.subkey
                             ]
                           )"
                         >
-                          <v-row
+                          <template
                             v-for="subkey in Object.keys(
                               currentBillingSettings.billing[field.key][
-                                [field.subkey]
+                                field.subkey
                               ][key]
                             )"
-                            :key="`${key}-${subkey}`"
                           >
-                            <v-col
-                              cols="2"
-                              class="d-flex justify-start align-center"
-                              ><span class="key_text"
-                                >{{ key }} {{ subkey }}</span
-                              >
-
-                              <v-btn icon @click="deleteFromMap(field, key)"
-                                ><v-icon>mdi-delete</v-icon></v-btn
-                              >
-                            </v-col>
-                            <v-col
-                              cols="5"
-                              v-for="{
-                                key: priceKey,
-                                label: priceLabel,
-                              } in priceKeys"
-                              :key="`${field.subkey}-${priceKey}`"
+                            <div
+                              class="price-grid__label"
+                              :key="`${key}-${subkey}`"
                             >
-                              <v-text-field
-                                dense
-                                outlined
-                                type="number"
-                                :label="priceLabel"
-                                :value="
+                              <v-btn
+                                icon
+                                x-small
+                                @click="deleteFromMap(field, key, subkey)"
+                                ><v-icon small>mdi-close</v-icon></v-btn
+                              >
+                              <span>{{ key }} / {{ subkey }}</span>
+                            </div>
+                            <v-text-field
+                              v-for="{ key: priceKey } in priceKeys"
+                              :key="`${key}-${subkey}-${priceKey}`"
+                              class="price-field"
+                              dense
+                              outlined
+                              hide-details
+                              type="number"
+                              :suffix="defaultCurrency?.code"
+                              :readonly="priceKey === 'amount'"
+                              :filled="priceKey === 'amount'"
+                              :value="
+                                currentBillingSettings.billing[field.key][
+                                  field.subkey
+                                ][key][subkey][priceKey]
+                              "
+                              @input="
+                                setPrice(
                                   currentBillingSettings.billing[field.key][
-                                    [field.subkey]
-                                  ][key][subkey][priceKey]
-                                "
-                                hide-details
-                                @input="
-                                  currentBillingSettings.billing[field.key][
-                                    [field.subkey]
-                                  ][key][subkey][priceKey] = +$event
-                                "
-                              />
-                            </v-col>
-                          </v-row>
+                                    field.subkey
+                                  ][key][subkey],
+                                  $event
+                                )
+                              "
+                            />
+                          </template>
                         </template>
 
-                        <v-row justify="end">
-                          <v-col cols="3">
-                            <v-text-field
-                              dense
-                              outlined
-                              hide-details
-                              label="New key"
-                              v-model="newKeysForMaps[field.subkey]"
-                            />
-                          </v-col>
-                          <v-col cols="3">
-                            <v-text-field
-                              dense
-                              outlined
-                              hide-details
-                              label="New subkey"
-                              v-model="newSubkeysForMaps[field.subkey]"
-                            />
-                          </v-col>
-                          <v-col cols="2">
-                            <v-btn
-                              :disabled="
-                                !newKeysForMaps[field.subkey] ||
-                                !newSubkeysForMaps[field.subkey] ||
-                                isSaveModelLoading
-                              "
-                              @click="addToMap(field)"
-                              >Add new value</v-btn
-                            >
-                          </v-col>
-                        </v-row>
-                      </div>
-                    </v-col>
-                  </v-row>
-                </v-col>
-              </v-row>
+                        <div class="price-grid__add" :key="`add-${field.subkey}`">
+                          <v-text-field
+                            dense
+                            outlined
+                            hide-details
+                            :label="mapKeyLabels(field)[0]"
+                            v-model="newKeysForMaps[field.subkey]"
+                          />
+                          <v-text-field
+                            dense
+                            outlined
+                            hide-details
+                            :label="mapKeyLabels(field)[1]"
+                            v-model="newSubkeysForMaps[field.subkey]"
+                          />
+                          <v-btn
+                            small
+                            outlined
+                            :disabled="
+                              !newKeysForMaps[field.subkey] ||
+                              !newSubkeysForMaps[field.subkey] ||
+                              isSaveModelLoading
+                            "
+                            @click="addToMap(field)"
+                            >Add</v-btn
+                          >
+                        </div>
+                      </template>
+                    </template>
+                  </template>
+                </div>
+              </v-card-text>
 
-              <div
-                class="d-flex justify-center align-center mt-2 mb-2"
-                v-if="billingSettinfsMessages.length"
-              >
-                <v-card-title style="color: red; text-align: center">
-                  Errors: {{ billingSettinfsMessages.join(", ") }}
-                </v-card-title>
-              </div>
-
-              <v-card-actions class="d-flex justify-end mt-3">
+              <v-card-actions class="billing-card__actions">
+                <v-alert
+                  v-if="billingSettinfsMessages.length"
+                  class="billing-card__errors"
+                  dense
+                  text
+                  type="error"
+                >
+                  {{ billingSettinfsMessages.join(", ") }}
+                </v-alert>
+                <v-spacer />
                 <v-btn
+                  small
+                  text
                   :disabled="isSaveModelLoading"
                   @click="isBillingSettingsOpen = false"
                   >Close</v-btn
                 >
                 <v-btn
+                  small
+                  color="primary"
                   :loading="isSaveModelLoading"
                   @click="saveBillingSettings"
                   >Save changes</v-btn
@@ -459,11 +542,15 @@ const newPricesHeaders = [
 ];
 
 const priceKeys = [
-  { key: "raw_amount", label: "Price" },
-  { key: "amount", label: "Margined price" },
+  { key: "raw_amount", label: "Supplier price" },
+  { key: "amount", label: "Final price" },
 ];
 
 const searchParam = ref("");
+const onlyEnabled = ref(true);
+const hideBroken = ref(true);
+const typesFilter = ref([]);
+const providersFilter = ref([]);
 
 const isSaveLoading = ref(false);
 const isSaveModelLoading = ref(false);
@@ -496,6 +583,69 @@ const keyLabelMap = {
   other: "Other",
   media_duration: "Media",
   images: "Images",
+};
+
+const fieldMeta = {
+  "tokens.text_input": {
+    label: "Text input, per 1M tokens",
+    hint: "Price for 1 000 000 tokens sent to the model (prompt).",
+  },
+  "tokens.text_output": {
+    label: "Text output, per 1M tokens",
+    hint: "Price for 1 000 000 tokens generated by the model (answer).",
+  },
+  "tokens.image_input": {
+    label: "Image input, per 1M tokens",
+    hint: "Price for 1 000 000 tokens of images sent to the model.",
+  },
+  "tokens.image_output": {
+    label: "Image output, per 1M tokens",
+    hint: "Price for 1 000 000 tokens of images generated by the model.",
+  },
+  "media_duration.duration_price": {
+    label: "Media, per 60 seconds",
+    hint: "Price for 60 seconds of audio or video. Charged proportionally to the real duration.",
+  },
+  "other.web_search_price": {
+    label: "Web search, per 1000 requests",
+    hint: "Price for 1000 web searches performed by the model.",
+  },
+  "other.sampling_step_price": {
+    label: "Generation step",
+    hint: "Price for one generation (sampling) step.",
+  },
+  "other.characters_price": {
+    label: "Characters, per 1M",
+    hint: "Price for 1 000 000 input characters (used by TTS models).",
+  },
+  "other.pages_count_price": {
+    label: "Pages, per 1000",
+    hint: "Price for 1000 recognized pages.",
+  },
+  "images.res_to_quality": {
+    label: "Price per image (resolution / quality)",
+    hint: "Price for one generated image for every resolution and quality pair, e.g. 1024x1024 / standard.",
+  },
+};
+
+const fieldPath = (field) => `${field.key}.${field.subkey}`;
+const fieldLabel = (field) =>
+  fieldMeta[fieldPath(field)]?.label || field.subkey;
+const fieldHint = (field) =>
+  fieldMeta[fieldPath(field)]?.hint || "No description";
+const mapKeyLabels = (field) =>
+  field.subkey === "res_to_quality"
+    ? ["New resolution", "New quality"]
+    : ["New key", "New subkey"];
+
+const priceOf = (field) =>
+  currentBillingSettings.value.billing[field.key][field.subkey].price;
+
+const setPrice = (price, value) => {
+  const raw = +value || 0;
+
+  price.raw_amount = raw;
+  price.amount = getMarginedValue(fee.value, raw);
 };
 
 onMounted(async () => {
@@ -586,67 +736,87 @@ const fieldsForTypes = {
   },
 };
 
-const setFee = () => {
-  newPricesResources.value = newPricesResources.value.map((temp) => {
-    for (const type of Object.keys(fieldsForTypes)) {
-      for (const fields of fieldsForTypes[type].fields) {
-        for (const field of Object.keys(fields)) {
-          const [key, subkey] = field.split(".");
+const applyMargin = (model) => {
+  for (const type of Object.keys(fieldsForTypes)) {
+    for (const fields of fieldsForTypes[type].fields) {
+      for (const field of Object.keys(fields)) {
+        const [key, subkey] = field.split(".");
 
-          if (temp.billing[key] == null) {
-            temp.billing[key] = {};
-          }
+        if (model.billing[key] == null) {
+          model.billing[key] = {};
+        }
 
-          if (temp.billing[key][subkey] == null) {
-            continue;
-          }
+        if (model.billing[key][subkey] == null) {
+          continue;
+        }
 
-          if (fields[field] === "map-map-number") {
-            for (const fieldKey of Object.keys(temp.billing[key][subkey])) {
-              for (const fieldSubkey of Object.keys(
-                temp.billing[key][subkey][fieldKey]
-              )) {
-                temp.billing[key][subkey][fieldKey][fieldSubkey].amount =
-                  getMarginedValue(
-                    fee.value,
-                    temp.billing[key][subkey][fieldKey][fieldSubkey].raw_amount
-                  );
-              }
+        if (fields[field] === "map-map-number") {
+          for (const fieldKey of Object.keys(model.billing[key][subkey])) {
+            for (const fieldSubkey of Object.keys(
+              model.billing[key][subkey][fieldKey]
+            )) {
+              setPrice(
+                model.billing[key][subkey][fieldKey][fieldSubkey],
+                model.billing[key][subkey][fieldKey][fieldSubkey].raw_amount
+              );
             }
-          } else {
-            temp.billing[key][subkey].price.amount = getMarginedValue(
-              fee.value,
-              temp.billing[key][subkey].price.raw_amount
-            );
           }
+        } else {
+          setPrice(
+            model.billing[key][subkey].price,
+            model.billing[key][subkey].price.raw_amount
+          );
         }
       }
     }
+  }
 
-    return temp;
-  });
+  return model;
 };
 
+const setFee = () => {
+  newPricesResources.value = newPricesResources.value.map(applyMargin);
+};
+
+const availableProviders = computed(() => [
+  ...new Set(newPricesResources.value.map((r) => r.provider).filter(Boolean)),
+]);
+
 const newPricesResourcesFiltred = computed(() => {
-  const param = searchParam.value.toLowerCase();
-  return newPricesResources.value.filter(
-    (r) =>
-      r.name.includes(param) ||
-      r.key.includes(param) ||
-      (r?.types || []).includes(param) ||
-      r.provider === param
-  );
+  const param = (searchParam.value || "").toLowerCase().trim();
+
+  return newPricesResources.value.filter((r) => {
+    if (onlyEnabled.value && r.disabled) return false;
+    if (hideBroken.value && r.state?.state === "broken") return false;
+    if (
+      typesFilter.value.length &&
+      !typesFilter.value.some((type) => (r.types || []).includes(type))
+    ) {
+      return false;
+    }
+    if (
+      providersFilter.value.length &&
+      !providersFilter.value.includes(r.provider)
+    ) {
+      return false;
+    }
+    if (!param) return true;
+
+    return [r.name, r.key, r.provider, ...(r.types || [])]
+      .filter(Boolean)
+      .some((v) => v.toLowerCase().includes(param));
+  });
 });
 
 const fieldsForAdd = computed(() => {
   if (!Object.keys(currentBillingSettings.value).length) {
-    return [];
+    return {};
   }
 
   const resultMap = {};
 
-  for (const type of currentBillingSettings.value.types) {
-    for (const fields of fieldsForTypes[type].fields) {
+  for (const type of currentBillingSettings.value.types || []) {
+    for (const fields of fieldsForTypes[type]?.fields || []) {
       for (const field of Object.keys(fields)) {
         resultMap[field] = {
           type: fields[field],
@@ -706,7 +876,7 @@ const openBillingSettings = (item) => {
     }
   }
 
-  currentBillingSettings.value = temp;
+  currentBillingSettings.value = applyMargin(temp);
   isBillingSettingsOpen.value = true;
 };
 
@@ -827,8 +997,13 @@ const addToMap = (field) => {
   newSubkeysForMaps.value[field.subkey] = "";
 };
 
-const deleteFromMap = (field, key) => {
-  delete currentBillingSettings.value.billing[field.key][field.subkey][key];
+const deleteFromMap = (field, key, subkey) => {
+  const map = currentBillingSettings.value.billing[field.key][field.subkey];
+
+  delete map[key][subkey];
+  if (!Object.keys(map[key]).length) {
+    delete map[key];
+  }
 
   currentBillingSettings.value.billing[field.key][field.subkey] = {
     ...currentBillingSettings.value.billing[field.key][field.subkey],
@@ -858,9 +1033,6 @@ const exportToXlsx = async () => {
   try {
     isExportLoading.value = true;
 
-    store.commit("snackbar/showSnackbarSuccess", {
-      message: "Export success",
-    });
     const baseHeaders = [
       { title: "Name", key: "name" },
       { title: "Price per 1M input tokens", key: "tokens.text_input" },
@@ -969,7 +1141,7 @@ const save = async () => {
     imageSize1792x1024.price = imageSize1024x1792.price;
     imageSize1792x1024HD.price = imageSize1024x1792HD.price;
 
-    await api.post("/api/openai/save_config", {
+    const { new_serial } = await api.post("/api/openai/save_config", {
       serial: currentSerial.value,
       cfg: {
         models: newPricesResources.value.reduce((acc, r) => {
@@ -978,6 +1150,7 @@ const save = async () => {
         }, {}),
       },
     });
+    currentSerial.value = new_serial;
 
     await api.plans.update(props.template.uuid, {
       ...props.template,
@@ -1005,9 +1178,20 @@ const save = async () => {
   }
 };
 
+const stateColor = (item) => {
+  if (item.state?.state === "broken") return "red";
+  return item.state?.state ? "green" : "grey";
+};
+
 const changeDisabled = (item, value) => {
   item.disabled = !value;
 };
+
+watch(fee, () => {
+  if (isBillingSettingsOpen.value) {
+    applyMargin(currentBillingSettings.value);
+  }
+});
 
 watch(isBillingSettingsOpen, (value) => {
   if (!value) {
@@ -1018,10 +1202,220 @@ watch(isBillingSettingsOpen, (value) => {
 </script>
 
 <style scoped>
-.key_text {
-  font-size: 1rem;
+/* --- toolbar --- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px 14px;
 }
-.key_title {
-  font-size: 1.4em;
+
+.toolbar__search {
+  max-width: 260px;
+}
+
+.toolbar__select {
+  max-width: 200px;
+}
+
+.toolbar__switch {
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.toolbar__counter {
+  margin-left: auto;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.toolbar ::v-deep .v-label {
+  font-size: 0.8rem;
+}
+
+.toolbar__select ::v-deep .v-select__selections {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.toolbar__select ::v-deep .v-select__selections > input {
+  min-width: 0;
+}
+
+.toolbar__select ::v-deep .v-select__selection {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+/* --- table cells --- */
+.cell-input {
+  font-size: 0.85rem;
+}
+
+.cell-input ::v-deep .v-select__selections {
+  flex-wrap: nowrap;
+}
+
+.cell-switch {
+  margin: 0;
+  padding: 0;
+}
+
+/* --- billing dialog --- */
+.billing-card__head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.billing-card__title {
+  min-width: 0;
+}
+
+.billing-card__name {
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.billing-card__key {
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.billing-card__types {
+  margin-left: auto;
+  max-width: 320px;
+}
+
+.billing-card__types ::v-deep .v-select__selections {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.billing-card__types ::v-deep .v-select__selection {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.billing-card__body {
+  padding: 12px 16px 16px;
+  max-height: 62vh;
+}
+
+.billing-card__actions {
+  padding: 8px 16px;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.billing-card__errors {
+  margin: 0;
+  font-size: 0.75rem;
+  flex: 1 1 auto;
+}
+
+.hint {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.price-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 150px;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+}
+
+.price-grid__head {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+
+.price-grid__head--num {
+  text-align: center;
+}
+
+.price-grid__group {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+
+.price-grid__hint {
+  opacity: 0.55;
+  cursor: help;
+}
+
+.price-grid__hint:hover {
+  opacity: 1;
+}
+
+.price-grid__label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+.price-grid__label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.price-grid__add {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 150px;
+  column-gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.price-grid__add ::v-deep .v-label {
+  font-size: 0.75rem;
+}
+
+.price-field ::v-deep input {
+  font-size: 0.8rem;
+  text-align: right;
+  /* ponytail: native spinners only add visual noise on price inputs */
+  -moz-appearance: textfield;
+}
+
+.price-field ::v-deep input::-webkit-outer-spin-button,
+.price-field ::v-deep input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.price-field ::v-deep .v-text-field__suffix {
+  font-size: 0.7rem;
+  opacity: 0.6;
 }
 </style>
