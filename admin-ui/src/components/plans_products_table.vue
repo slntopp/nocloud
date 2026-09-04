@@ -178,6 +178,13 @@
             />
           </template>
 
+          <template v-slot:[`item.meta.highCPU`]="{ item }">
+            <v-switch
+              :input-value="item.meta?.highCPU"
+              @change="changeHighCPU(item, $event)"
+            />
+          </template>
+
           <template v-slot:[`item.addons`]="{ item }">
             <product-addons-dialog
               @change:addons="changeProductAddons(item, $event)"
@@ -357,6 +364,10 @@ const headers = computed(() =>
     { text: "Group", value: "group", width: 300 },
     { text: "Public", value: "public" },
     { text: "Sorter", value: "sorter" },
+    ["ione", "proxmox"].includes(type.value) && {
+      text: "High CPU",
+      value: "meta.highCPU",
+    },
     {
       text: "Addons",
       value: "addons",
@@ -420,6 +431,12 @@ function changeOneTime(item, value) {
     changeProduct("period", 0, item.id);
   }
   changeProduct("meta", { ...item.meta, oneTime: value }, item.id);
+}
+
+// highCPU на продукте: драйвер proxmox выбирает по нему ключ HCPU в sched.
+// Флаг на плане остаётся рабочим fallback'ом для старых планов.
+function changeHighCPU(item, value) {
+  changeProduct("meta", { ...item.meta, highCPU: !!value }, item.id);
 }
 
 function changeProductAddons(item, value) {
