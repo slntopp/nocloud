@@ -24,6 +24,7 @@
             <v-chip x-small color="info" outlined>used {{ net.used }}</v-chip>
             <v-chip x-small color="warning" outlined>hold {{ net.hold }}</v-chip>
             <v-chip v-if="conflicts(kind)" x-small color="error">conflict {{ conflicts(kind) }}</v-chip>
+            <v-chip v-if="outside(kind)" x-small color="error" outlined>outside {{ outside(kind) }}</v-chip>
             <v-chip x-small outlined>total {{ net.total }}</v-chip>
           </div>
         </v-expansion-panel-header>
@@ -133,6 +134,7 @@
               <v-btn x-small value="used">used</v-btn>
               <v-btn x-small value="hold">hold</v-btn>
               <v-btn x-small value="conflict" :disabled="!conflicts(kind)">conflict{{ conflicts(kind) ? ` (${conflicts(kind)})` : "" }}</v-btn>
+              <v-btn x-small value="outside" :disabled="!outside(kind)">outside{{ outside(kind) ? ` (${outside(kind)})` : "" }}</v-btn>
             </v-btn-toggle>
             <v-text-field
               v-model="search[kind]"
@@ -162,6 +164,10 @@
             :footer-props="{ 'items-per-page-options': [25, 50, 100, -1] }"
             item-key="ip"
           >
+            <template v-slot:[`item.ar`]="{ item }">
+              <span v-if="item.ar === 0 || item.ar > 0">{{ item.ar }}</span>
+              <span v-else class="text--disabled">—</span>
+            </template>
             <template v-slot:[`item.state`]="{ item }">
               <v-select
                 v-if="item.state === 'free' || item.state === 'hold'"
@@ -319,8 +325,11 @@ export default {
     conflicts(kind) {
       return (this.networks[kind]?.leases || []).filter((l) => l.state === "conflict").length;
     },
+    outside(kind) {
+      return (this.networks[kind]?.leases || []).filter((l) => l.state === "outside").length;
+    },
     stateColor(s) {
-      return { free: "success", used: "info", hold: "warning", conflict: "error" }[s] || "";
+      return { free: "success", used: "info", hold: "warning", conflict: "error", outside: "error" }[s] || "";
     },
 
     // ---- persistence: edit the pool inside SP vars, exactly what the driver reads ----
