@@ -32,6 +32,27 @@
           copy
         />
       </v-col>
+      <v-col>
+        <v-text-field
+          append-icon="mdi-pencil"
+          @input="emit('update', { key: 'config.hostname', value: $event })"
+          :value="template.config?.hostname"
+          label="Hostname"
+          hint="PVE name + guest hostname. Empty = sanitized title."
+          persistent-hint
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          append-icon="mdi-pencil"
+          type="number"
+          @input="emit('update', { key: 'config.ssh_port', value: +$event || $event })"
+          :value="template.config?.ssh_port || template.data?.ssh_port"
+          label="SSH port"
+          hint="Override SP guest_ssh.port. Applied via qemu-agent."
+          persistent-hint
+        />
+      </v-col>
     </v-row>
     <v-row>
       <v-col>

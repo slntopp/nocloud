@@ -29,6 +29,7 @@
       "vmid_range": "Restrict VMIDs the driver may allocate, e.g. 1000–1999. Empty = /cluster/nextid.",
       "suspend_mode": "What billing suspend does: hibernate (suspend to disk, default), power off, or pause in RAM.",
       "qemu_agent_required": "Hide templates without qemu-guest-agent. The agent is needed for real IPs, extra IPs and guest stats.",
+      "guest_ssh": "sshd policy written into the Linux guest via qemu-guest-agent (00-nocloud.conf). Port is what the cabinet shows. A change is re-applied on the next Monitoring tick. Windows guests are skipped. Instance config.ssh_port can override the port.",
       "min_drive_size": "Per drive type limits in MB, e.g. {\"SSD\": 10240}. Template disk size is always the lower bound."
     }
   }
