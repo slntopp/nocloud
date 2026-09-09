@@ -85,7 +85,9 @@
               @click.stop="openMove(group.uuid)"
               >mdi-arrow-up-bold</v-icon
             >
-            <v-icon @click.stop="deleteIg(i)" class="instance-group-button"
+            <v-icon
+              class="instance-group-button"
+              @click.stop="openDeleteIg(i)"
               >mdi-delete</v-icon
             >
           </v-expansion-panel-header>
@@ -179,6 +181,26 @@
       </v-expansion-panels>
     </v-row>
 
+    <v-dialog persistent v-model="deleteIgDialog" max-width="480">
+      <v-card class="pa-4">
+        <v-card-title class="text-h6">Are you sure?</v-card-title>
+        <v-card-text class="pt-2">
+          {{ deleteIgWarning(pendingDeleteGroup) }}
+        </v-card-text>
+        <v-card-actions class="justify-center">
+          <v-btn @click="closeDeleteIg">Cancel</v-btn>
+          <v-btn
+            color="error"
+            class="ml-4"
+            :loading="isLoading"
+            @click="confirmDeleteIg"
+          >
+            Delete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog style="box-shadow: none" v-model="changeIGDialog" width="40%">
       <v-card class="ma-auto pa-5">
         <v-card-title>Move service</v-card-title>
@@ -249,6 +271,8 @@ export default {
     templates: {},
 
     changeIGDialog: false,
+    deleteIgDialog: false,
+    pendingDeleteIndex: null,
     selectedService: null,
     igUUID: null,
 
@@ -267,6 +291,13 @@ export default {
       }
 
       return this.allServices.filter((s) => s.uuid !== this.service.uuid);
+    },
+    pendingDeleteGroup() {
+      const index = this.pendingDeleteIndex;
+      if (index == null) {
+        return null;
+      }
+      return this.service.instancesGroups[index] || null;
     },
   },
   methods: {
@@ -364,28 +395,109 @@ export default {
       this.changeIGDialog = true;
       this.igUUID = uuid;
     },
-    deleteIg(index) {
-      const template = JSON.parse(JSON.stringify(this.service));
-      template.instancesGroups = template.instancesGroups.filter(
-        (_, ind) => ind !== index
-      );
+    hypervisorRef(inst) {
+      const data = inst?.data || {};
+      return data.vmid || data.vm_id;
+    },
+    deleteIgWarning(group) {
+      const n = group?.instances?.length || 0;
+      if (group?.type === "proxmox") {
+        return `This will destroy ${n} VM(s) in Proxmox, then remove the group from NoCloud. VMs that stay on the hypervisor cannot be deleted from NoCloud later.`;
+      }
+      return `Instances will be marked deleted so the driver can destroy them on the hypervisor. The group is removed from NoCloud only after that.`;
+    },
+    openDeleteIg(index) {
+      this.pendingDeleteIndex = index;
+      this.deleteIgDialog = true;
+    },
+    closeDeleteIg() {
+      if (this.isLoading) {
+        return;
+      }
+      this.deleteIgDialog = false;
+      this.pendingDeleteIndex = null;
+    },
+    confirmDeleteIg() {
+      const index = this.pendingDeleteIndex;
+      if (index == null) {
+        return;
+      }
+      this.deleteIg(index);
+    },
+    async deleteIg(index) {
+      const group = this.service.instancesGroups[index];
+      if (!group) {
+        this.closeDeleteIg();
+        return;
+      }
+      this.isLoading = true;
+      try {
+        const instances = group.instances || [];
+        if (group.type === "proxmox") {
+          for (const inst of instances) {
+            if (inst.status === "DEL" && !this.hypervisorRef(inst)) {
+              continue;
+            }
+            try {
+              await api.instances.action({
+                uuid: inst.uuid,
+                action: "destroy",
+              });
+            } catch (err) {
+              const msg = err?.response?.data?.message ?? "";
+              if (!/not declared/i.test(msg)) {
+                throw err;
+              }
+              for (const item of instances) {
+                if (item.status !== "DEL") {
+                  await api.delete(`/instances/${item.uuid}`);
+                }
+              }
+              this.showSnackbarSuccess({
+                message:
+                  "Instances marked for deletion. Deploy the updated Proxmox driver to destroy VMs immediately, then remove the group.",
+              });
+              this.$store.dispatch("reloadBtn/onclick");
+              return;
+            }
+            if (inst.status !== "DEL") {
+              await api.delete(`/instances/${inst.uuid}`);
+            }
+          }
+        } else {
+          for (const inst of instances) {
+            if (inst.status !== "DEL") {
+              await api.delete(`/instances/${inst.uuid}`);
+            }
+          }
+          if (instances.some((inst) => this.hypervisorRef(inst))) {
+            this.showSnackbarSuccess({
+              message:
+                "Instances marked for deletion. Remove the group after the hypervisor destroys the VMs.",
+            });
+            this.$store.dispatch("reloadBtn/onclick");
+            return;
+          }
+        }
 
-      api.services
-        ._update(template)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Service edited successfully",
-          });
-          this.$store.dispatch('reloadBtn/onclick')
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isLoading = false;
+        const template = JSON.parse(JSON.stringify(this.service));
+        template.instancesGroups = template.instancesGroups.filter(
+          (_, ind) => ind !== index
+        );
+        await api.services._update(template);
+        this.showSnackbarSuccess({
+          message: "Service edited successfully",
         });
+        this.$store.dispatch("reloadBtn/onclick");
+      } catch (err) {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}. Group was not removed from NoCloud.`,
+        });
+      } finally {
+        this.isLoading = false;
+        this.deleteIgDialog = false;
+        this.pendingDeleteIndex = null;
+      }
     },
   },
   created() {
