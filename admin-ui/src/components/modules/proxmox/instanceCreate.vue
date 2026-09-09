@@ -15,6 +15,15 @@
             :rules="requiredRule"
           />
         </v-col>
+        <v-col cols="6">
+          <v-text-field
+            @change="(newVal) => setValue('config.hostname', newVal)"
+            label="Hostname (PVE name)"
+            :value="instance.config?.hostname"
+            hint="Linux DNS label, max 63. Windows NetBIOS max 15. Empty = sanitized Name."
+            persistent-hint
+          />
+        </v-col>
       </v-row>
 
       <v-row>

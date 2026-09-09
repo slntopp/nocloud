@@ -288,6 +288,53 @@
       </v-col>
     </v-row>
 
+    <v-divider class="my-4" />
+
+    <v-row>
+      <v-col cols="4">
+        <subheader-with-info infoText="SPInfo.proxmox.guest_ssh">
+          Guest SSH (applied via qemu-agent)
+        </subheader-with-info>
+        <div class="text-caption">
+          Drop-in /etc/ssh/sshd_config.d/00-nocloud.conf on Linux guests. Changing these values re-applies on the next Monitoring tick.
+        </div>
+      </v-col>
+      <v-col cols="8">
+        <v-row>
+          <v-col cols="4">
+            <v-text-field
+              type="number"
+              label="SSH port"
+              :value="guestSSH.port"
+              :rules="[isSSHPort]"
+              :error-messages="errors.guest_ssh"
+              @change="(v) => changeGuestSSH('port', +v)"
+            />
+          </v-col>
+          <v-col cols="8" class="d-flex flex-column justify-center">
+            <v-switch
+              dense
+              label="PasswordAuthentication"
+              :input-value="guestSSH.password_auth !== false"
+              @change="(v) => changeGuestSSH('password_auth', !!v)"
+            />
+            <v-switch
+              dense
+              label="PermitRootLogin"
+              :input-value="guestSSH.permit_root_login !== false"
+              @change="(v) => changeGuestSSH('permit_root_login', !!v)"
+            />
+            <v-switch
+              dense
+              label="PubkeyAuthentication"
+              :input-value="guestSSH.pubkey_auth !== false"
+              @change="(v) => changeGuestSSH('pubkey_auth', !!v)"
+            />
+          </v-col>
+        </v-row>
+      </v-col>
+    </v-row>
+
     <v-row>
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.min_drive_size">
@@ -365,6 +412,12 @@ export default {
       const r = this.getDefault("vmid_range");
       return Array.isArray(r) && r.length === 2 ? r : ["", ""];
     },
+    guestSSH() {
+      const d = this.getDefault("guest_ssh");
+      return d && typeof d === "object"
+        ? d
+        : { port: 52222, password_auth: true, permit_root_login: true, pubkey_auth: true };
+    },
   },
   methods: {
     required(v) {
@@ -383,6 +436,13 @@ export default {
     },
     isRealmUser(v) {
       return /^[^@\s]+@[^@\s]+$/.test(v || "") || "Format: user@realm (nocloud@pve)";
+    },
+    isSSHPort(v) {
+      const n = +v;
+      return (n >= 1 && n <= 65535) || "Port must be 1..65535";
+    },
+    changeGuestSSH(key, value) {
+      this.changeDefault("guest_ssh", { ...this.guestSSH, [key]: value });
     },
 
     getDefault(key) {
@@ -475,6 +535,13 @@ export default {
       const r = vars.vmid_range?.value?.default;
       if (Array.isArray(r) && (r.length !== 2 || +r[0] < 100 || +r[1] < +r[0])) {
         errors.vmid_range = "expected [min >= 100, max >= min]";
+      }
+      const ssh = vars.guest_ssh?.value?.default;
+      if (ssh && typeof ssh === "object" && ssh.port != null && ssh.port !== "") {
+        const n = +ssh.port;
+        if (!(n >= 1 && n <= 65535)) {
+          errors.guest_ssh = "SSH port must be 1..65535";
+        }
       }
       this.errors = errors;
       this.$emit("passed", Object.keys(errors).length === 0);
