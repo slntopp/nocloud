@@ -2,7 +2,6 @@
   <v-card color="background-light" class="pa-5" elevation="0">
     <div class="d-flex align-center mb-2">
       <span class="text-h6">Virtual networks</span>
-      <span class="text--secondary ml-3">address ranges · leases · holds (as OpenNebula vnets)</span>
       <v-spacer />
       <v-btn small text :loading="isLoading" @click="load">
         <v-icon small left>mdi-refresh</v-icon>refresh leases
@@ -55,30 +54,72 @@
             <tbody>
               <tr v-for="ar in net.ars" :key="ar.id">
                 <td>{{ ar.id }}</td>
-                <td>{{ ar.ip }}</td>
-                <td>{{ ar.last }}</td>
-                <td>{{ ar.size }}</td>
-                <td>{{ ar.used }}</td>
-                <td>{{ ar.hold }}</td>
-                <td :class="ar.free === 0 ? 'error--text' : ''">{{ ar.free }}</td>
-                <td class="text--secondary">
-                  <span v-if="ar.gateway">gw {{ ar.gateway }} </span>
-                  <span v-if="ar.prefix">/{{ ar.prefix }} </span>
-                  <span v-if="ar.bridge">{{ ar.bridge }} </span>
-                  <span v-if="ar.vlan_tag">vlan {{ ar.vlan_tag }}</span>
-                </td>
-                <td>
-                  <v-tooltip bottom>
-                    <template v-slot:activator="{ on }">
-                      <span v-on="on">
-                        <v-btn icon x-small :disabled="ar.used > 0 || isSaving" @click="removeAR(kind, ar.id)">
-                          <v-icon small>mdi-delete</v-icon>
-                        </v-btn>
-                      </span>
-                    </template>
-                    <span>{{ ar.used > 0 ? "range has leased addresses" : "remove range" }}</span>
-                  </v-tooltip>
-                </td>
+                <template v-if="isEditingAR(kind, ar.id)">
+                  <td>
+                    <v-text-field v-model="editAR.ip" dense hide-details placeholder="First IP" />
+                  </td>
+                  <td class="text--secondary">{{ editLast }}</td>
+                  <td>
+                    <v-text-field v-model.number="editAR.size" dense hide-details type="number" min="1" style="max-width: 80px" />
+                  </td>
+                  <td>{{ ar.used }}</td>
+                  <td>{{ ar.hold }}</td>
+                  <td>{{ ar.free }}</td>
+                  <td>
+                    <v-row dense>
+                      <v-col cols="6">
+                        <v-text-field v-model="editAR.gateway" dense hide-details placeholder="gateway" />
+                      </v-col>
+                      <v-col cols="6">
+                        <v-text-field v-model.number="editAR.prefix" dense hide-details type="number" placeholder="prefix" />
+                      </v-col>
+                      <v-col cols="6">
+                        <v-text-field v-model="editAR.bridge" dense hide-details placeholder="bridge" />
+                      </v-col>
+                      <v-col cols="6">
+                        <v-text-field v-model.number="editAR.vlan_tag" dense hide-details type="number" placeholder="vlan" />
+                      </v-col>
+                    </v-row>
+                  </td>
+                  <td class="text-no-wrap">
+                    <v-btn icon x-small color="success" :loading="isSaving" :disabled="!editAR.ip || !(editAR.size > 0)" @click="saveAR(kind, ar.id)">
+                      <v-icon small>mdi-check</v-icon>
+                    </v-btn>
+                    <v-btn icon x-small @click="cancelEditAR">
+                      <v-icon small>mdi-close</v-icon>
+                    </v-btn>
+                  </td>
+                </template>
+                <template v-else>
+                  <td>{{ ar.ip }}</td>
+                  <td>{{ ar.last }}</td>
+                  <td>{{ ar.size }}</td>
+                  <td>{{ ar.used }}</td>
+                  <td>{{ ar.hold }}</td>
+                  <td :class="ar.free === 0 ? 'error--text' : ''">{{ ar.free }}</td>
+                  <td class="text--secondary">
+                    <span v-if="ar.gateway">gw {{ ar.gateway }} </span>
+                    <span v-if="ar.prefix">/{{ ar.prefix }} </span>
+                    <span v-if="ar.bridge">{{ ar.bridge }} </span>
+                    <span v-if="ar.vlan_tag">vlan {{ ar.vlan_tag }}</span>
+                    <span v-if="!ar.gateway && !ar.prefix && !ar.bridge && !ar.vlan_tag">—</span>
+                  </td>
+                  <td class="text-no-wrap">
+                    <v-btn icon x-small :disabled="isSaving" title="edit range" @click="startEditAR(kind, ar)">
+                      <v-icon small>mdi-pencil</v-icon>
+                    </v-btn>
+                    <v-tooltip bottom>
+                      <template v-slot:activator="{ on }">
+                        <span v-on="on">
+                          <v-btn icon x-small :disabled="ar.used > 0 || isSaving" @click="removeAR(kind, ar.id)">
+                            <v-icon small>mdi-delete</v-icon>
+                          </v-btn>
+                        </span>
+                      </template>
+                      <span>{{ ar.used > 0 ? "range has leased addresses" : "remove range" }}</span>
+                    </v-tooltip>
+                  </td>
+                </template>
               </tr>
             </tbody>
           </v-simple-table>
@@ -122,7 +163,20 @@
             item-key="ip"
           >
             <template v-slot:[`item.state`]="{ item }">
-              <v-chip x-small :color="stateColor(item.state)" outlined>{{ item.state }}</v-chip>
+              <v-select
+                v-if="item.state === 'free' || item.state === 'hold'"
+                :value="item.state"
+                :items="[
+                  { text: 'free', value: 'free' },
+                  { text: 'hold', value: 'hold' },
+                ]"
+                dense
+                hide-details
+                :disabled="isSaving"
+                style="max-width: 110px"
+                @change="setLeaseState(kind, item, $event)"
+              />
+              <v-chip v-else x-small :color="stateColor(item.state)" outlined>{{ item.state }}</v-chip>
             </template>
             <template v-slot:[`item.vm`]="{ item }">
               <template v-if="item.owners">
@@ -188,6 +242,13 @@ import api from "@/api";
 
 const VAR_BY_KIND = { public: "public_ip_pool", private: "private_vnet_tmpl" };
 
+const ip2n = (ip) => {
+  const p = String(ip || "").split(".").map(Number);
+  if (p.length !== 4 || p.some((x) => Number.isNaN(x) || x < 0 || x > 255)) return null;
+  return ((p[0] << 24) >>> 0) + (p[1] << 16) + (p[2] << 8) + p[3];
+};
+const n2ip = (n) => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+
 export default {
   name: "proxmox-networks",
   props: { template: { type: Object, required: true } },
@@ -203,16 +264,27 @@ export default {
     addDialog: false,
     addKind: "public",
     newAR: { ip: "", size: 1, range: "", gateway: "", prefix: null, bridge: "", vlan_tag: null },
+    editKind: "",
+    editId: null,
+    editAR: { ip: "", size: 1, gateway: "", prefix: null, bridge: "", vlan_tag: null },
     leaseHeaders: [
       { text: "IP", value: "ip", width: 150 },
       { text: "AR", value: "ar", width: 60 },
-      { text: "State", value: "state", width: 90 },
+      { text: "State", value: "state", width: 120 },
       { text: "VM", value: "vm" },
       { text: "Instance", value: "instance", width: 140 },
       { text: "Source", value: "source", width: 90 },
       { text: "", value: "actions", sortable: false, width: 90 },
     ],
   }),
+  computed: {
+    editLast() {
+      const n = ip2n(this.editAR.ip);
+      const size = +this.editAR.size || 0;
+      if (n === null || size < 1) return "—";
+      return n2ip(n + size - 1);
+    },
+  },
   methods: {
     async load() {
       this.isLoading = true;
@@ -310,6 +382,44 @@ export default {
     release(kind, ip) {
       const { pool } = this.poolVar(kind);
       return this.savePool(kind, { ...pool, holds: (pool.holds || []).filter((h) => h !== ip) });
+    },
+    setLeaseState(kind, item, state) {
+      if (state === item.state) return;
+      if (state === "hold") return this.hold(kind, item.ip);
+      if (state === "free") return this.release(kind, item.ip);
+    },
+    isEditingAR(kind, id) {
+      return this.editKind === kind && this.editId === id;
+    },
+    startEditAR(kind, ar) {
+      this.editKind = kind;
+      this.editId = ar.id;
+      this.editAR = {
+        ip: ar.ip || "",
+        size: ar.size || 1,
+        gateway: ar.gateway || "",
+        prefix: ar.prefix || null,
+        bridge: ar.bridge || "",
+        vlan_tag: ar.vlan_tag || null,
+      };
+    },
+    cancelEditAR() {
+      this.editKind = "";
+      this.editId = null;
+    },
+    saveAR(kind, id) {
+      const { pool } = this.poolVar(kind);
+      const ars = (pool.ars || []).map((a) => {
+        if (a.id !== id) return a;
+        const next = { id, ip: String(this.editAR.ip || "").trim(), size: +this.editAR.size || 1 };
+        if (this.editAR.gateway) next.gateway = String(this.editAR.gateway).trim();
+        if (this.editAR.prefix > 0) next.prefix = +this.editAR.prefix;
+        if (this.editAR.bridge) next.bridge = String(this.editAR.bridge).trim();
+        if (this.editAR.vlan_tag > 0) next.vlan_tag = +this.editAR.vlan_tag;
+        return next;
+      });
+      this.cancelEditAR();
+      return this.savePool(kind, { ...pool, ars });
     },
     openAddAR(kind) {
       this.addKind = kind;
