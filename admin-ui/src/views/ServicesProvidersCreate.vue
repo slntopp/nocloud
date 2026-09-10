@@ -327,7 +327,7 @@ export default {
       }
     },
     isProxyHide() {
-      return ["cpanel"].includes(this.serviceProviderBody.type);
+      return ["cpanel", "proxmox"].includes(this.serviceProviderBody.type);
     },
     downloadedFileName() {
       return this.serviceProviderBody.title
