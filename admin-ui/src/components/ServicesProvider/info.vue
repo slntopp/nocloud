@@ -19,7 +19,7 @@
           :value="provider.type"
         />
       </v-col>
-      <v-col>
+      <v-col v-if="provider.type !== 'proxmox'">
         <v-text-field
           readonly
           label="proxy"

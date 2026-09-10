@@ -335,26 +335,6 @@
       </v-col>
     </v-row>
 
-    <v-row>
-      <v-col cols="4">
-        <subheader-with-info infoText="SPInfo.proxmox.min_drive_size">
-          Drive size limits, MB
-        </subheader-with-info>
-        <div class="text-caption">min_drive_size / max_drive_size by drive type</div>
-      </v-col>
-      <v-col cols="4">
-        <json-editor
-          :json="getJSON('min_drive_size')"
-          @changeValue="(v) => changeJSON('min_drive_size', v)"
-        />
-      </v-col>
-      <v-col cols="4">
-        <json-editor
-          :json="getJSON('max_drive_size')"
-          @changeValue="(v) => changeJSON('max_drive_size', v)"
-        />
-      </v-col>
-    </v-row>
   </div>
 </template>
 
@@ -386,8 +366,6 @@ const DEFAULT_VARS = {
     default: { ars: [], holds: [], gateway: "", prefix: 24, dns: ["1.1.1.1"], bridge: "vmbr0" },
   },
   private_vnet_tmpl: { default: { ars: [], holds: [], prefix: 24, bridge: "vmbr1" } },
-  min_drive_size: { default: {} },
-  max_drive_size: { default: {} },
 };
 
 export default {
