@@ -55,6 +55,7 @@ var handlers = map[string]EventHandler{
 	"overdue_ticket":              OverdueTicketHandler,
 	"renew_failed_ticket":         OverdueTicketHandler,
 	"drive_mismatch_ticket":       OverdueTicketHandler,
+	"ip_pool_exhausted":           OverdueTicketHandler,
 }
 
 var getInstanceAccount = `
@@ -276,6 +277,51 @@ func parseChatUUIDFromCreate(respBody []byte) (string, error) {
 	return chat.UUID, nil
 }
 
+func supportTicketCopy(event *pb.Event, info EventInfo) (topic, content string) {
+	if event.GetKey() == "ip_pool_exhausted" {
+		return formatIPPoolTicketTopic(info), formatIPPoolTicketMessage(info, event)
+	}
+	return formatOverdueTicketTopic(info), formatOverdueTicketMessage(info)
+}
+
+func formatIPPoolTicketTopic(info EventInfo) string {
+	name := stripOverdueBillingDecor(info.Instance)
+	if name == "" {
+		name = stripOverdueBillingDecor(info.Product)
+	}
+	if name == "" {
+		name = info.AccountTitle
+	}
+	return fmt.Sprintf("Нет свободных IP: %s", name)
+}
+
+func formatIPPoolTicketMessage(info EventInfo, event *pb.Event) string {
+	clientName := info.AccountTitle
+	if clientName == "" {
+		clientName = info.Account
+	}
+	errMsg := ""
+	if event != nil {
+		if data := event.GetData(); data != nil {
+			if v := data["error"]; v != nil {
+				errMsg = v.GetStringValue()
+			}
+		}
+	}
+	if errMsg == "" {
+		errMsg = "ip pool exhausted"
+	}
+	return fmt.Sprintf(`Здравствуйте.
+
+Услуга "%s" (клиент %s) не создана: в пуле закончились свободные IP-адреса.
+Ошибка: %s
+
+После пополнения пула создание возобновится автоматически.
+
+С уважением, служба поддержки.`,
+		formatOverdueServiceDetails(info), clientName, errMsg)
+}
+
 func formatOverdueTicketTopic(info EventInfo) string {
 	name := stripOverdueBillingDecor(info.Instance)
 	if name == "" {
@@ -447,6 +493,27 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 			Department: overdueDepartmentKey,
 			SenderUUID: overdueWhmcsSenderUUID,
 		}
+
+	case "ip_pool_exhausted":
+		var botValues map[string]string
+		if defaults != nil && defaults.Bot != nil {
+			botValues = defaults.Bot.Values
+		}
+		profile := resolveTicketProfile(event.GetKey(), botValues)
+		if !profile.Enabled {
+			log.Info("ip pool ticket: disabled in chat settings, skipping", zap.String("instance", event.GetUuid()))
+			event.Type = "noop"
+			return event, nil
+		}
+		topic, message = ticketText(event, info, profile)
+		ticketConf = overdueAutoTicketConf{
+			Enabled:     true,
+			Department:  profile.Department,
+			Admins:      profile.Admins,
+			Responsible: profile.Responsible,
+			SenderUUID:  profile.SenderUUID,
+		}
+
 	default: // overdue_ticket
 		ticketConf = overdueAutoTicketConf{
 			Enabled:    true,
@@ -494,7 +561,7 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 			return event, nil
 		}
 		topic, message = resolveOverdueTicketTexts(ticketConf, info)
-}
+	}
 
 	createPayload := map[string]any{
 		"owner":  info.Account,
