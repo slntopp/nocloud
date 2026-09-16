@@ -24,10 +24,10 @@ import (
 type EventHandler func(context.Context, *zap.Logger, *pb.Event, driver.Database) (*pb.Event, error)
 
 var (
-	overdueCCHost                string
-	overdueSigningKey            []byte
-	overdueDepartmentKey         string
-	overdueWhmcsSenderUUID       string
+	overdueCCHost          string
+	overdueSigningKey      []byte
+	overdueDepartmentKey   string
+	overdueWhmcsSenderUUID string
 )
 
 func SetupOverdueTicketHandler(ccHost string, signingKey []byte, departmentKey, whmcsSenderUUID string) {
@@ -53,6 +53,7 @@ var handlers = map[string]EventHandler{
 	"invoice_published":           nil,
 	"invoice_paid":                nil,
 	"overdue_ticket":              OverdueTicketHandler,
+	"ip_pool_exhausted":           OverdueTicketHandler,
 }
 
 var getInstanceAccount = `
@@ -222,7 +223,19 @@ type overdueCCDepartmentInfo struct {
 	WhmcsID string
 }
 
-func overdueCCDepartmentInfoFetch(ctx context.Context, token, departmentKey string) (*overdueCCDepartmentInfo, error) {
+type ccDefaultsDoc struct {
+	Departments []struct {
+		Key          string   `json:"key"`
+		Admins       []string `json:"admins"`
+		WhmcsID      string   `json:"whmcsId"`
+		WhmcsIDSnake string   `json:"whmcs_id"`
+	} `json:"departments"`
+	Bot struct {
+		Values map[string]string `json:"values"`
+	} `json:"bot"`
+}
+
+func fetchCCDefaults(ctx context.Context, token string) (*ccDefaultsDoc, error) {
 	status, body, err := overdueCCPost(ctx, "/cc.UsersAPI/FetchDefaults", map[string]any{
 		"fetchTemplates": false,
 	}, token)
@@ -232,20 +245,18 @@ func overdueCCDepartmentInfoFetch(ctx context.Context, token, departmentKey stri
 	if status >= 300 {
 		return nil, fmt.Errorf("fetch defaults: status %d: %s", status, string(body))
 	}
-
-	var defaults struct {
-		Departments []struct {
-			Key          string   `json:"key"`
-			Admins       []string `json:"admins"`
-			WhmcsID      string   `json:"whmcsId"`
-			WhmcsIDSnake string   `json:"whmcs_id"`
-		} `json:"departments"`
-	}
+	var defaults ccDefaultsDoc
 	if err := json.Unmarshal(body, &defaults); err != nil {
 		return nil, fmt.Errorf("parse defaults: %w", err)
 	}
+	return &defaults, nil
+}
 
-	for _, dep := range defaults.Departments {
+func (d *ccDefaultsDoc) department(departmentKey string) (*overdueCCDepartmentInfo, error) {
+	if d == nil {
+		return nil, fmt.Errorf("department %q not found in CC config", departmentKey)
+	}
+	for _, dep := range d.Departments {
 		if dep.Key != departmentKey {
 			continue
 		}
@@ -256,6 +267,21 @@ func overdueCCDepartmentInfoFetch(ctx context.Context, token, departmentKey stri
 		return &overdueCCDepartmentInfo{Admins: dep.Admins, WhmcsID: wid}, nil
 	}
 	return nil, fmt.Errorf("department %q not found in CC config", departmentKey)
+}
+
+func (d *ccDefaultsDoc) values() map[string]string {
+	if d == nil {
+		return nil
+	}
+	return d.Bot.Values
+}
+
+func overdueCCDepartmentInfoFetch(ctx context.Context, token, departmentKey string) (*overdueCCDepartmentInfo, error) {
+	defaults, err := fetchCCDefaults(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	return defaults.department(departmentKey)
 }
 
 func overdueAppendUniqueAdminUUID(admins []string, uuid string) []string {
@@ -287,6 +313,51 @@ func parseChatUUIDFromCreate(respBody []byte) (string, error) {
 		return "", fmt.Errorf("empty chat uuid in create response")
 	}
 	return chat.UUID, nil
+}
+
+func supportTicketCopy(event *pb.Event, info EventInfo) (topic, content string) {
+	if event.GetKey() == "ip_pool_exhausted" {
+		return formatIPPoolTicketTopic(info), formatIPPoolTicketMessage(info, event)
+	}
+	return formatOverdueTicketTopic(info), formatOverdueTicketMessage(info)
+}
+
+func formatIPPoolTicketTopic(info EventInfo) string {
+	name := stripOverdueBillingDecor(info.Instance)
+	if name == "" {
+		name = stripOverdueBillingDecor(info.Product)
+	}
+	if name == "" {
+		name = info.AccountTitle
+	}
+	return fmt.Sprintf("Нет свободных IP: %s", name)
+}
+
+func formatIPPoolTicketMessage(info EventInfo, event *pb.Event) string {
+	clientName := info.AccountTitle
+	if clientName == "" {
+		clientName = info.Account
+	}
+	errMsg := ""
+	if event != nil {
+		if data := event.GetData(); data != nil {
+			if v := data["error"]; v != nil {
+				errMsg = v.GetStringValue()
+			}
+		}
+	}
+	if errMsg == "" {
+		errMsg = "ip pool exhausted"
+	}
+	return fmt.Sprintf(`Здравствуйте.
+
+Услуга "%s" (клиент %s) не создана: в пуле закончились свободные IP-адреса.
+Ошибка: %s
+
+После пополнения пула создание возобновится автоматически.
+
+С уважением, служба поддержки.`,
+		formatOverdueServiceDetails(info), clientName, errMsg)
 }
 
 func formatOverdueTicketTopic(info EventInfo) string {
@@ -385,50 +456,70 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 		return nil, fmt.Errorf("overdue ticket: sign token: %w", err)
 	}
 
+	defaults, err := fetchCCDefaults(ctx, token)
+	if err != nil {
+		log.Warn("overdue ticket: CC defaults not loaded", zap.Error(err))
+	}
+	var botValues map[string]string
+	if defaults != nil {
+		botValues = defaults.values()
+	}
+	profile := resolveTicketProfile(event.GetKey(), botValues)
+	if !profile.Enabled {
+		log.Info("auto ticket disabled", zap.String("key", event.GetKey()))
+		event.Type = "noop"
+		return event, nil
+	}
+
+	topic, content := ticketText(event, info, profile)
 	createPayload := map[string]any{
 		"owner":  info.Account,
 		"users":  []string{info.Account},
-		"topic":  formatOverdueTicketTopic(info),
+		"topic":  topic,
 		"status": 0,
 	}
-	var deptWhmcsID string
-	if overdueDepartmentKey != "" {
-		createPayload["department"] = overdueDepartmentKey
-		deptInfo, err := overdueCCDepartmentInfoFetch(ctx, token, overdueDepartmentKey)
-		if err != nil {
-			log.Warn("overdue ticket: department config not loaded", zap.Error(err))
-		} else {
-			admins := deptInfo.Admins
-			deptWhmcsID = deptInfo.WhmcsID
-			if overdueWhmcsSenderUUID != "" {
-				admins = overdueAppendUniqueAdminUUID(admins, overdueWhmcsSenderUUID)
-			}
-			if len(admins) == 0 {
-				log.Warn("overdue ticket: department has no admins", zap.String("department", overdueDepartmentKey))
-			} else {
-				createPayload["admins"] = admins
-				log.Debug("overdue ticket: assigned department admins",
-					zap.String("department", overdueDepartmentKey),
-					zap.Int("admins", len(admins)))
-			}
-			if deptWhmcsID != "" {
-				createPayload["meta"] = map[string]any{
-					"data": map[string]any{
-						"dept_id": deptWhmcsID,
-					},
-				}
-			} else {
-				log.Warn("overdue ticket: CC department has no whmcsId; WHMCS OpenTicket may fail",
-					zap.String("department", overdueDepartmentKey))
-			}
-		}
-	} else if overdueWhmcsSenderUUID != "" {
-		createPayload["admins"] = []string{overdueWhmcsSenderUUID}
-		log.Warn("overdue ticket: OVERDUE_TICKET_WHMCS_SENDER_UUID set but OVERDUE_TICKET_DEPARTMENT empty; need department for WHMCS dept_id")
+	if profile.Responsible != "" {
+		createPayload["responsible"] = profile.Responsible
 	}
 
-	if overdueDepartmentKey != "" && deptWhmcsID != "" && overdueWhmcsSenderUUID == "" {
-		log.Warn("overdue ticket: set OVERDUE_TICKET_WHMCS_SENDER_UUID (staff NoCloud UUID with whmcs_admin_id) so the first message opens WHMCS as admin")
+	var deptWhmcsID string
+	var admins []string
+	if profile.Department != "" {
+		createPayload["department"] = profile.Department
+		if defaults != nil {
+			deptInfo, err := defaults.department(profile.Department)
+			if err != nil {
+				log.Warn("overdue ticket: department config not loaded", zap.Error(err))
+			} else {
+				admins = deptInfo.Admins
+				deptWhmcsID = deptInfo.WhmcsID
+			}
+		}
+	}
+	for _, uuid := range profile.Admins {
+		admins = overdueAppendUniqueAdminUUID(admins, uuid)
+	}
+	admins = overdueAppendUniqueAdminUUID(admins, profile.Responsible)
+	admins = overdueAppendUniqueAdminUUID(admins, profile.SenderUUID)
+	if len(admins) > 0 {
+		createPayload["admins"] = admins
+	} else if profile.Department != "" {
+		log.Warn("overdue ticket: department has no admins", zap.String("department", profile.Department))
+	}
+
+	if deptWhmcsID != "" {
+		createPayload["meta"] = map[string]any{
+			"data": map[string]any{
+				"dept_id": deptWhmcsID,
+			},
+		}
+	} else if profile.Department != "" {
+		log.Warn("overdue ticket: CC department has no whmcsId; WHMCS OpenTicket may fail",
+			zap.String("department", profile.Department))
+	}
+
+	if profile.Department != "" && deptWhmcsID != "" && profile.SenderUUID == "" {
+		log.Warn("overdue ticket: set sender (staff NoCloud UUID with whmcs_admin_id) so the first message opens WHMCS as admin")
 	}
 
 	// ChatsAPI/Create sets chat owner from JWT (not from payload). Root → owner "0" (nocloud);
@@ -436,8 +527,8 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 	// Use the same staff JWT for Create+Send when configured so CC owner matches the opener.
 	createToken := token
 	sendToken := token
-	if overdueWhmcsSenderUUID != "" {
-		staffTok, err := overdueCCJWT(overdueWhmcsSenderUUID)
+	if profile.SenderUUID != "" {
+		staffTok, err := overdueCCJWT(profile.SenderUUID)
 		if err != nil {
 			return nil, fmt.Errorf("overdue ticket: sign staff token: %w", err)
 		}
@@ -466,7 +557,7 @@ func OverdueTicketHandler(ctx context.Context, log *zap.Logger, event *pb.Event,
 
 	sendStatus, sendBody, err := overdueCCPost(ctx, "/cc.MessagesAPI/Send", map[string]any{
 		"chat":    chatUUID,
-		"content": formatOverdueTicketMessage(info),
+		"content": content,
 		"kind":    0,
 	}, sendToken)
 	if err != nil {
