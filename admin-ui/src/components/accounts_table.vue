@@ -50,6 +50,10 @@
       </div>
     </template>
 
+    <template v-slot:[`item.notifications`]="{ item }">
+      <notifications-cell :uuid="item.uuid" />
+    </template>
+
     <template v-slot:[`item.data.email`]="{ item }">
       {{ getShortName(item.data.email) }}
     </template>
@@ -106,6 +110,7 @@ import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
 import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
+import NotificationsCell from "@/components/ui/notificationsCell.vue";
 import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
@@ -145,6 +150,10 @@ const headers = ref([
   { text: "Status", value: "status" },
   { text: "Balance", value: "balance" },
   { text: "Email", value: "data.email" },
+  // How much has gone out to this customer in the last thirty days — the
+  // campaigns plugin's journal, both halves of it. Sorting by it would mean
+  // sorting by a number this table does not hold, so it is off.
+  { text: "Notifications", value: "notifications", sortable: false },
   { text: "Phone verified", value: "is_phone_verified" },
   { text: "Created date", value: "data.date_create" },
   { text: "Country", value: "data.country" },
