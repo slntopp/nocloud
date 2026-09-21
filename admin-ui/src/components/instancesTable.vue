@@ -17,6 +17,10 @@
     @update:edit-values="updateEditValues"
     :show-select="showSelect"
   >
+    <template v-slot:[`item.notifications`]="{ item }">
+      <notifications-cell :uuid="item.uuid" kind="instances" :account="item.account" />
+    </template>
+
     <template v-slot:[`item.account`]="{ value }">
       <router-link
         v-if="!isAccountsLoading"
@@ -225,6 +229,7 @@ import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import Balance from "./balance.vue";
+import NotificationsCell from "@/components/ui/notificationsCell.vue";
 import useSearch from "@/hooks/useSearch";
 import { UpdateRequest } from "nocloud-proto/proto/es/instances/instances_pb";
 
@@ -327,6 +332,10 @@ const headers = computed(() => {
     { text: "Account balance", value: "balance" },
     { text: "Period", value: "period" },
     { text: "Email", value: "email" },
+    // What has gone out about this service in the last thirty days: the
+    // tickets campaigns opened about it, and the letters nocloud sent about
+    // it. Not sortable — the number is not in this table.
+    { text: "Notifications", value: "notifications", sortable: false },
     { text: "Created date", value: "created" },
     { text: "UUID", value: "uuid" },
     { text: "Price model", value: "billingPlan.title" },

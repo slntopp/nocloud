@@ -29,6 +29,7 @@ import promocodes from "./promocodes";
 import playbooks from "./playbooks";
 import statistic from "./statistic";
 import accountGroups from "./accountGroups";
+import campaigns from "./campaigns";
 
 Vue.use(Vuex);
 
@@ -64,6 +65,7 @@ const store = new Vuex.Store({
     promocodes,
     playbooks,
     statistic,
+    campaigns,
   },
 });
 
