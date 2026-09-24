@@ -175,7 +175,7 @@
                   >
                     <template v-if="field.type === 'number'">
                       <v-col cols="2" :key="field.subkey">
-                        <span class="key_text">{{ field.subkey }}</span>
+                        <span class="key_text">{{ fieldLabel(field) }}</span>
                       </v-col>
 
                       <v-col
@@ -203,6 +203,50 @@
                             ].price[priceKey] = +$event
                           "
                         />
+                      </v-col>
+                    </template>
+                    <template v-else-if="field.type === 'map-number'">
+                      <v-col cols="12" :key="field.subkey">
+                        <span class="key_text">{{ fieldLabel(field) }}</span>
+                        <v-row
+                          v-for="resolution in Object.keys(
+                            currentBillingSettings.billing[field.key][
+                              field.subkey
+                            ] || {}
+                          )"
+                          :key="resolution"
+                          align="center"
+                        >
+                          <v-col cols="2">
+                            <span class="key_text">{{ resolution }}</span>
+                          </v-col>
+                          <v-col
+                            v-for="{
+                              key: priceKey,
+                              label: priceLabel,
+                            } in priceKeys"
+                            cols="5"
+                            :key="`${resolution}-${priceKey}`"
+                          >
+                            <v-text-field
+                              hide-details
+                              dense
+                              outlined
+                              type="number"
+                              :label="priceLabel"
+                              :value="
+                                currentBillingSettings.billing[field.key][
+                                  field.subkey
+                                ][resolution][priceKey]
+                              "
+                              @input="
+                                currentBillingSettings.billing[field.key][
+                                  field.subkey
+                                ][resolution][priceKey] = +$event
+                              "
+                            />
+                          </v-col>
+                        </v-row>
                       </v-col>
                     </template>
                     <v-col v-else :key="field.subkey" cols="12">
@@ -463,6 +507,17 @@ const priceKeys = [
   { key: "amount", label: "Margined price" },
 ];
 
+const fieldLabel = (field) => {
+  const isVideo = (currentBillingSettings.value.types || []).includes("video");
+  if (
+    isVideo &&
+    (field.subkey === "duration_price" || field.subkey === "resolution_prices")
+  ) {
+    return "Price / 1 second";
+  }
+  return field.subkey;
+};
+
 const searchParam = ref("");
 
 const isSaveLoading = ref(false);
@@ -581,6 +636,7 @@ const fieldsForTypes = {
     fields: [
       {
         "media_duration.duration_price": "number",
+        "media_duration.resolution_prices": "map-number",
       },
     ],
   },
@@ -612,6 +668,13 @@ const setFee = () => {
                     temp.billing[key][subkey][fieldKey][fieldSubkey].raw_amount
                   );
               }
+            }
+          } else if (fields[field] === "map-number") {
+            for (const fieldKey of Object.keys(temp.billing[key][subkey])) {
+              temp.billing[key][subkey][fieldKey].amount = getMarginedValue(
+                fee.value,
+                temp.billing[key][subkey][fieldKey].raw_amount
+              );
             }
           } else {
             temp.billing[key][subkey].price.amount = getMarginedValue(
@@ -688,6 +751,25 @@ const openBillingSettings = (item) => {
           temp.billing[key] = {};
         }
 
+        if (fields[field] === "map-number") {
+          if (temp.billing[key][subkey] == null) {
+            temp.billing[key][subkey] = {};
+          }
+          const resolutions =
+            temp.meta?.request_parameters?.resolution?.enum || [];
+          for (const resolution of resolutions) {
+            if (temp.billing[key][subkey][resolution] != null) {
+              continue;
+            }
+            temp.billing[key][subkey][resolution] = {
+              amount: 0,
+              raw_amount: 0,
+              currency: defaultCurrency.value.code,
+            };
+          }
+          continue;
+        }
+
         if (temp.billing[key][subkey] != null) {
           continue;
         }
@@ -731,6 +813,21 @@ const saveBillingSettings = async () => {
             .billing[key][subkey].price.raw_amount
             ? currentBillingSettings.value.billing[key][subkey]
             : null;
+        }
+
+        if (fields[field] === "map-number") {
+          configModel.billing[key][subkey] = {};
+          for (const resolution of Object.keys(
+            currentBillingSettings.value.billing[key][subkey] || {}
+          )) {
+            if (
+              currentBillingSettings.value.billing[key][subkey][resolution]
+                .raw_amount
+            ) {
+              configModel.billing[key][subkey][resolution] =
+                currentBillingSettings.value.billing[key][subkey][resolution];
+            }
+          }
         }
 
         if (fields[field] === "map-map-number") {
