@@ -48,6 +48,7 @@ import AccountsEvents from "@/components/account/events.vue";
 import AccountsHistory from "@/components/account/history.vue";
 import AccountReport from "@/components/account/reports.vue";
 import AccountChats from "@/components/account/chats.vue";
+import AccountCampaigns from "@/components/account/campaigns.vue";
 import AccountNotes from "@/components/account/notes.vue";
 import AccountSubaccounts from "@/components/account/subaccounts.vue";
 import AccountInvoices from "@/components/account/invoices.vue";
@@ -76,6 +77,12 @@ const accountTitle = computed(() => {
 const accountLoading = computed(() => {
   return store.getters["accounts/isLoading"];
 });
+
+const hasCampaigns = computed(() =>
+  (store.getters["plugins/all"] || []).some((p) =>
+    (p.url || "").includes("campaigns.ui")
+  )
+);
 
 const tabItems = computed(() => [
   {
@@ -110,6 +117,16 @@ const tabItems = computed(() => [
     component: AccountChats,
     title: "helpdesk",
   },
+  // Only when the campaigns plugin is installed: other installations of
+  // nocloud do not have it, and an empty tab is worse than no tab.
+  ...(hasCampaigns.value
+    ? [
+        {
+          component: AccountCampaigns,
+          title: "campaigns",
+        },
+      ]
+    : []),
   {
     component: AccountsTemplate,
     title: "template",
