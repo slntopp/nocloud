@@ -64,6 +64,26 @@
               >Export to XLSX</v-btn
             >
           </div>
+          <div class="d-flex align-center">
+            <v-select
+              style="max-width: 200px"
+              class="mr-2"
+              dense
+              label="Provider"
+              :items="providers"
+              v-model="bulkGroupProvider"
+            />
+            <v-text-field
+              style="max-width: 200px"
+              class="mr-2"
+              dense
+              label="Group"
+              v-model="bulkGroup"
+            />
+            <v-btn :disabled="!bulkGroupProvider" @click="setGroupForProvider"
+              >Set group for provider</v-btn
+            >
+          </div>
           <nocloud-table
             :headers="newPricesHeaders"
             :items="newPricesResourcesFiltred"
@@ -71,6 +91,10 @@
           >
             <template v-slot:[`item.name`]="{ item }">
               <v-text-field dense v-model="item.name" />
+            </template>
+
+            <template v-slot:[`item.meta.group`]="{ item }">
+              <v-text-field dense v-model="item.meta.group" />
             </template>
 
             <template v-slot:[`item.disabled`]="{ item }">
@@ -451,6 +475,7 @@ const newPricesHeaders = [
   { text: "Key", value: "key", width: 150 },
   { text: "Name", value: "name" },
   { text: "Provider", value: "provider", width: 100 },
+  { text: "Group", value: "meta.group", width: 150 },
   { text: "Types", value: "types", sortable: false },
   { text: "Visibility", value: "visibility", width: 150 },
   { text: "Enabled", value: "disabled", width: 100 },
@@ -511,7 +536,9 @@ onMounted(async () => {
     const response = await api.get("/api/openai/get_config");
 
     Object.keys(response.cfg.models).forEach((key) => {
-      newPricesResources.value.push({ ...response.cfg.models[key], key });
+      newPricesResources.value.push(
+        withMeta({ ...response.cfg.models[key], key })
+      );
     });
     currentSerial.value = response.serial;
   } catch (e) {
@@ -787,7 +814,7 @@ const saveBillingSettings = async () => {
     const index = newPricesResources.value.findIndex(
       (item) => item.key === resultModel.key
     );
-    newPricesResources.value[index] = { ...resultModel };
+    newPricesResources.value[index] = withMeta(resultModel);
 
     newPricesResources.value = [...newPricesResources.value];
     isBillingSettingsOpen.value = false;
@@ -1007,6 +1034,25 @@ const save = async () => {
 
 const changeDisabled = (item, value) => {
   item.disabled = !value;
+};
+
+// meta is omitted by backend when empty; group must exist up front for Vue 2 reactivity
+const withMeta = (model) => ({
+  ...model,
+  meta: { group: "", ...model.meta },
+});
+
+const bulkGroupProvider = ref("");
+const bulkGroup = ref("");
+
+const providers = computed(() => [
+  ...new Set(newPricesResources.value.map((r) => r.provider)),
+]);
+
+const setGroupForProvider = () => {
+  newPricesResources.value
+    .filter((r) => r.provider === bulkGroupProvider.value)
+    .forEach((r) => (r.meta.group = bulkGroup.value));
 };
 
 watch(isBillingSettingsOpen, (value) => {
