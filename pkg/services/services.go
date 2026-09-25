@@ -46,7 +46,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type ServicesServer struct {
@@ -58,6 +57,7 @@ type ServicesServer struct {
 	acc_ctrl  graph.AccountsController
 	cur_ctrl  graph.CurrencyController
 	instances graph.InstancesController
+	plans     graph.BillingPlansController
 	ca        graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -80,6 +80,7 @@ func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, 
 		acc_ctrl:  graph.NewAccountsController(log, db),
 		cur_ctrl:  graph.NewCurrencyController(log, db),
 		instances: graph.NewInstancesController(log, db, conn),
+		plans:     graph.NewBillingPlansController(log, db),
 		ca:        graph.NewCommonActionsController(log, db),
 		drivers:   make(map[string]driverpb.DriverServiceClient),
 		ps:        ps,
@@ -356,7 +357,9 @@ func (s *ServicesServer) Create(ctx context.Context, _request *connect.Request[p
 	service := request.GetService()
 	contexts := make(map[string]*InstancesGroupDriverContext)
 
-	s.keepProviderOwnedData(ctx, log, requestor, service, nil)
+	if err := s.keepProviderOwnedData(ctx, log, requestor, service, nil); err != nil {
+		return nil, err
+	}
 
 	testResult, err := s.DoTestServiceConfig(ctx, log, service)
 	if err != nil {
@@ -456,7 +459,9 @@ func (s *ServicesServer) Update(ctx context.Context, _service *connect.Request[p
 		log.Debug("Error getting Service from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not found")
 	}
-	s.keepProviderOwnedData(ctx, log, requestor, service, stored)
+	if err := s.keepProviderOwnedData(ctx, log, requestor, service, stored); err != nil {
+		return nil, err
+	}
 
 	err = s.ctrl.Update(ctx, service, true)
 	if err != nil {
@@ -472,28 +477,50 @@ func (s *ServicesServer) Update(ctx context.Context, _service *connect.Request[p
 	return connect.NewResponse(service), nil
 }
 
-func (s *ServicesServer) keepProviderOwnedData(ctx context.Context, log *zap.Logger, requestor string, service, stored *pb.Service) {
+// keepProviderOwnedData keeps what only the provider or a platform admin sets on a non-admin's
+// instances: data and admin config are reset to their stored values, and a product change on a
+// lock_product plan is refused.
+func (s *ServicesServer) keepProviderOwnedData(ctx context.Context, log *zap.Logger, requestor string, service, stored *pb.Service) error {
 	if s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-		return
+		return nil
 	}
 
-	storedData := make(map[string]map[string]*structpb.Value)
+	storedInstances := make(map[string]*proto.Instance)
 	for _, group := range stored.GetInstancesGroups() {
 		for _, inst := range group.GetInstances() {
-			storedData[inst.GetUuid()] = inst.GetData()
+			storedInstances[inst.GetUuid()] = inst
 		}
 	}
 
 	for _, group := range service.GetInstancesGroups() {
 		for _, inst := range group.GetInstances() {
-			data := storedData[inst.GetUuid()]
+			storedInst, isStored := storedInstances[inst.GetUuid()]
+			data := storedInst.GetData()
 			if !reflect.DeepEqual(inst.GetData(), data) {
 				log.Warn("Dropping tenant-supplied instance data",
 					zap.String("instance", inst.GetUuid()), zap.String("requestor", requestor))
 			}
 			inst.Data = data
+			if graph.KeepAdminConfig(inst, storedInst) {
+				log.Warn("Dropping tenant-supplied admin config",
+					zap.String("instance", inst.GetUuid()), zap.String("requestor", requestor))
+			}
+			if !isStored {
+				continue
+			}
+			locked, err := graph.LockedProductChange(ctx, s.plans, inst, storedInst)
+			if err != nil {
+				log.Error("Failed to check the product lock", zap.String("instance", inst.GetUuid()), zap.Error(err))
+				return status.Error(codes.Internal, "Failed to check the billing plan")
+			}
+			if locked {
+				log.Warn("Refusing a product change on a locked plan",
+					zap.String("instance", inst.GetUuid()), zap.String("requestor", requestor))
+				return status.Error(codes.PermissionDenied, "Only an admin can change the product of this instance")
+			}
 		}
 	}
+	return nil
 }
 
 func (s *ServicesServer) Up(ctx context.Context, _request *connect.Request[pb.UpRequest]) (*connect.Response[pb.UpResponse], error) {
