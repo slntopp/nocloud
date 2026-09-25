@@ -69,6 +69,7 @@ type InstancesServer struct {
 	acc_ctrl   graph.AccountsController
 	inv_ctrl   graph.InvoicesController
 	curr_ctrl  graph.CurrencyController
+	plan_ctrl  graph.BillingPlansController
 	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -130,6 +131,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		acc_ctrl:   acc_ctrl,
 		inv_ctrl:   inv_ctrl,
 		curr_ctrl:  curr_ctrl,
+		plan_ctrl:  graph.NewBillingPlansController(logger, db),
 		ca:         ca,
 		drivers:    make(map[string]driverpb.DriverServiceClient),
 		rdb:        rdb,
@@ -353,10 +355,14 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		ctx = context.WithValue(ctx, graph.CreationPromocodeKey, req.GetPromocode())
 	}
 
-	if req.GetInstance().GetData() != nil &&
-		!s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
-		log.Warn("Dropping tenant-supplied instance data", zap.String("requestor", requester))
-		req.Instance.Data = nil
+	if !s.ca.HasAccess(ctx, requester, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ADMIN) {
+		if req.GetInstance().GetData() != nil {
+			log.Warn("Dropping tenant-supplied instance data", zap.String("requestor", requester))
+			req.Instance.Data = nil
+		}
+		if graph.KeepAdminConfig(req.GetInstance(), nil) {
+			log.Warn("Dropping tenant-supplied admin config", zap.String("requestor", requester))
+		}
 	}
 
 	if req.AutoAssign {
@@ -554,6 +560,21 @@ func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.U
 			log.Warn("Dropping tenant-supplied instance data",
 				zap.String("uuid", instance.GetUuid()), zap.String("requestor", requestor))
 			req.Instance.Data = nil
+		}
+		if graph.KeepAdminConfig(req.GetInstance(), instance.Instance) {
+			log.Warn("Dropping tenant-supplied admin config",
+				zap.String("uuid", instance.GetUuid()), zap.String("requestor", requestor))
+		}
+
+		locked, err := graph.LockedProductChange(ctx, s.plan_ctrl, req.GetInstance(), instance.Instance)
+		if err != nil {
+			log.Error("Failed to check the product lock", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to check the billing plan")
+		}
+		if locked {
+			log.Warn("Refusing a product change on a locked plan",
+				zap.String("uuid", instance.GetUuid()), zap.String("requestor", requestor))
+			return nil, status.Error(codes.PermissionDenied, "Only an admin can change the product of this instance")
 		}
 	}
 
