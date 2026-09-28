@@ -242,9 +242,10 @@
                     {{ label }}
                   </div>
 
-                  <template
+                  <div
                     v-for="group in Object.keys(fieldsForAdd)"
                     :key="group"
+                    class="price-grid__span"
                   >
                     <div class="price-grid__group">
                       {{ keyLabelMap[group] || group }}
@@ -311,13 +312,12 @@
                               </tr>
                               <tr class="resolution-prices__sub">
                                 <th></th>
-                                <template
-                                  v-for="resolution in resolutionColumns(field)"
-                                  :key="resolution"
+                                <th
+                                  v-for="cell in resolutionSubheads(field)"
+                                  :key="cell.key"
                                 >
-                                  <th>Price</th>
-                                  <th>Margined</th>
-                                </template>
+                                  {{ cell.label }}
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
@@ -384,13 +384,14 @@
                             ]
                           )"
                         >
-                          <template
+                          <div
                             v-for="subkey in Object.keys(
                               currentBillingSettings.billing[field.key][
                                 field.subkey
                               ][key]
                             )"
                             :key="`${key}-${subkey}`"
+                            class="price-grid__span"
                           >
                             <div class="price-grid__label">
                               <v-btn
@@ -426,7 +427,7 @@
                                 )
                               "
                             />
-                          </template>
+                          </div>
                         </template>
 
                         <div class="price-grid__add" :key="`add-${field.subkey}`">
@@ -458,7 +459,7 @@
                         </div>
                       </template>
                     </template>
-                  </template>
+                  </div>
                 </div>
               </v-card-text>
 
@@ -1036,6 +1037,12 @@ const resolutionColumns = (field) => {
   return Object.keys(stored);
 };
 
+const resolutionSubheads = (field) =>
+  resolutionColumns(field).flatMap((resolution) => [
+    { key: `${resolution}-cost`, label: "Price" },
+    { key: `${resolution}-sell`, label: "Margined" },
+  ]);
+
 const audioCell = (field, resolution, side) =>
   currentBillingSettings.value.billing[field.key][field.subkey][resolution][
     side
@@ -1506,6 +1513,10 @@ watch(isBillingSettingsOpen, (value) => {
 .hint {
   font-size: 0.8rem;
   opacity: 0.7;
+}
+
+.price-grid__span {
+  display: contents;
 }
 
 .price-grid {
