@@ -229,6 +229,81 @@
                         />
                       </v-col>
                     </template>
+                    <template v-else-if="field.type === 'resolution-table'">
+                      <v-col cols="12">
+                        <span class="key_text">Price / 1 second</span>
+                        <div class="resolution-prices-wrap">
+                          <table class="resolution-prices">
+                            <colgroup>
+                              <col class="resolution-prices__label-col" />
+                              <col
+                                v-for="index in resolutionColumns(field).length *
+                                2"
+                                :key="index"
+                                class="resolution-prices__value-col"
+                              />
+                            </colgroup>
+                            <thead>
+                              <tr class="resolution-prices__group">
+                                <th>Audio</th>
+                                <th
+                                  v-for="resolution in resolutionColumns(field)"
+                                  :key="resolution"
+                                  colspan="2"
+                                >
+                                  {{ resolution }}
+                                </th>
+                              </tr>
+                              <tr class="resolution-prices__sub">
+                                <th></th>
+                                <th
+                                  v-for="cell in resolutionSubheads(field)"
+                                  :key="cell.key"
+                                >
+                                  {{ cell.label }}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="row in audioPriceRows" :key="row.key">
+                                <th>{{ row.label }}</th>
+                                <template
+                                  v-for="resolution in resolutionColumns(field)"
+                                >
+                                  <td
+                                    v-for="{
+                                      key: priceKey,
+                                      label: priceLabel,
+                                    } in priceKeys"
+                                    :key="`${row.key}-${resolution}-${priceKey}`"
+                                  >
+                                    <v-text-field
+                                      hide-details
+                                      dense
+                                      outlined
+                                      type="number"
+                                      :label="priceLabel"
+                                      :value="
+                                        audioCell(
+                                          field,
+                                          resolution,
+                                          row.key
+                                        )[priceKey]
+                                      "
+                                      @input="
+                                        audioCell(field, resolution, row.key)[
+                                          priceKey
+                                        ] = +$event
+                                      "
+                                    />
+                                  </td>
+                                </template>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </v-col>
+                    </template>
                     <template v-else-if="field.type === 'map-number'">
                       <v-col cols="12" :key="field.subkey">
                         <span class="key_text">{{ fieldLabel(field) }}</span>
@@ -606,6 +681,38 @@ onMounted(async () => {
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
+const audioPriceRows = [
+  { key: "with_audio", label: "With audio" },
+  { key: "without_audio", label: "Without audio" },
+];
+
+const emptyAudioPrice = () => ({
+  amount: 0,
+  raw_amount: 0,
+  currency: defaultCurrency.value.code,
+});
+
+const normalizeAudioPrice = (value) => {
+  const blank = () => ({
+    with_audio: emptyAudioPrice(),
+    without_audio: emptyAudioPrice(),
+  });
+  if (!value || typeof value !== "object") {
+    return blank();
+  }
+  if (value.with_audio || value.without_audio) {
+    return {
+      with_audio: { ...emptyAudioPrice(), ...value.with_audio },
+      without_audio: { ...emptyAudioPrice(), ...value.without_audio },
+    };
+  }
+  if (value.raw_amount || value.amount) {
+    const legacy = { ...emptyAudioPrice(), ...value };
+    return { with_audio: { ...legacy }, without_audio: { ...legacy } };
+  }
+  return blank();
+};
+
 const changeFee = (value) => {
   fee.value = JSON.parse(JSON.stringify(value));
 };
@@ -662,8 +769,7 @@ const fieldsForTypes = {
     type: "variant",
     fields: [
       {
-        "media_duration.duration_price": "number",
-        "media_duration.resolution_prices": "map-number",
+        "media_duration.resolution_prices": "resolution-table",
       },
     ],
   },
@@ -694,6 +800,19 @@ const setFee = () => {
                     fee.value,
                     temp.billing[key][subkey][fieldKey][fieldSubkey].raw_amount
                   );
+              }
+            }
+          } else if (fields[field] === "resolution-table") {
+            for (const resolution of Object.keys(temp.billing[key][subkey])) {
+              const rate = temp.billing[key][subkey][resolution];
+              for (const side of ["with_audio", "without_audio"]) {
+                if (!rate?.[side]) {
+                  continue;
+                }
+                rate[side].amount = getMarginedValue(
+                  fee.value,
+                  rate[side].raw_amount
+                );
               }
             }
           } else if (fields[field] === "map-number") {
@@ -778,6 +897,19 @@ const openBillingSettings = (item) => {
           temp.billing[key] = {};
         }
 
+        if (fields[field] === "resolution-table") {
+          const current = temp.billing[key][subkey] || {};
+          const resolutions =
+            temp.meta?.request_parameters?.resolution?.enum ||
+            Object.keys(current);
+          const next = {};
+          for (const resolution of resolutions) {
+            next[resolution] = normalizeAudioPrice(current[resolution]);
+          }
+          temp.billing[key][subkey] = next;
+          continue;
+        }
+
         if (fields[field] === "map-number") {
           if (temp.billing[key][subkey] == null) {
             temp.billing[key][subkey] = {};
@@ -819,6 +951,28 @@ const openBillingSettings = (item) => {
   isBillingSettingsOpen.value = true;
 };
 
+const resolutionColumns = (field) => {
+  const stored =
+    currentBillingSettings.value.billing?.[field.key]?.[field.subkey] || {};
+  const fromEnum =
+    currentBillingSettings.value.meta?.request_parameters?.resolution?.enum;
+  if (Array.isArray(fromEnum) && fromEnum.length) {
+    return fromEnum;
+  }
+  return Object.keys(stored);
+};
+
+const resolutionSubheads = (field) =>
+  resolutionColumns(field).flatMap((resolution) => [
+    { key: `${resolution}-cost`, label: "Price" },
+    { key: `${resolution}-sell`, label: "Margined" },
+  ]);
+
+const audioCell = (field, resolution, side) =>
+  currentBillingSettings.value.billing[field.key][field.subkey][resolution][
+    side
+  ];
+
 const saveBillingSettings = async () => {
   isSaveModelLoading.value = true;
 
@@ -840,6 +994,23 @@ const saveBillingSettings = async () => {
             .billing[key][subkey].price.raw_amount
             ? currentBillingSettings.value.billing[key][subkey]
             : null;
+        }
+
+        if (fields[field] === "resolution-table") {
+          configModel.billing[key][subkey] = {};
+          const rates =
+            currentBillingSettings.value.billing[key][subkey] || {};
+          for (const resolution of Object.keys(rates)) {
+            const saved = {};
+            for (const side of ["with_audio", "without_audio"]) {
+              if (rates[resolution]?.[side]?.raw_amount) {
+                saved[side] = rates[resolution][side];
+              }
+            }
+            if (Object.keys(saved).length) {
+              configModel.billing[key][subkey][resolution] = saved;
+            }
+          }
         }
 
         if (fields[field] === "map-number") {
@@ -1166,5 +1337,62 @@ watch(isBillingSettingsOpen, (value) => {
 }
 .key_title {
   font-size: 1.4em;
+}
+
+.resolution-prices-wrap {
+  overflow-x: auto;
+}
+
+.resolution-prices {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 8px;
+}
+
+.resolution-prices__label-col {
+  width: 148px;
+}
+
+.resolution-prices__value-col {
+  width: 108px;
+}
+
+.resolution-prices th,
+.resolution-prices td {
+  height: auto;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+  border-right: 1px solid rgba(128, 128, 128, 0.25);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.resolution-prices tr > :last-child {
+  border-right: 0;
+}
+
+.resolution-prices tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.resolution-prices__group th {
+  height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.resolution-prices__sub th {
+  height: 32px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.resolution-prices tbody th {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
 }
 </style>
