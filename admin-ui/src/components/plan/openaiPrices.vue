@@ -200,7 +200,11 @@
             </template>
           </nocloud-table>
 
-          <v-dialog max-width="840px" scrollable v-model="isBillingSettingsOpen">
+          <v-dialog
+            :max-width="hasVideoPrices ? '980px' : '840px'"
+            scrollable
+            v-model="isBillingSettingsOpen"
+          >
             <v-card class="billing-card" color="background-light">
               <div class="billing-card__head">
                 <div class="billing-card__title">
@@ -238,8 +242,11 @@
                     {{ label }}
                   </div>
 
-                  <template v-for="group in Object.keys(fieldsForAdd)">
-                    <div class="price-grid__group" :key="group">
+                  <template
+                    v-for="group in Object.keys(fieldsForAdd)"
+                    :key="group"
+                  >
+                    <div class="price-grid__group">
                       {{ keyLabelMap[group] || group }}
                     </div>
 
@@ -276,6 +283,83 @@
                         />
                       </template>
 
+                      <template v-else-if="field.type === 'resolution-table'">
+                        <div class="resolution-prices-wrap" :key="field.subkey">
+                          <div class="resolution-prices-title">
+                            Price / 1 second
+                          </div>
+                          <table class="resolution-prices">
+                            <colgroup>
+                              <col class="resolution-prices__label-col" />
+                              <col
+                                v-for="index in resolutionColumns(field).length *
+                                2"
+                                :key="index"
+                                class="resolution-prices__value-col"
+                              />
+                            </colgroup>
+                            <thead>
+                              <tr class="resolution-prices__group">
+                                <th>Audio</th>
+                                <th
+                                  v-for="resolution in resolutionColumns(field)"
+                                  :key="resolution"
+                                  colspan="2"
+                                >
+                                  {{ resolution }}
+                                </th>
+                              </tr>
+                              <tr class="resolution-prices__sub">
+                                <th></th>
+                                <template
+                                  v-for="resolution in resolutionColumns(field)"
+                                  :key="resolution"
+                                >
+                                  <th>Price</th>
+                                  <th>Margined</th>
+                                </template>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr v-for="row in audioPriceRows" :key="row.key">
+                                <th>{{ row.label }}</th>
+                                <template
+                                  v-for="resolution in resolutionColumns(field)"
+                                >
+                                  <td
+                                    v-for="{ key: priceKey } in priceKeys"
+                                    :key="`${row.key}-${resolution}-${priceKey}`"
+                                  >
+                                    <v-text-field
+                                      class="resolution-price-input"
+                                      hide-details
+                                      dense
+                                      outlined
+                                      type="number"
+                                      :readonly="priceKey === 'amount'"
+                                      :filled="priceKey === 'amount'"
+                                      :value="
+                                        audioCell(
+                                          field,
+                                          resolution,
+                                          row.key
+                                        )[priceKey]
+                                      "
+                                      @input="
+                                        setPrice(
+                                          audioCell(field, resolution, row.key),
+                                          $event
+                                        )
+                                      "
+                                    />
+                                  </td>
+                                </template>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </template>
+
                       <template v-else>
                         <div class="price-grid__group" :key="field.subkey">
                           {{ fieldLabel(field) }}
@@ -306,11 +390,9 @@
                                 field.subkey
                               ][key]
                             )"
+                            :key="`${key}-${subkey}`"
                           >
-                            <div
-                              class="price-grid__label"
-                              :key="`${key}-${subkey}`"
-                            >
+                            <div class="price-grid__label">
                               <v-btn
                                 icon
                                 x-small
@@ -603,8 +685,12 @@ const fieldMeta = {
     hint: "Price for 1 000 000 tokens of images generated by the model.",
   },
   "media_duration.duration_price": {
-    label: "Media, per 60 seconds",
-    hint: "Price for 60 seconds of audio or video. Charged proportionally to the real duration.",
+    label: "Audio, per 60 seconds",
+    hint: "Price for 60 seconds of audio. Charged proportionally to the real duration.",
+  },
+  "media_duration.resolution_prices": {
+    label: "Video, per 1 second",
+    hint: "Price for 1 second of video, separately with and without audio, for each resolution.",
   },
   "other.web_search_price": {
     label: "Web search, per 1000 requests",
@@ -674,6 +760,42 @@ onMounted(async () => {
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
+const audioPriceRows = [
+  { key: "with_audio", label: "With audio" },
+  { key: "without_audio", label: "Without audio" },
+];
+
+const hasVideoPrices = computed(() =>
+  (currentBillingSettings.value.types || []).includes("video")
+);
+
+const emptyAudioPrice = () => ({
+  amount: 0,
+  raw_amount: 0,
+  currency: defaultCurrency.value.code,
+});
+
+const normalizeAudioPrice = (value) => {
+  const blank = () => ({
+    with_audio: emptyAudioPrice(),
+    without_audio: emptyAudioPrice(),
+  });
+  if (!value || typeof value !== "object") {
+    return blank();
+  }
+  if (value.with_audio || value.without_audio) {
+    return {
+      with_audio: { ...emptyAudioPrice(), ...value.with_audio },
+      without_audio: { ...emptyAudioPrice(), ...value.without_audio },
+    };
+  }
+  if (value.raw_amount || value.amount) {
+    const legacy = { ...emptyAudioPrice(), ...value };
+    return { with_audio: { ...legacy }, without_audio: { ...legacy } };
+  }
+  return blank();
+};
+
 const changeFee = (value) => {
   fee.value = JSON.parse(JSON.stringify(value));
 };
@@ -730,7 +852,7 @@ const fieldsForTypes = {
     type: "variant",
     fields: [
       {
-        "media_duration.duration_price": "number",
+        "media_duration.resolution_prices": "resolution-table",
       },
     ],
   },
@@ -759,6 +881,16 @@ const applyMargin = (model) => {
                 model.billing[key][subkey][fieldKey][fieldSubkey],
                 model.billing[key][subkey][fieldKey][fieldSubkey].raw_amount
               );
+            }
+          }
+        } else if (fields[field] === "resolution-table") {
+          for (const resolution of Object.keys(model.billing[key][subkey])) {
+            const rate = model.billing[key][subkey][resolution];
+            for (const side of ["with_audio", "without_audio"]) {
+              if (!rate?.[side]) {
+                continue;
+              }
+              setPrice(rate[side], rate[side].raw_amount);
             }
           }
         } else {
@@ -858,6 +990,19 @@ const openBillingSettings = (item) => {
           temp.billing[key] = {};
         }
 
+        if (fields[field] === "resolution-table") {
+          const current = temp.billing[key][subkey] || {};
+          const resolutions =
+            temp.meta?.request_parameters?.resolution?.enum ||
+            Object.keys(current);
+          const next = {};
+          for (const resolution of resolutions) {
+            next[resolution] = normalizeAudioPrice(current[resolution]);
+          }
+          temp.billing[key][subkey] = next;
+          continue;
+        }
+
         if (temp.billing[key][subkey] != null) {
           continue;
         }
@@ -880,6 +1025,22 @@ const openBillingSettings = (item) => {
   isBillingSettingsOpen.value = true;
 };
 
+const resolutionColumns = (field) => {
+  const stored =
+    currentBillingSettings.value.billing?.[field.key]?.[field.subkey] || {};
+  const fromEnum =
+    currentBillingSettings.value.meta?.request_parameters?.resolution?.enum;
+  if (Array.isArray(fromEnum) && fromEnum.length) {
+    return fromEnum;
+  }
+  return Object.keys(stored);
+};
+
+const audioCell = (field, resolution, side) =>
+  currentBillingSettings.value.billing[field.key][field.subkey][resolution][
+    side
+  ];
+
 const saveBillingSettings = async () => {
   isSaveModelLoading.value = true;
 
@@ -901,6 +1062,22 @@ const saveBillingSettings = async () => {
             .billing[key][subkey].price.raw_amount
             ? currentBillingSettings.value.billing[key][subkey]
             : null;
+        }
+
+        if (fields[field] === "resolution-table") {
+          configModel.billing[key][subkey] = {};
+          const rates = currentBillingSettings.value.billing[key][subkey] || {};
+          for (const resolution of Object.keys(rates)) {
+            const saved = {};
+            for (const side of ["with_audio", "without_audio"]) {
+              if (rates[resolution]?.[side]?.raw_amount) {
+                saved[side] = rates[resolution][side];
+              }
+            }
+            if (Object.keys(saved).length) {
+              configModel.billing[key][subkey][resolution] = saved;
+            }
+          }
         }
 
         if (fields[field] === "map-map-number") {
@@ -1404,7 +1581,7 @@ watch(isBillingSettingsOpen, (value) => {
 .price-field ::v-deep input {
   font-size: 0.8rem;
   text-align: right;
-  /* ponytail: native spinners only add visual noise on price inputs */
+  appearance: textfield;
   -moz-appearance: textfield;
 }
 
@@ -1417,5 +1594,81 @@ watch(isBillingSettingsOpen, (value) => {
 .price-field ::v-deep .v-text-field__suffix {
   font-size: 0.7rem;
   opacity: 0.6;
+}
+
+.resolution-prices-wrap {
+  grid-column: 1 / -1;
+  overflow-x: auto;
+}
+
+.resolution-prices-title {
+  margin: 4px 0 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.resolution-prices {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 8px;
+}
+
+.resolution-prices__label-col {
+  width: 148px;
+}
+
+.resolution-prices__value-col {
+  width: 108px;
+}
+
+.resolution-prices th,
+.resolution-prices td {
+  height: 52px;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+  border-right: 1px solid rgba(128, 128, 128, 0.25);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+}
+
+.resolution-prices tr > :last-child {
+  border-right: 0;
+}
+
+.resolution-prices tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.resolution-prices__group th {
+  height: 40px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.resolution-prices__sub th {
+  height: 32px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
+.resolution-prices tbody th {
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.resolution-prices ::v-deep .resolution-price-input {
+  width: 100%;
+}
+
+.resolution-prices ::v-deep .v-input__slot {
+  min-height: 36px;
+}
+
+.resolution-prices ::v-deep .v-text-field__details {
+  display: none;
 }
 </style>
