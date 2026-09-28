@@ -200,95 +200,72 @@
             </template>
           </nocloud-table>
 
-          <v-dialog
-            :max-width="hasVideoPrices ? '980px' : '840px'"
-            scrollable
-            v-model="isBillingSettingsOpen"
-          >
-            <v-card class="billing-card" color="background-light">
-              <div class="billing-card__head">
-                <div class="billing-card__title">
-                  <div class="billing-card__name">
-                    {{ currentBillingSettings.name }}
-                  </div>
-                  <div class="billing-card__key">
-                    {{ currentBillingSettings.key }}
-                  </div>
-                </div>
-                <v-select
-                  class="billing-card__types"
-                  dense
-                  outlined
-                  hide-details
-                  multiple
-                  label="Types"
-                  :items="availableTypes"
-                  v-model="currentBillingSettings.types"
-                />
-              </div>
+          <v-dialog width="70%" v-model="isBillingSettingsOpen">
+            <v-card
+              class="pa-5"
+              color="background-light"
+              style="min-height: 60vh"
+            >
+              <v-card-title class="key_title"
+                >{{ currentBillingSettings.name }}
+              </v-card-title>
+              <v-select
+                outlined
+                chips
+                label="Types"
+                :items="availableTypes"
+                multiple
+                v-model="currentBillingSettings.types"
+              />
 
-              <v-card-text class="billing-card__body">
-                <div v-if="!Object.keys(fieldsForAdd).length" class="hint">
-                  Select at least one type to configure prices.
-                </div>
-
-                <div v-else class="price-grid">
-                  <div class="price-grid__head"></div>
-                  <div
-                    class="price-grid__head price-grid__head--num"
-                    v-for="{ key: priceKey, label } in priceKeys"
-                    :key="priceKey"
+              <v-row v-for="key in Object.keys(fieldsForAdd)" :key="key">
+                <v-col cols="12">
+                  <v-card-title class="key_title" style="padding: 0px">{{
+                    keyLabelMap[key]
+                  }}</v-card-title>
+                </v-col>
+                <v-col cols="12">
+                  <v-row
+                    align="center"
+                    v-for="field in fieldsForAdd[key]"
+                    :key="field.subkey"
                   >
-                    {{ label }}
-                  </div>
+                    <template v-if="field.type === 'number'">
+                      <v-col cols="2">
+                        <span class="key_text">{{ fieldLabel(field) }}</span>
+                      </v-col>
 
-                  <div
-                    v-for="group in Object.keys(fieldsForAdd)"
-                    :key="group"
-                    class="price-grid__span"
-                  >
-                    <div class="price-grid__group">
-                      {{ keyLabelMap[group] || group }}
-                    </div>
-
-                    <template v-for="field in fieldsForAdd[group]">
-                      <template v-if="field.type === 'number'">
-                        <div class="price-grid__label" :key="field.subkey">
-                          <span>{{ fieldLabel(field) }}</span>
-                          <v-tooltip right max-width="320">
-                            <template v-slot:activator="{ on, attrs }">
-                              <v-icon
-                                class="price-grid__hint"
-                                small
-                                v-bind="attrs"
-                                v-on="on"
-                                >mdi-help-circle-outline</v-icon
-                              >
-                            </template>
-                            <span>{{ fieldHint(field) }}</span>
-                          </v-tooltip>
-                        </div>
+                      <v-col
+                        v-for="{
+                          key: priceKey,
+                          label: priceLabel,
+                        } in priceKeys"
+                        cols="5"
+                        :key="`${field.subkey}-${priceKey}`"
+                      >
                         <v-text-field
-                          v-for="{ key: priceKey } in priceKeys"
-                          :key="`${field.subkey}-${priceKey}`"
-                          class="price-field"
+                          hide-details
                           dense
                           outlined
-                          hide-details
                           type="number"
-                          :suffix="defaultCurrency?.code"
-                          :readonly="priceKey === 'amount'"
-                          :filled="priceKey === 'amount'"
-                          :value="priceOf(field)[priceKey]"
-                          @input="setPrice(priceOf(field), $event)"
+                          :label="priceLabel"
+                          :value="
+                            currentBillingSettings.billing[field.key][
+                              field.subkey
+                            ].price[priceKey]
+                          "
+                          @input="
+                            currentBillingSettings.billing[field.key][
+                              field.subkey
+                            ].price[priceKey] = +$event
+                          "
                         />
-                      </template>
-
-                      <template v-else-if="field.type === 'resolution-table'">
-                        <div class="resolution-prices-wrap" :key="field.subkey">
-                          <div class="resolution-prices-title">
-                            Price / 1 second
-                          </div>
+                      </v-col>
+                    </template>
+                    <template v-else-if="field.type === 'resolution-table'">
+                      <v-col cols="12">
+                        <span class="key_text">Price / 1 second</span>
+                        <div class="resolution-prices-wrap">
                           <table class="resolution-prices">
                             <colgroup>
                               <col class="resolution-prices__label-col" />
@@ -327,17 +304,18 @@
                                   v-for="resolution in resolutionColumns(field)"
                                 >
                                   <td
-                                    v-for="{ key: priceKey } in priceKeys"
+                                    v-for="{
+                                      key: priceKey,
+                                      label: priceLabel,
+                                    } in priceKeys"
                                     :key="`${row.key}-${resolution}-${priceKey}`"
                                   >
                                     <v-text-field
-                                      class="resolution-price-input"
                                       hide-details
                                       dense
                                       outlined
                                       type="number"
-                                      :readonly="priceKey === 'amount'"
-                                      :filled="priceKey === 'amount'"
+                                      :label="priceLabel"
                                       :value="
                                         audioCell(
                                           field,
@@ -346,10 +324,9 @@
                                         )[priceKey]
                                       "
                                       @input="
-                                        setPrice(
-                                          audioCell(field, resolution, row.key),
-                                          $event
-                                        )
+                                        audioCell(field, resolution, row.key)[
+                                          priceKey
+                                        ] = +$event
                                       "
                                     />
                                   </td>
@@ -358,134 +335,127 @@
                             </tbody>
                           </table>
                         </div>
-                      </template>
-
-                      <template v-else>
-                        <div class="price-grid__group" :key="field.subkey">
-                          {{ fieldLabel(field) }}
-                          <v-tooltip right max-width="320">
-                            <template v-slot:activator="{ on, attrs }">
-                              <v-icon
-                                class="price-grid__hint"
-                                small
-                                v-bind="attrs"
-                                v-on="on"
-                                >mdi-help-circle-outline</v-icon
-                              >
-                            </template>
-                            <span>{{ fieldHint(field) }}</span>
-                          </v-tooltip>
-                        </div>
-
+                      </v-col>
+                    </template>
+                    <v-col v-else cols="12">
+                      <div>
+                        <span class="key_text"
+                          >Table for {{ field.subkey }}</span
+                        >
                         <template
-                          v-for="key in Object.keys(
+                          v-for="mapKey in Object.keys(
                             currentBillingSettings.billing[field.key][
                               field.subkey
                             ]
                           )"
                         >
-                          <div
+                          <v-row
                             v-for="subkey in Object.keys(
                               currentBillingSettings.billing[field.key][
                                 field.subkey
-                              ][key]
+                              ][mapKey]
                             )"
-                            :key="`${key}-${subkey}`"
-                            class="price-grid__span"
+                            :key="`${mapKey}-${subkey}`"
                           >
-                            <div class="price-grid__label">
+                            <v-col
+                              cols="2"
+                              class="d-flex justify-start align-center"
+                              ><span class="key_text"
+                                >{{ mapKey }} {{ subkey }}</span
+                              >
+
                               <v-btn
                                 icon
-                                x-small
-                                @click="deleteFromMap(field, key, subkey)"
-                                ><v-icon small>mdi-close</v-icon></v-btn
+                                @click="deleteFromMap(field, mapKey, subkey)"
+                                ><v-icon>mdi-delete</v-icon></v-btn
                               >
-                              <span>{{ key }} / {{ subkey }}</span>
-                            </div>
+                            </v-col>
+                            <v-col
+                              cols="5"
+                              v-for="{
+                                key: priceKey,
+                                label: priceLabel,
+                              } in priceKeys"
+                              :key="`${mapKey}-${subkey}-${priceKey}`"
+                            >
+                              <v-text-field
+                                dense
+                                outlined
+                                type="number"
+                                :label="priceLabel"
+                                :value="
+                                  currentBillingSettings.billing[field.key][
+                                    field.subkey
+                                  ][mapKey][subkey][priceKey]
+                                "
+                                hide-details
+                                @input="
+                                  currentBillingSettings.billing[field.key][
+                                    field.subkey
+                                  ][mapKey][subkey][priceKey] = +$event
+                                "
+                              />
+                            </v-col>
+                          </v-row>
+                        </template>
+
+                        <v-row justify="end">
+                          <v-col cols="3">
                             <v-text-field
-                              v-for="{ key: priceKey } in priceKeys"
-                              :key="`${key}-${subkey}-${priceKey}`"
-                              class="price-field"
                               dense
                               outlined
                               hide-details
-                              type="number"
-                              :suffix="defaultCurrency?.code"
-                              :readonly="priceKey === 'amount'"
-                              :filled="priceKey === 'amount'"
-                              :value="
-                                currentBillingSettings.billing[field.key][
-                                  field.subkey
-                                ][key][subkey][priceKey]
-                              "
-                              @input="
-                                setPrice(
-                                  currentBillingSettings.billing[field.key][
-                                    field.subkey
-                                  ][key][subkey],
-                                  $event
-                                )
-                              "
+                              label="New key"
+                              v-model="newKeysForMaps[field.subkey]"
                             />
-                          </div>
-                        </template>
+                          </v-col>
+                          <v-col cols="3">
+                            <v-text-field
+                              dense
+                              outlined
+                              hide-details
+                              label="New subkey"
+                              v-model="newSubkeysForMaps[field.subkey]"
+                            />
+                          </v-col>
+                          <v-col cols="2">
+                            <v-btn
+                              :disabled="
+                                !newKeysForMaps[field.subkey] ||
+                                !newSubkeysForMaps[field.subkey] ||
+                                isSaveModelLoading
+                              "
+                              @click="addToMap(field)"
+                              >Add new value</v-btn
+                            >
+                          </v-col>
+                        </v-row>
+                      </div>
+                    </v-col>
+                  </v-row>
+                </v-col>
+              </v-row>
 
-                        <div class="price-grid__add" :key="`add-${field.subkey}`">
-                          <v-text-field
-                            dense
-                            outlined
-                            hide-details
-                            :label="mapKeyLabels(field)[0]"
-                            v-model="newKeysForMaps[field.subkey]"
-                          />
-                          <v-text-field
-                            dense
-                            outlined
-                            hide-details
-                            :label="mapKeyLabels(field)[1]"
-                            v-model="newSubkeysForMaps[field.subkey]"
-                          />
-                          <v-btn
-                            small
-                            outlined
-                            :disabled="
-                              !newKeysForMaps[field.subkey] ||
-                              !newSubkeysForMaps[field.subkey] ||
-                              isSaveModelLoading
-                            "
-                            @click="addToMap(field)"
-                            >Add</v-btn
-                          >
-                        </div>
-                      </template>
-                    </template>
-                  </div>
-                </div>
-              </v-card-text>
+              <div
+                class="d-flex justify-center align-center mt-2 mb-2"
+                v-if="billingSettinfsMessages.length"
+              >
+                <v-card-title style="color: red; text-align: center">
+                  Errors: {{ billingSettinfsMessages.join(", ") }}
+                </v-card-title>
+              </div>
 
-              <v-card-actions class="d-flex justify-end">
-                <v-alert
-                  v-if="billingSettinfsMessages.length"
-                  class="billing-card__errors mr-4"
-                  dense
-                  text
-                  type="error"
-                >
-                  {{ billingSettinfsMessages.join(", ") }}
-                </v-alert>
+              <v-card-actions class="d-flex justify-end mt-3">
                 <v-btn
-                  class="mr-2"
                   :disabled="isSaveModelLoading"
                   @click="isBillingSettingsOpen = false"
+                  >Close</v-btn
                 >
-                  Close
-                </v-btn>
                 <v-btn
                   :loading="isSaveModelLoading"
                   @click="saveBillingSettings"
+                  >Save changes</v-btn
                 >
-                  Save
-                </v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -623,8 +593,8 @@ const newPricesHeaders = [
 ];
 
 const priceKeys = [
-  { key: "raw_amount", label: "Supplier price" },
-  { key: "amount", label: "Final price" },
+  { key: "raw_amount", label: "Price" },
+  { key: "amount", label: "Margined price" },
 ];
 
 const searchParam = ref("");
@@ -666,65 +636,7 @@ const keyLabelMap = {
   images: "Images",
 };
 
-const fieldMeta = {
-  "tokens.text_input": {
-    label: "Text input, per 1M tokens",
-    hint: "Price for 1 000 000 tokens sent to the model (prompt).",
-  },
-  "tokens.text_output": {
-    label: "Text output, per 1M tokens",
-    hint: "Price for 1 000 000 tokens generated by the model (answer).",
-  },
-  "tokens.image_input": {
-    label: "Image input, per 1M tokens",
-    hint: "Price for 1 000 000 tokens of images sent to the model.",
-  },
-  "tokens.image_output": {
-    label: "Image output, per 1M tokens",
-    hint: "Price for 1 000 000 tokens of images generated by the model.",
-  },
-  "media_duration.duration_price": {
-    label: "Audio, per 60 seconds",
-    hint: "Price for 60 seconds of audio. Charged proportionally to the real duration.",
-  },
-  "media_duration.resolution_prices": {
-    label: "Video, per 1 second",
-    hint: "Price for 1 second of video, separately with and without audio, for each resolution.",
-  },
-  "other.web_search_price": {
-    label: "Web search, per 1000 requests",
-    hint: "Price for 1000 web searches performed by the model.",
-  },
-  "other.sampling_step_price": {
-    label: "Generation step",
-    hint: "Price for one generation (sampling) step.",
-  },
-  "other.characters_price": {
-    label: "Characters, per 1M",
-    hint: "Price for 1 000 000 input characters (used by TTS models).",
-  },
-  "other.pages_count_price": {
-    label: "Pages, per 1000",
-    hint: "Price for 1000 recognized pages.",
-  },
-  "images.res_to_quality": {
-    label: "Price per image (resolution / quality)",
-    hint: "Price for one generated image for every resolution and quality pair, e.g. 1024x1024 / standard.",
-  },
-};
-
-const fieldPath = (field) => `${field.key}.${field.subkey}`;
-const fieldLabel = (field) =>
-  fieldMeta[fieldPath(field)]?.label || field.subkey;
-const fieldHint = (field) =>
-  fieldMeta[fieldPath(field)]?.hint || "No description";
-const mapKeyLabels = (field) =>
-  field.subkey === "res_to_quality"
-    ? ["New resolution", "New quality"]
-    : ["New key", "New subkey"];
-
-const priceOf = (field) =>
-  currentBillingSettings.value.billing[field.key][field.subkey].price;
+const fieldLabel = (field) => field.subkey;
 
 const setPrice = (price, value) => {
   const raw = +value || 0;
@@ -763,10 +675,6 @@ const audioPriceRows = [
   { key: "with_audio", label: "With audio" },
   { key: "without_audio", label: "Without audio" },
 ];
-
-const hasVideoPrices = computed(() =>
-  (currentBillingSettings.value.types || []).includes("video")
-);
 
 const emptyAudioPrice = () => ({
   amount: 0,
@@ -1384,6 +1292,12 @@ watch(isBillingSettingsOpen, (value) => {
 </script>
 
 <style scoped>
+.key_text {
+  font-size: 1rem;
+}
+.key_title {
+  font-size: 1.4em;
+}
 /* --- toolbar --- */
 .toolbar {
   display: flex;
@@ -1448,158 +1362,6 @@ watch(isBillingSettingsOpen, (value) => {
   padding: 0;
 }
 
-/* --- billing dialog --- */
-.billing-card__head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
-}
-
-.billing-card__title {
-  min-width: 0;
-}
-
-.billing-card__name {
-  font-size: 1rem;
-  font-weight: 500;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.billing-card__key {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-
-.billing-card__types {
-  margin-left: auto;
-  max-width: 320px;
-}
-
-.billing-card__types ::v-deep .v-select__selections {
-  flex-wrap: nowrap;
-  overflow: hidden;
-}
-
-.billing-card__types ::v-deep .v-select__selection {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.8rem;
-}
-
-.billing-card__body {
-  padding: 12px 16px 16px;
-  max-height: 62vh;
-}
-
-.billing-card__errors {
-  margin: 0;
-  font-size: 0.75rem;
-  flex: 1 1 auto;
-}
-
-.hint {
-  font-size: 0.8rem;
-  opacity: 0.7;
-}
-
-.price-grid__span {
-  display: contents;
-}
-
-.price-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 150px;
-  align-items: center;
-  column-gap: 12px;
-  row-gap: 8px;
-}
-
-.price-grid__head {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.6;
-}
-
-.price-grid__head--num {
-  text-align: center;
-}
-
-.price-grid__group {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 6px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
-}
-
-.price-grid__hint {
-  opacity: 0.55;
-  cursor: help;
-}
-
-.price-grid__hint:hover {
-  opacity: 1;
-}
-
-.price-grid__label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  font-size: 0.8rem;
-}
-
-.price-grid__label span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.price-grid__add {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 150px;
-  column-gap: 12px;
-  align-items: center;
-  margin-top: 4px;
-}
-
-.price-grid__add ::v-deep .v-label {
-  font-size: 0.75rem;
-}
-
-.price-field ::v-deep input {
-  font-size: 0.8rem;
-  text-align: right;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.price-field ::v-deep input::-webkit-outer-spin-button,
-.price-field ::v-deep input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.price-field ::v-deep .v-text-field__suffix {
-  font-size: 0.7rem;
-  opacity: 0.6;
-}
-
 .resolution-prices-wrap {
   grid-column: 1 / -1;
   overflow-x: auto;
@@ -1629,7 +1391,7 @@ watch(isBillingSettingsOpen, (value) => {
 
 .resolution-prices th,
 .resolution-prices td {
-  height: 52px;
+  height: auto;
   padding: 8px;
   text-align: center;
   vertical-align: middle;
@@ -1664,15 +1426,7 @@ watch(isBillingSettingsOpen, (value) => {
   text-align: left;
 }
 
-.resolution-prices ::v-deep .resolution-price-input {
+.resolution-prices .price-field {
   width: 100%;
-}
-
-.resolution-prices ::v-deep .v-input__slot {
-  min-height: 36px;
-}
-
-.resolution-prices ::v-deep .v-text-field__details {
-  display: none;
 }
 </style>
