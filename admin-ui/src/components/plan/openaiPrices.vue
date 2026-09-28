@@ -463,31 +463,29 @@
                 </div>
               </v-card-text>
 
-              <v-card-actions class="billing-card__actions">
+              <v-card-actions class="d-flex justify-end">
                 <v-alert
                   v-if="billingSettinfsMessages.length"
-                  class="billing-card__errors"
+                  class="billing-card__errors mr-4"
                   dense
                   text
                   type="error"
                 >
                   {{ billingSettinfsMessages.join(", ") }}
                 </v-alert>
-                <v-spacer />
                 <v-btn
-                  small
-                  text
+                  class="mr-2"
                   :disabled="isSaveModelLoading"
                   @click="isBillingSettingsOpen = false"
-                  >Close</v-btn
                 >
+                  Close
+                </v-btn>
                 <v-btn
-                  small
-                  color="primary"
                   :loading="isSaveModelLoading"
                   @click="saveBillingSettings"
-                  >Save changes</v-btn
                 >
+                  Save
+                </v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -1497,11 +1495,6 @@ watch(isBillingSettingsOpen, (value) => {
 .billing-card__body {
   padding: 12px 16px 16px;
   max-height: 62vh;
-}
-
-.billing-card__actions {
-  padding: 8px 16px;
-  border-top: 1px solid rgba(128, 128, 128, 0.25);
 }
 
 .billing-card__errors {
