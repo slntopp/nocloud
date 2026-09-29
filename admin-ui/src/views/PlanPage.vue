@@ -124,6 +124,10 @@ export default {
           component: () =>
             import("@/components/modules/ione/planConfiguration.vue"),
         },
+        this.plan?.type === "empty" && {
+          title: "AI packages",
+          component: () => import("@/components/plan/aiPackages.vue"),
+        },
         ["bitrix24"].includes(this.plan?.type) && {
           title: "Licences",
           component: () =>

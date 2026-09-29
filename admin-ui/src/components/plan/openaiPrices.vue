@@ -97,6 +97,10 @@
               <v-text-field dense v-model="item.meta.group" />
             </template>
 
+            <template v-slot:[`item.meta.sorter`]="{ item }">
+              <v-text-field dense type="number" v-model.number="item.meta.sorter" />
+            </template>
+
             <template v-slot:[`item.disabled`]="{ item }">
               <v-switch
                 :key="item.key"
@@ -595,6 +599,7 @@ const newPricesHeaders = [
   { text: "Name", value: "name" },
   { text: "Provider", value: "provider", width: 100 },
   { text: "Group", value: "meta.group", width: 150 },
+  { text: "Sorter", value: "meta.sorter", width: 100 },
   { text: "Types", value: "types", sortable: false },
   { text: "Visibility", value: "visibility", width: 150 },
   { text: "Enabled", value: "disabled", width: 100 },
@@ -1268,7 +1273,7 @@ const save = async () => {
       serial: currentSerial.value,
       cfg: {
         models: newPricesResources.value.reduce((acc, r) => {
-          acc[r.key] = { ...r, key: undefined };
+          acc[r.key] = { ...r, key: undefined, meta: withoutEmptySorter(r.meta) };
           return acc;
         }, {}),
       },
@@ -1304,11 +1309,17 @@ const changeDisabled = (item, value) => {
   item.disabled = !value;
 };
 
-// meta is omitted by backend when empty; group must exist up front for Vue 2 reactivity
+// meta is omitted by backend when empty; group and sorter must exist up front for Vue 2 reactivity
 const withMeta = (model) => ({
   ...model,
-  meta: { group: "", ...model.meta },
+  meta: { group: "", sorter: "", ...model.meta },
 });
+
+// sorter orders the chat's models, 0 first; a blank one is not stored
+const withoutEmptySorter = ({ sorter, ...meta }) =>
+  typeof sorter === "number" && Number.isFinite(sorter)
+    ? { ...meta, sorter }
+    : meta;
 
 const bulkGroupProvider = ref("");
 const bulkGroup = ref("");
