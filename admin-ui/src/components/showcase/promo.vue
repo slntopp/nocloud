@@ -40,6 +40,22 @@
             />
           </v-card-title>
           <rich-editor v-model="currentLocation.preview" />
+          <template v-if="aiProducts.length && currentLocation.products">
+            <v-card-title>AI packages</v-card-title>
+            <v-expansion-panels>
+              <v-expansion-panel v-for="product in aiProducts" :key="product.id">
+                <v-expansion-panel-header color="background-light">
+                  {{ product.title }}
+                </v-expansion-panel-header>
+                <v-expansion-panel-content color="background-light">
+                  <v-card-subtitle>Description:</v-card-subtitle>
+                  <rich-editor
+                    v-model="currentLocation.products[product.id].description"
+                  />
+                </v-expansion-panel-content>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </template>
         </v-tab-item>
         <v-tab-item>
           <div class="d-flex">
@@ -244,7 +260,8 @@ export default {
 <script setup>
 import api from "@/api";
 import RichEditor from "@/components/ui/richEditor.vue";
-import { onBeforeMount, toRefs, watch, ref } from "vue";
+import { onBeforeMount, toRefs, watch, ref, set } from "vue";
+import { isAiPackage } from "@/components/plan/aiPackages.js";
 import { useStore } from "@/store";
 
 const props = defineProps({ template: { type: Object, required: true } });
@@ -267,10 +284,51 @@ const widgetPlaces = ref([
   { value: "offer", title: "Special offer settings" },
 ]);
 const activeWidgetPlace = ref("service");
+/** The AI packages this showcase sells, described per language in promo.products["plan/key"]. */
+const aiProducts = ref([]);
 
 onBeforeMount(() => {
   language.value = template.value.languages[0] ?? "en";
+  fetchAiProducts();
 });
+
+async function fetchAiProducts() {
+  if (!template.value.meta?.ai_packages) {
+    return;
+  }
+  const uuids = [...new Set((template.value.items ?? []).map((i) => i.plan))];
+  const plans = await Promise.all(
+    uuids.filter(Boolean).map((uuid) => api.plans.get(uuid).catch(() => null))
+  );
+  aiProducts.value = plans
+    .filter(Boolean)
+    .flatMap((plan) =>
+      Object.entries(plan.products ?? {})
+        .filter(([, product]) => isAiPackage(product))
+        .map(([key, product]) => ({
+          id: `${plan.uuid}/${key}`,
+          title: product.title || key,
+          sorter: Number(product.sorter) || 0,
+        }))
+    )
+    .sort((a, b) => a.sorter - b.sorter || a.title.localeCompare(b.title));
+  describeAiProducts();
+}
+
+/** Every AI package gets a description slot in the current language's promo. */
+function describeAiProducts() {
+  if (!currentLocation.value || !Object.keys(currentLocation.value).length) {
+    return;
+  }
+  if (!currentLocation.value.products) {
+    set(currentLocation.value, "products", {});
+  }
+  aiProducts.value.forEach(({ id }) => {
+    if (!currentLocation.value.products[id]) {
+      set(currentLocation.value.products, id, { description: "" });
+    }
+  });
+}
 
 watch(language, (newValue, prevValue) => {
   if (!newValue) {
@@ -298,6 +356,7 @@ watch(language, (newValue, prevValue) => {
   currentLocation.value.offer = currentLocation.value.offer ?? {};
   currentLocation.value.rewards = currentLocation.value.rewards ?? {};
   currentLocation.value.service = currentLocation.value.service ?? {};
+  describeAiProducts();
 
   template.value?.locations.forEach((location) => {
     if (!promo.value[language.value]?.locations[getLocationKey(location)]) {
