@@ -51,13 +51,21 @@
         <span v-else-if="!item.form.models.length">All models</span>
         <template v-else>
           <v-chip
-            v-for="model in item.form.models"
+            v-for="model in item.form.models.slice(0, MODELS_SHOWN)"
             :key="model"
             x-small
             class="mr-1"
             :color="modelsByKey[model] ? undefined : 'warning'"
           >
-            {{ (modelsByKey[model] || {}).name || model }}
+            {{ modelLabel(model) }}
+          </v-chip>
+          <v-chip
+            v-if="item.form.models.length > MODELS_SHOWN"
+            x-small
+            outlined
+            :title="item.form.models.slice(MODELS_SHOWN).map(modelLabel).join(', ')"
+          >
+            +{{ item.form.models.length - MODELS_SHOWN }}
           </v-chip>
         </template>
       </template>
@@ -243,13 +251,28 @@ const modelsByKey = computed(() =>
   Object.fromEntries(models.value.map((model) => [model.key, model]))
 );
 
-/** The driver's models by provider, for the picker; a key the driver no longer lists stays pickable. */
+/** A package's row lists this many of its models and counts the rest. */
+const MODELS_SHOWN = 3;
+
+const modelLabel = (key) => {
+  const model = modelsByKey.value[key];
+  if (!model) return key;
+  return `${model.name || key}${model.disabled ? " · disabled" : ""}`;
+};
+
+/**
+ * The driver's models by provider, for the picker. A disabled model is not offered, but one the
+ * package already has stays, marked, and so does a key the driver no longer lists.
+ */
 const modelItems = computed(() => {
+  const chosen = new Set(form.value?.models || []);
   const byProvider = {};
-  models.value.forEach((model) => {
-    const provider = model.provider || "other";
-    (byProvider[provider] = byProvider[provider] || []).push(model);
-  });
+  models.value
+    .filter((model) => !model.disabled || chosen.has(model.key))
+    .forEach((model) => {
+      const provider = model.provider || "other";
+      (byProvider[provider] = byProvider[provider] || []).push(model);
+    });
   const items = [];
   Object.keys(byProvider)
     .sort()
