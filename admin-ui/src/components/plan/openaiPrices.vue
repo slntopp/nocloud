@@ -658,6 +658,7 @@ const fieldsForTypes = {
       { "images.res_to_quality": "map-map-number" },
       {
         "tokens.text_input": "number",
+        "tokens.text_output": "number",
         "tokens.image_input": "number",
         "tokens.image_output": "number",
       },
