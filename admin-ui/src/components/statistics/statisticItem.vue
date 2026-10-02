@@ -38,9 +38,7 @@
             <div class="current_duration">
               <v-btn
                 x-small
-                @click="
-                  emit('input:periods-first-offset', periodsFirstOffset - 1)
-                "
+                @click="emit('input:period-offset', periodOffset - 1)"
               >
                 <v-icon>mdi-minus</v-icon>
               </v-btn>
@@ -50,9 +48,7 @@
               >
               <v-btn
                 x-small
-                @click="
-                  emit('input:periods-first-offset', periodsFirstOffset + 1)
-                "
+                @click="emit('input:period-offset', periodOffset + 1)"
               >
                 <v-icon>mdi-plus</v-icon>
               </v-btn>
@@ -66,26 +62,10 @@
             </span>
 
             <div class="current_duration">
-              <v-btn
-                x-small
-                @click="
-                  emit('input:periods-second-offset', periodsSecondOffset - 1)
-                "
-              >
-                <v-icon>mdi-minus</v-icon>
-              </v-btn>
               <span class="current_duration_info"
                 >{{ formatDate(periods.second[0]) }} -
                 {{ formatDate(periods.second[1]) }}</span
               >
-              <v-btn
-                x-small
-                @click="
-                  emit('input:periods-second-offset', periodsSecondOffset + 1)
-                "
-              >
-                <v-icon>mdi-plus</v-icon>
-              </v-btn>
             </div>
           </div>
         </div>
@@ -175,10 +155,9 @@ const props = defineProps({
   durationOptions: {
     type: Array,
     default: () => [
-      { label: "Week", value: "week" },
-      { label: "Month", value: "month" },
-      { label: "Month by week", value: "month-7_days" },
-      { label: "Year", value: "year-1_month" },
+      { label: "Daily", value: "month" },
+      { label: "Monthly", value: "year-1_month" },
+      { label: "Yearly", value: "years-1_year" },
     ],
   },
 });
@@ -214,7 +193,6 @@ const emit = defineEmits([
 const typeOptions = [
   { label: "Bar", value: "bar" },
   { label: "Line", value: "line" },
-  { label: "Area", value: "area" },
 ];
 
 const colors = getApexChartsColors();
@@ -252,6 +230,14 @@ function getDurationTuple(type = "week", offset = 1) {
 
       break;
     }
+    case "years-1_year": {
+      const todayDate = new Date();
+      const endYear = todayDate.getFullYear() + offset;
+      const startYear = endYear - 9;
+      startDate = new Date(startYear, 0, 1);
+      endDate = new Date(endYear, 11, 31);
+      break;
+    }
     case "year":
     case "year-1_month":
     case "year-7_days":
@@ -282,7 +268,12 @@ function formatDate(date) {
   if (!date) {
     return;
   }
-  return date.toISOString().split("T")[0].replaceAll("-", "/");
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date).replaceAll("-", "/");
 }
 
 function setDefaultData() {
@@ -304,10 +295,10 @@ function setDefaultData() {
     !periods.value.first?.length ||
     !periods.value.second?.length
   ) {
-    const first = getDurationTuple(periodType.value, periodsFirstOffset.value);
+    const first = getDurationTuple(periodType.value, periodOffset.value);
     const second = getDurationTuple(
       periodType.value,
-      periodsSecondOffset.value
+      (periodOffset.value || 0) - 1
     );
 
     emit("input:periods", { first: first, second: second });
@@ -318,32 +309,13 @@ setDefaultData();
 
 watch(periodType, () => {
   emit("input:period-offset", 0);
-  emit("input:periods-first-offset", 0);
-  emit("input:periods-second-offset", -1);
 });
 
 watch([periodType, periodOffset, comparable], () => {
-  if (comparable?.value) {
-    return;
-  }
-
-  const [startDate, endDate] = getDurationTuple(
-    periodType.value,
-    periodOffset.value
-  );
-
-  emit("input:period", [startDate, endDate]);
-});
-
-watch([periodType, periodsSecondOffset, periodsFirstOffset, comparable], () => {
-  if (!comparable?.value) {
-    return;
-  }
-
-  const first = getDurationTuple(periodType.value, periodsFirstOffset.value);
-  const second = getDurationTuple(periodType.value, periodsSecondOffset.value);
-
-  emit("input:periods", { first: first, second: second });
+  const primary = getDurationTuple(periodType.value, periodOffset.value);
+  const previous = getDurationTuple(periodType.value, (periodOffset.value || 0) - 1);
+  emit("input:period", primary);
+  emit("input:periods", { first: primary, second: previous });
 });
 </script>
 

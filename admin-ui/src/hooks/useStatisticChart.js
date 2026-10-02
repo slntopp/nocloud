@@ -1,6 +1,6 @@
 import { ref, watch } from "vue";
 import { useStore } from "@/store";
-import { debounce, formatToYYMMDD } from "@/functions";
+import { debounce, formatWarsawDate } from "@/functions";
 
 export const statisticPeriodProps = {
   period: { type: Array, default: () => [] },
@@ -80,7 +80,7 @@ export function buildComparablePeriodSeries(
   getValue = (row, key) => row?.[key] || 0
 ) {
   const series = Object.keys(periods).map((key) => ({
-    name: `${formatToYYMMDD(periods[key][0])}/${formatToYYMMDD(
+    name: `${formatWarsawDate(periods[key][0])}/${formatWarsawDate(
       periods[key][1]
     )}`,
     data: [],
@@ -108,4 +108,93 @@ export function buildComparablePeriodSeries(
   });
 
   return { series, categories, summary };
+}
+
+export function buildSeriesFromTimeseries(timeseries, field, getValue, label) {
+  const getter = getValue || ((row, key) => row?.[key] || 0);
+  const data = (timeseries || []).map((row) => getter(row, field));
+  const name = label || field;
+  return {
+    series: [{ name, data }],
+    categories: (timeseries || []).map((row) => row.ts),
+    summary: { [name]: data.reduce((acc, value) => acc + (Number(value) || 0), 0) },
+  };
+}
+
+export function buildGroupedSeries(timeseries, nameField, valueField, getValue) {
+  const getter = getValue || ((row, key) => row?.[key] || 0);
+  const names = [];
+  const categories = [];
+  (timeseries || []).forEach((row) => {
+    const name = row[nameField];
+    if (name != null && name !== "" && !names.includes(name)) names.push(name);
+    if (!categories.includes(row.ts)) categories.push(row.ts);
+  });
+  const series = names.map((name) => ({
+    name,
+    data: categories.map((ts) => {
+      const row = (timeseries || []).find(
+        (item) => item.ts === ts && item[nameField] === name
+      );
+      return row ? getter(row, valueField) : 0;
+    }),
+  }));
+  const summary = {};
+  series.forEach((serie) => {
+    summary[serie.name] = serie.data.reduce((acc, value) => acc + (Number(value) || 0), 0);
+  });
+  return { series, categories, summary };
+}
+
+export function limitTop(series, summary, limit) {
+  const ranked = [...series].sort(
+    (a, b) => (summary[b.name] || 0) - (summary[a.name] || 0)
+  );
+  if (ranked.length <= limit) {
+    return { series: ranked, summary };
+  }
+  const top = ranked.slice(0, limit);
+  const rest = ranked.slice(limit);
+  const other = {
+    name: "Other",
+    data: (top[0]?.data || []).map((_, index) =>
+      rest.reduce((acc, serie) => acc + (Number(serie.data[index]) || 0), 0)
+    ),
+  };
+  const next = {};
+  top.forEach((serie) => {
+    next[serie.name] = summary[serie.name] || 0;
+  });
+  next.Other = rest.reduce((acc, serie) => acc + (summary[serie.name] || 0), 0);
+  return { series: [...top, other], summary: next };
+}
+
+export function bucketLabels(start, end, periodType) {
+  if (!start || !end) return [];
+  const startText = formatWarsawDate(start);
+  const endText = formatWarsawDate(end);
+  const today = formatWarsawDate(new Date());
+  if (periodType === "year-1_month") {
+    const year = Number(startText.slice(0, 4));
+    const lastMonth = year === Number(today.slice(0, 4)) ? Number(today.slice(5, 7)) : 12;
+    return Array.from({ length: lastMonth }, (_, index) =>
+      `${year}-${String(index + 1).padStart(2, "0")}-01`
+    );
+  }
+  if (periodType === "years-1_year") {
+    const from = Number(startText.slice(0, 4));
+    const to = Math.min(Number(endText.slice(0, 4)), Number(today.slice(0, 4)));
+    const labels = [];
+    for (let year = from; year <= to; year++) labels.push(`${year}-01-01`);
+    return labels;
+  }
+  const capped = endText > today ? today : endText;
+  const labels = [];
+  let cursor = Date.parse(`${startText}T12:00:00Z`);
+  const last = Date.parse(`${capped}T12:00:00Z`);
+  while (cursor <= last) {
+    labels.push(new Date(cursor).toISOString().slice(0, 10));
+    cursor += 86400000;
+  }
+  return labels;
 }

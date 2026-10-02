@@ -51,13 +51,13 @@ const { period, periodType, periods, type } = toRefs(props);
 
 const emit = defineEmits(statisticPeriodEmits);
 
-const comparable = ref(true);
+const comparable = ref(false);
 const allFields = ref([
   { label: "Created", value: "created" },
   { label: "Active", value: "active" },
   { label: "Total", value: "total" },
 ]);
-const fields = ref("created");
+const fields = ref(["created"]);
 
 const series = ref([]);
 const categories = ref([]);
