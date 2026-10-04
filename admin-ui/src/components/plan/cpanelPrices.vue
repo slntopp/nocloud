@@ -63,6 +63,17 @@
             <template v-slot:[`item.price`]="{ item }">
               <v-text-field type="number" v-model.number="item.price" />
             </template>
+            <template v-slot:[`item.siteCredit`]="{ item }">
+              <v-text-field type="number" v-model.number="item.siteCredit" />
+            </template>
+            <template v-slot:[`item.siteModels`]="{ item }">
+              <v-text-field
+                v-model="item.siteModels"
+                placeholder="gpt-4o, claude-sonnet-4"
+                hint="Empty: every model"
+                persistent-hint
+              />
+            </template>
             <template v-slot:[`item.addons`]="{ item }">
               <product-addons-dialog
                 @change:addons="item.addons = $event"
@@ -112,6 +123,53 @@ import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import planAddonsTable from "@/components/planAddonsTable.vue";
 import productAddonsDialog from "@/components/product_addons_dialog.vue";
+
+function unwrapNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  if (value && typeof value === "object") {
+    if ("numberValue" in value) {
+      return unwrapNumber(value.numberValue);
+    }
+    if ("stringValue" in value) {
+      return unwrapNumber(value.stringValue);
+    }
+  }
+  return null;
+}
+
+function readSiteCredit(meta) {
+  const value = unwrapNumber(meta?.site_credit);
+  if (value == null) {
+    return 5;
+  }
+  return value < 0 ? 0 : value;
+}
+
+function readSiteModels(meta) {
+  const value = meta?.site_models;
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === "string" ? item : item?.stringValue || ""))
+      .filter(Boolean)
+      .join(", ");
+  }
+  if (value?.values) {
+    return readSiteModels({ site_models: value.values });
+  }
+  if (value?.listValue?.values) {
+    return readSiteModels({ site_models: value.listValue.values });
+  }
+  return "";
+}
 
 export default {
   name: "plan-prices",
@@ -169,6 +227,8 @@ export default {
       { text: "Addons", value: "addons" },
       { text: "Period", value: "period", width: 220 },
       { text: "Price", value: "price", width: 150 },
+      { text: "Site credit", value: "siteCredit", width: 140 },
+      { text: "Site models", value: "siteModels", width: 280 },
       { text: "Enabled", value: "enabled" },
     ],
   }),
@@ -202,6 +262,8 @@ export default {
         price.addons = product?.addons || [];
         price.enabled = !!product;
         price.periodKind = product?.periodKind || "CALENDAR_MONTH";
+        price.siteCredit = readSiteCredit(product?.meta);
+        price.siteModels = readSiteModels(product?.meta);
         return price;
       });
       this.isPricesLoading = false;
@@ -226,6 +288,18 @@ export default {
       this.prices
         .filter((p) => p.enabled)
         .forEach((item) => {
+          const previous = this.template.products?.[item.key] || {};
+          const models = String(item.siteModels || "")
+            .split(/[,;\n]/)
+            .map((part) => part.trim())
+            .filter(Boolean);
+          const meta = { ...(previous.meta || {}) };
+          meta.site_credit = readSiteCredit({ site_credit: item.siteCredit });
+          if (models.length > 0) {
+            meta.site_models = models;
+          } else {
+            delete meta.site_models;
+          }
           products[item.key] = {
             title: item.name,
             kind: "PREPAID",
@@ -234,6 +308,7 @@ export default {
             sorter: item.sorter,
             addons: item.addons,
             periodKind: item.periodKind,
+            meta,
             resources: {
               model: item.key,
               bandwidth: item.BWLIMIT || undefined,
