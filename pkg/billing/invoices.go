@@ -2069,7 +2069,6 @@ func (s *BillingServiceServer) SendInvoiceEmail(ctx context.Context, _req *conne
 
 const bitrixDomainResourceKey = "bitrix_domain"
 
-
 const (
 	billingMonthSecs = 3600 * 24 * 30
 	billingDaySecs   = 3600 * 24
@@ -2319,7 +2318,6 @@ func (s *BillingServiceServer) CreateRenewalInvoice(ctx context.Context, _req *c
 
 	renewDescription := formatInvoiceLineDescription(invoicePrefix, productTitle, inst, expireDate, untilDate)
 
-
 	tax := acc.GetTaxRate()
 	invCost := initCost
 
@@ -2472,6 +2470,19 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			})
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
+			}
+
+			sites := hostingSites(instOld.Instance)
+			if amount := siteCreditAmount(sites); amount > 0 && !siteCreditGranted(instNew.Config) {
+				_, err = s.applyTransaction(ctx, -amount, acc.GetUuid(), acc.GetCurrency(), false, &applyTransactionMeta{
+					TransactionType: "transaction top-up",
+					InstanceUUID:    i,
+					Description:     fmt.Sprintf("Site builder credit for %d sites", sites),
+				})
+				if err != nil {
+					return inv, fmt.Errorf("failed to credit site builder balance: %w", err)
+				}
+				instNew.Config[siteCreditConfigKey] = structpb.NewBoolValue(true)
 			}
 			// Update instance in the end due to publish operations inside
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
