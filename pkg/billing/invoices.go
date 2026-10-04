@@ -2473,7 +2473,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			}
 
 			sites := hostingSites(instOld.Instance)
-			if amount := siteCreditAmount(sites); amount > 0 && !siteCreditGranted(instNew.Config) {
+			if amount := siteCreditAmount(instOld.Instance, sites); amount > 0 && !siteCreditGranted(instNew.Config) {
 				_, err = s.applyTransaction(ctx, -amount, acc.GetUuid(), acc.GetCurrency(), false, &applyTransactionMeta{
 					TransactionType: "transaction top-up",
 					InstanceUUID:    i,
