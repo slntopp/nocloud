@@ -67,9 +67,22 @@
               <v-text-field type="number" v-model.number="item.siteCredit" />
             </template>
             <template v-slot:[`item.siteModels`]="{ item }">
-              <v-text-field
+              <v-autocomplete
+                class="site-models-field"
                 v-model="item.siteModels"
-                placeholder="gpt-4o, claude-sonnet-4"
+                :items="siteModelItems"
+                :loading="isModelsLoading"
+                :menu-props="{ maxHeight: 360, offsetY: true }"
+                item-text="text"
+                item-value="value"
+                multiple
+                chips
+                small-chips
+                deletable-chips
+                clearable
+                dense
+                hide-selected
+                placeholder="Every model"
                 hint="Empty: every model"
                 persistent-hint
               />
@@ -154,13 +167,15 @@ function readSiteCredit(meta) {
 function readSiteModels(meta) {
   const value = meta?.site_models;
   if (typeof value === "string") {
-    return value;
+    return value
+      .split(/[,;\n]/)
+      .map((part) => part.trim())
+      .filter(Boolean);
   }
   if (Array.isArray(value)) {
     return value
       .map((item) => (typeof item === "string" ? item : item?.stringValue || ""))
-      .filter(Boolean)
-      .join(", ");
+      .filter(Boolean);
   }
   if (value?.values) {
     return readSiteModels({ site_models: value.values });
@@ -168,7 +183,29 @@ function readSiteModels(meta) {
   if (value?.listValue?.values) {
     return readSiteModels({ site_models: value.listValue.values });
   }
-  return "";
+  return [];
+}
+
+function isChatModel(model) {
+  if (model?.disabled) {
+    return false;
+  }
+  const types = model?.types;
+  if (!Array.isArray(types) || types.length === 0) {
+    return true;
+  }
+  return types.includes("text");
+}
+
+function modelGroup(model) {
+  const group = model?.meta?.group;
+  if (typeof group === "string" && group.trim()) {
+    return group.trim();
+  }
+  if (typeof model?.provider === "string" && model.provider.trim()) {
+    return model.provider.trim();
+  }
+  return "Other";
 }
 
 export default {
@@ -190,7 +227,9 @@ export default {
     prices: [],
     fee: {},
     products: [],
+    siteCatalog: [],
     isPricesLoading: false,
+    isModelsLoading: false,
     isValid: false,
     isSaveLoading: false,
     headers: [
@@ -228,7 +267,7 @@ export default {
       { text: "Period", value: "period", width: 220 },
       { text: "Price", value: "price", width: 150 },
       { text: "Site credit", value: "siteCredit", width: 140 },
-      { text: "Site models", value: "siteModels", width: 280 },
+      { text: "Site models", value: "siteModels", width: 340 },
       { text: "Enabled", value: "enabled" },
     ],
   }),
@@ -268,6 +307,36 @@ export default {
       });
       this.isPricesLoading = false;
     },
+    async fetchSiteModels() {
+      this.isModelsLoading = true;
+      try {
+        const response = await api.get("/api/openai/get_config");
+        const models = response?.cfg?.models || {};
+        this.siteCatalog = Object.keys(models).flatMap((key) => {
+          const model = models[key] || {};
+          if (!isChatModel(model)) {
+            return [];
+          }
+          const sorter = Number(model.meta?.sorter);
+          return [
+            {
+              key,
+              name: model.name || key,
+              provider: model.provider,
+              meta: model.meta,
+              sorter: Number.isFinite(sorter) ? sorter : 0,
+            },
+          ];
+        });
+      } catch (error) {
+        this.siteCatalog = [];
+        this.showSnackbarError({
+          message: error.response?.data?.message || "Error during fetch models",
+        });
+      } finally {
+        this.isModelsLoading = false;
+      }
+    },
     changeFee(value) {
       this.fee = JSON.parse(JSON.stringify(value));
     },
@@ -289,9 +358,8 @@ export default {
         .filter((p) => p.enabled)
         .forEach((item) => {
           const previous = this.template.products?.[item.key] || {};
-          const models = String(item.siteModels || "")
-            .split(/[,;\n]/)
-            .map((part) => part.trim())
+          const models = (Array.isArray(item.siteModels) ? item.siteModels : [])
+            .map((part) => String(part || "").trim())
             .filter(Boolean);
           const meta = { ...(previous.meta || {}) };
           meta.site_credit = readSiteCredit({ site_credit: item.siteCredit });
@@ -340,6 +408,7 @@ export default {
   },
   mounted() {
     this.fetchPrices();
+    this.fetchSiteModels();
     this.products = this.template.products;
     this.planAddons = this.template.addons;
   },
@@ -347,6 +416,58 @@ export default {
     sps() {
       return this.$store.getters["servicesProviders/all"];
     },
+    siteModelItems() {
+      const groups = new Map();
+      for (const model of this.siteCatalog) {
+        const name = modelGroup(model);
+        if (!groups.has(name)) {
+          groups.set(name, []);
+        }
+        groups.get(name).push(model);
+      }
+      const known = new Set(this.siteCatalog.map((model) => model.key));
+      const extra = [];
+      for (const price of this.prices) {
+        for (const key of price.siteModels || []) {
+          if (key && !known.has(key) && !extra.includes(key)) {
+            extra.push(key);
+          }
+        }
+      }
+      if (extra.length > 0) {
+        groups.set("Saved", extra.map((key) => ({ key, name: key, sorter: 0 })));
+      }
+      const items = [];
+      [...groups.keys()]
+        .sort((a, b) => a.localeCompare(b))
+        .forEach((name) => {
+          items.push({ header: name });
+          groups
+            .get(name)
+            .slice()
+            .sort((a, b) => {
+              const left = Number.isFinite(a.sorter) ? a.sorter : 0;
+              const right = Number.isFinite(b.sorter) ? b.sorter : 0;
+              if (left !== right) {
+                return left - right;
+              }
+              return (a.name || a.key).localeCompare(b.name || b.key);
+            })
+            .forEach((model) => {
+              items.push({
+                text: model.name || model.key,
+                value: model.key,
+              });
+            });
+        });
+      return items;
+    },
   },
 };
 </script>
+
+<style scoped>
+.site-models-field {
+  min-width: 240px;
+}
+</style>
