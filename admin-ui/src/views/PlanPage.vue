@@ -37,6 +37,10 @@
 import config from "@/config.js";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 
+const planComponents = require
+  .context("@/components/plan/", true, /\.vue$/)
+  .keys();
+
 export default {
   name: "plan-view",
   components: { PlanWikiIcon },
@@ -114,6 +118,8 @@ export default {
       );
     },
     tabs() {
+      const type = this.plan?.type?.split(" ")[0];
+
       return [
         {
           title: "Info",
@@ -124,14 +130,9 @@ export default {
           component: () =>
             import("@/components/modules/ione/planConfiguration.vue"),
         },
-        this.plan?.type === "empty" && {
-          title: "AI packages",
-          component: () => import("@/components/plan/aiPackages.vue"),
-        },
         ["bitrix24"].includes(this.plan?.type) && {
           title: "Licences",
-          component: () =>
-            import("@/components/plan/licences.vue"),
+          component: () => import("@/components/plan/licences.vue"),
         },
         {
           title: "Instances",
@@ -149,6 +150,14 @@ export default {
           title: "Event overrides",
           component: () => import("@/components/plan/event-overrides.vue"),
         },
+        planComponents.includes(`./${type}Prices.vue`) && {
+          title: "Prices",
+          component: () => import(`@/components/plan/${type}Prices.vue`),
+        },
+        this.plan?.type === "empty" && {
+          title: "AI packages",
+          component: () => import("@/components/plan/aiPackages.vue"),
+        },
         {
           title: "Template",
           component: () => import("@/components/plan/template.vue"),
@@ -162,27 +171,6 @@ export default {
     });
 
     this.fetchPlan();
-  },
-  watch: {
-    plan() {
-      const pricesComponents = require
-        .context("@/components/plan/", true, /\.vue$/)
-        .keys();
-
-      if (
-        !pricesComponents.includes(
-          `./${this.plan?.type.split(" ")[0]}Prices.vue`
-        )
-      )
-        return;
-      if (this.tabs.find(({ title }) => title === "Prices")) return;
-      const type = this.plan?.type.split(" ")[0];
-
-      this.tabs.splice(this.tabs.length - 1, 0, {
-        title: "Prices",
-        component: () => import(`@/components/plan/${type}Prices.vue`),
-      });
-    },
   },
 };
 </script>
