@@ -63,28 +63,19 @@
             <template v-slot:[`item.price`]="{ item }">
               <v-text-field type="number" v-model.number="item.price" />
             </template>
-            <template v-slot:[`item.siteCredit`]="{ item }">
-              <v-text-field type="number" v-model.number="item.siteCredit" />
-            </template>
-            <template v-slot:[`item.siteModels`]="{ item }">
+            <template v-slot:[`item.emptyBind`]="{ item }">
               <v-autocomplete
-                class="site-models-field"
-                v-model="item.siteModels"
-                :items="siteModelItems"
-                :loading="isModelsLoading"
+                class="empty-bind-field"
+                v-model="item.emptyBind"
+                :items="emptyPackageItems"
+                :loading="isEmptyPlansLoading"
                 :menu-props="{ maxHeight: 360, offsetY: true }"
                 item-text="text"
                 item-value="value"
-                multiple
-                chips
-                small-chips
-                deletable-chips
                 clearable
                 dense
-                hide-selected
-                placeholder="Every model"
-                hint="Empty: every model"
-                persistent-hint
+                hide-details
+                placeholder="Empty package"
               />
             </template>
             <template v-slot:[`item.addons`]="{ item }">
@@ -137,75 +128,34 @@ import ConfirmDialog from "@/components/confirmDialog.vue";
 import planAddonsTable from "@/components/planAddonsTable.vue";
 import productAddonsDialog from "@/components/product_addons_dialog.vue";
 
-function unwrapNumber(value) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-  if (value && typeof value === "object") {
-    if ("numberValue" in value) {
-      return unwrapNumber(value.numberValue);
-    }
-    if ("stringValue" in value) {
-      return unwrapNumber(value.stringValue);
-    }
-  }
-  return null;
-}
+import { ListRequest } from "nocloud-proto/proto/es/billing/billing_pb";
 
-function readSiteCredit(meta) {
-  const value = unwrapNumber(meta?.site_credit);
-  if (value == null) {
-    return 5;
-  }
-  return value < 0 ? 0 : value;
-}
-
-function readSiteModels(meta) {
-  const value = meta?.site_models;
+function unwrapMetaString(value) {
   if (typeof value === "string") {
-    return value
-      .split(/[,;\n]/)
-      .map((part) => part.trim())
-      .filter(Boolean);
+    return value.trim();
   }
-  if (Array.isArray(value)) {
-    return value
-      .map((item) => (typeof item === "string" ? item : item?.stringValue || ""))
-      .filter(Boolean);
+  if (value && typeof value === "object" && typeof value.stringValue === "string") {
+    return value.stringValue.trim();
   }
-  if (value?.values) {
-    return readSiteModels({ site_models: value.values });
-  }
-  if (value?.listValue?.values) {
-    return readSiteModels({ site_models: value.listValue.values });
-  }
-  return [];
+  return "";
 }
 
-function isChatModel(model) {
-  if (model?.disabled) {
-    return false;
+function emptyBindValue(product) {
+  const plan = unwrapMetaString(product?.resources?.empty_plan) || unwrapMetaString(product?.meta?.empty_plan);
+  const pkg = unwrapMetaString(product?.resources?.empty_product) || unwrapMetaString(product?.meta?.empty_product);
+  if (!plan || !pkg) {
+    return "";
   }
-  const types = model?.types;
-  if (!Array.isArray(types) || types.length === 0) {
-    return true;
-  }
-  return types.includes("text");
+  return `${plan}/${pkg}`;
 }
 
-function modelGroup(model) {
-  const group = model?.meta?.group;
-  if (typeof group === "string" && group.trim()) {
-    return group.trim();
+function parseEmptyBind(value) {
+  const text = String(value || "").trim();
+  const slash = text.indexOf("/");
+  if (slash < 1 || slash === text.length - 1) {
+    return { plan: "", product: "" };
   }
-  if (typeof model?.provider === "string" && model.provider.trim()) {
-    return model.provider.trim();
-  }
-  return "Other";
+  return { plan: text.slice(0, slash), product: text.slice(slash + 1) };
 }
 
 export default {
@@ -227,9 +177,9 @@ export default {
     prices: [],
     fee: {},
     products: [],
-    siteCatalog: [],
+    emptyPlans: [],
     isPricesLoading: false,
-    isModelsLoading: false,
+    isEmptyPlansLoading: false,
     isValid: false,
     isSaveLoading: false,
     headers: [
@@ -266,8 +216,7 @@ export default {
       { text: "Addons", value: "addons" },
       { text: "Period", value: "period", width: 220 },
       { text: "Price", value: "price", width: 150 },
-      { text: "Site credit", value: "siteCredit", width: 140 },
-      { text: "Site models", value: "siteModels", width: 340 },
+      { text: "Package", value: "emptyBind", width: 280 },
       { text: "Enabled", value: "enabled" },
     ],
   }),
@@ -301,40 +250,30 @@ export default {
         price.addons = product?.addons || [];
         price.enabled = !!product;
         price.periodKind = product?.periodKind || "CALENDAR_MONTH";
-        price.siteCredit = readSiteCredit(product?.meta);
-        price.siteModels = readSiteModels(product?.meta);
+        price.emptyBind = emptyBindValue(product);
         return price;
       });
       this.isPricesLoading = false;
     },
-    async fetchSiteModels() {
-      this.isModelsLoading = true;
+    async fetchEmptyPlans() {
+      this.isEmptyPlansLoading = true;
       try {
-        const response = await api.get("/api/openai/get_config");
-        const models = response?.cfg?.models || {};
-        this.siteCatalog = Object.keys(models).flatMap((key) => {
-          const model = models[key] || {};
-          if (!isChatModel(model)) {
-            return [];
-          }
-          const sorter = Number(model.meta?.sorter);
-          return [
-            {
-              key,
-              name: model.name || key,
-              provider: model.provider,
-              meta: model.meta,
-              sorter: Number.isFinite(sorter) ? sorter : 0,
-            },
-          ];
-        });
+        const response = await this.$store.getters["plans/plansClient"].listPlans(
+          ListRequest.fromJson({
+            anonymously: false,
+            showDeleted: false,
+            limit: "500",
+            filters: { type: ["empty"] },
+          })
+        );
+        this.emptyPlans = response.toJson().pool || [];
       } catch (error) {
-        this.siteCatalog = [];
+        this.emptyPlans = [];
         this.showSnackbarError({
-          message: error.response?.data?.message || "Error during fetch models",
+          message: error.response?.data?.message || "Error during fetch empty plans",
         });
       } finally {
-        this.isModelsLoading = false;
+        this.isEmptyPlansLoading = false;
       }
     },
     changeFee(value) {
@@ -358,15 +297,23 @@ export default {
         .filter((p) => p.enabled)
         .forEach((item) => {
           const previous = this.template.products?.[item.key] || {};
-          const models = (Array.isArray(item.siteModels) ? item.siteModels : [])
-            .map((part) => String(part || "").trim())
-            .filter(Boolean);
           const meta = { ...(previous.meta || {}) };
-          meta.site_credit = readSiteCredit({ site_credit: item.siteCredit });
-          if (models.length > 0) {
-            meta.site_models = models;
-          } else {
-            delete meta.site_models;
+          delete meta.site_credit;
+          delete meta.site_models;
+          delete meta.empty_plan;
+          delete meta.empty_product;
+          const bind = parseEmptyBind(item.emptyBind);
+          const resources = {
+            model: item.key,
+            bandwidth: item.BWLIMIT || undefined,
+            ssd: item.QUOTA || undefined,
+            email: item.MAXPOP || undefined,
+            mysql: item.MAXSQL || undefined,
+            websites: 1 + +item.MAXADDON || undefined,
+          };
+          if (bind.plan && bind.product) {
+            resources.empty_plan = bind.plan;
+            resources.empty_product = bind.product;
           }
           products[item.key] = {
             title: item.name,
@@ -377,14 +324,7 @@ export default {
             addons: item.addons,
             periodKind: item.periodKind,
             meta,
-            resources: {
-              model: item.key,
-              bandwidth: item.BWLIMIT || undefined,
-              ssd: item.QUOTA || undefined,
-              email: item.MAXPOP || undefined,
-              mysql: item.MAXSQL || undefined,
-              websites: 1 + +item.MAXADDON || undefined,
-            },
+            resources,
           };
         });
 
@@ -408,7 +348,7 @@ export default {
   },
   mounted() {
     this.fetchPrices();
-    this.fetchSiteModels();
+    this.fetchEmptyPlans();
     this.products = this.template.products;
     this.planAddons = this.template.addons;
   },
@@ -416,50 +356,42 @@ export default {
     sps() {
       return this.$store.getters["servicesProviders/all"];
     },
-    siteModelItems() {
-      const groups = new Map();
-      for (const model of this.siteCatalog) {
-        const name = modelGroup(model);
-        if (!groups.has(name)) {
-          groups.set(name, []);
-        }
-        groups.get(name).push(model);
-      }
-      const known = new Set(this.siteCatalog.map((model) => model.key));
-      const extra = [];
-      for (const price of this.prices) {
-        for (const key of price.siteModels || []) {
-          if (key && !known.has(key) && !extra.includes(key)) {
-            extra.push(key);
-          }
-        }
-      }
-      if (extra.length > 0) {
-        groups.set("Saved", extra.map((key) => ({ key, name: key, sorter: 0 })));
-      }
+    emptyPackageItems() {
       const items = [];
-      [...groups.keys()]
-        .sort((a, b) => a.localeCompare(b))
-        .forEach((name) => {
-          items.push({ header: name });
-          groups
-            .get(name)
-            .slice()
-            .sort((a, b) => {
-              const left = Number.isFinite(a.sorter) ? a.sorter : 0;
-              const right = Number.isFinite(b.sorter) ? b.sorter : 0;
-              if (left !== right) {
-                return left - right;
-              }
-              return (a.name || a.key).localeCompare(b.name || b.key);
-            })
-            .forEach((model) => {
-              items.push({
-                text: model.name || model.key,
-                value: model.key,
-              });
-            });
+      const plans = (this.emptyPlans || [])
+        .slice()
+        .sort((a, b) => String(a.title || a.uuid).localeCompare(String(b.title || b.uuid)));
+      for (const plan of plans) {
+        const products = plan.products || {};
+        const keys = Object.keys(products).sort((a, b) => {
+          const left = products[a] || {};
+          const right = products[b] || {};
+          const sorter = (left.sorter || 0) - (right.sorter || 0);
+          if (sorter) {
+            return sorter;
+          }
+          return String(left.title || a).localeCompare(String(right.title || b));
         });
+        if (keys.length === 0) {
+          continue;
+        }
+        items.push({ header: plan.title || plan.uuid });
+        for (const key of keys) {
+          const product = products[key] || {};
+          items.push({
+            text: product.title || key,
+            value: `${plan.uuid}/${key}`,
+          });
+        }
+      }
+      const known = new Set(items.map((item) => item.value).filter(Boolean));
+      for (const price of this.prices) {
+        if (price.emptyBind && !known.has(price.emptyBind)) {
+          items.push({ header: "Saved" });
+          items.push({ text: price.emptyBind, value: price.emptyBind });
+          known.add(price.emptyBind);
+        }
+      }
       return items;
     },
   },
@@ -467,7 +399,7 @@ export default {
 </script>
 
 <style scoped>
-.site-models-field {
-  min-width: 240px;
+.empty-bind-field {
+  min-width: 220px;
 }
 </style>

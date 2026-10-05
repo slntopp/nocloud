@@ -69,7 +69,7 @@ type InstancesServer struct {
 	acc_ctrl   graph.AccountsController
 	inv_ctrl   graph.InvoicesController
 	curr_ctrl  graph.CurrencyController
-	plan_ctrl  graph.BillingPlansController
+	bp_ctrl    graph.BillingPlansController
 	ca         graph.CommonActionsController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -93,6 +93,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 	acc_ctrl := graph.NewAccountsController(logger, db)
 	inv_ctrl := graph.NewInvoicesController(logger, db)
 	curr_ctrl := graph.NewCurrencyController(logger, db)
+	bp_ctrl := graph.NewBillingPlansController(logger, db)
 	ca := graph.NewCommonActionsController(logger, db)
 
 	log.Debug("Setting up StatesPubSub")
@@ -131,7 +132,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq rabb
 		acc_ctrl:   acc_ctrl,
 		inv_ctrl:   inv_ctrl,
 		curr_ctrl:  curr_ctrl,
-		plan_ctrl:  graph.NewBillingPlansController(logger, db),
+		bp_ctrl:    bp_ctrl,
 		ca:         ca,
 		drivers:    make(map[string]driverpb.DriverServiceClient),
 		rdb:        rdb,
@@ -274,16 +275,25 @@ func (s *InstancesServer) Start(ctx context.Context, _req *connect.Request[pb.St
 	}
 	old := proto.Clone(instance.Instance).(*pb.Instance)
 
-	if instance.Config["auto_start"] != nil && instance.Config["auto_start"].GetBoolValue() {
+	already := instance.Config["auto_start"] != nil && instance.Config["auto_start"].GetBoolValue()
+	if already && instance.GetStatus() != spb.NoCloudStatus_INIT {
 		log.Info("Instance already has auto_start enabled", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.FailedPrecondition, "Instance already has auto_start enabled")
 	}
 
-	instance.Config["auto_start"] = structpb.NewBoolValue(true)
+	if !already {
+		instance.Config["auto_start"] = structpb.NewBoolValue(true)
+		if err = s.ctrl.Update(ctx, "", instance.Instance, old); err != nil {
+			log.Error("Failed to update instance", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to update instance")
+		}
+	}
 
-	if err = s.ctrl.Update(ctx, "", instance.Instance, old); err != nil {
-		log.Error("Failed to update instance", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to update instance")
+	if instance.GetStatus() == spb.NoCloudStatus_INIT {
+		if err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_UP); err != nil {
+			log.Error("Failed to up instance after start", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to start instance")
+		}
 	}
 
 	return connect.NewResponse(&pb.StartResponse{
@@ -397,6 +407,12 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 	newId, err := s.ctrl.Create(ctx, igId, sp.GetUuid(), req.GetInstance())
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if err := s.createBundledEmptyInstance(ctx, requester, newId, req.GetInstance()); err != nil {
+		log.Error("Failed to create bundled empty instance", zap.Error(err))
+		s.rollbackInstance(ctx, newId)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -530,6 +546,12 @@ func (s *InstancesServer) createWithAutoAssign(ctx context.Context, req *pb.Crea
 		return nil, fmt.Errorf("failed to up new instance: %w", err)
 	}
 
+	if err := s.createBundledEmptyInstance(ctx, account, newId, req.GetInstance()); err != nil {
+		log.Error("Failed to create bundled empty instance", zap.Error(err))
+		s.rollbackInstance(ctx, newId)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	return connect.NewResponse(&pb.CreateResponse{
 		Id:     newId,
 		Result: true,
@@ -566,7 +588,7 @@ func (s *InstancesServer) Update(ctx context.Context, _req *connect.Request[pb.U
 				zap.String("uuid", instance.GetUuid()), zap.String("requestor", requestor))
 		}
 
-		locked, err := graph.LockedProductChange(ctx, s.plan_ctrl, req.GetInstance(), instance.Instance)
+		locked, err := graph.LockedProductChange(ctx, s.bp_ctrl, req.GetInstance(), instance.Instance)
 		if err != nil {
 			log.Error("Failed to check the product lock", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to check the billing plan")
@@ -2088,4 +2110,176 @@ func processIGsIPs(ig *pb.InstancesGroup, inst *pb.Instance, decrease bool) *pb.
 	}
 
 	return ig
+}
+
+func metaString(meta map[string]*structpb.Value, key string) string {
+	if meta == nil {
+		return ""
+	}
+	return strings.TrimSpace(meta[key].GetStringValue())
+}
+
+func productBindString(product *billingpb.Product, key string) string {
+	if product == nil {
+		return ""
+	}
+	if v := metaString(product.GetResources(), key); v != "" {
+		return v
+	}
+	return metaString(product.GetMeta(), key)
+}
+
+func (s *InstancesServer) createBundledEmptyInstance(ctx context.Context, requester, hostingUUID string, hosting *pb.Instance) error {
+	if hosting == nil || hosting.GetBillingPlan() == nil || hosting.GetBillingPlan().GetUuid() == "" {
+		return nil
+	}
+	hostingPlan, err := s.bp_ctrl.Get(ctx, hosting.GetBillingPlan())
+	if err != nil {
+		return fmt.Errorf("failed to get hosting plan: %w", err)
+	}
+	if !strings.EqualFold(hostingPlan.GetType(), "cpanel") {
+		return nil
+	}
+	product := hostingPlan.GetProducts()[hosting.GetProduct()]
+	if product == nil {
+		return nil
+	}
+	planUUID := productBindString(product, "empty_plan")
+	productKey := productBindString(product, "empty_product")
+	if planUUID == "" || productKey == "" {
+		return nil
+	}
+
+	emptyPlan, err := s.bp_ctrl.Get(ctx, &billingpb.Plan{Uuid: planUUID})
+	if err != nil {
+		return fmt.Errorf("failed to get empty plan %s: %w", planUUID, err)
+	}
+	if !strings.EqualFold(emptyPlan.GetType(), "empty") {
+		return fmt.Errorf("bundled plan %s is type %q, want empty", planUUID, emptyPlan.GetType())
+	}
+	emptyProduct := emptyPlan.GetProducts()[productKey]
+	if emptyProduct == nil {
+		return fmt.Errorf("empty product %q not found in plan %s", productKey, planUUID)
+	}
+
+	sp, err := s.emptyProviderForPlan(ctx, planUUID)
+	if err != nil {
+		return err
+	}
+
+	data := map[string]*structpb.Value{
+		"hosting_instance": structpb.NewStringValue(hostingUUID),
+	}
+
+	title := emptyProduct.GetTitle()
+	if title == "" {
+		title = productKey
+	}
+	key := productKey
+	resources := make(map[string]*structpb.Value, len(emptyProduct.GetResources()))
+	for k, v := range emptyProduct.GetResources() {
+		if v != nil {
+			resources[k] = proto.Clone(v).(*structpb.Value)
+		}
+	}
+
+	resp, err := s.createWithAutoAssign(ctx, &pb.CreateRequest{
+		Account: requester,
+		Sp:      sp.GetUuid(),
+		Instance: &pb.Instance{
+			Title:       title,
+			Data:        data,
+			Resources:   resources,
+			BillingPlan: &billingpb.Plan{Uuid: emptyPlan.GetUuid()},
+			Product:     &key,
+		},
+	}, requester)
+	if err != nil {
+		return fmt.Errorf("failed to create bundled empty instance: %w", err)
+	}
+
+	created, err := s.ctrl.Get(ctx, resp.Msg.GetId())
+	if err != nil || created == nil || created.Instance == nil {
+		return fmt.Errorf("bundled empty instance created but could not be loaded: %w", err)
+	}
+	if created.GetStatus() == spb.NoCloudStatus_UP {
+		if err := s.ctrl.SetStatus(ctx, created.Instance, spb.NoCloudStatus_INIT); err != nil {
+			return fmt.Errorf("failed to hold bundled empty instance until hosting is paid: %w", err)
+		}
+	}
+
+	hostingInst, err := s.ctrl.Get(ctx, hostingUUID)
+	if err != nil || hostingInst == nil || hostingInst.Instance == nil {
+		return fmt.Errorf("failed to link bundled empty instance on hosting: %w", err)
+	}
+	old := proto.Clone(hostingInst.Instance).(*pb.Instance)
+	hdata := hostingInst.GetData()
+	if hdata == nil {
+		hdata = map[string]*structpb.Value{}
+	}
+	hdata["empty_instance"] = structpb.NewStringValue(resp.Msg.GetId())
+	hostingInst.Data = hdata
+	if err := s.ctrl.Update(ctx, "", hostingInst.Instance, old); err != nil {
+		return err
+	}
+	if !hosting.GetConfig()["auto_start"].GetBoolValue() {
+		return nil
+	}
+	return s.enableInstanceStart(ctx, resp.Msg.GetId())
+}
+
+func (s *InstancesServer) enableInstanceStart(ctx context.Context, uuid string) error {
+	inst, err := s.ctrl.Get(ctx, uuid)
+	if err != nil || inst == nil || inst.Instance == nil {
+		return fmt.Errorf("failed to start bundled empty instance: %w", err)
+	}
+	if inst.Config == nil {
+		inst.Config = map[string]*structpb.Value{}
+	}
+	if !inst.Config["auto_start"].GetBoolValue() {
+		oldPkg := proto.Clone(inst.Instance).(*pb.Instance)
+		inst.Config["auto_start"] = structpb.NewBoolValue(true)
+		if err := s.ctrl.Update(ctx, "", inst.Instance, oldPkg); err != nil {
+			return err
+		}
+	}
+	if inst.GetStatus() == spb.NoCloudStatus_INIT {
+		if err := s.ctrl.SetStatus(ctx, inst.Instance, spb.NoCloudStatus_UP); err != nil {
+			return fmt.Errorf("failed to up bundled empty instance: %w", err)
+		}
+	}
+	return nil
+}
+
+func (s *InstancesServer) emptyProviderForPlan(ctx context.Context, planUUID string) (*graph.ServicesProvider, error) {
+	sps, err := s.sp_ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list service providers: %w", err)
+	}
+	for _, sp := range sps {
+		if sp == nil || !strings.EqualFold(sp.GetType(), "empty") {
+			continue
+		}
+		plans, err := s.bp_ctrl.List(ctx, sp.GetUuid())
+		if err != nil {
+			return nil, fmt.Errorf("failed to list plans of %s: %w", sp.GetUuid(), err)
+		}
+		for _, plan := range plans {
+			if plan != nil && plan.GetUuid() == planUUID {
+				return sp, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("no empty service provider is bound to plan %s", planUUID)
+}
+
+func (s *InstancesServer) rollbackInstance(ctx context.Context, uuid string) {
+	group, err := s.ctrl.GetGroup(ctx, uuid)
+	if err != nil || group == nil || group.Group == nil {
+		s.log.Error("Failed to roll back hosting instance", zap.Error(err), zap.String("instance", uuid))
+		return
+	}
+	if err := s.ctrl.Delete(ctx, group.Group.GetUuid(), &pb.Instance{Uuid: uuid}); err != nil {
+		s.log.Error("Failed to delete hosting instance after bundled package error", zap.Error(err), zap.String("instance", uuid))
+	}
 }
