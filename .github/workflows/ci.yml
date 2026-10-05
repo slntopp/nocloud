@@ -90,6 +90,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
@@ -128,6 +129,7 @@ jobs:
           context: .
           file: Dockerfiles/${{matrix.tag}}/Dockerfile
           push: true
+          provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: IMAGE_TAG=${{env.IMAGE_TAG}}
