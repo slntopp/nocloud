@@ -2471,6 +2471,19 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
+
+			sites := hostingSites(instOld.Instance)
+			if amount := siteCreditAmount(instOld.Instance, sites); amount > 0 && !siteCreditGranted(instNew.Config) {
+				_, err = s.applyTransaction(ctx, -amount, acc.GetUuid(), acc.GetCurrency(), false, &applyTransactionMeta{
+					TransactionType: "transaction top-up",
+					InstanceUUID:    i,
+					Description:     fmt.Sprintf("Site builder credit for %d sites", sites),
+				})
+				if err != nil {
+					return inv, fmt.Errorf("failed to credit site builder balance: %w", err)
+				}
+				instNew.Config[siteCreditConfigKey] = structpb.NewBoolValue(true)
+			}
 			// Update instance in the end due to publish operations inside
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
 				log.Error("Failed to update instance", zap.Error(err))
