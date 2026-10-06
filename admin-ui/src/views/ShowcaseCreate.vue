@@ -71,11 +71,7 @@
           <v-switch v-model="showcase.meta.isNew" label="Is new?" />
         </v-col>
 
-        <v-col cols="2">
-          <v-switch v-model="showcase.meta.ai_packages" label="AI packages" />
-        </v-col>
-
-        <v-col v-if="showcase.meta.ai_packages" cols="4">
+        <v-col v-if="isAiPackages" cols="4">
           <v-text-field
             v-model.trim="showcase.meta.landing"
             label="Landing URL"
@@ -176,11 +172,14 @@ const { realShowcase, isEdit } = toRefs(props);
 const store = useStore();
 const router = useRouter();
 
+const AI_PACKAGES_TYPE = "ai-packages";
+
 const types = [
   "cloud",
   "custom",
   "virtual",
   "openai",
+  "ai-packages",
   "vpn",
   "ione-vpn",
   "bots",
@@ -209,10 +208,13 @@ const showcase = ref({
     type: "",
     iconColor: "",
     iconIsUrl: false,
-    ai_packages: false,
     landing: "",
   },
 });
+
+const isAiPackages = computed(
+  () => showcase.value.meta.type === AI_PACKAGES_TYPE
+);
 
 const currentLang = ref("en");
 const langs = ["en", "ru", "pl"];
@@ -284,8 +286,12 @@ const setShowcase = () => {
   showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
 
-  // ai_packages and landing must exist up front for Vue 2 reactivity
-  showcase.value.meta = { ai_packages: false, landing: "", ...showcase.value.meta };
+  // landing must exist up front for Vue 2 reactivity
+  showcase.value.meta = { landing: "", ...showcase.value.meta };
+  // showcases marked with the old ai_packages flag carry the type now
+  if (showcase.value.meta.ai_packages) {
+    showcase.value.meta.type = AI_PACKAGES_TYPE;
+  }
   isIconUrl.value = !!showcase.value.meta.iconIsUrl;
 
   if (!Array.isArray(showcase.value.items)) {
@@ -318,7 +324,8 @@ const save = async () => {
   try {
     const data = JSON.parse(JSON.stringify(showcase.value));
     data.meta.iconColor = data.meta.iconColor || undefined;
-    data.meta.landing = (data.meta.ai_packages && data.meta.landing) || undefined;
+    data.meta.ai_packages = isAiPackages.value;
+    data.meta.landing = (isAiPackages.value && data.meta.landing) || undefined;
     data.items.pop();
     data.locations = [];
     Object.entries(filteredLocations.value).forEach(([i, value]) => {
