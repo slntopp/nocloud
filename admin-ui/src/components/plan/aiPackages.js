@@ -35,6 +35,7 @@ export function toForm(key, product = {}) {
     site: Boolean(aiValue(product, "ai_site")),
     promocode: aiValue(product, "ai_promocode") ?? "",
     public: product.public ?? true,
+    public: key ? Boolean(product.public) : product.public !== false,
     sorter: Number(product.sorter) || 0,
   };
 }
@@ -72,7 +73,7 @@ export function toProduct(form, original = {}) {
     price: Number(form.price),
     period: Number(form.period),
     periodKind: form.periodKind || "DEFAULT",
-    public: form.public,
+    public: Boolean(form.public),
     sorter: Number(form.sorter) || 0,
     meta,
   };
