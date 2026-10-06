@@ -255,7 +255,13 @@
                                   :key="resolution"
                                   colspan="2"
                                 >
-                                  {{ resolution }}
+                                  <span>{{ resolution }}</span>
+                                  <v-btn
+                                    icon
+                                    x-small
+                                    @click="removeResolution(field, resolution)"
+                                    ><v-icon small>mdi-close</v-icon></v-btn
+                                  >
                                 </th>
                               </tr>
                               <tr class="resolution-prices__sub">
@@ -306,6 +312,24 @@
                             </tbody>
                           </table>
                         </div>
+                        <v-row justify="end" class="mt-2">
+                          <v-col cols="3">
+                            <v-text-field
+                              dense
+                              outlined
+                              hide-details
+                              label="New resolution"
+                              v-model="newResolution"
+                            />
+                          </v-col>
+                          <v-col cols="2">
+                            <v-btn
+                              :disabled="!newResolution || isSaveModelLoading"
+                              @click="addResolution(field)"
+                              >Add new value</v-btn
+                            >
+                          </v-col>
+                        </v-row>
                       </v-col>
                     </template>
                     <template v-else-if="field.type === 'map-number'">
@@ -632,6 +656,7 @@ const billingSettinfsMessages = ref([]);
 const currentBillingSettings = ref({});
 const newKeysForMaps = ref({});
 const newSubkeysForMaps = ref({});
+const newResolution = ref("");
 const currentSerial = ref();
 
 const availableTypes = [
@@ -905,11 +930,16 @@ const openBillingSettings = (item) => {
 
         if (fields[field] === "resolution-table") {
           const current = temp.billing[key][subkey] || {};
-          const resolutions =
-            temp.meta?.request_parameters?.resolution?.enum ||
-            Object.keys(current);
+          const fromEnum =
+            temp.meta?.request_parameters?.resolution?.enum || [];
+          const names = [];
+          for (const resolution of [...fromEnum, ...Object.keys(current)]) {
+            if (resolution && !names.includes(resolution)) {
+              names.push(resolution);
+            }
+          }
           const next = {};
-          for (const resolution of resolutions) {
+          for (const resolution of names) {
             next[resolution] = normalizeAudioPrice(current[resolution]);
           }
           temp.billing[key][subkey] = next;
@@ -962,10 +992,54 @@ const resolutionColumns = (field) => {
     currentBillingSettings.value.billing?.[field.key]?.[field.subkey] || {};
   const fromEnum =
     currentBillingSettings.value.meta?.request_parameters?.resolution?.enum;
-  if (Array.isArray(fromEnum) && fromEnum.length) {
-    return fromEnum;
+  const names = [];
+  const push = (name) => {
+    if (!name || names.includes(name)) {
+      return;
+    }
+    names.push(name);
+  };
+  if (Array.isArray(fromEnum)) {
+    fromEnum.forEach(push);
   }
-  return Object.keys(stored);
+  Object.keys(stored).forEach(push);
+  return names;
+};
+
+const setResolutionColumns = (field, names) => {
+  const settings = currentBillingSettings.value;
+  const current = settings.billing[field.key][field.subkey] || {};
+  const next = {};
+  for (const name of names) {
+    next[name] = current[name] || normalizeAudioPrice(null);
+  }
+  settings.billing[field.key][field.subkey] = next;
+
+  const meta = { ...(settings.meta || {}) };
+  const params = { ...(meta.request_parameters || {}) };
+  params.resolution = { ...(params.resolution || {}), enum: [...names] };
+  meta.request_parameters = params;
+  settings.meta = meta;
+};
+
+const addResolution = (field) => {
+  const name = (newResolution.value || "").trim();
+  if (!name) {
+    return;
+  }
+  const names = resolutionColumns(field);
+  if (!names.includes(name)) {
+    names.push(name);
+  }
+  setResolutionColumns(field, names);
+  newResolution.value = "";
+};
+
+const removeResolution = (field, name) => {
+  setResolutionColumns(
+    field,
+    resolutionColumns(field).filter((item) => item !== name)
+  );
 };
 
 const resolutionSubheads = (field) =>
@@ -1017,6 +1091,17 @@ const saveBillingSettings = async () => {
               configModel.billing[key][subkey][resolution] = saved;
             }
           }
+          if (!configModel.meta) {
+            configModel.meta = {};
+          }
+          const params = {
+            ...(configModel.meta.request_parameters || {}),
+          };
+          params.resolution = {
+            ...(params.resolution || {}),
+            enum: Object.keys(rates),
+          };
+          configModel.meta.request_parameters = params;
         }
 
         if (fields[field] === "map-number") {
