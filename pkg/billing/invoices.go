@@ -2408,6 +2408,16 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 	return resp, nil
 }
 
+func bundledInstanceAlreadyStarted(err error) bool {
+	if err == nil {
+		return false
+	}
+	if connect.CodeOf(err) == connect.CodeFailedPrecondition || status.Code(err) == codes.FailedPrecondition {
+		return true
+	}
+	return strings.Contains(err.Error(), "already has auto_start enabled")
+}
+
 func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *zap.Logger, inv *graph.Invoice, defCurr *pb.Currency) (*graph.Invoice, error) {
 
 	switch inv.GetType() {
@@ -2474,10 +2484,8 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if uuid := instNew.GetData()["empty_instance"].GetStringValue(); uuid != "" {
 				startReq := connect.NewRequest(&ipb.StartRequest{Id: uuid})
 				startReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-				if _, err := s.instancesClient.Start(ctxWithRoot(ctx), startReq); err != nil {
-					if connect.CodeOf(err) != connect.CodeFailedPrecondition {
-						return inv, fmt.Errorf("failed to start bundled empty instance: %w", err)
-					}
+				if _, err := s.instancesClient.Start(ctxWithRoot(ctx), startReq); err != nil && !bundledInstanceAlreadyStarted(err) {
+					return inv, fmt.Errorf("failed to start bundled empty instance: %w", err)
 				}
 			}
 			// Update instance in the end due to publish operations inside

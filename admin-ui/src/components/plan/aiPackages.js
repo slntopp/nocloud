@@ -32,7 +32,7 @@ export function toForm(key, product = {}) {
     seats: seats > 0 ? seats : "",
     models: modelKeys,
     site: Boolean(aiValue(product, "ai_site")),
-    public: product.public ?? true,
+    public: key ? Boolean(product.public) : product.public !== false,
     sorter: Number(product.sorter) || 0,
   };
 }
@@ -67,7 +67,7 @@ export function toProduct(form, original = {}) {
     price: Number(form.price),
     period: Number(form.period),
     periodKind: form.periodKind || "DEFAULT",
-    public: form.public,
+    public: Boolean(form.public),
     sorter: Number(form.sorter) || 0,
     meta,
   };

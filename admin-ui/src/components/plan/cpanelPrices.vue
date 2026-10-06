@@ -57,6 +57,9 @@
             <template v-slot:[`item.enabled`]="{ item }">
               <v-switch v-model="item.enabled" />
             </template>
+            <template v-slot:[`item.tempDomain`]="{ item }">
+              <v-switch v-model="item.tempDomain" />
+            </template>
             <template v-slot:[`item.name`]="{ item }">
               <v-text-field v-model="item.name" />
             </template>
@@ -140,6 +143,16 @@ function unwrapMetaString(value) {
   return "";
 }
 
+function metaFlag(value) {
+  if (value === true || value === "true") {
+    return true;
+  }
+  if (value && typeof value === "object") {
+    return value.boolValue === true || value.bool_value === true;
+  }
+  return false;
+}
+
 function emptyBindValue(product) {
   const plan = unwrapMetaString(product?.resources?.empty_plan) || unwrapMetaString(product?.meta?.empty_plan);
   const pkg = unwrapMetaString(product?.resources?.empty_product) || unwrapMetaString(product?.meta?.empty_product);
@@ -218,6 +231,7 @@ export default {
       { text: "Price", value: "price", width: 150 },
       { text: "Package", value: "emptyBind", width: 280 },
       { text: "Enabled", value: "enabled" },
+      { text: "Temp domain", value: "tempDomain" },
     ],
   }),
   methods: {
@@ -251,6 +265,9 @@ export default {
         price.enabled = !!product;
         price.periodKind = product?.periodKind || "CALENDAR_MONTH";
         price.emptyBind = emptyBindValue(product);
+        price.tempDomain =
+          metaFlag(product?.meta?.temp_domain) ||
+          metaFlag(product?.resources?.temp_domain);
         return price;
       });
       this.isPricesLoading = false;
@@ -302,6 +319,10 @@ export default {
           delete meta.site_models;
           delete meta.empty_plan;
           delete meta.empty_product;
+          delete meta.temp_domain;
+          if (item.tempDomain) {
+            meta.temp_domain = true;
+          }
           const bind = parseEmptyBind(item.emptyBind);
           const resources = {
             model: item.key,
