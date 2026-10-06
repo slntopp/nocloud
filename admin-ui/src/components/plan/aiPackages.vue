@@ -72,6 +72,9 @@
       <template v-slot:[`item.public`]="{ item }">
         <v-icon small>{{ item.public ? "mdi-check" : "mdi-minus" }}</v-icon>
       </template>
+      <template v-slot:[`item.site`]="{ item }">
+        <v-icon small>{{ item.form.site ? "mdi-check" : "mdi-minus" }}</v-icon>
+      </template>
       <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex">
           <v-btn icon small title="Edit" @click="openEdit(item.key)">
@@ -154,6 +157,9 @@
               <v-switch v-model="form.public" label="Public" />
             </v-col>
             <v-col cols="6">
+              <v-switch v-model="form.site" label="Site constructor only" />
+            </v-col>
+            <v-col cols="6">
               <v-text-field
                 v-model.number="form.sorter"
                 type="number"
@@ -222,6 +228,7 @@ const headers = [
   { text: "Seats", value: "seats" },
   { text: "Models", value: "models", sortable: false },
   { text: "Public", value: "public" },
+  { text: "Site", value: "site" },
   { text: "Sorter", value: "sorter" },
   { text: "Actions", value: "actions", sortable: false },
 ];
@@ -238,6 +245,7 @@ const rows = computed(() =>
         credit: form.credit,
         seats: form.seats || "—",
         public: form.public,
+        site: form.site,
         sorter: form.sorter,
         form,
         isAi: isAiPackage(product),

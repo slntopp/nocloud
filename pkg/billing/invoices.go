@@ -2472,7 +2472,9 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
 			if uuid := instNew.GetData()["empty_instance"].GetStringValue(); uuid != "" {
-				if _, err := s.instancesClient.Start(ctxWithRoot(ctx), connect.NewRequest(&ipb.StartRequest{Id: uuid})); err != nil {
+				startReq := connect.NewRequest(&ipb.StartRequest{Id: uuid})
+				startReq.Header().Set("Authorization", "Bearer "+s.rootToken)
+				if _, err := s.instancesClient.Start(ctxWithRoot(ctx), startReq); err != nil {
 					if connect.CodeOf(err) != connect.CodeFailedPrecondition {
 						return inv, fmt.Errorf("failed to start bundled empty instance: %w", err)
 					}
