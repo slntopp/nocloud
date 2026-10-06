@@ -278,7 +278,7 @@ func (s *InstancesServer) Start(ctx context.Context, _req *connect.Request[pb.St
 	already := instance.Config["auto_start"] != nil && instance.Config["auto_start"].GetBoolValue()
 	if already && instance.GetStatus() != spb.NoCloudStatus_INIT {
 		log.Info("Instance already has auto_start enabled", zap.String("uuid", instance.GetUuid()))
-		return nil, status.Error(codes.FailedPrecondition, "Instance already has auto_start enabled")
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("Instance already has auto_start enabled"))
 	}
 
 	if !already {
@@ -373,6 +373,11 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		if graph.KeepAdminConfig(req.GetInstance(), nil) {
 			log.Warn("Dropping tenant-supplied admin config", zap.String("requestor", requester))
 		}
+	}
+
+	if err := s.ensureTempDomain(ctx, req.GetInstance()); err != nil {
+		log.Error("Temporary domain is not allowed", zap.Error(err))
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	if req.AutoAssign {
@@ -2117,6 +2122,43 @@ func metaString(meta map[string]*structpb.Value, key string) string {
 		return ""
 	}
 	return strings.TrimSpace(meta[key].GetStringValue())
+}
+
+func metaBool(meta map[string]*structpb.Value, key string) bool {
+	if meta == nil || meta[key] == nil {
+		return false
+	}
+	if meta[key].GetBoolValue() {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(meta[key].GetStringValue()), "true")
+}
+
+func productAllowsTempDomain(product *billingpb.Product) bool {
+	if product == nil {
+		return false
+	}
+	return metaBool(product.GetMeta(), "temp_domain") || metaBool(product.GetResources(), "temp_domain")
+}
+
+func (s *InstancesServer) ensureTempDomain(ctx context.Context, inst *pb.Instance) error {
+	if inst == nil || inst.GetBillingPlan().GetUuid() == "" {
+		return nil
+	}
+	if strings.TrimSpace(inst.GetConfig()["domain"].GetStringValue()) != "" {
+		return nil
+	}
+	plan, err := s.bp_ctrl.Get(ctx, inst.GetBillingPlan())
+	if err != nil {
+		return fmt.Errorf("failed to get billing plan: %w", err)
+	}
+	if !strings.EqualFold(plan.GetType(), "cpanel") {
+		return nil
+	}
+	if productAllowsTempDomain(plan.GetProducts()[inst.GetProduct()]) {
+		return nil
+	}
+	return fmt.Errorf("temporary domain is not allowed for this tariff")
 }
 
 func productBindString(product *billingpb.Product, key string) string {
