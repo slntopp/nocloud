@@ -2471,18 +2471,12 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
-
-			sites := hostingSites(instOld.Instance)
-			if amount := siteCreditAmount(instOld.Instance, sites); amount > 0 && !siteCreditGranted(instNew.Config) {
-				_, err = s.applyTransaction(ctx, -amount, acc.GetUuid(), acc.GetCurrency(), false, &applyTransactionMeta{
-					TransactionType: "transaction top-up",
-					InstanceUUID:    i,
-					Description:     fmt.Sprintf("Site builder credit for %d sites", sites),
-				})
-				if err != nil {
-					return inv, fmt.Errorf("failed to credit site builder balance: %w", err)
+			if uuid := instNew.GetData()["empty_instance"].GetStringValue(); uuid != "" {
+				if _, err := s.instancesClient.Start(ctxWithRoot(ctx), connect.NewRequest(&ipb.StartRequest{Id: uuid})); err != nil {
+					if connect.CodeOf(err) != connect.CodeFailedPrecondition {
+						return inv, fmt.Errorf("failed to start bundled empty instance: %w", err)
+					}
 				}
-				instNew.Config[siteCreditConfigKey] = structpb.NewBoolValue(true)
 			}
 			// Update instance in the end due to publish operations inside
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {

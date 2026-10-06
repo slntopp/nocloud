@@ -328,6 +328,10 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 		log.Info("Skipping creation of start invoice for auto_start instance")
 		return nil
 	}
+	if instance.GetData()["hosting_instance"].GetStringValue() != "" {
+		log.Info("Skipping creation of start invoice for empty instance bundled with hosting")
+		return nil
+	}
 
 	// Find owner account
 	cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
