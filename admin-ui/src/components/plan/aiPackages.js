@@ -1,9 +1,10 @@
 /**
  * AI packages are the products of an "empty" plan whose meta carries the keys the OpenAI driver
  * reads: ai_credit (NCU per paid period), ai_seats (how many people may spend it; absent is the
- * whole organization) and ai_models (the model keys it pays for; absent is every model).
+ * whole organization) and ai_models (the model keys it pays for; absent is every model). The
+ * storefront reads one more: ai_promocode, the code it applies to this package on its own.
  */
-export const AI_KEYS = ["ai_credit", "ai_seats", "ai_models", "ai_site"];
+export const AI_KEYS = ["ai_credit", "ai_seats", "ai_models", "ai_site", "ai_promocode"];
 
 export const DEFAULT_PERIOD = 3600 * 24 * 30;
 
@@ -32,6 +33,7 @@ export function toForm(key, product = {}) {
     seats: seats > 0 ? seats : "",
     models: modelKeys,
     site: Boolean(aiValue(product, "ai_site")),
+    promocode: aiValue(product, "ai_promocode") ?? "",
     public: product.public ?? true,
     sorter: Number(product.sorter) || 0,
   };
@@ -59,6 +61,9 @@ export function toProduct(form, original = {}) {
   }
   if (form.site) {
     meta.ai_site = true;
+  }
+  if (form.promocode.trim()) {
+    meta.ai_promocode = form.promocode.trim().toUpperCase();
   }
   const product = {
     ...original,
