@@ -3,7 +3,7 @@
  * reads: ai_credit (NCU per paid period), ai_seats (how many people may spend it; absent is the
  * whole organization) and ai_models (the model keys it pays for; absent is every model).
  */
-export const AI_KEYS = ["ai_credit", "ai_seats", "ai_models"];
+export const AI_KEYS = ["ai_credit", "ai_seats", "ai_models", "ai_site"];
 
 export const DEFAULT_PERIOD = 3600 * 24 * 30;
 
@@ -31,6 +31,7 @@ export function toForm(key, product = {}) {
     credit: Number(aiValue(product, "ai_credit")) || 0,
     seats: seats > 0 ? seats : "",
     models: modelKeys,
+    site: Boolean(aiValue(product, "ai_site")),
     public: product.public ?? true,
     sorter: Number(product.sorter) || 0,
   };
@@ -55,6 +56,9 @@ export function toProduct(form, original = {}) {
   }
   if (form.models.length > 0) {
     meta.ai_models = [...new Set(form.models)];
+  }
+  if (form.site) {
+    meta.ai_site = true;
   }
   const product = {
     ...original,
