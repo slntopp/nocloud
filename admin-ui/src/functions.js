@@ -2,6 +2,7 @@ import yaml from "yaml";
 import XlsxService from "@/services/XlsxService";
 import store from "@/store";
 import { Rounding } from "nocloud-proto/proto/es/billing/billing_pb";
+import { NoCloudStatus } from "nocloud-proto/proto/es/statuses/statuses_pb";
 import {
   endOfDay,
   endOfMonth,
@@ -277,6 +278,12 @@ export function readYAMLFile(file) {
 export function getSecondsByDays(days) {
   return +days * 60 * 60 * 24;
 }
+
+// ponytail: the backend status filter is an inclusion list, so hiding deleted
+// instances means listing every other status
+export const notDeletedStatuses = Object.values(NoCloudStatus)
+  .filter((value) => typeof value === "number")
+  .filter((value) => value !== NoCloudStatus.DEL);
 
 export function getState(item) {
   // ponytail: instance is logically deleted (status DEL) — the driver may still

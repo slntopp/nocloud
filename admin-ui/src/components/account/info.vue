@@ -202,7 +202,7 @@
       :show-select="false"
       :custom-filter="{
         account: [uuid],
-        'state.state': !!showDeletedInstances ? [] : [0, 1, 2, 3, 4, 6, 7, 8],
+        status: showDeletedInstances ? [] : notDeletedStatuses,
       }"
     />
 
@@ -274,7 +274,7 @@ import InstancesTable from "@/components/instancesTable.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import hintBtn from "@/components/ui/hintBtn.vue";
-import { formatSecondsToDate } from "@/functions";
+import { formatSecondsToDate, notDeletedStatuses } from "@/functions";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 import { computed, onMounted, onUnmounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";

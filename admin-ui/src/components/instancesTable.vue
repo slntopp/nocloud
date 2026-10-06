@@ -219,6 +219,7 @@ import {
   getBillingPeriod,
   getShortName,
   isInstancePayg,
+  notDeletedStatuses,
 } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
@@ -256,7 +257,7 @@ useSearch({
   defaultLayout: {
     title: "Default",
     filter: {
-      "state.state": [0, 1, 2, 3, 4, 6, 7, 8],
+      status: notDeletedStatuses,
     },
   },
 });
