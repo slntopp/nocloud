@@ -34,7 +34,6 @@ export function toForm(key, product = {}) {
     models: modelKeys,
     site: Boolean(aiValue(product, "ai_site")),
     promocode: aiValue(product, "ai_promocode") ?? "",
-    public: product.public ?? true,
     public: key ? Boolean(product.public) : product.public !== false,
     sorter: Number(product.sorter) || 0,
   };
