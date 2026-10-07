@@ -275,11 +275,13 @@ func (s *InstancesServer) Start(ctx context.Context, _req *connect.Request[pb.St
 	if instance.Config == nil {
 		instance.Config = make(map[string]*structpb.Value)
 	}
+	id := instance.GetUuid()
+	wasInit := instance.GetStatus() == spb.NoCloudStatus_INIT
 	old := proto.Clone(instance.Instance).(*pb.Instance)
 
 	already := instance.Config["auto_start"] != nil && instance.Config["auto_start"].GetBoolValue()
-	if already && instance.GetStatus() != spb.NoCloudStatus_INIT {
-		log.Info("Instance already has auto_start enabled", zap.String("uuid", instance.GetUuid()))
+	if already && !wasInit {
+		log.Info("Instance already has auto_start enabled", zap.String("uuid", id))
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("Instance already has auto_start enabled"))
 	}
 
@@ -289,9 +291,11 @@ func (s *InstancesServer) Start(ctx context.Context, _req *connect.Request[pb.St
 			log.Error("Failed to update instance", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to update instance")
 		}
+		instance.Uuid = id
 	}
 
-	if instance.GetStatus() == spb.NoCloudStatus_INIT {
+	if wasInit {
+		instance.Uuid = id
 		if err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_UP); err != nil {
 			log.Error("Failed to up instance after start", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to start instance")
@@ -2305,14 +2309,21 @@ func (s *InstancesServer) enableInstanceStart(ctx context.Context, uuid string) 
 	if inst.Config == nil {
 		inst.Config = map[string]*structpb.Value{}
 	}
+	id := inst.GetUuid()
+	if id == "" {
+		id = uuid
+	}
+	wasInit := inst.GetStatus() == spb.NoCloudStatus_INIT
 	if !inst.Config["auto_start"].GetBoolValue() {
 		oldPkg := proto.Clone(inst.Instance).(*pb.Instance)
 		inst.Config["auto_start"] = structpb.NewBoolValue(true)
 		if err := s.ctrl.Update(ctx, "", inst.Instance, oldPkg); err != nil {
 			return err
 		}
+		inst.Uuid = id
 	}
-	if inst.GetStatus() == spb.NoCloudStatus_INIT {
+	if wasInit {
+		inst.Uuid = id
 		if err := s.ctrl.SetStatus(ctx, inst.Instance, spb.NoCloudStatus_UP); err != nil {
 			return fmt.Errorf("failed to up bundled empty instance: %w", err)
 		}
