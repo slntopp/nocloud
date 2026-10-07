@@ -74,6 +74,10 @@ func JWT_STREAM_INTERCEPTOR(srv interface{}, stream grpc.ServerStream, info *grp
 	if err != nil {
 		return err
 	}
+	ctx, err = nocloud.CheckMember(ctx, l, info.FullMethod)
+	if err != nil {
+		return err
+	}
 
 	return handler(srv, &grpc_middleware.WrappedServerStream{
 		ServerStream:   stream,
@@ -135,10 +139,14 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 			return nil, err
 		}
 	}
+	asMember, err := nocloud.CheckMember(ctx, l, info.FullMethod)
+	if err != nil {
+		return nil, err
+	}
 
 	go handleLogActivity(ctx)
 
-	return handler(ctx, req)
+	return handler(asMember, req)
 }
 
 func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
@@ -191,6 +199,8 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
 	ctx = context.WithValue(ctx, nocloud.Expiration, exp)
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, acc.(string))
+
+	ctx = nocloud.MemberClaims(ctx, token[nocloud.NOCLOUD_MEMBER_CLAIM], token[nocloud.NOCLOUD_MEMBER_ACCESS_CLAIM])
 
 	ctx, err = func(ctx context.Context) (context.Context, error) {
 		sp := token[nocloud.NOCLOUD_SP_CLAIM]

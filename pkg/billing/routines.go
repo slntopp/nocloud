@@ -812,14 +812,8 @@ let global = (
         return acc
 )
 
-LET subs = (
-    FOR acc IN UNION_DISTINCT(global, local)
-        FILTER IS_ARRAY(acc.subaccounts)
-        FOR sub IN acc.subaccounts
-           RETURN DOCUMENT(Accounts, sub)
-)
-
-FOR acc IN union_distinct(local, global, subs)
+// Subaccounts are not resumed with their owner: their suspension is the owner's switch.
+FOR acc IN union_distinct(local, global)
     RETURN MERGE(acc, {uuid:acc._key})
 `
 
@@ -862,14 +856,9 @@ LET local = (
         RETURN acc
 )
 
-LET subs = (
-    FOR acc IN UNION_DISTINCT(global, local, extra)
-        FILTER IS_ARRAY(acc.subaccounts)
-        FOR sub IN acc.subaccounts
-           RETURN DOCUMENT(Accounts, sub)
-)
-
-FOR acc IN UNION_DISTINCT(global, local, extra, subs)
+// Subaccounts are not suspended with their owner: they own nothing, and what they spend is the
+// owner's, which its own suspension stops.
+FOR acc IN UNION_DISTINCT(global, local, extra)
     RETURN MERGE(acc, {uuid:acc._key})
 `
 

@@ -110,10 +110,14 @@ func (i *Interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 				return nil, err
 			}
 		}
+		asMember, err := nocloud.CheckMember(ctx, i.log, req.Spec().Procedure)
+		if err != nil {
+			return nil, err
+		}
 
 		go i.handleLogActivity(ctx)
 
-		return next(ctx, req)
+		return next(asMember, req)
 	})
 }
 
@@ -140,6 +144,10 @@ func (i *Interceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc) co
 		}
 
 		ctx, err := i.JwtAuthMiddleware(ctx, segments[1])
+		if err != nil {
+			return err
+		}
+		ctx, err = nocloud.CheckMember(ctx, l, shc.Spec().Procedure)
 		if err != nil {
 			return err
 		}
@@ -193,6 +201,8 @@ func (i *Interceptor) JwtAuthMiddleware(ctx context.Context, tokenString string)
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
 	ctx = context.WithValue(ctx, nocloud.Expiration, exp)
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, acc.(string))
+
+	ctx = nocloud.MemberClaims(ctx, token[nocloud.NOCLOUD_MEMBER_CLAIM], token[nocloud.NOCLOUD_MEMBER_ACCESS_CLAIM])
 
 	ctx, err = func(ctx context.Context) (context.Context, error) {
 		sp := token[nocloud.NOCLOUD_SP_CLAIM]
