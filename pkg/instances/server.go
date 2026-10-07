@@ -17,6 +17,8 @@ package instances
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
@@ -2156,9 +2158,28 @@ func (s *InstancesServer) ensureTempDomain(ctx context.Context, inst *pb.Instanc
 		return nil
 	}
 	if productAllowsTempDomain(plan.GetProducts()[inst.GetProduct()]) {
+		if inst.Config == nil {
+			inst.Config = map[string]*structpb.Value{}
+		}
+		inst.Config["domain"] = structpb.NewStringValue(tempDomainName(inst.GetUuid()))
 		return nil
 	}
 	return fmt.Errorf("temporary domain is not allowed for this tariff")
+}
+
+const tempDomainZone = "7min.page"
+
+func tempDomainName(instanceID string) string {
+	compact := strings.ReplaceAll(strings.ToLower(instanceID), "-", "")
+	if len(compact) > 10 {
+		compact = compact[:10]
+	}
+	if compact == "" {
+		buf := make([]byte, 5)
+		_, _ = rand.Read(buf)
+		compact = hex.EncodeToString(buf)
+	}
+	return "s" + compact + "." + tempDomainZone
 }
 
 func productBindString(product *billingpb.Product, key string) string {
@@ -2212,6 +2233,11 @@ func (s *InstancesServer) createBundledEmptyInstance(ctx context.Context, reques
 	data := map[string]*structpb.Value{
 		"hosting_instance": structpb.NewStringValue(hostingUUID),
 	}
+	config := map[string]*structpb.Value{}
+	if domain := strings.TrimSpace(hosting.GetConfig()["domain"].GetStringValue()); domain != "" {
+		config["domain"] = structpb.NewStringValue(domain)
+		data["domain"] = structpb.NewStringValue(domain)
+	}
 
 	title := emptyProduct.GetTitle()
 	if title == "" {
@@ -2231,6 +2257,7 @@ func (s *InstancesServer) createBundledEmptyInstance(ctx context.Context, reques
 		Instance: &pb.Instance{
 			Title:       title,
 			Data:        data,
+			Config:      config,
 			Resources:   resources,
 			BillingPlan: &billingpb.Plan{Uuid: emptyPlan.GetUuid()},
 			Product:     &key,

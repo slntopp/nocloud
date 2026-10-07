@@ -37,6 +37,7 @@ export default {
     errors: {
       domain: [],
       token: [],
+      user: [],
     },
     fields: {
       domain: {
@@ -48,6 +49,11 @@ export default {
         label: "token",
         subheader: "Token",
         rules: [(value) => !!value || "Field is required"],
+      },
+      user: {
+        label: "WHM user",
+        subheader: "WHM user",
+        rules: [() => true],
       },
     },
   }),
