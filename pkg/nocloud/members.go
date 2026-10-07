@@ -28,27 +28,27 @@ const NoCloudActingMember = ContextKey("acting_member")
 // The member's access, kept in its account data under this key; only the owner (or an admin) sets it.
 const MemberAccessKey = "member_access"
 
+// Spending on AI (the owner's AI balance and packages, through the AI driver) every member may;
+// it is not an access.
 const (
-	MemberAI             = "ai"              // spend the owner's AI balance and packages (the AI driver)
-	MemberBillingRead    = "billing.read"    // see the owner's invoices, transactions and reports
-	MemberBillingPay     = "billing.pay"     // pay the owner's invoices and top its balance up
-	MemberServicesRead   = "services.read"   // see the owner's services and instances
-	MemberServicesManage = "services.manage" // order, change, start, stop and delete them
+	MemberOrder    = "order"    // buy subscriptions and services, top the owner's balance up
+	MemberInvoices = "invoices" // see and pay the owner's invoices
+	MemberSupport  = "support"  // write to support (the chats service checks it, NoCloud has nothing)
+	MemberServices = "services" // see the owner's services
 )
 
-// Access a member had before members had access: what LibreChat members need.
-var MemberAccessDefault = []string{MemberAI}
+// A member with no access set (one from LibreChat, or from before access existed) only spends on AI.
+var MemberAccessDefault = []string{}
 
 var memberImplies = map[string][]string{
-	MemberAI:             nil,
-	MemberBillingRead:    nil,
-	MemberBillingPay:     {MemberBillingRead},
-	MemberServicesRead:   nil,
-	MemberServicesManage: {MemberServicesRead},
+	MemberOrder:    {MemberServices},
+	MemberInvoices: nil,
+	MemberSupport:  nil,
+	MemberServices: nil,
 }
 
-// MemberAccess checks a member's access and adds what it implies: paying needs seeing invoices,
-// managing services needs seeing them.
+// MemberAccess checks a member's access and adds what it implies: ordering needs seeing what was
+// ordered.
 func MemberAccess(access []string) ([]string, error) {
 	result := []string{}
 	for _, a := range access {
@@ -124,10 +124,9 @@ var memberBase = methods(
 )
 
 // What each access lets a member call, as its owner. Nothing here may touch accounts themselves:
-// as the owner, a member would have ROOT on the owner's account. "ai" is the AI driver's, not
-// NoCloud's.
+// as the owner, a member would have ROOT on the owner's account.
 var memberScopes = map[string]map[string]bool{
-	MemberBillingRead: methods(
+	MemberInvoices: methods(
 		"/nocloud.billing.BillingService/GetTransactions",
 		"/nocloud.billing.BillingService/GetTransactionsCount",
 		"/nocloud.billing.BillingService/GetRecords",
@@ -138,14 +137,25 @@ var memberScopes = map[string]map[string]bool{
 		"/nocloud.billing.BillingService/GetInvoice",
 		"/nocloud.billing.BillingService/GetInvoices",
 		"/nocloud.billing.BillingService/GetInvoicesCount",
-	),
-	MemberBillingPay: methods(
 		"/nocloud.billing.BillingService/Pay",
 		"/nocloud.billing.BillingService/PayWithBalance",
-		"/nocloud.billing.BillingService/CreateTopUpBalanceInvoice",
 		"/nocloud.billing.BillingService/CreateRenewalInvoice",
 	),
-	MemberServicesRead: methods(
+	// Buying ends in an invoice to pay, so ordering pays the invoices it makes.
+	MemberOrder: methods(
+		"/nocloud.services.ServicesService/TestConfig",
+		"/nocloud.services.ServicesService/Create",
+		"/nocloud.services.ServicesService/Update",
+		"/nocloud.services.ServicesService/Up",
+		"/nocloud.instances.InstancesService/Create",
+		"/nocloud.billing.PromocodesService/Apply",
+		"/nocloud.billing.PromocodesService/Detach",
+		"/nocloud.billing.BillingService/CreateTopUpBalanceInvoice",
+		"/nocloud.billing.BillingService/GetInvoice",
+		"/nocloud.billing.BillingService/Pay",
+		"/nocloud.billing.BillingService/PayWithBalance",
+	),
+	MemberServices: methods(
 		"/nocloud.services.ServicesService/Get",
 		"/nocloud.services.ServicesService/List",
 		"/nocloud.services.ServicesService/Stream",
@@ -157,24 +167,7 @@ var memberScopes = map[string]map[string]bool{
 		"/nocloud.billing.BillingService/ListPlansInstances",
 		"/nocloud.billing.RecordsService/GetActive",
 	),
-	MemberServicesManage: methods(
-		"/nocloud.instances.InstancesService/Invoke",
-		"/nocloud.instances.InstancesService/Start",
-		"/nocloud.instances.InstancesService/Create",
-		"/nocloud.instances.InstancesService/Update",
-		"/nocloud.instances.InstancesService/Delete",
-		"/nocloud.instances.InstancesService/Detach",
-		"/nocloud.instances.InstancesService/Attach",
-		"/nocloud.services.ServicesService/TestConfig",
-		"/nocloud.services.ServicesService/Create",
-		"/nocloud.services.ServicesService/Update",
-		"/nocloud.services.ServicesService/Up",
-		"/nocloud.services.ServicesService/Down",
-		"/nocloud.services.ServicesService/Delete",
-		"/nocloud.services_providers.ServicesProvidersService/Invoke",
-		"/nocloud.billing.PromocodesService/Apply",
-		"/nocloud.billing.PromocodesService/Detach",
-	),
+	MemberSupport: methods(),
 }
 
 // MemberOwner is the owner of the member who makes this request as itself, "" for anyone else,

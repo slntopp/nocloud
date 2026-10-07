@@ -23,21 +23,27 @@ func TestCheckMember(t *testing.T) {
 	defer func(g string) { memberGate = g }(memberGate)
 	memberGate = ""
 
-	if _, err := CheckMember(member("ai"), log, create); err == nil {
-		t.Error("an AI member creates instances")
+	if _, err := CheckMember(member(), log, create); err == nil {
+		t.Error("a member without access creates instances")
 	}
-	if _, err := CheckMember(member("services.read"), log, create); err == nil {
-		t.Error("a services.read member creates instances")
+	if _, err := CheckMember(member("services"), log, create); err == nil {
+		t.Error("a services member creates instances")
 	}
-	ctx, err := CheckMember(member("services.read"), log, list)
+	if _, err := CheckMember(member("order", "services"), log, create); err != nil {
+		t.Errorf("an order member does not create instances: %v", err)
+	}
+	if _, err := CheckMember(member("order", "services"), log, "/nocloud.instances.InstancesService/Delete"); err == nil {
+		t.Error("an order member deletes instances")
+	}
+	ctx, err := CheckMember(member("services"), log, list)
 	if err != nil || ctx.Value(NoCloudAccount) != "o" || MemberOwner(ctx) != "" || ctx.Value(NoCloudActingMember) != "m" {
-		t.Errorf("a services.read member does not list as the owner: %v", err)
+		t.Errorf("a services member does not list as the owner: %v", err)
 	}
-	ctx, err = CheckMember(member("services.manage", "services.read"), log, get)
+	ctx, err = CheckMember(member("order", "services"), log, get)
 	if err != nil || ctx.Value(NoCloudAccount) != "m" || MemberOwner(ctx) != "o" {
 		t.Errorf("Get is not the member's own: %v", err)
 	}
-	for _, a := range []string{"billing.read", "billing.pay", "services.read", "services.manage"} {
+	for _, a := range []string{"order", "invoices", "support", "services"} {
 		if _, err := CheckMember(member(a), log, update); err == nil {
 			t.Errorf("a %s member updates accounts", a)
 		}
@@ -54,14 +60,17 @@ func TestCheckMember(t *testing.T) {
 }
 
 func TestMemberAccess(t *testing.T) {
-	if got, _ := MemberAccess([]string{"services.manage", "billing.pay", "ai"}); !slices.Equal(got,
-		[]string{"ai", "billing.pay", "billing.read", "services.manage", "services.read"}) {
+	if got, _ := MemberAccess([]string{"order", "support"}); !slices.Equal(got, []string{"order", "services", "support"}) {
 		t.Errorf("implied access: %v", got)
 	}
-	if _, err := MemberAccess([]string{"root"}); err == nil {
+	if _, err := MemberAccess([]string{"ai"}); err == nil {
 		t.Error("unknown access accepted")
 	}
-	if got := MemberAccessOf(nil); !slices.Equal(got, []string{"ai"}) {
+	old, _ := structpb.NewStruct(map[string]interface{}{"member_access": []interface{}{"ai", "billing.read"}})
+	if got := MemberAccessOf(old); len(got) != 0 {
+		t.Errorf("old access names: %v", got)
+	}
+	if got := MemberAccessOf(nil); len(got) != 0 {
 		t.Errorf("legacy member: %v", got)
 	}
 	none, _ := structpb.NewStruct(map[string]interface{}{"member_access": []interface{}{}})
