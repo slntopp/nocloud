@@ -546,6 +546,10 @@ func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.Sus
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	accId := driver.NewDocumentID(schema.ACCOUNTS_COL, req.Uuid)
+	// Nobody lifts their own suspension, and only who administers an account suspends it.
+	if requestor == req.GetUuid() || !s.ca.HasAccess(ctx, requestor, accId, access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
 
 	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
 		"account":     accId,
@@ -582,6 +586,9 @@ func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.Sus
 		log.Debug("Error updating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating account")
 	}
+	if acc.GetAccountOwner() != "" {
+		s.signOut(ctx, acc.Key)
+	}
 
 	nocloud.Log(log, &elpb.Event{
 		Entity:    schema.ACCOUNTS_COL,
@@ -608,6 +615,10 @@ func (s *AccountsServiceServer) Unsuspend(ctx context.Context, req *accountspb.U
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	accId := driver.NewDocumentID(schema.ACCOUNTS_COL, req.Uuid)
+	// Nobody lifts their own suspension, and only who administers an account suspends it.
+	if requestor == req.GetUuid() || !s.ca.HasAccess(ctx, requestor, accId, access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
 
 	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
 		"account":     accId,
@@ -673,6 +684,13 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	requested := request.GetUuid()
 	if requested == "me" {
 		requested = requestor
+	}
+
+	if owner := nocloud.MemberOwner(ctx); owner != "" && requested != requestor {
+		if requested != owner {
+			return nil, status.Error(codes.PermissionDenied, "Members see only themselves and their organization")
+		}
+		return s.organizationCard(ctx, owner, requestor)
 	}
 
 	log.Debug("Retrieving account", zap.String("uuid", requested))
@@ -866,6 +884,10 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 		if !ok {
 			return nil, status.Error(codes.Unauthenticated, "Wrong credentials given")
 		}
+		// A suspended member is one its organization switched off.
+		if acc.GetAccountOwner() != "" && acc.GetSuspended() {
+			return nil, status.Error(codes.PermissionDenied, "Account is suspended by its organization")
+		}
 	}
 
 	log.Debug("Authorized user", zap.String("ID", acc.ID.String()))
@@ -880,6 +902,10 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = acc.Key
 	claims[nocloud.NOCLOUD_SESSION_CLAIM] = session.GetId()
 	claims["expires"] = request.GetExp()
+	if owner := acc.GetAccountOwner(); owner != "" {
+		claims[nocloud.NOCLOUD_MEMBER_CLAIM] = owner
+		claims[nocloud.NOCLOUD_MEMBER_ACCESS_CLAIM] = nocloud.MemberAccessOf(acc.GetData())
+	}
 
 	if request.GetRootClaim() {
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, "0")
@@ -1022,6 +1048,12 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		structMap, _ := structpb.NewStruct(m)
 		request.Data = structMap
 	}
+	if memberAccess, err := memberAccessPatch(request.Data.AsMap(), request.GetAccountOwner() != ""); err != nil {
+		return nil, err
+	} else if memberAccess != nil {
+		list, _ := structpb.NewList(memberAccess)
+		request.Data.Fields[nocloud.MemberAccessKey] = structpb.NewListValue(list)
+	}
 	creationAccount := accountspb.Account{
 		Title:           request.Title,
 		Currency:        request.Currency,
@@ -1072,7 +1104,9 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return res, err
 	}
 
-	// Patch mother account with new subaccount and link namespace
+	// Patch mother account with new subaccount. No edge from the subaccount's namespace to the
+	// mother: AccessLevel takes the first edge's level, so it gave the subaccount ADMIN over her.
+	// The mother reaches the subaccount through her own namespace already.
 	if isSubaccount {
 		subaccounts := motherAcc.GetSubaccounts()
 		subaccounts = append(subaccounts, acc.GetUuid())
@@ -1082,17 +1116,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 			log.Error("Error updating mother account with new subaccount", zap.Error(err))
 			return res, err
 		}
-		col, _ := s.db.Collection(ctx, schema.NS2ACC)
-		accNs, err := s.ctrl.GetNamespace(ctx, acc)
-		if err != nil {
-			log.Error("Error getting personal namespace", zap.Error(err))
-			return res, err
-		}
-		if err := motherAcc.JoinNamespace(ctx, col, accNs, access.Level_MGMT, roles.DEFAULT); err != nil {
-			log.Error("Error joining child namespace to mother account", zap.Error(err))
-			return res, err
-		}
-		log.Debug("Subaccount created and linked", zap.String("subaccount", acc.GetUuid()))
+		log.Debug("Subaccount created", zap.String("subaccount", acc.GetUuid()))
 	}
 
 	return res, nil
@@ -1162,6 +1186,12 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 		normalizeDateCreate(m, true)
 		structMap, _ := structpb.NewStruct(m)
 		request.Data = structMap
+	}
+	if memberAccess, err := memberAccessPatch(request.Data.AsMap(), request.GetAccountOwner() != ""); err != nil {
+		return nil, err
+	} else if memberAccess != nil {
+		list, _ := structpb.NewList(memberAccess)
+		request.Data.Fields[nocloud.MemberAccessKey] = structpb.NewListValue(list)
 	}
 	creationAccount := accountspb.Account{
 		Title:           request.Title,
@@ -1255,6 +1285,18 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		request.Suspended = nil
 	}
 
+	var memberAccess []interface{}
+	if request.Data != nil {
+		if _, ok := request.Data.GetFields()[nocloud.MemberAccessKey]; ok && requestor == request.GetUuid() {
+			return nil, status.Error(codes.PermissionDenied, "Members may not change their own access")
+		}
+		memberAccess, err = memberAccessPatch(request.Data.AsMap(), acc.GetAccountOwner() != "")
+		if err != nil {
+			return nil, err
+		}
+	}
+	accessBefore := nocloud.MemberAccessOf(acc.GetData())
+
 	patch := make(map[string]interface{})
 
 	if acc.Title != request.Title && request.Title != "" {
@@ -1288,6 +1330,9 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 			delete(requestData, "phone_new")
 			log.Debug("Merging data")
 			mergedData := MergeMaps(acc.Data.AsMap(), requestData)
+			if memberAccess != nil {
+				mergedData[nocloud.MemberAccessKey] = memberAccess
+			}
 			applyTaxRate(mergedData)
 			normalizeDateCreate(mergedData, false)
 			patch["data"] = mergedData
@@ -1304,6 +1349,10 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	if err != nil {
 		log.Debug("Error updating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating account")
+	}
+
+	if memberAccess != nil && fmt.Sprint(memberAccess) != fmt.Sprint(accessBefore) {
+		s.signOut(ctx, acc.Key)
 	}
 
 	return &accountspb.UpdateResponse{Result: true}, nil
@@ -1377,6 +1426,11 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 	if err != nil {
 		log.Debug("Error deleting account and it's children", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting account")
+	}
+	if acc.GetAccountOwner() != "" {
+		s.dropMember(ctx, acc)
+	} else {
+		s.signOut(ctx, acc.Key)
 	}
 
 	return &accountspb.DeleteResponse{Result: true}, nil

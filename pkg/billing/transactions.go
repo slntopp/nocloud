@@ -111,14 +111,24 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	if req.Account != nil {
 		accString := *req.Account
 		accs := strings.Split(accString, ",")
+		owner := nocloud.MemberOwner(ctx)
 		for _, a := range accs {
+			if owner != "" && (a == owner || a == requestor) {
+				continue
+			}
 			node := driver.NewDocumentID(schema.ACCOUNTS_COL, a)
-			if !s.ca.HasAccess(ctx, requestor, node, access.Level_READ) {
+			if owner != "" || !s.ca.HasAccess(ctx, requestor, node, access.Level_READ) {
 				return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 			}
 		}
 		query += ` FILTER t.account in @acc`
 		vars["acc"] = accs
+		if owner != "" {
+			// A member sees, of its organization's transactions, only the charges it made itself.
+			query += ` && (t.account != @owner || t.meta.user == @requestor)`
+			vars["owner"] = owner
+			vars["requestor"] = requestor
+		}
 	} else {
 		if acc != schema.ROOT_ACCOUNT_KEY {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
