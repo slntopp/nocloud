@@ -238,6 +238,9 @@ func (s *BillingServiceServer) processInvoiceStatusActionLocked(log *zap.Logger,
 	}
 
 	_ = commit()
+	if event.GetKey() == billing.InvoicePaid {
+		s.startBundledEmptyInstances(log, inv)
+	}
 	return nil
 }
 

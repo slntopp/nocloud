@@ -420,6 +420,11 @@ func (s *InstancesServer) Create(ctx context.Context, _req *connect.Request[pb.C
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	if err := s.bindTempDomain(ctx, newId, req.GetInstance()); err != nil {
+		log.Error("Failed to assign temporary domain", zap.Error(err))
+		s.rollbackInstance(ctx, newId)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	if err := s.createBundledEmptyInstance(ctx, requester, newId, req.GetInstance()); err != nil {
 		log.Error("Failed to create bundled empty instance", zap.Error(err))
@@ -551,6 +556,11 @@ func (s *InstancesServer) createWithAutoAssign(ctx context.Context, req *pb.Crea
 	if err != nil {
 		log.Error("Failed to create instance", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := s.bindTempDomain(ctx, newId, req.GetInstance()); err != nil {
+		log.Error("Failed to assign temporary domain", zap.Error(err))
+		s.rollbackInstance(ctx, newId)
+		return nil, fmt.Errorf("failed to assign temporary domain: %w", err)
 	}
 	if err := s.ctrl.SetStatus(ctx, &pb.Instance{Uuid: newId}, spb.NoCloudStatus_UP); err != nil {
 		log.Error("Failed to up created instance", zap.Error(err))
@@ -2162,16 +2172,49 @@ func (s *InstancesServer) ensureTempDomain(ctx context.Context, inst *pb.Instanc
 		return nil
 	}
 	if productAllowsTempDomain(plan.GetProducts()[inst.GetProduct()]) {
-		if inst.Config == nil {
-			inst.Config = map[string]*structpb.Value{}
+		if id := strings.TrimSpace(inst.GetUuid()); id != "" {
+			if inst.Config == nil {
+				inst.Config = map[string]*structpb.Value{}
+			}
+			inst.Config["domain"] = structpb.NewStringValue(tempDomainName(id))
 		}
-		inst.Config["domain"] = structpb.NewStringValue(tempDomainName(inst.GetUuid()))
 		return nil
 	}
 	return fmt.Errorf("temporary domain is not allowed for this tariff")
 }
 
 const tempDomainZone = "7min.page"
+
+func (s *InstancesServer) bindTempDomain(ctx context.Context, id string, inst *pb.Instance) error {
+	if inst == nil || strings.TrimSpace(inst.GetConfig()["domain"].GetStringValue()) != "" {
+		return nil
+	}
+	if inst.GetBillingPlan().GetUuid() == "" {
+		return nil
+	}
+	plan, err := s.bp_ctrl.Get(ctx, inst.GetBillingPlan())
+	if err != nil {
+		return err
+	}
+	if !strings.EqualFold(plan.GetType(), "cpanel") || !productAllowsTempDomain(plan.GetProducts()[inst.GetProduct()]) {
+		return nil
+	}
+	name := tempDomainName(id)
+	if inst.Config == nil {
+		inst.Config = map[string]*structpb.Value{}
+	}
+	inst.Config["domain"] = structpb.NewStringValue(name)
+	stored, err := s.ctrl.Get(ctx, id)
+	if err != nil || stored == nil || stored.Instance == nil {
+		return fmt.Errorf("failed to load instance for temporary domain: %w", err)
+	}
+	old := proto.Clone(stored.Instance).(*pb.Instance)
+	if stored.Config == nil {
+		stored.Config = map[string]*structpb.Value{}
+	}
+	stored.Config["domain"] = structpb.NewStringValue(name)
+	return s.ctrl.Update(ctx, "", stored.Instance, old)
+}
 
 func tempDomainName(instanceID string) string {
 	compact := strings.ReplaceAll(strings.ToLower(instanceID), "-", "")

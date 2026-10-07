@@ -2408,6 +2408,32 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 	return resp, nil
 }
 
+func (s *BillingServiceServer) startBundledEmptyInstances(log *zap.Logger, inv *graph.Invoice) {
+	if inv == nil || inv.GetType() != pb.ActionType_INSTANCE_START {
+		return
+	}
+	ctx := ctxWithRoot(context.Background())
+	for _, i := range inv.GetInstances() {
+		if i == "" {
+			continue
+		}
+		inst, err := s.instances.GetWithAccess(ctx, driver.NewDocumentID(schema.ACCOUNTS_COL, schema.ROOT_ACCOUNT_KEY), i)
+		if err != nil || inst.Instance == nil {
+			log.Error("Failed to load hosting for bundled start", zap.Error(err), zap.String("instance", i))
+			continue
+		}
+		uuid := inst.GetData()["empty_instance"].GetStringValue()
+		if uuid == "" {
+			continue
+		}
+		startReq := connect.NewRequest(&ipb.StartRequest{Id: uuid})
+		startReq.Header().Set("Authorization", "Bearer "+s.rootToken)
+		if _, err := s.instancesClient.Start(ctx, startReq); err != nil && !bundledInstanceAlreadyStarted(err) {
+			log.Error("Failed to start bundled empty instance", zap.Error(err), zap.String("instance", uuid))
+		}
+	}
+}
+
 func bundledInstanceAlreadyStarted(err error) bool {
 	if err == nil {
 		return false
@@ -2481,13 +2507,7 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if err != nil {
 				return inv, fmt.Errorf("failed to apply transaction: %w", err)
 			}
-			if uuid := instNew.GetData()["empty_instance"].GetStringValue(); uuid != "" {
-				startReq := connect.NewRequest(&ipb.StartRequest{Id: uuid})
-				startReq.Header().Set("Authorization", "Bearer "+s.rootToken)
-				if _, err := s.instancesClient.Start(ctxWithRoot(ctx), startReq); err != nil && !bundledInstanceAlreadyStarted(err) {
-					return inv, fmt.Errorf("failed to start bundled empty instance: %w", err)
-				}
-			}
+
 			// Update instance in the end due to publish operations inside
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
 				log.Error("Failed to update instance", zap.Error(err))
