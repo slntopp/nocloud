@@ -1,6 +1,6 @@
 <template>
   <div class="editor" v-if="isVisible">
-    <jodit-editor :config="config" :value="value" @input="onInput" />
+    <jodit-editor :config="config" :value="value ?? ''" @input="onInput" />
   </div>
 </template>
 
