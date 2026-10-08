@@ -1,6 +1,6 @@
 import Api from "nocloudjsrest";
 import vuex from "@/store/index.js";
-const api = new Api();
+const api = new Api('http://localhost:8624/https://api.nc2dev.support.by/');
 
 api.axios.interceptors.response.use(
   (response) => response,
