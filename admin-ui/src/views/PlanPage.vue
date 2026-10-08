@@ -91,7 +91,7 @@ export default {
           })),
         ];
 
-        const descriptions = await Promise.all(
+        const descriptions = await Promise.allSettled(
           descriptionPromises
             .filter((item) => !!item.descriptionId)
             .map(async (item) => ({
@@ -103,9 +103,19 @@ export default {
             }))
         );
 
-        descriptions.forEach(({ type, id, data }) => {
-          this.plan[type][id].description = data.text;
+        // $set: plan is already reactive, plain assignment wouldn't be tracked.
+        // Failed ones stay undefined, PlansCreate won't overwrite them on save.
+        descriptions.forEach(({ status, value }) => {
+          if (status !== "fulfilled") return;
+          const { type, id, data } = value;
+          this.$set(this.plan[type][id], "description", data.text ?? "");
         });
+
+        if (descriptions.some(({ status }) => status === "rejected")) {
+          this.$store.commit("snackbar/showSnackbarError", {
+            message: "Some descriptions failed to load",
+          });
+        }
       } finally {
         this.isDescriptionsLoading = false;
       }

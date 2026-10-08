@@ -528,6 +528,8 @@ const copyProducts = () => {
   for (const product of copiedProducts) {
     const key = product.key;
     delete product.key;
+    // copy gets its own description on save, otherwise edits hit the original
+    delete product.descriptionId;
     newProducts[key + " 1"] = product;
   }
 
@@ -538,20 +540,13 @@ const copyProducts = () => {
 const saveNewMeta = async () => {
   setProductsArray();
 
+  // take fresh rows by id, selected holds a snapshot from selection time
+  const selectedIds = selected.value.map(({ id }) => id);
   const newProducts = {};
-  for (const product of productsArray.value) {
-    const key = product.key;
-    delete product.key;
-    newProducts[key] = product;
-  }
-
-  for (const product of selected.value) {
-    const key = product.key;
-    delete product.key;
-    newProducts[key] = {
-      ...product,
-      description: newMeta.value.description,
-    };
+  for (const { key, ...product } of productsArray.value) {
+    newProducts[key] = selectedIds.includes(product.id)
+      ? { ...product, description: newMeta.value.description }
+      : product;
   }
 
   changeProduct("products", newProducts);
