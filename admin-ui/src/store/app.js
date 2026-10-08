@@ -20,12 +20,7 @@ export default {
     chatClicks: (state) => state.chatClicks,
     transport(state, getters, rootState, rootGetters) {
       const transport = createConnectTransport({
-        // On localhost the admin is not served next to the API. Price models
-        // and other Connect calls must use the same proxy target as api.js.
-        baseUrl:
-          window.location.hostname === "localhost"
-            ? "http://localhost:8624/https://api.nc2dev.support.by"
-            : window.location.origin,
+        baseUrl: window.location.origin,
         useBinaryFormat: true,
         interceptors: [
           (next) => async (req) => {
@@ -33,7 +28,6 @@ export default {
               "Authorization",
               `Bearer ${rootGetters["auth/token"]}`
             );
-            req.header.set("X-Requested-With", "XMLHttpRequest");
             return next(req);
           },
 
