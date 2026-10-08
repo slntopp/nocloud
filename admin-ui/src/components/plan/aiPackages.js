@@ -2,8 +2,17 @@
  * AI packages are the products of an "empty" plan whose meta carries the keys the OpenAI driver
  * reads: ai_credit (NCU per paid period), ai_seats (how many people may spend it; absent is the
  * whole organization) and ai_models (the model keys it pays for; absent is every model).
+ * Constructor packages (`ai_site`) may also split models into survey (`ai_models_survey`) and
+ * build (`ai_models_build`); `ai_models` stays the union so billing still covers both.
  */
-export const AI_KEYS = ["ai_credit", "ai_seats", "ai_models", "ai_site"];
+export const AI_KEYS = [
+  "ai_credit",
+  "ai_seats",
+  "ai_models",
+  "ai_models_survey",
+  "ai_models_build",
+  "ai_site",
+];
 
 export const DEFAULT_PERIOD = 3600 * 24 * 30;
 
@@ -11,6 +20,11 @@ const KEY_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
 /** A key the driver reads, from meta or, as an earlier mistake left it, from resources. */
 const aiValue = (product, key) => product?.meta?.[key] ?? product?.resources?.[key];
+
+const modelList = (value) =>
+  Array.isArray(value) ? value.filter((m) => typeof m === "string" && m) : [];
+
+const uniqueModels = (keys) => [...new Set(keys.filter((m) => typeof m === "string" && m))];
 
 export const isAiPackage = (product) => Number(aiValue(product, "ai_credit")) > 0;
 
@@ -20,8 +34,13 @@ export const hasMisplacedKeys = (product) =>
 
 export function toForm(key, product = {}) {
   const seats = Math.floor(Number(aiValue(product, "ai_seats")) || 0);
-  const models = aiValue(product, "ai_models");
-  const modelKeys = Array.isArray(models) ? models.filter((m) => typeof m === "string" && m) : [];
+  const models = modelList(aiValue(product, "ai_models"));
+  const site = Boolean(aiValue(product, "ai_site"));
+  const survey = modelList(aiValue(product, "ai_models_survey"));
+  const build = modelList(aiValue(product, "ai_models_build"));
+  /** Older constructor packages only had `ai_models`; seed both roles from it. */
+  const surveyModels = site && survey.length === 0 && build.length === 0 ? [...models] : survey;
+  const buildModels = site && survey.length === 0 && build.length === 0 ? [...models] : build;
   return {
     key,
     title: product.title ?? "",
@@ -30,8 +49,10 @@ export function toForm(key, product = {}) {
     periodKind: product.periodKind || (product.period ? "DEFAULT" : "CALENDAR_MONTH"),
     credit: Number(aiValue(product, "ai_credit")) || 0,
     seats: seats > 0 ? seats : "",
-    models: modelKeys,
-    site: Boolean(aiValue(product, "ai_site")),
+    models,
+    surveyModels,
+    buildModels,
+    site,
     public: key ? Boolean(product.public) : product.public !== false,
     sorter: Number(product.sorter) || 0,
   };
@@ -54,11 +75,22 @@ export function toProduct(form, original = {}) {
   if (Number(form.seats) > 0) {
     meta.ai_seats = Math.floor(Number(form.seats));
   }
-  if (form.models.length > 0) {
-    meta.ai_models = [...new Set(form.models)];
-  }
   if (form.site) {
     meta.ai_site = true;
+    const survey = uniqueModels(form.surveyModels || []);
+    const build = uniqueModels(form.buildModels || []);
+    if (survey.length > 0) {
+      meta.ai_models_survey = survey;
+    }
+    if (build.length > 0) {
+      meta.ai_models_build = build;
+    }
+    const billed = uniqueModels([...survey, ...build]);
+    if (billed.length > 0) {
+      meta.ai_models = billed;
+    }
+  } else if (form.models.length > 0) {
+    meta.ai_models = uniqueModels(form.models);
   }
   const product = {
     ...original,

@@ -48,10 +48,10 @@
       </template>
       <template v-slot:[`item.models`]="{ item }">
         <span v-if="!item.isAi">—</span>
-        <span v-else-if="!item.form.models.length">All models</span>
+        <span v-else-if="!packageModels(item.form).length">All models</span>
         <template v-else>
           <v-chip
-            v-for="model in item.form.models.slice(0, MODELS_SHOWN)"
+            v-for="model in packageModels(item.form).slice(0, MODELS_SHOWN)"
             :key="model"
             x-small
             class="mr-1"
@@ -60,12 +60,12 @@
             {{ modelLabel(model) }}
           </v-chip>
           <v-chip
-            v-if="item.form.models.length > MODELS_SHOWN"
+            v-if="packageModels(item.form).length > MODELS_SHOWN"
             x-small
             outlined
-            :title="item.form.models.slice(MODELS_SHOWN).map(modelLabel).join(', ')"
+            :title="packageModels(item.form).slice(MODELS_SHOWN).map(modelLabel).join(', ')"
           >
-            +{{ item.form.models.length - MODELS_SHOWN }}
+            +{{ packageModels(item.form).length - MODELS_SHOWN }}
           </v-chip>
         </template>
       </template>
@@ -141,10 +141,40 @@
             <v-col cols="6">
               <v-text-field v-model="form.seats" type="number" label="Seats" />
             </v-col>
-            <v-col cols="12">
+            <template v-if="form.site">
+              <v-col cols="12">
+                <v-autocomplete
+                  v-model="form.surveyModels"
+                  :items="modelItemsFor(form.surveyModels)"
+                  :loading="isModelsLoading"
+                  label="Survey models"
+                  hint="Models offered for the questionnaire (опрос)."
+                  persistent-hint
+                  multiple
+                  chips
+                  small-chips
+                  deletable-chips
+                />
+              </v-col>
+              <v-col cols="12">
+                <v-autocomplete
+                  v-model="form.buildModels"
+                  :items="modelItemsFor(form.buildModels)"
+                  :loading="isModelsLoading"
+                  label="Build models"
+                  hint="Models offered for site assembly (сборка)."
+                  persistent-hint
+                  multiple
+                  chips
+                  small-chips
+                  deletable-chips
+                />
+              </v-col>
+            </template>
+            <v-col v-else cols="12">
               <v-autocomplete
                 v-model="form.models"
-                :items="modelItems"
+                :items="modelItemsFor(form.models)"
                 :loading="isModelsLoading"
                 label="Models"
                 multiple
@@ -157,7 +187,11 @@
               <v-switch v-model="form.public" label="Public" />
             </v-col>
             <v-col cols="6">
-              <v-switch v-model="form.site" label="Site constructor only" />
+              <v-switch
+                v-model="form.site"
+                label="Site constructor only"
+                @change="onSiteToggle"
+              />
             </v-col>
             <v-col cols="6">
               <v-text-field
@@ -268,12 +302,20 @@ const modelLabel = (key) => {
   return `${model.name || key}${model.disabled ? " · disabled" : ""}`;
 };
 
+/** Models shown for a package row: the billing union, or survey∪build on a constructor package. */
+const packageModels = (pkg) => {
+  if (pkg.site) {
+    return [...new Set([...(pkg.surveyModels || []), ...(pkg.buildModels || [])])];
+  }
+  return pkg.models || [];
+};
+
 /**
  * The driver's models by provider, for the picker. A disabled model is not offered, but one the
  * package already has stays, marked, and so does a key the driver no longer lists.
  */
-const modelItems = computed(() => {
-  const chosen = new Set(form.value?.models || []);
+const modelItemsFor = (chosenKeys = []) => {
+  const chosen = new Set(chosenKeys);
   const byProvider = {};
   models.value
     .filter((model) => !model.disabled || chosen.has(model.key))
@@ -295,11 +337,24 @@ const modelItems = computed(() => {
           })
         );
     });
-  (form.value?.models || [])
+  chosenKeys
     .filter((key) => !modelsByKey.value[key])
     .forEach((key) => items.push({ text: `${key} (not in the driver config)`, value: key }));
   return items;
-});
+};
+
+/** Turning constructor mode on seeds both role lists from the shared Models field. */
+const onSiteToggle = (enabled) => {
+  if (!form.value || !enabled) {
+    return;
+  }
+  if ((form.value.surveyModels || []).length || (form.value.buildModels || []).length) {
+    return;
+  }
+  const shared = [...(form.value.models || [])];
+  form.value.surveyModels = shared;
+  form.value.buildModels = [...shared];
+};
 
 const otherKeys = computed(() =>
   Object.keys(products.value).filter((key) => key !== editingKey.value)
