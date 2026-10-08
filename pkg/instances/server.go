@@ -2218,15 +2218,15 @@ func (s *InstancesServer) bindTempDomain(ctx context.Context, id string, inst *p
 
 func tempDomainName(instanceID string) string {
 	compact := strings.ReplaceAll(strings.ToLower(instanceID), "-", "")
-	if len(compact) > 10 {
-		compact = compact[:10]
-	}
 	if compact == "" {
-		buf := make([]byte, 5)
+		buf := make([]byte, 2)
 		_, _ = rand.Read(buf)
 		compact = hex.EncodeToString(buf)
 	}
-	return "s" + compact + "." + tempDomainZone
+	if len(compact) > 4 {
+		compact = compact[:4]
+	}
+	return "site-" + compact + "." + tempDomainZone
 }
 
 func productBindString(product *billingpb.Product, key string) string {
