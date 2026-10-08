@@ -4,6 +4,7 @@
  * whole organization) and ai_models (the model keys it pays for; absent is every model).
  * Constructor packages (`ai_site`) may also split models into survey (`ai_models_survey`) and
  * build (`ai_models_build`); `ai_models` stays the union so billing still covers both.
+ * The storefront reads one more: ai_promocode, the code it applies to this package on its own.
  */
 export const AI_KEYS = [
   "ai_credit",
@@ -12,6 +13,7 @@ export const AI_KEYS = [
   "ai_models_survey",
   "ai_models_build",
   "ai_site",
+  "ai_promocode",
 ];
 
 export const DEFAULT_PERIOD = 3600 * 24 * 30;
@@ -53,6 +55,7 @@ export function toForm(key, product = {}) {
     surveyModels,
     buildModels,
     site,
+    promocode: aiValue(product, "ai_promocode") ?? "",
     public: key ? Boolean(product.public) : product.public !== false,
     sorter: Number(product.sorter) || 0,
   };
@@ -91,6 +94,9 @@ export function toProduct(form, original = {}) {
     }
   } else if (form.models.length > 0) {
     meta.ai_models = uniqueModels(form.models);
+  }
+  if (form.promocode.trim()) {
+    meta.ai_promocode = form.promocode.trim().toUpperCase();
   }
   const product = {
     ...original,

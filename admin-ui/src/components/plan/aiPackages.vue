@@ -69,6 +69,12 @@
           </v-chip>
         </template>
       </template>
+      <template v-slot:[`item.promocode`]="{ item }">
+        <v-chip v-if="item.form.promocode" x-small label>
+          {{ item.form.promocode }}
+        </v-chip>
+        <span v-else>—</span>
+      </template>
       <template v-slot:[`item.public`]="{ item }">
         <v-icon small>{{ item.public ? "mdi-check" : "mdi-minus" }}</v-icon>
       </template>
@@ -183,6 +189,15 @@
                 deletable-chips
               />
             </v-col>
+            <v-col cols="12">
+              <v-text-field
+                v-model="form.promocode"
+                label="Promocode"
+                hint="The storefront applies it to this package by itself, so a first order can be free or discounted. The promocode must be linked to this price model."
+                persistent-hint
+                clearable
+              />
+            </v-col>
             <v-col cols="6">
               <v-switch v-model="form.public" label="Public" />
             </v-col>
@@ -261,6 +276,7 @@ const headers = [
   { text: "Credit", value: "credit" },
   { text: "Seats", value: "seats" },
   { text: "Models", value: "models", sortable: false },
+  { text: "Promocode", value: "promocode", sortable: false },
   { text: "Public", value: "public" },
   { text: "Site", value: "site" },
   { text: "Sorter", value: "sorter" },

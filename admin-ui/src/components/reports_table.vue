@@ -269,6 +269,11 @@ const fetchReports = async () => {
   try {
     const { records: result } = await api.reports.list(requestOptions.value);
     reports.value = result.map((r) => {
+      const credit = packageCredit(r);
+      if (credit !== null) {
+        r = { ...r, cost: credit, currency: defaultCurrency.value };
+      }
+
       return {
         total: -r.cost,
         start: r.start,
@@ -298,6 +303,15 @@ const fetchReports = async () => {
 };
 
 const fetchReportsDebounced = debounce(fetchReports);
+
+/**
+ * What a request paid from an AI package took from its credit, in the default currency: the driver
+ * records it with a zero cost, as nothing leaves the balance, and the amount in meta.credit.
+ */
+const packageCredit = (record) =>
+  record.meta?.reason === "AI package credit"
+    ? +record.meta.credit || 0
+    : null;
 
 const setOptions = (newOptions) => {
   const sortByReplaceKeys = {

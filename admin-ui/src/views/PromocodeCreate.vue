@@ -187,8 +187,19 @@
               :loading="isBindedPlansLoading"
               table-name="plans-promocode-table"
               v-model="selectedBindedPlans"
-              :headers="customPlansHeaders"
-            />
+              :headers="bindedPlansHeaders"
+            >
+              <template v-slot:[`item.product`]="{ item }">
+                <v-select
+                  dense
+                  hide-details
+                  style="min-width: 180px"
+                  :value="planProducts[item.uuid] || ''"
+                  :items="productItems(item)"
+                  @change="setPlanProduct(item.uuid, $event)"
+                />
+              </template>
+            </nocloud-table>
           </div>
         </v-tab-item>
 
@@ -331,6 +342,29 @@ const customPlansHeaders = ref([
   { text: "Type ", value: "type" },
 ]);
 
+const bindedPlansHeaders = ref([
+  ...customPlansHeaders.value,
+  { text: "Product ", value: "product", sortable: false },
+]);
+
+/**
+ * The one product of a bound plan the promocode applies to, by plan uuid; "" is the whole plan.
+ * It rides along as planPromo.product, which the billing applies to that product alone.
+ */
+const planProducts = ref({});
+
+const productItems = (plan) => [
+  { text: "All products", value: "" },
+  ...Object.entries(plan.products || {}).map(([key, product]) => ({
+    text: product.title ? `${product.title} (${key})` : key,
+    value: key,
+  })),
+];
+
+const setPlanProduct = (uuid, product) => {
+  planProducts.value = { ...planProducts.value, [uuid]: product };
+};
+
 const isBindedPlansLoading = ref(false);
 const bindedPlans = ref([]);
 const selectedBindedPlans = ref([]);
@@ -446,7 +480,10 @@ const savePromocode = async () => {
     newPromocode.value.plans.forEach((uuid) => {
       const promoItem = {
         schema: promoSchema,
-        planPromo: { billingPlan: uuid },
+        planPromo: {
+          billingPlan: uuid,
+          ...(planProducts.value[uuid] ? { product: planProducts.value[uuid] } : {}),
+        },
       };
 
       data.promoItems.push(promoItem);
@@ -521,6 +558,7 @@ const setPromocde = () => {
 
     const showcases = [];
     const plans = [];
+    const products = {};
 
     if (promocode.value.promoItems?.length) {
       const promoSchema = promocode.value.promoItems[0].schema;
@@ -535,12 +573,14 @@ const setPromocde = () => {
           showcases.push(item.showcasePromo.showcase);
         } else if (item.planPromo) {
           plans.push(item.planPromo.billingPlan);
+          products[item.planPromo.billingPlan] = item.planPromo.product || "";
         }
       });
     }
 
     newPromocode.value.showcases = showcases;
     newPromocode.value.plans = plans;
+    planProducts.value = products;
   }
 };
 

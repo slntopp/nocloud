@@ -112,9 +112,8 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
 				continue
 			}
 			query += fmt.Sprintf(` LET result = (
-                       FILTER IS_ARRAY(p.promo_items)
                        LET has = (
-                          FOR item IN p.promo_items
+                          FOR item IN (IS_ARRAY(p.promo_items) ? p.promo_items : [])
                           FILTER item.plan_promo
                           FILTER item.plan_promo.billing_plan IN @billingPlans
                           RETURN true
@@ -130,9 +129,8 @@ func buildFiltersQuery(filters map[string]*structpb.Value, vars map[string]any) 
 				continue
 			}
 			query += fmt.Sprintf(` LET result = (
-                       FILTER IS_ARRAY(p.promo_items)
                        LET has = (
-                          FOR item IN p.promo_items
+                          FOR item IN (IS_ARRAY(p.promo_items) ? p.promo_items : [])
                           FILTER item.showcase_promo
                           FILTER item.showcase_promo.showcase IN @showcasesList
                           RETURN true

@@ -31,6 +31,7 @@ import (
 
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/credentials"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
@@ -134,6 +135,8 @@ func main() {
 	})
 
 	auth.SetContext(log, rdb, SIGNING_KEY)
+	migrations.UnlinkMembersFromOwners(log, db, rdb)
+
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),

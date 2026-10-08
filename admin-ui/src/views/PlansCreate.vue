@@ -334,10 +334,13 @@ export default {
   methods: {
     downloadPlanXlsx,
     changeConfig({ key, value, id }, type) {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        value;
+      // description is html/text, "8" or "true" must stay strings
+      if (key !== "description") {
+        try {
+          value = JSON.parse(value);
+        } catch {
+          value;
+        }
       }
 
       const configs =
@@ -371,7 +374,7 @@ export default {
         case "amount":
           key = "resources";
       }
-      if (product) product[key] = value;
+      if (product) this.$set(product, key, value);
       else if (type === "resource") this.$set(id, key, value);
     },
     changeMetaConfig({ key, value, id }) {
@@ -419,15 +422,31 @@ export default {
 
       try {
         //update or create descriptions
+        // old copies share descriptionId with the original, split them on save
+        const seenDescriptionIds = new Set();
+        const needsNewDescription = ({ descriptionId }) => {
+          if (action === "create") return true;
+          if (!descriptionId) return false;
+          if (seenDescriptionIds.has(descriptionId)) return true;
+          seenDescriptionIds.add(descriptionId);
+          return false;
+        };
+
         const descriptionPromises = [
           ...this.resources.map((resource, index) =>
-            this.updateOrCreateDescription(resource, "resources", index)
+            this.updateOrCreateDescription(
+              resource,
+              "resources",
+              index,
+              needsNewDescription(resource)
+            )
           ),
           ...Object.keys(this.plan.products).map((key) =>
             this.updateOrCreateDescription(
               this.plan.products[key],
               "products",
-              key
+              key,
+              needsNewDescription(this.plan.products[key])
             )
           ),
         ];
@@ -471,9 +490,14 @@ export default {
         this.savePlanAction = "";
       }
     },
-    async updateOrCreateDescription(item, type, id) {
+    // isNewPlan: a copied plan must not edit descriptions of the original one
+    async updateOrCreateDescription(item, type, id, isNewPlan = false) {
       const { descriptionId, description } = item;
-      if (descriptionId) {
+      // undefined = failed to load in PlanPage, don't wipe it
+      if (descriptionId && description === undefined) {
+        return { descriptionId, type, id };
+      }
+      if (descriptionId && !isNewPlan) {
         await this.$store.dispatch("descriptions/update", {
           uuid: descriptionId,
           text: description,
