@@ -173,8 +173,6 @@ const {
   periods,
   type,
   periodOffset,
-  periodsFirstOffset,
-  periodsSecondOffset,
   durationOptions
 } = toRefs(props);
 
