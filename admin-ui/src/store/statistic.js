@@ -1,5 +1,5 @@
 import api from "@/api";
-import { formatToYYMMDD } from "@/functions";
+import { formatWarsawDate } from "@/functions";
 import qs from "qs";
 
 const getCacheKey = (params) => JSON.stringify(params);
@@ -93,10 +93,17 @@ export default {
 
       const data = await Promise.all(
         periods.map((period) => {
-          dataParams.params.start_date = formatToYYMMDD(period[0]);
-          dataParams.params.end_date = formatToYYMMDD(period[1]);
-
-          return dispatch("fetch", dataParams);
+          return dispatch("fetch", {
+            entity: dataParams.entity,
+            withCache,
+            params: {
+              ...(params || {}),
+              with_timeseries: true,
+              bucket_interval: interval,
+              start_date: formatWarsawDate(period[0]),
+              end_date: formatWarsawDate(period[1]),
+            },
+          });
         }),
       );
 

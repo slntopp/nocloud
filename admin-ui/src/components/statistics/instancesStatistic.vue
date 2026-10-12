@@ -55,6 +55,7 @@ import {
   statisticPeriodEmits,
   useStatisticData,
   buildComparablePeriodSeries,
+  limitTop,
 } from "@/hooks/useStatisticChart";
 
 const props = defineProps(statisticPeriodProps);
@@ -70,13 +71,13 @@ const seriesTypes = [
   { label: "By types", value: "type" },
   { label: "Amount", value: "amount" },
 ];
-const fields = ref("created");
+const fields = ref(["created"]);
 const allFields = ref([
   { label: "Created", value: "created" },
   { label: "Active", value: "active" },
   { label: "Total", value: "total" },
 ]);
-const comparable = ref(true);
+const comparable = ref(false);
 
 const { chartData: data, isDataLoading } = useStatisticData({
   entity: "services",
@@ -86,11 +87,12 @@ const { chartData: data, isDataLoading } = useStatisticData({
   comparable,
 });
 
-function switchFields(type, comparable) {
-  if (type !== "type" && !comparable) {
-    fields.value = [fields.value || ["created", "closed"]];
-  } else if (comparable) {
-    fields.value = fields.value[0] || "created";
+function switchFields(kind, isComparable) {
+  const current = Array.isArray(fields.value) ? fields.value[0] : fields.value;
+  if (kind !== "type" && !isComparable) {
+    fields.value = [current || "created"];
+  } else if (isComparable) {
+    fields.value = current || "created";
   } else {
     fields.value = "created";
   }
@@ -205,7 +207,13 @@ watch([data, seriesType, fields], () => {
     summary.value = cmp.summary;
   }
 
-  series.value = newSeries;
+  if (seriesType.value === "type") {
+    const limited = limitTop(newSeries, summary.value, 10);
+    series.value = limited.series;
+    summary.value = limited.summary;
+  } else {
+    series.value = newSeries;
+  }
   categories.value = newCategories.map((c) => c.toString().split("T")[0]);
 });
 </script>

@@ -640,6 +640,16 @@ export function formatToYYMMDD(date) {
   return date.toISOString().split("T")[0];
 }
 
+export function formatWarsawDate(date) {
+  if (!date) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 export function getDeepObjectValue(data, key) {
   let value = { ...data };
   key.split(".").forEach((subKey, index) => {

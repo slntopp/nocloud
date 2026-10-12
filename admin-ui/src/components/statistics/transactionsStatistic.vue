@@ -18,13 +18,24 @@
     :all-fields="allFields"
     :fields="fields"
     @input:fields="fields = $event"
-    :fields-multiple="!comparable"
     :comparable="comparable"
     @input:comparable="comparable = $event"
+    description="Balance"
   >
+    <template v-slot:options>
+      <v-select
+        style="width: 220px"
+        item-text="label"
+        item-value="value"
+        :items="typeItems"
+        v-model="txType"
+        hide-details
+      />
+    </template>
     <template v-slot:content>
+      <div v-if="qualityText" class="px-4 pb-2">{{ qualityText }}</div>
       <default-chart
-        description="Transactions statistics"
+        description="Balance"
         :type="type"
         :series="series"
         :categories="categories"
@@ -36,89 +47,80 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { ref, toRefs, watch } from "vue";
+import { computed, ref, toRefs, watch } from "vue";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
 import {
   statisticPeriodProps,
   statisticPeriodEmits,
   useStatisticData,
   buildComparablePeriodSeries,
+  buildSeriesFromTimeseries,
 } from "@/hooks/useStatisticChart";
 
 const props = defineProps(statisticPeriodProps);
 const { period, periodType, periods, type } = toRefs(props);
-
 const emit = defineEmits(statisticPeriodEmits);
 
-const allFields = ref([
-  { label: "Created", value: "created" },
-  { label: "Total", value: "total" },
-]);
-const fields = ref("created");
-const comparable = ref(true);
-
+const comparable = ref(false);
+const txType = ref("");
+const fields = ref("amount");
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
+const qualityText = ref("");
+
+const allFields = [
+  { label: "Amount", value: "amount" },
+  { label: "Count", value: "count" },
+];
+
+const requestParams = computed(() => ({ tx_type: txType.value || undefined }));
 
 const { chartData, isDataLoading } = useStatisticData({
-  entity: "transactions",
+  entity: "balance",
   periodType,
   period,
   periods,
   comparable,
+  params: requestParams,
+  extraDeps: [txType],
 });
 
-watch(comparable, () => {
-  if (comparable.value) {
-    fields.value = "created";
-  } else {
-    fields.value = ["created"];
-  }
+const typeItems = computed(() => {
+  const names = new Set();
+  (chartData.value || []).forEach((block) => {
+    (block?.summary?.types || []).forEach((name) => names.add(name));
+  });
+  return [
+    { label: "All types", value: "" },
+    ...[...names].sort().map((name) => ({ label: name, value: name })),
+  ];
 });
 
-watch([chartData, fields], () => {
-  if (!chartData.value || !fields.value.length) {
+watch([chartData, fields, comparable], () => {
+  const blocks = chartData.value;
+  if (!blocks) return;
+  qualityText.value = blocks[0]?.summary?.detail || "";
+  const field = fields.value;
+  if (!comparable.value) {
+    const built = buildSeriesFromTimeseries(
+      blocks[0]?.timeseries || [],
+      field,
+      (row, key) => Number(row?.[key]) || 0
+    );
+    series.value = built.series;
+    categories.value = built.categories.map((item) => String(item).split("T")[0]);
+    summary.value = built.summary;
     return;
   }
-
-  const newSeries = [];
-  const newCategories = [];
-  summary.value = {};
-
-  const tempData = JSON.parse(JSON.stringify(chartData.value));
-
-  if (!comparable.value) {
-    fields.value.forEach((key) => {
-      newSeries.push({
-        name: allFields.value.find((field) => field.value === key).label,
-        data: [],
-        id: key,
-      });
-    });
-
-    tempData[0].timeseries?.forEach((timeseries) => {
-      newCategories.push(timeseries.ts);
-      newSeries.forEach((serie) => {
-        serie.data.push(timeseries[serie.id] || 0);
-      });
-    });
-
-    newSeries.forEach((serie) => {
-      summary.value[serie.name] = tempData[0].summary?.[serie.id] || 0;
-    });
-  } else {
-    const cmp = buildComparablePeriodSeries(
-      tempData,
-      periods.value,
-      fields.value
-    );
-    newSeries.push(...cmp.series);
-    newCategories.push(...cmp.categories);
-    Object.assign(summary.value, cmp.summary);
-  }
-
-  series.value = newSeries;
-  categories.value = newCategories.map((c) => c.toString().split("T")[0]);
+  const built = buildComparablePeriodSeries(
+    blocks,
+    periods.value,
+    field,
+    (row, key) => Number(row?.[key]) || 0
+  );
+  series.value = built.series;
+  categories.value = built.categories.map((item) => String(item));
+  summary.value = built.summary;
 });
 </script>

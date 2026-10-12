@@ -38,10 +38,8 @@
 import AccountsStatistic from "@/components/statistics/accountsStatistic.vue";
 import TrasactionsStatistic from "@/components/statistics/transactionsStatistic.vue";
 import InstancesStatistic from "@/components/statistics/instancesStatistic.vue";
-import ChatsResponsesStatistic from "@/components/statistics/chatsResponsesStatistic.vue";
-import InstancesIncomeStatistic from "@/components/statistics/instancesIncomeStatistic.vue";
 import ChatsStatistics from "@/components/statistics/chatsStatistics.vue";
-import RevenueStatistics from "@/components/statistics/revenueStatistics.vue";
+import MoneyStatistic from "@/components/statistics/moneyStatistic.vue";
 import aiStatistic from "../components/statistics/aiStatistic.vue";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useStore } from "@/store/";
@@ -53,37 +51,11 @@ const route = useRoute();
 
 const widgets = [
   { component: InstancesStatistic, title: "Instances", key: "instances" },
-  {
-    component: RevenueStatistics,
-    title: "Revenue",
-    key: "revenue",
-  },
-  {
-    component: aiStatistic,
-    title: "AI",
-    key: "ai",
-  },
-  {
-    component: ChatsStatistics,
-    title: "Chats",
-    key: "chats",
-  },
-  {
-    component: ChatsResponsesStatistic,
-    title: "Chats responses",
-    key: "chats-responses",
-  },
   { component: AccountsStatistic, title: "Accounts", key: "accounts" },
-  {
-    component: InstancesIncomeStatistic,
-    title: "Instances income",
-    key: "instances-income",
-  },
-  {
-    component: TrasactionsStatistic,
-    title: "Trasactions",
-    key: "transactions",
-  },
+  { component: MoneyStatistic, title: "Money", key: "money" },
+  { component: aiStatistic, title: "AI", key: "ai" },
+  { component: TrasactionsStatistic, title: "Balance", key: "balance" },
+  { component: ChatsStatistics, title: "Chats", key: "chats" },
 ];
 
 const period = ref([]);
@@ -98,7 +70,7 @@ const tab = ref(null);
 
 onMounted(() => {
   store.commit("reloadBtn/setCallback", {
-    event: () => this.$router.go(),
+    event: () => router.go(0),
   });
 
   if (route.query.tab) {
@@ -126,27 +98,20 @@ const saveWidgetsData = () => {
     "nocloud-statistic",
     JSON.stringify({
       type: type.value,
-      periodType: periodType.value,
-      periodsFirstOffset: periodsFirstOffset.value,
-      periodsSecondOffset: periodsSecondOffset.value,
-      periodOffset: periodOffset.value,
     }),
   );
 };
 
 const loadWidgetsData = () => {
+  periodType.value = "month";
+  periodOffset.value = 0;
+  periodsFirstOffset.value = 0;
+  periodsSecondOffset.value = -1;
   try {
     const data = JSON.parse(localStorage.getItem("nocloud-statistic"));
-
-    type.value = data.type ?? type.value;
-    periodType.value = data.periodType ?? periodType.value;
-    periodsFirstOffset.value =
-      data.periodsFirstOffset ?? periodsFirstOffset.value;
-    periodsSecondOffset.value =
-      data.periodsSecondOffset ?? periodsSecondOffset.value;
-    periodOffset.value = data.periodOffset ?? periodOffset.value;
+    type.value = data?.type === "line" ? "line" : "bar";
   } catch (e) {
-    console.log(e);
+    type.value = "bar";
   }
 };
 </script>

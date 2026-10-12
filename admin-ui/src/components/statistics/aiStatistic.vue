@@ -1,7 +1,6 @@
 <template>
   <div>
     <statistic-item
-      :duration-options="durationOptions"
       :period="period"
       :periodType="periodType"
       :periods="periods"
@@ -22,7 +21,7 @@
       :all-fields="allFields"
       :fields="fields"
       @input:fields="fields = $event"
-      :not-comparable="fields !== 'revenue'"
+      :not-comparable="false"
       :comparable="comparable"
       @input:comparable="comparable = $event"
     >
@@ -189,13 +188,15 @@ import { computed, onMounted, ref, shallowRef, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
-import { formatToYYMMDD } from "@/functions";
+import { formatWarsawDate } from "@/functions";
 import api from "@/api";
 import router from "../../router";
 import useCurrency from "@/hooks/useCurrency";
 import {
   statisticPeriodProps,
   statisticPeriodEmits,
+  bucketLabels,
+  limitTop,
 } from "@/hooks/useStatisticChart";
 
 const store = useStore();
@@ -204,8 +205,6 @@ const props = defineProps(statisticPeriodProps);
 const { period, periodType, periods, type } = toRefs(props);
 
 const emit = defineEmits(statisticPeriodEmits);
-
-const durationOptions = [{ label: "Month", value: "month" }];
 
 const { defaultCurrency } = useCurrency();
 
@@ -217,7 +216,7 @@ const allFields = ref([
 ]);
 const fields = ref("revenue");
 
-const comparable = ref(true);
+const comparable = ref(false);
 
 const agentTypes = ref([
   { label: "Bots", value: "nocloud_bots" },
@@ -404,7 +403,13 @@ async function fetchData() {
           ? [period.value]
           : [periods.value.first, periods.value.second],
         params: {
-          raw: fields.value !== "revenue",
+          raw: false,
+          group_by:
+            fields.value === "accounts"
+              ? "account"
+              : fields.value === "models" || fields.value === "providers"
+              ? "model"
+              : undefined,
           models: selectedModels.value.length
             ? selectedModels.value
             : providersModels.value.length
@@ -519,12 +524,6 @@ watch(
   },
 );
 
-watch(fields, () => {
-  if (fields.value !== "revenue") {
-    comparable.value = false;
-  }
-});
-
 watch([chartData, fields], () => {
   if (!chartData.value || !fields.value) {
     return;
@@ -567,130 +566,86 @@ watch([chartData, fields], () => {
     : JSON.parse(JSON.stringify(chartData.value));
 
   if (fields.value === "revenue") {
-    Object.keys(
-      comparable.value ? periods.value : { first: period.value },
-    ).forEach((key) => {
+    const ranges = comparable.value ? periods.value : { first: period.value };
+    const labels = bucketLabels(ranges.first[0], ranges.first[1], periodType.value);
+    Object.keys(ranges).forEach((key, seriesIndex) => {
+      const rangeLabels = bucketLabels(ranges[key][0], ranges[key][1], periodType.value);
+      const byDay = {};
+      (tempData[seriesIndex]?.timeseries || []).forEach((row) => {
+        byDay[String(row.ts).split("T")[0]] = row;
+      });
       newSeries.push({
-        name: `${formatToYYMMDD(periods.value[key][0])}/${formatToYYMMDD(
-          periods.value[key][1],
-        )}`,
-        data: [],
-        meta: [],
+        name: `${formatWarsawDate(ranges[key][0])}/${formatWarsawDate(ranges[key][1])}`,
+        data: labels.map((_, index) => getValue(byDay[rangeLabels[index]]?.revenue || 0)),
+        meta: labels.map((_, index) => byDay[rangeLabels[index]] || {}),
       });
     });
-
-    const maxLength = Math.max(
-      tempData[0]?.timeseries?.length || 0,
-      tempData[1]?.timeseries?.length || 0,
-    );
-
-    for (let index = 0; index < maxLength; index++) {
-      const first = tempData[0]?.timeseries?.[index];
-      const second = tempData[1]?.timeseries?.[index];
-
-      if (!tempData[1]) {
-        newCategories.push(first.ts);
-      } else if (!newCategories.includes(index + 1)) {
-        newCategories.push(index + 1);
-      }
-
-      [first, second].forEach((value, index) => {
-        if (!value) {
-          return;
-        }
-        newSeries[index].data.push(getValue(value?.[fields.value] || 0));
-        newSeries[index].meta.push({
-          accounts: value?.accounts || [],
-          models: value?.models || [],
-          agents: value?.agents || ["api"],
-        });
-      });
-    }
-
+    newCategories.push(...labels);
     newSeries.forEach((serie) => {
       newSummary[serie.name] = getValue(
-        serie.data.reduce((acc, a) => acc + a, 0) || 0,
+        serie.data.reduce((acc, value) => acc + (Number(value) || 0), 0) || 0,
       );
     });
   } else {
-    const dataMap = {};
-    tempData[0].timeseries.forEach((timeserie) => {
-      const ts = timeserie.ts.split("T")[0];
-
-      let dataKey = "";
-
-      if (fields.value === "accounts") {
-        dataKey = timeserie.account;
-      } else if (fields.value === "models") {
-        dataKey = timeserie.model;
-      } else if (fields.value === "providers") {
-        dataKey = Object.keys(modelsByProviders.value).find((provider) =>
-          modelsByProviders.value[provider].includes(timeserie.model),
-        );
-      }
-
-      if (!dataMap[dataKey]) {
-        dataMap[dataKey] = [];
-      }
-
-      dataMap[dataKey][ts] = {
-        revenue: (dataMap[dataKey]?.[ts]?.revenue || 0) + timeserie.revenue,
-        accounts:
-          dataMap[dataKey]?.[ts]?.accounts &&
-          !dataMap[dataKey]?.[ts]?.accounts.includes(timeserie.account)
-            ? [...dataMap[dataKey]?.[ts]?.accounts, timeserie.account]
-            : dataMap[dataKey]?.[ts]?.accounts || [],
-        models:
-          dataMap[dataKey]?.[ts]?.models &&
-          !dataMap[dataKey]?.[ts]?.models.includes(timeserie.model)
-            ? [...dataMap[dataKey]?.[ts]?.models, timeserie.model]
-            : dataMap[dataKey]?.[ts]?.models || [],
-        agents:
-          dataMap[dataKey]?.[ts]?.agents &&
-          !dataMap[dataKey]?.[ts]?.agents.includes(timeserie.agent || "api")
-            ? [...dataMap[dataKey]?.[ts]?.agents, timeserie.agent || "api"]
-            : dataMap[dataKey]?.[ts]?.agents || [],
-      };
-    });
-
-    Object.keys(dataMap).forEach((account) => {
-      newSeries.push({ name: account, data: [], meta: [] });
-
-      const data = Array(period.value[1].getDate() - 1).fill(null);
-      const meta = Array(period.value[1].getDate() - 1).fill(null);
-
-      Object.keys(dataMap[account]).forEach((key) => {
-        const date = new Date(key);
-        data[date.getDate() - 1] = getValue(dataMap[account][key]?.revenue);
-
-        meta[date.getDate() - 1] = {
-          accounts: dataMap[account][key]?.accounts,
-          models: dataMap[account][key]?.models,
-          agents: dataMap[account][key]?.agents,
-        };
+    const labels = bucketLabels(period.value[0], period.value[1], periodType.value);
+    const blocks = comparable.value ? tempData : [tempData[0]];
+    const maps = blocks.map((block) => {
+      const map = {};
+      (block?.timeseries || []).forEach((row) => {
+        const day = String(row.ts).split("T")[0];
+        let dataKey = row.key || row.model || row.account || "unknown";
+        if (fields.value === "providers") {
+          dataKey =
+            Object.keys(modelsByProviders.value).find((provider) =>
+              (modelsByProviders.value[provider] || []).includes(row.key || row.model),
+            ) || "unknown";
+        }
+        map[dataKey] = map[dataKey] || {};
+        map[dataKey][day] = (map[dataKey][day] || 0) + Number(row.revenue || 0);
       });
-
-      newSeries[newSeries.length - 1].data = data;
-      newSeries[newSeries.length - 1].meta = meta;
+      return map;
     });
-
-    const current = new Date(period.value[0]);
-    const end = new Date(period.value[1]);
-
-    while (current <= end) {
-      const formatted = current.toISOString().slice(0, 10);
-      newCategories.push(formatted);
-      current.setDate(current.getDate() + 1);
-    }
-
-    newSeries.forEach((serie) => {
-      newSummary[serie.name] = getValue(
-        Object.keys(dataMap[serie.name]).reduce(
-          (acc, key) => acc + dataMap[serie.name][key]?.revenue,
-          0,
-        ) || 0,
+    const names = new Set();
+    Object.keys(maps[0] || {}).forEach((name) => names.add(name));
+    let built = [...names].map((name) => ({
+      name,
+      data: labels.map((label) => getValue(maps[0][name]?.[label] || 0)),
+      meta: labels.map(() => ({})),
+    }));
+    const builtSummary = {};
+    built.forEach((serie) => {
+      builtSummary[serie.name] = getValue(
+        serie.data.reduce((acc, value) => acc + (Number(value) || 0), 0) || 0,
       );
     });
+    const limited = limitTop(built, builtSummary, 10);
+    limited.series.forEach((serie) => {
+      if (!serie.meta) serie.meta = (serie.data || []).map(() => ({}));
+    });
+    newSeries.push(...limited.series);
+    Object.assign(newSummary, limited.summary);
+    if (comparable.value && maps[1]) {
+      const prevLabels = bucketLabels(
+        periods.value.second[0],
+        periods.value.second[1],
+        periodType.value,
+      );
+      limited.series.forEach((serie) => {
+        if (serie.name === "Other") return;
+        const data = labels.map((_, index) =>
+          getValue(maps[1][serie.name]?.[prevLabels[index]] || 0),
+        );
+        newSeries.push({
+          name: `${serie.name} prev`,
+          data,
+          meta: labels.map(() => ({})),
+        });
+        newSummary[`${serie.name} prev`] = getValue(
+          data.reduce((acc, value) => acc + (Number(value) || 0), 0) || 0,
+        );
+      });
+    }
+    newCategories.push(...labels);
   }
 
   const accounts = [];

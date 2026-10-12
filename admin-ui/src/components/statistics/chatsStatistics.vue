@@ -18,29 +18,29 @@
     :all-fields="allFields"
     :fields="fields"
     @input:fields="fields = $event"
-    :not-comparable="seriesType !== 'amount'"
-    :fields-multiple="seriesType === 'amount' && !comparable"
-    description="Chats statistics for period"
     :comparable="comparable"
+    :not-comparable="seriesType !== 'amount'"
     @input:comparable="comparable = $event"
+    description="Chats"
   >
-    <template v-slot:content>
-      <default-chart
-        description="Chats statistics"
-        :type="type"
-        :series="series"
-        :categories="categories"
-        :summary="summary"
-      />
-    </template>
-
     <template v-slot:options>
       <v-select
-        style="width: 150px"
+        style="width: 200px"
         item-text="label"
         item-value="value"
         :items="seriesTypes"
         v-model="seriesType"
+        hide-details
+      />
+    </template>
+    <template v-slot:content>
+      <div v-if="qualityText" class="px-4 pb-2">{{ qualityText }}</div>
+      <default-chart
+        description="Chats"
+        :type="type"
+        :series="series"
+        :categories="categories"
+        :summary="summary"
       />
     </template>
   </statistic-item>
@@ -48,159 +48,103 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { ref, toRefs, watch } from "vue";
+import { computed, ref, toRefs, watch } from "vue";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
 import {
   statisticPeriodProps,
   statisticPeriodEmits,
   useStatisticData,
   buildComparablePeriodSeries,
+  buildSeriesFromTimeseries,
+  buildGroupedSeries,
+  limitTop,
 } from "@/hooks/useStatisticChart";
 
 const props = defineProps(statisticPeriodProps);
 const { period, periodType, periods, type } = toRefs(props);
-
 const emit = defineEmits(statisticPeriodEmits);
 
+const comparable = ref(false);
+const seriesType = ref("amount");
+const fields = ref("created");
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
-const seriesType = ref("amount");
-const allFields = ref([
-  { label: "Created", value: "created" },
-  { label: "Closed", value: "closed" },
-  { label: "Active", value: "active" },
-  { label: "Total", value: "total" },
-]);
-const fields = ref("created");
-const comparable = ref(true);
+const qualityText = ref("");
 
 const seriesTypes = [
-  { label: "By departments", value: "departments" },
-  { label: "Amount", value: "amount" },
+  { label: "All", value: "amount" },
+  { label: "By department", value: "departments" },
+  { label: "By client", value: "clients" },
+  { label: "By admin", value: "admins" },
 ];
 
-const { chartData: data, isDataLoading } = useStatisticData({
-  entity: "tickets",
+const entity = computed(() => {
+  if (seriesType.value === "clients") return "chat_owners";
+  if (seriesType.value === "admins") return "ticket-responses";
+  return "tickets";
+});
+
+const allFields = computed(() => {
+  if (seriesType.value === "admins") {
+    return [{ label: "Replies", value: "responses" }];
+  }
+  const fieldsList = [
+    { label: "Created", value: "created" },
+    { label: "Active", value: "active" },
+    { label: "Total", value: "total" },
+  ];
+  if (seriesType.value === "departments") {
+    fieldsList.push({ label: "Closed", value: "closed" });
+  }
+  return fieldsList;
+});
+
+const { chartData, isDataLoading } = useStatisticData({
+  entity,
   periodType,
   period,
   periods,
   comparable,
+  extraDeps: [seriesType],
 });
 
-function switchFields(val) {
-  if (val !== "departments" && !comparable.value) {
-    fields.value = [fields.value || ["created", "closed"]];
-  } else if (comparable.value) {
-    fields.value = fields.value[0] || "created";
-  } else {
-    fields.value = "created";
-  }
-}
-
-watch(seriesType, (val) => {
-  comparable.value = false;
-  switchFields(val);
+watch(seriesType, () => {
+  fields.value = seriesType.value === "admins" ? "responses" : "created";
 });
 
-watch(comparable, () => {
-  switchFields(seriesType.value);
-});
-
-watch([data, seriesType, fields], () => {
-  if (Array.isArray(fields.value) && fields.value.length === 0) {
+watch([chartData, fields, comparable, seriesType], () => {
+  const blocks = chartData.value;
+  if (!blocks) return;
+  const primary = blocks[0] || {};
+  qualityText.value = primary.quality?.incomplete
+    ? "Closed chats are incomplete for part of this period."
+    : "";
+  const field = fields.value;
+  const nameField = seriesType.value === "clients" ? "owner" : seriesType.value === "admins" ? "user" : "dep";
+  if (seriesType.value === "amount") {
+    if (!comparable.value) {
+      const built = buildSeriesFromTimeseries(primary.timeseries || [], field);
+      series.value = built.series;
+      categories.value = built.categories.map((item) => String(item).split("T")[0]);
+      summary.value = built.summary;
+      return;
+    }
+    const built = buildComparablePeriodSeries(blocks, periods.value, field);
+    series.value = built.series;
+    categories.value = built.categories.map((item) => String(item));
+    summary.value = built.summary;
     return;
   }
-
-  const newSeries = [];
-  const newCategories = [];
-
-  const tempData = JSON.parse(JSON.stringify(data.value));
-
-  if (seriesType.value !== "amount") {
-    tempData[0].timeseries?.forEach((timeseries) => {
-      const current = tempData[0].timeseries.filter(
-        (t) => t.ts === timeseries.ts
-      );
-      if (current.length <= 0 || newCategories.includes(timeseries.ts)) {
-        return;
-      }
-      newCategories.push(timeseries.ts);
-      current.map((ts) => {
-        let index = newSeries.findIndex((series) => series.name === ts.dep);
-        if (index == -1) {
-          newSeries.push({ name: ts.dep, data: [] });
-          index = newSeries.length - 1;
-        }
-        newSeries[index].data.push(ts[fields.value] || 0);
-      });
-    });
-    summary.value = Object.keys(tempData[0].summary || {}).reduce(
-      (acc, key) => {
-        acc[key] = tempData[0].summary[key][fields.value] || 0;
-        return acc;
-      },
-      {}
-    );
-  } else if (!comparable.value) {
-    fields.value.forEach((key) => {
-      newSeries.push({
-        name: allFields.value.find((field) => field.value === key).label,
-        data: [],
-        id: key,
-      });
-    });
-
-    tempData[0].timeseries?.forEach((timeseries) => {
-      const current = tempData[0].timeseries.filter(
-        (t) => t.ts === timeseries.ts
-      );
-      if (current.length <= 0 || newCategories.includes(timeseries.ts)) {
-        return;
-      }
-      newCategories.push(timeseries.ts);
-
-      for (const series of newSeries) {
-        series.data.push(
-          current.reduce((acc, c) => acc + (c[series.id] || 0), 0) || 0
-        );
-      }
-    });
-
-    summary.value = {};
-    newSeries.forEach((serie) => {
-      summary.value[serie.name] =
-        Object.keys(tempData[0].summary || {}).reduce(
-          (acc, key) => acc + (tempData[0].summary[key][serie.id] || 0),
-          0
-        ) || 0;
-    });
-  } else {
-    const datas = [];
-    tempData.forEach((_, index) => {
-      const timeseries = [];
-
-      tempData[index].timeseries.forEach((ts) => {
-        const index = timeseries.findIndex((el) => ts.ts == el.ts);
-
-        if (index !== -1) {
-          timeseries[index][fields.value] =
-            (timeseries[index][fields.value] || 0) + (ts[fields.value] || 0);
-        } else {
-          timeseries.push(ts);
-        }
-      });
-
-      datas.push({ timeseries: timeseries });
-    });
-
-    const cmp = buildComparablePeriodSeries(datas, periods.value, fields.value);
-    newSeries.push(...cmp.series);
-    newCategories.push(...cmp.categories);
-    summary.value = cmp.summary;
-  }
-
-  series.value = newSeries;
-  categories.value = newCategories.map((c) => c.toString().split("T")[0]);
+  const built = buildGroupedSeries(
+    primary.timeseries || [],
+    nameField,
+    field,
+    (row, key) => Number(row?.[key]) || 0
+  );
+  const limited = limitTop(built.series, built.summary, 20);
+  series.value = limited.series;
+  summary.value = limited.summary;
+  categories.value = built.categories.map((item) => String(item).split("T")[0]);
 });
 </script>
