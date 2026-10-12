@@ -83,8 +83,6 @@ type AccountsServiceServer struct {
 
 	log         *zap.Logger
 	SIGNING_KEY []byte
-	// AllowAccounts is the same list the public MCP uses for notice text. Empty means the screen cannot say.
-	AllowAccounts map[string]struct{}
 
 	rdb          redisdb.Client
 	asteriskConn *ssh.Client

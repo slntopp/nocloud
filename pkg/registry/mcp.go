@@ -16,31 +16,18 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 const (
 	mcpPublicURL = "https://mcp.support.by/mcp"
-	mcpNotice    = "Вставленный фрагмент MCP отвечает 401, пока аккаунт не добавлен в список доступа."
 
 	mcpOrdersKey     = "public_mcp:orders:%s:%s"
 	mcpRebootsKey    = "public_mcp:reboots:%s:%s"
 	mcpSpendDayKey   = "public_mcp:spend:day:%s:%s"
 	mcpSpendMonthKey = "public_mcp:spend:month:%s:%s"
 )
-
-func AllowAccounts(csv string) map[string]struct{} {
-	out := map[string]struct{}{}
-	for _, part := range strings.Split(csv, ",") {
-		part = strings.TrimSpace(strings.TrimPrefix(part, "accounts/"))
-		if part != "" {
-			out[part] = struct{}{}
-		}
-	}
-	return out
-}
 
 func (s *AccountsServiceServer) GetMcp(ctx context.Context, req *accountspb.GetMcpRequest) (*accountspb.GetMcpResponse, error) {
 	acc, err := s.mcpAccount(ctx, req.GetUuid())
@@ -128,22 +115,7 @@ func (s *AccountsServiceServer) mcpResponse(ctx context.Context, acc *graph.Acco
 		SpentMonth:   s.mcpMoney(ctx, fmt.Sprintf(mcpSpendMonthKey, acc.Key, now.UTC().Format("2006-01")), prec),
 		OrdersToday:  int32(s.mcpInt(ctx, fmt.Sprintf(mcpOrdersKey, acc.Key, now.UTC().Format("2006-01-02")))),
 		RebootsToday: int32(s.mcpInt(ctx, fmt.Sprintf(mcpRebootsKey, acc.Key, now.UTC().Format("2006-01-02")))),
-		Notice:       s.mcpNotice(acc.Key),
 	}, nil
-}
-
-func (s *AccountsServiceServer) mcpNotice(uuid string) string {
-	allow := s.AllowAccounts
-	if len(allow) == 0 {
-		allow = AllowAccounts(viper.GetString("ALLOW_ACCOUNTS"))
-	}
-	if len(allow) == 0 {
-		return ""
-	}
-	if _, ok := allow[uuid]; ok {
-		return ""
-	}
-	return mcpNotice
 }
 
 func (s *AccountsServiceServer) mcpInt(ctx context.Context, key string) int64 {
