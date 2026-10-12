@@ -110,6 +110,15 @@
               />
             </template>
 
+            <template v-slot:[`item.sitebuilder`]="{ item }">
+              <v-switch
+                :key="`${item.key}-sitebuilder`"
+                dense
+                :input-value="!!item.sitebuilder"
+                @change="changeSitebuilder(item, $event)"
+              />
+            </template>
+
             <template v-slot:[`item.key`]="{ item }">
               {{ getShortName(item.key) }}
             </template>
@@ -627,6 +636,7 @@ const newPricesHeaders = [
   { text: "Types", value: "types", sortable: false },
   { text: "Visibility", value: "visibility", width: 150 },
   { text: "Enabled", value: "disabled", width: 100 },
+  { text: "Sitebuilder", value: "sitebuilder", width: 120 },
   { text: "Billing", value: "billing", sortable: false, width: 100 },
   { text: "State", value: "state.state", width: 100 },
 ];
@@ -1395,9 +1405,14 @@ const changeDisabled = (item, value) => {
   item.disabled = !value;
 };
 
+const changeSitebuilder = (item, value) => {
+  item.sitebuilder = !!value;
+};
+
 // meta is omitted by backend when empty; group and sorter must exist up front for Vue 2 reactivity
 const withMeta = (model) => ({
   ...model,
+  sitebuilder: model.sitebuilder === true,
   meta: { group: "", sorter: "", ...model.meta },
 });
 
