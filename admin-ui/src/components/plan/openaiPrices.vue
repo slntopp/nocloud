@@ -754,6 +754,9 @@ const fieldsForTypes = {
       {
         "tokens.text_output": "number",
         "tokens.text_input": "number",
+        // Optional: a text model that reads pictures. Empty saves as null; test_config asks
+        // image_output only of the image type.
+        "tokens.image_input": "number",
         "other.web_search_price": "number",
       },
     ],
