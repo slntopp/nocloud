@@ -83,6 +83,8 @@ type AccountsServiceServer struct {
 
 	log         *zap.Logger
 	SIGNING_KEY []byte
+	// AllowAccounts is the same list the public MCP uses for notice text. Empty means the screen cannot say.
+	AllowAccounts map[string]struct{}
 
 	rdb          redisdb.Client
 	asteriskConn *ssh.Client
@@ -1339,6 +1341,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		}
 	}
 
+	// mcp is written only by SetMcp and RotateMcp. A full account save must not carry it.
 	if len(patch) == 0 {
 		log.Debug("Resulting patch is empty")
 		return nil, status.Error(codes.InvalidArgument, "Nothing changed")

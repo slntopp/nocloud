@@ -178,6 +178,7 @@ func main() {
 
 	accounts_server := accounting.NewAccountsServer(log, db, rdb, asteriskClient, baseHost, appHost)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
+	accounts_server.AllowAccounts = accounting.AllowAccounts(viper.GetString("ALLOW_ACCOUNTS"))
 	credentials.SetupSettingsClient(log.Named("Credentials"), sc, token)
 	accounts_server.SetupSettingsClient(sc, token)
 	err = accounts_server.EnsureRootExists(nocloudRootPass)
