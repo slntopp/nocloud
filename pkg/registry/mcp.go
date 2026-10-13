@@ -139,7 +139,7 @@ func (s *AccountsServiceServer) mcpMoney(ctx context.Context, key string, precis
 }
 
 func defaultMcp() *accountspb.McpSettings {
-	return &accountspb.McpSettings{Enabled: true, Pay: true, Reboot: true, Tickets: true, OrdersDay: 5, RebootsDay: 20, Gen: 1}
+	return &accountspb.McpSettings{Enabled: false, Pay: true, Reboot: true, Tickets: true, OrdersDay: 5, RebootsDay: 20, Gen: 1}
 }
 
 func currencyPrecision(acc *graph.Account) int {
