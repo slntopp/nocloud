@@ -1339,6 +1339,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		}
 	}
 
+	// mcp is written only by SetMcp and RotateMcp. A full account save must not carry it.
 	if len(patch) == 0 {
 		log.Debug("Resulting patch is empty")
 		return nil, status.Error(codes.InvalidArgument, "Nothing changed")
