@@ -31,6 +31,10 @@ func TestMcpTokenIsStableUntilGenChanges(t *testing.T) {
 
 func TestApplyMcpMask(t *testing.T) {
 	cur := defaultMcp()
+	if cur.GetEnabled() {
+		t.Fatal("MCP must stay off until the client turns it on")
+	}
+	cur.Enabled = true
 	zero := 0.0
 	off := false
 	orders := int32(0)
