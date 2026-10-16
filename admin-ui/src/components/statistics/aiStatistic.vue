@@ -52,7 +52,7 @@
               clearable
               multiple
               hide-details
-              :items="!isAccountsLoading ? [...fullAccounts.values()] : []"
+              :items="accountItems"
               v-model="selectedAccounts"
             />
 
@@ -184,7 +184,15 @@
 
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
-import { computed, onMounted, ref, shallowRef, toRefs, watch } from "vue";
+import {
+  computed,
+  onMounted,
+  ref,
+  shallowRef,
+  toRefs,
+  triggerRef,
+  watch,
+} from "vue";
 import { useStore } from "@/store";
 import { debounce } from "@/functions";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
@@ -226,7 +234,7 @@ const agentTypes = ref([
 ]);
 const agentType = ref("all");
 
-const allModels = shallowRef(new Set());
+const allModels = shallowRef(new Map());
 const selectedModels = ref([]);
 
 const isAccountsLoading = ref(false);
@@ -248,32 +256,7 @@ const aiConfig = ref({ models: [] });
 const isSelectedPointOpen = ref(false);
 const selectedDataPoints = ref([]);
 
-const processedDataCache = new Map();
-const CACHE_MAX_SIZE = 3;
-
-function getCacheKey(params) {
-  return JSON.stringify({
-    periodType: params.periodType,
-    periods: params.periods,
-    fields: params.fields,
-    models: params.models?.sort(),
-    accounts: params.accounts?.sort(),
-    agents: params.agents?.sort(),
-  });
-}
-
-function getCachedProcessedData(key) {
-  return processedDataCache.get(key) || null;
-}
-
-function setCachedProcessedData(key, data) {
-  if (processedDataCache.size >= CACHE_MAX_SIZE) {
-    const firstKey = processedDataCache.keys().next().value;
-    processedDataCache.delete(firstKey);
-  }
-
-  processedDataCache.set(key, data);
-}
+let lastRequestId = 0;
 
 function getSeriesName(series) {
   if (fields.value === "accounts") {
@@ -295,8 +278,9 @@ onMounted(async () => {
 const modelsByProviders = computed(() => {
   const result = {};
 
-  Object.keys(aiConfig.value.models).map((key) => {
-    const model = aiConfig.value.models[key];
+  const models = aiConfig.value?.models || {};
+  Object.keys(models).forEach((key) => {
+    const model = models[key];
 
     if (!result[model.provider]) {
       result[model.provider] = [];
@@ -324,12 +308,15 @@ const currentModels = computed(() => {
 
 const valueFormatter = (val) => val?.toFixed?.(2) ?? val;
 
-const legendFormatter = (name) => {
+const legendFormatter = computed(() => {
+  fullAccounts.value; // re-create after titles load so the chart redraws the legend
+  return (name) => {
   const total = summary.value[name];
   const label =
     fields.value === "accounts" ? fullAccounts.value.get(name)?.label || name : name;
   return `${label} ${total} ${defaultCurrency.value.code}`;
-};
+  };
+});
 
 const tooltipFormatter = (params) => {
   const list = Array.isArray(params) ? params : [params];
@@ -391,10 +378,13 @@ const tooltipFormatter = (params) => {
 };
 
 async function fetchData() {
+  const requestId = ++lastRequestId;
+  const requestFields = fields.value;
+  const requestComparable = comparable.value;
   isDataLoading.value = true;
 
   try {
-    chartData.value = await store.dispatch(
+    const blocks = await store.dispatch(
       "statistic/getForChart",
       {
         entity: "ai/transactions",
@@ -426,8 +416,13 @@ async function fetchData() {
         withCache: false,
       },
     );
+    if (requestId === lastRequestId) {
+      chartData.value = { fields: requestFields, comparable: requestComparable, blocks };
+    }
   } finally {
-    isDataLoading.value = false;
+    if (requestId === lastRequestId) {
+      isDataLoading.value = false;
+    }
   }
 }
 
@@ -466,41 +461,47 @@ const openAccount = (id) => {
   window.open(routeData.href, "_blank");
 };
 
-const fetchDataDebounced = debounce(fetchData, 1000);
+const fetchDataDebounced = debounce(fetchData, 300);
 
 debounce(fetchData, 100)();
 
-async function fetchAccounts(accounts) {
-  const accountsToFetch = [];
-  accounts.forEach((account) => {
-    if (!fullAccounts.value.has(account)) {
-      accountsToFetch.push(account);
-    }
-  });
+const requestedAccounts = new Set();
+const ACCOUNTS_CHUNK = 200;
 
+async function fetchAccounts(accounts) {
+  const accountsToFetch = accounts.filter((uuid) => !requestedAccounts.has(uuid));
   if (accountsToFetch.length === 0) {
     return;
   }
+  accountsToFetch.forEach((uuid) => requestedAccounts.add(uuid));
 
   isAccountsLoading.value = true;
-  await Promise.allSettled(
-    accountsToFetch.map(async (uuid) => {
+  try {
+    for (let i = 0; i < accountsToFetch.length; i += ACCOUNTS_CHUNK) {
+      const chunk = accountsToFetch.slice(i, i + ACCOUNTS_CHUNK);
       try {
-        fullAccounts.value.set(uuid, api.accounts.get(uuid));
-        const account = await fullAccounts.value.get(uuid);
-
-        fullAccounts.value.set(account.uuid, {
-          label: account.title,
-          value: account.uuid,
+        const response = await api.post("accounts", {
+          page: 1,
+          limit: chunk.length,
+          filters: { uuid: chunk },
+        });
+        (response.pool || []).forEach((account) => {
+          fullAccounts.value.set(account.uuid, {
+            label: account.title,
+            value: account.uuid,
+          });
         });
       } catch (e) {
-        fullAccounts.value.delete(uuid);
+        chunk.forEach((uuid) => requestedAccounts.delete(uuid));
       }
-    }),
-  );
-
-  isAccountsLoading.value = false;
+      triggerRef(fullAccounts);
+    }
+  } finally {
+    isAccountsLoading.value = false;
+  }
 }
+
+const accountItems = computed(() => [...fullAccounts.value.values()]);
 
 const fetchAccountsDebounced = debounce(fetchAccounts, 200);
 
@@ -516,6 +517,7 @@ watch(
     fields,
   ],
   () => {
+    isDataLoading.value = true;
     if (!chartData.value) {
       fetchData();
     } else {
@@ -524,36 +526,13 @@ watch(
   },
 );
 
-watch([chartData, fields], () => {
-  if (!chartData.value || !fields.value) {
-    return;
-  }
-
-  const cacheKey = getCacheKey({
-    periodType: periodType.value,
-    periods: !comparable.value
-      ? [period.value]
-      : [periods.value.first, periods.value.second],
-    fields: fields.value,
-    models: selectedModels.value.length
-      ? selectedModels.value
-      : providersModels.value.length
-      ? providersModels.value
-      : undefined,
-    accounts: selectedAccounts.value.length
-      ? selectedAccounts.value
-      : undefined,
-    agents:
-      agentType.value !== "all"
-        ? [agentType.value]
-        : agentTypes.value.map((a) => a.value).filter((a) => a !== "all"),
-  });
-
-  const cached = getCachedProcessedData(cacheKey);
-  if (cached) {
-    series.value = cached.series;
-    categories.value = cached.categories;
-    summary.value = cached.summary;
+watch(chartData, () => {
+  // Data fetched for another grouping/mode (changed mid-request) — wait for the next response.
+  if (
+    !chartData.value ||
+    chartData.value.fields !== fields.value ||
+    chartData.value.comparable !== comparable.value
+  ) {
     return;
   }
 
@@ -561,9 +540,7 @@ watch([chartData, fields], () => {
   const newCategories = [];
   const newSummary = {};
 
-  const tempData = structuredClone
-    ? structuredClone(chartData.value)
-    : JSON.parse(JSON.stringify(chartData.value));
+  const tempData = chartData.value.blocks;
 
   if (fields.value === "revenue") {
     const ranges = comparable.value ? periods.value : { first: period.value };
@@ -649,14 +626,26 @@ watch([chartData, fields], () => {
   }
 
   const accounts = [];
+  let modelsChanged = false;
   tempData.forEach((data) => {
-    data.summary?.models?.forEach((model) =>
-      allModels.value.add({ label: model, value: model }),
-    );
+    const models = [...(data.summary?.models || [])];
+    if (fields.value === "models" || fields.value === "providers") {
+      data.timeseries?.forEach((row) => row.key && models.push(row.key));
+    }
+    models.forEach((model) => {
+      if (!allModels.value.has(model)) {
+        allModels.value.set(model, { label: model, value: model });
+        modelsChanged = true;
+      }
+    });
 
     data.summary?.accounts?.forEach((account) => accounts.push(account));
+    if (fields.value === "accounts") {
+      data.timeseries?.forEach((row) => row.key && accounts.push(row.key));
+    }
   });
 
+  if (modelsChanged) triggerRef(allModels);
   allAccounts.value = [
     ...new Set([...allAccounts.value, ...accounts]).values(),
   ];
@@ -664,12 +653,6 @@ watch([chartData, fields], () => {
   series.value = newSeries;
   categories.value = newCategories.map((c) => c.toString().split("T")[0]);
   summary.value = newSummary;
-
-  setCachedProcessedData(cacheKey, {
-    series: newSeries,
-    categories: newCategories.map((c) => c.toString().split("T")[0]),
-    summary: newSummary,
-  });
 });
 
 watch(

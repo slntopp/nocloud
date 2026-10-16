@@ -108,8 +108,20 @@ const defaultTooltipFormatter = (params) => {
 const baseSeriesType = computed(() => (type.value === "bar" ? "bar" : "line"));
 const labelsEnabled = computed(() => (categories.value?.length || 0) < 35);
 
+// Stacked: one label with the stack total on the top series, not one per series.
+const stackTotals = computed(() => {
+  if (!stacked.value) return null;
+  const totals = [];
+  (series.value || []).forEach((serie) =>
+    (serie.data || []).forEach((value, i) => {
+      totals[i] = (totals[i] || 0) + (Number(value) || 0);
+    })
+  );
+  return totals;
+});
+
 const echartSeries = computed(() =>
-  (series.value || []).map((serie, index) => ({
+  (series.value || []).map((serie, index, all) => ({
     name: serie.name,
     type: baseSeriesType.value,
     stack: stacked.value ? "total" : undefined,
@@ -121,11 +133,13 @@ const echartSeries = computed(() =>
     lineStyle: type.value !== "bar" ? { width: 2.5 } : undefined,
     emphasis: { focus: "series" },
     label: {
-      show: labelsEnabled.value,
+      show:
+        labelsEnabled.value && (!stackTotals.value || index === all.length - 1),
       position: "top",
       color: textColor.value,
       fontSize: 11,
-      formatter: (p) => formatValue(p.value),
+      formatter: (p) =>
+        formatValue(stackTotals.value ? stackTotals.value[p.dataIndex] : p.value),
     },
     data: serie.data,
   }))

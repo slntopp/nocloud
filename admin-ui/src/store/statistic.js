@@ -107,6 +107,11 @@ export default {
         }),
       );
 
+      // fetch() swallows request errors and resolves undefined
+      data.forEach((item, index) => {
+        if (!item) data[index] = {};
+      });
+
       data.forEach((data) => {
         if (!data.timeseries) {
           data.timeseries = [];
