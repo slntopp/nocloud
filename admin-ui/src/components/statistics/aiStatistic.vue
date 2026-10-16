@@ -33,6 +33,7 @@
           :categories="categories"
           :summary="summary"
           :stacked="fields !== 'revenue'"
+          :stack-total-label="fields !== 'revenue' && !comparable"
           :value-formatter="valueFormatter"
           :tooltip-formatter="tooltipFormatter"
           :legend-formatter="fields !== 'revenue' ? legendFormatter : null"
@@ -377,8 +378,9 @@ const tooltipFormatter = (params) => {
   return html;
 };
 
-async function fetchData() {
-  const requestId = ++lastRequestId;
+// requestId is taken by the caller at the moment filters change, so a response
+// in flight during the debounce window is already stale.
+async function fetchData(requestId = ++lastRequestId) {
   const requestFields = fields.value;
   const requestComparable = comparable.value;
   isDataLoading.value = true;
@@ -419,6 +421,8 @@ async function fetchData() {
     if (requestId === lastRequestId) {
       chartData.value = { fields: requestFields, comparable: requestComparable, blocks };
     }
+  } catch (e) {
+    console.error(e); // keep the previous chart
   } finally {
     if (requestId === lastRequestId) {
       isDataLoading.value = false;
@@ -466,6 +470,7 @@ const fetchDataDebounced = debounce(fetchData, 300);
 debounce(fetchData, 100)();
 
 const requestedAccounts = new Set();
+let accountsLoads = 0;
 const ACCOUNTS_CHUNK = 200;
 
 async function fetchAccounts(accounts) {
@@ -475,6 +480,7 @@ async function fetchAccounts(accounts) {
   }
   accountsToFetch.forEach((uuid) => requestedAccounts.add(uuid));
 
+  accountsLoads++;
   isAccountsLoading.value = true;
   try {
     for (let i = 0; i < accountsToFetch.length; i += ACCOUNTS_CHUNK) {
@@ -497,7 +503,7 @@ async function fetchAccounts(accounts) {
       triggerRef(fullAccounts);
     }
   } finally {
-    isAccountsLoading.value = false;
+    isAccountsLoading.value = --accountsLoads > 0;
   }
 }
 
@@ -517,11 +523,12 @@ watch(
     fields,
   ],
   () => {
+    const requestId = ++lastRequestId;
     isDataLoading.value = true;
     if (!chartData.value) {
-      fetchData();
+      fetchData(requestId);
     } else {
-      fetchDataDebounced();
+      fetchDataDebounced(requestId);
     }
   },
 );

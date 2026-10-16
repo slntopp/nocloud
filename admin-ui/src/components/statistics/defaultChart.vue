@@ -38,6 +38,8 @@ const props = defineProps({
   summary: { type: Object, default: () => ({}) },
   type: { type: String, default: "bar" },
   stacked: { type: Boolean, default: false },
+  // Stacked series are parts of one whole (top N + Other): label the column total.
+  stackTotalLabel: { type: Boolean, default: false },
   description: { type: String, default: "" },
   options: { type: Object, default: () => ({}) },
   valueFormatter: { type: Function, default: null },
@@ -51,6 +53,7 @@ const {
   summary,
   type,
   stacked,
+  stackTotalLabel,
   description,
   options,
   valueFormatter,
@@ -108,9 +111,8 @@ const defaultTooltipFormatter = (params) => {
 const baseSeriesType = computed(() => (type.value === "bar" ? "bar" : "line"));
 const labelsEnabled = computed(() => (categories.value?.length || 0) < 35);
 
-// Stacked: one label with the stack total on the top series, not one per series.
 const stackTotals = computed(() => {
-  if (!stacked.value) return null;
+  if (!stacked.value || !stackTotalLabel.value) return null;
   const totals = [];
   (series.value || []).forEach((serie) =>
     (serie.data || []).forEach((value, i) => {
