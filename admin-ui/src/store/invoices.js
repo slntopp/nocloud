@@ -72,14 +72,21 @@ export default {
       }
     },
     copy({ getters }, invoice) {
-      delete invoice.meta.whmcs_invoice_id;
+      const meta = { ...(invoice.meta || {}) };
+      delete meta.whmcs_invoice_id;
+      for (const key of Object.keys(meta)) {
+        if (key === "ksef" || key.startsWith("ksef_")) {
+          delete meta[key];
+        }
+      }
+
       const data = {
         items: invoice.items,
         total: invoice.total,
         account: invoice.account,
         type: invoice.type,
         deadline: Math.round(Date.now() / 1000 + 86400 * 30),
-        meta: invoice.meta,
+        meta,
         status: "DRAFT",
         currency: invoice.currency,
       };
