@@ -140,6 +140,11 @@ export default {
           component: () =>
             import("@/components/modules/ione/planConfiguration.vue"),
         },
+        this.plan?.type === "proxmox" && {
+          title: "Configuration",
+          component: () =>
+            import("@/components/modules/proxmox/planConfiguration.vue"),
+        },
         ["bitrix24"].includes(this.plan?.type) && {
           title: "Licences",
           component: () => import("@/components/plan/licences.vue"),

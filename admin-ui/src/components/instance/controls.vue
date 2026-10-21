@@ -535,6 +535,54 @@ export default {
           },
           ...this.baseVmControls,
         ],
+        // Same buttons/action names as IONE: the driver emits OpenNebula-like
+        // state/lcm_state in state.meta (path A), so ioneActions applies as is.
+        proxmox: [
+          {
+            action: "start",
+            type: "method",
+            component: () => import("@/components/dialogs/startInstance.vue"),
+            method: this.startInstance,
+            disabled: this.ioneActions?.start,
+          },
+          {
+            action: "poweroff",
+            disabled: this.ioneActions?.poweroff,
+            icon: "mdi-stop",
+          },
+          {
+            action: "resume",
+            title: "Unsuspend",
+            disabled: this.ioneActions?.resume,
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume", date),
+          },
+          {
+            action: "suspend",
+            disabled: this.ioneActions?.suspend,
+            icon: "mdi-power-sleep",
+          },
+          {
+            action: "reboot",
+            disabled: this.ioneActions?.reboot,
+            icon: "mdi-restart",
+          },
+          {
+            action: "vnc",
+            title: "Console",
+            disabled: this.ioneActions?.vnc,
+            icon: "mdi-console",
+          },
+          {
+            action: "migrate",
+            title: "Migrate",
+            component: () => import("@/components/dialogs/migrateInstance.vue"),
+            disabled: !this.template.data?.vmid && !this.template.data?.vm_id,
+          },
+          ...this.baseVmControls,
+        ],
         "ovh dedicated": [
           {
             action: "start",
