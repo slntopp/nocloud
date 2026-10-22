@@ -233,6 +233,8 @@ import Balance from "./balance.vue";
 import NotificationsCell from "@/components/ui/notificationsCell.vue";
 import useSearch from "@/hooks/useSearch";
 import { UpdateRequest } from "nocloud-proto/proto/es/instances/instances_pb";
+import { NoCloudStatus } from "nocloud-proto/proto/es/statuses/statuses_pb";
+import { NoCloudState } from "nocloud-proto/proto/es/states/states_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "instances-table" },
@@ -378,6 +380,8 @@ const searchParam = computed(() => store.getters["appSearch/param"]);
 const listOptions = computed(() => {
   const filters = {};
   const datekeys = ["created", "data.next_payment_date"];
+  // set once the State filter has said what to do about deleted instances
+  let statusDecided = false;
 
   for (const key of Object.keys(filter.value)) {
     const value = filter.value[key];
@@ -423,7 +427,22 @@ const listOptions = computed(() => {
       continue;
     }
 
-    if (key === "account_groups") {
+    // The DELETED chip reads status (DEL), not state.state, so picking DELETED
+    // in the State filter has to become a status filter. The backend ANDs the
+    // two, so "deleted OR running" is not expressible: with DELETED alongside
+    // live states we just stop hiding deleted ones.
+    if (key === "state.state") {
+      const states = value.filter((v) => v !== NoCloudState.DELETED);
+      const withDeleted = states.length !== value.length;
+
+      if (states.length) {
+        filters[key] = states;
+      } else if (withDeleted) {
+        filters.status = [NoCloudStatus.DEL];
+      }
+
+      statusDecided = withDeleted;
+    } else if (key === "account_groups") {
       const groups = filter.value[key].filter((v) => v !== "no_group");
       const hasNoGroup = filter.value[key].includes("no_group");
       if (groups.length) {
@@ -452,6 +471,16 @@ const listOptions = computed(() => {
       continue;
     }
     filters[key] = value;
+  }
+
+  // a layout that never mentions DELETED still must not leak deleted instances
+  // (an empty status means "any", as the account page's Show deleted does)
+  if (
+    !statusDecided &&
+    !("status" in filters) &&
+    !("status" in (customFilter.value ?? {}))
+  ) {
+    filters.status = notDeletedStatuses;
   }
 
   return {
