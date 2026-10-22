@@ -113,6 +113,64 @@
               <span v-html="item.name" />
               <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
             </template>
+            <template v-slot:[`item.aiModels`]="{ item }">
+              <div v-if="!item.isAddon" class="d-flex align-center nowrap">
+                <span v-if="!models.length">All</span>
+                <v-chip
+                  v-for="model in models.slice(0, 2)"
+                  :key="model"
+                  x-small
+                  outlined
+                  class="mr-1"
+                  >{{ modelNames[model] || model }}</v-chip
+                >
+                <v-tooltip v-if="models.length > 2" bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <v-chip
+                      x-small
+                      color="primary"
+                      outlined
+                      v-bind="attrs"
+                      v-on="on"
+                      >+{{ models.length - 2 }}</v-chip
+                    >
+                  </template>
+                  <div v-for="model in models.slice(2)" :key="model">
+                    {{ modelNames[model] || model }}
+                  </div>
+                </v-tooltip>
+              </div>
+            </template>
+            <template v-slot:[`item.aiCredit`]="{ item }">
+              <div v-if="!item.isAddon" class="nowrap">
+                <v-progress-circular
+                  v-if="isUsageLoading"
+                  indeterminate
+                  size="16"
+                  width="2"
+                />
+                <template v-else-if="usage">
+                  <div>
+                    {{ amount(usage.left) }} / {{ amount(usage.total) }}
+                    {{ defaultCurrency?.code }}
+                  </div>
+                  <div class="caption text--secondary">
+                    used {{ amount(usage.total - usage.left) }}
+                  </div>
+                </template>
+                <v-tooltip v-else bottom>
+                  <template v-slot:activator="{ on, attrs }">
+                    <span v-bind="attrs" v-on="on"
+                      >- / {{ amount(credit) }} {{ defaultCurrency?.code }}</span
+                    >
+                  </template>
+                  <span>{{ usageError }}</span>
+                </v-tooltip>
+              </div>
+            </template>
+            <template v-slot:[`item.aiSeats`]="{ item }">
+              <template v-if="!item.isAddon">{{ seatsText }}</template>
+            </template>
             <template v-slot:[`item.price`]="{ item }">
               <div class="d-flex">
                 <v-text-field
@@ -142,8 +200,19 @@
                       ?.period
                   }}
                 </td>
-                <td>
+                <td :colspan="isAiPackage ? 4 : 1">
                   <div class="d-flex align-center justify-end mr-4">
+                    <v-btn
+                      v-if="isAiPackage"
+                      class="mr-5"
+                      color="primary"
+                      outlined
+                      :loading="isChatLoading"
+                      @click="openChat"
+                    >
+                      <v-icon small left>mdi-chat-outline</v-icon>
+                      AI chat as client
+                    </v-btn>
                     <v-dialog v-model="isAddonsDialog" max-width="60%">
                       <template v-slot:activator="{ on, attrs }">
                         <v-btn
@@ -222,6 +291,7 @@ import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import DatePicker from "../../ui/dateTimePicker.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
+import useAiPackage from "@/hooks/useAiPackage";
 import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
@@ -237,16 +307,33 @@ const changeDatesDialog = ref(false);
 const priceModelDialog = ref(false);
 const isAddonsDialog = ref(false);
 
-function getBillingHeaders() {
-  return [
-    { text: "Name", value: "name" },
-    { text: "Payment term", value: "kind" },
-    { text: "Billing period", value: "period" },
-    { text: "Price", value: "price" },
-  ];
-}
+const {
+  isAiPackage,
+  credit,
+  usage,
+  usageError,
+  isUsageLoading,
+  seatsText,
+  models,
+  modelNames,
+  amount,
+  openChat,
+  isChatLoading,
+} = useAiPackage(template, account);
 
-const billingHeaders = ref(getBillingHeaders());
+const billingHeaders = computed(() => [
+  { text: "Name", value: "name" },
+  { text: "Payment term", value: "kind" },
+  { text: "Billing period", value: "period" },
+  ...(isAiPackage.value
+    ? [
+        { text: "Models", value: "aiModels", sortable: false },
+        { text: "Left / Credit", value: "aiCredit", sortable: false },
+        { text: "Seats", value: "aiSeats", sortable: false },
+      ]
+    : []),
+  { text: "Price", value: "price", width: isAiPackage.value ? 360 : undefined },
+]);
 const billingItems = ref([]);
 
 const dueDate = computed(() =>
@@ -338,4 +425,8 @@ const updatePrice = (item, isAccount) => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.nowrap {
+  white-space: nowrap;
+}
+</style>
