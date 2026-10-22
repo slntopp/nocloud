@@ -36,3 +36,6 @@ globalThis.dark = true;
 // globalThis.dark = false
 
 // globalThis.logoSrc = '/img/logo.svg'
+
+// LibreChat the instance page signs a client into
+// globalThis.aiChatUrl = 'https://ai.support.by'

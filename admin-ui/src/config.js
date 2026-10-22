@@ -10,5 +10,7 @@ export default {
 			whiteText: global?.dye?.aside?.whiteText,
 		}
 	},
-	navTitles: global.navTitles ?? {}
+	navTitles: global.navTitles ?? {},
+	// ponytail: support.by's chat as the default, set aiChatUrl in public/js/config.js for another installation
+	aiChatUrl: global.aiChatUrl ?? "https://ai.support.by",
 }
