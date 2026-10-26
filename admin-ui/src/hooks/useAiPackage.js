@@ -78,8 +78,11 @@ export default function useAiPackage(template, account) {
       usage.value =
         data.packages?.find((p) => p.instance === template.value.uuid) ?? null;
       if (!usage.value) {
-        // the driver lists only paid, running, not suspended periods
-        usageError.value = "No active period (stopped, suspended or unpaid)";
+        // the driver lists only paid, running, not suspended periods, and a one-time package
+        // until its credit is spent
+        usageError.value = +product.value.period > 0
+          ? "No active period (stopped, suspended or unpaid)"
+          : "Credit spent, or stopped or suspended";
       }
     } catch (e) {
       usageError.value = `Failed to read usage: ${

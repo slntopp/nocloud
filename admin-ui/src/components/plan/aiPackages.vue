@@ -128,6 +128,14 @@
               />
             </v-col>
             <v-col cols="6">
+              <v-switch
+                v-model="form.oneTime"
+                label="One-time"
+                hint="Bought once and never renewed: it lasts until its credit is spent, then it is suspended."
+                persistent-hint
+              />
+            </v-col>
+            <v-col v-if="!form.oneTime" cols="6">
               <date-field
                 :key="`${dialogKey}-period`"
                 :period="form.period"
@@ -245,6 +253,7 @@ import {
   formError,
   copyKey,
   isAiPackage,
+  isOneTime,
   hasMisplacedKeys,
 } from "./aiPackages";
 
@@ -381,6 +390,7 @@ const formMessage = computed(() => (form.value ? formError(form.value, otherKeys
 
 
 function periodLabel(product) {
+  if (isOneTime(product)) return "one-time, until spent";
   const kinds = {
     CALENDAR_MONTH: "calendar month",
     CALENDAR_QUARTER: "calendar quarter",
