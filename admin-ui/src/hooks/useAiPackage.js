@@ -4,6 +4,20 @@ import api from "@/api";
 import config from "@/config";
 import { useStore } from "@/store";
 
+// ponytail: the billing info and the billing label mount this hook for the same instance at
+// once, and every usage read mints a client session. Share the in-flight request per key and
+// drop it when it settles, so a page reload still refetches.
+const inFlight = new Map();
+const once = (key, fn) => {
+  let request = inFlight.get(key);
+  if (!request) {
+    request = fn();
+    inFlight.set(key, request);
+    request.catch(() => {}).finally(() => inFlight.delete(key));
+  }
+  return request;
+};
+
 /**
  * An instance's AI package (a product with meta.ai_credit) as the billing info shows it: the credit
  * of the current period, how much of it is spent, the seats and models, and signing into the chat
@@ -54,15 +68,21 @@ export default function useAiPackage(template, account) {
   const fetchUsage = async () => {
     isUsageLoading.value = true;
     try {
-      const token = await clientToken();
-      const { data } = await api.axios.get("/api/openai/packages", {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await once(`packages:${template.value.uuid}`, async () => {
+        const token = await clientToken();
+        const { data } = await api.axios.get("/api/openai/packages", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        return data;
       });
       usage.value =
         data.packages?.find((p) => p.instance === template.value.uuid) ?? null;
       if (!usage.value) {
-        // the driver lists only paid, running, not suspended periods
-        usageError.value = "No active period (stopped, suspended or unpaid)";
+        // the driver lists only paid, running, not suspended periods, and a one-time package
+        // until its credit is spent
+        usageError.value = +product.value.period > 0
+          ? "No active period (stopped, suspended or unpaid)"
+          : "Credit spent, or stopped or suspended";
       }
     } catch (e) {
       usageError.value = `Failed to read usage: ${
@@ -76,7 +96,9 @@ export default function useAiPackage(template, account) {
   const fetchModelNames = async () => {
     if (!models.value.length) return;
     try {
-      const { cfg } = await api.get("/api/openai/get_config");
+      const { cfg } = await once("openai-config", () =>
+        api.get("/api/openai/get_config")
+      );
       modelNames.value = Object.fromEntries(
         Object.entries(cfg?.models ?? {}).map(([key, m]) => [key, m.name])
       );

@@ -5,6 +5,9 @@
  * Constructor packages (`ai_site`) may also split models into survey (`ai_models_survey`) and
  * build (`ai_models_build`); `ai_models` stays the union so billing still covers both.
  * The storefront reads one more: ai_promocode, the code it applies to this package on its own.
+ *
+ * A package renews every period like any instance, or, with period 0, is one-time: bought once,
+ * never invoiced again, spent until its credit runs out, then suspended by the driver.
  */
 export const AI_KEYS = [
   "ai_credit",
@@ -30,6 +33,9 @@ const uniqueModels = (keys) => [...new Set(keys.filter((m) => typeof m === "stri
 
 export const isAiPackage = (product) => Number(aiValue(product, "ai_credit")) > 0;
 
+/** A saved package without a period is one-time; a new one starts periodic. */
+export const isOneTime = (product) => product?.period !== undefined && !(Number(product.period) > 0);
+
 /** Whether some AI keys sit in resources, where the driver does not read them. */
 export const hasMisplacedKeys = (product) =>
   AI_KEYS.some((key) => product?.resources?.[key] !== undefined);
@@ -47,6 +53,7 @@ export function toForm(key, product = {}) {
     key,
     title: product.title ?? "",
     price: Number(product.price) || 0,
+    oneTime: isOneTime(product),
     period: Number(product.period) || DEFAULT_PERIOD,
     periodKind: product.periodKind || (product.period ? "DEFAULT" : "CALENDAR_MONTH"),
     credit: Number(aiValue(product, "ai_credit")) || 0,
@@ -103,8 +110,8 @@ export function toProduct(form, original = {}) {
     kind: original.kind || "PREPAID",
     title: form.title.trim(),
     price: Number(form.price),
-    period: Number(form.period),
-    periodKind: form.periodKind || "DEFAULT",
+    period: form.oneTime ? 0 : Number(form.period),
+    periodKind: form.oneTime ? "DEFAULT" : form.periodKind || "DEFAULT",
     public: Boolean(form.public),
     sorter: Number(form.sorter) || 0,
     meta,
@@ -129,8 +136,8 @@ export function formError(form, otherKeys) {
   if (!(Number(form.price) >= 0)) {
     return "The price cannot be negative";
   }
-  if (!(Number(form.period) > 0)) {
-    return "The package needs a period";
+  if (!form.oneTime && !(Number(form.period) > 0)) {
+    return "The package needs a period, or make it one-time";
   }
   if (!(Number(form.credit) > 0)) {
     return "The credit must be above 0 NCU";
