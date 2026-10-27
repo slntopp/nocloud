@@ -50,39 +50,107 @@
         </nocloud-table>
 
         <div v-else-if="tab === 'Prices'">
-          <div class="d-flex justify-space-between align-center">
+          <div class="d-flex flex-wrap align-center prices-toolbar">
             <v-text-field
-              style="max-width: 400px"
-              v-model="searchParam"
-              label="Search"
-            ></v-text-field>
-            <v-btn :loading="isFillLoading" @click="fillConfig"
-              >Fill config</v-btn
-            >
-
-            <v-btn :loading="isExportLoading" @click="exportToXlsx"
-              >Export to XLSX</v-btn
-            >
-          </div>
-          <div class="d-flex align-center">
-            <v-select
-              style="max-width: 200px"
-              class="mr-2"
+              class="toolbar-search"
               dense
+              hide-details
+              clearable
+              prepend-inner-icon="mdi-magnify"
+              label="Search"
+              v-model="searchParam"
+            />
+
+            <v-select
+              class="toolbar-filter"
+              dense
+              hide-details
+              clearable
               label="Provider"
               :items="providers"
-              v-model="bulkGroupProvider"
+              v-model="filterProvider"
             />
-            <v-text-field
-              style="max-width: 200px"
-              class="mr-2"
+
+            <v-select
+              class="toolbar-filter"
               dense
-              label="Group"
-              v-model="bulkGroup"
-            />
-            <v-btn :disabled="!bulkGroupProvider" @click="setGroupForProvider"
-              >Set group for provider</v-btn
+              hide-details
+              clearable
+              multiple
+              label="Types"
+              :items="availableTypes"
+              v-model="filterTypes"
             >
+              <template v-slot:selection="{ item, index }">
+                <v-chip
+                  v-if="index < 1"
+                  x-small
+                  style="color: white"
+                  :color="typesColorMap[item]"
+                  >{{ item }}</v-chip
+                >
+                <span v-else-if="index === 1" class="caption ml-1"
+                  >+{{ filterTypes.length - 1 }}</span
+                >
+              </template>
+            </v-select>
+
+            <v-select
+              class="toolbar-filter"
+              dense
+              hide-details
+              clearable
+              label="State"
+              :items="states"
+              v-model="filterState"
+            />
+
+            <v-spacer />
+
+            <v-menu
+              v-model="isGroupMenu"
+              :close-on-content-click="false"
+              offset-y
+              left
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn outlined v-bind="attrs" v-on="on">
+                  <v-icon small left>mdi-folder-cog-outline</v-icon>
+                  Set group
+                </v-btn>
+              </template>
+              <v-card class="pa-4" color="background-light" width="320">
+                <div class="subtitle-2 mb-2">Set group for provider</div>
+                <v-select
+                  dense
+                  label="Provider"
+                  :items="providers"
+                  v-model="bulkGroupProvider"
+                />
+                <v-text-field dense label="Group" v-model="bulkGroup" />
+                <div class="d-flex justify-end">
+                  <v-btn text class="mr-2" @click="isGroupMenu = false"
+                    >Cancel</v-btn
+                  >
+                  <v-btn
+                    color="primary"
+                    :disabled="!bulkGroupProvider"
+                    @click="applyGroupForProvider"
+                    >Apply</v-btn
+                  >
+                </div>
+              </v-card>
+            </v-menu>
+
+            <v-btn outlined :loading="isFillLoading" @click="fillConfig">
+              <v-icon small left>mdi-cog-sync-outline</v-icon>
+              Fill config
+            </v-btn>
+
+            <v-btn outlined :loading="isExportLoading" @click="exportToXlsx">
+              <v-icon small left>mdi-file-excel-outline</v-icon>
+              Export to XLSX
+            </v-btn>
           </div>
           <nocloud-table
             :headers="newPricesHeaders"
@@ -120,7 +188,14 @@
             </template>
 
             <template v-slot:[`item.key`]="{ item }">
-              {{ getShortName(item.key) }}
+              <v-tooltip bottom>
+                <template v-slot:activator="{ on, attrs }">
+                  <span v-bind="attrs" v-on="on">{{
+                    getShortName(item.key)
+                  }}</span>
+                </template>
+                <span>{{ item.key }}</span>
+              </v-tooltip>
             </template>
 
             <template v-slot:[`item.visibility`]="{ item }">
@@ -658,6 +733,10 @@ const fieldLabel = (field) => {
 };
 
 const searchParam = ref("");
+const filterProvider = ref(null);
+const filterTypes = ref([]);
+const filterState = ref(null);
+const isGroupMenu = ref(false);
 
 const isSaveLoading = ref(false);
 const isSaveModelLoading = ref(false);
@@ -881,14 +960,33 @@ const setFee = () => {
 };
 
 const newPricesResourcesFiltred = computed(() => {
-  const param = searchParam.value.toLowerCase();
-  return newPricesResources.value.filter(
-    (r) =>
-      r.name.includes(param) ||
-      r.key.includes(param) ||
-      (r?.types || []).includes(param) ||
-      r.provider === param
-  );
+  const param = (searchParam.value || "").trim().toLowerCase();
+
+  return newPricesResources.value.filter((r) => {
+    if (filterProvider.value && r.provider !== filterProvider.value) {
+      return false;
+    }
+    if (filterState.value && r.state?.state !== filterState.value) {
+      return false;
+    }
+    // several types narrow to models having any of them, not all of them
+    if (
+      filterTypes.value.length &&
+      !filterTypes.value.some((type) => (r.types || []).includes(type))
+    ) {
+      return false;
+    }
+    if (!param) {
+      return true;
+    }
+
+    return (
+      (r.name || "").toLowerCase().includes(param) ||
+      (r.key || "").toLowerCase().includes(param) ||
+      (r.provider || "").toLowerCase().includes(param) ||
+      (r.types || []).some((type) => type.toLowerCase().includes(param))
+    );
+  });
 });
 
 const fieldsForAdd = computed(() => {
@@ -1432,10 +1530,21 @@ const providers = computed(() => [
   ...new Set(newPricesResources.value.map((r) => r.provider)),
 ]);
 
+const states = computed(() => [
+  ...new Set(
+    newPricesResources.value.map((r) => r.state?.state).filter(Boolean)
+  ),
+]);
+
 const setGroupForProvider = () => {
   newPricesResources.value
     .filter((r) => r.provider === bulkGroupProvider.value)
     .forEach((r) => (r.meta.group = bulkGroup.value));
+};
+
+const applyGroupForProvider = () => {
+  setGroupForProvider();
+  isGroupMenu.value = false;
 };
 
 watch(isBillingSettingsOpen, (value) => {
@@ -1447,6 +1556,20 @@ watch(isBillingSettingsOpen, (value) => {
 </script>
 
 <style scoped>
+/* one wrapping toolbar: search and filters on the left, actions on the right */
+.prices-toolbar {
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.toolbar-search {
+  max-width: 260px;
+}
+
+.toolbar-filter {
+  max-width: 180px;
+}
+
 .key_text {
   font-size: 1rem;
 }
