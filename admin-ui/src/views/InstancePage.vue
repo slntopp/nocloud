@@ -6,18 +6,18 @@
       }}</router-link>
       / {{ instanceTitle }}
     </h1>
-    <v-tabs
-      class="rounded-t-lg"
-      background-color="background-light"
-      v-model="tabsIndex"
-    >
-      <v-tab v-for="tab of tabs" :key="tab.title"
-        >{{ tab.title }}
-        <v-chip class="ml-1" small v-if="tab.title === 'notes'">{{
-          instance?.adminNotes?.length || 0
-        }}</v-chip></v-tab
-      >
-    </v-tabs>
+    <div class="tabs-row rounded-t-lg">
+      <v-tabs background-color="transparent" v-model="tabsIndex">
+        <v-tab v-for="tab of tabs" :key="tab.title"
+          >{{ tab.title }}
+          <v-chip class="ml-1" small v-if="tab.title === 'notes'">{{
+            instance?.adminNotes?.length || 0
+          }}</v-chip></v-tab
+        >
+      </v-tabs>
+      <!-- instance/controls.vue parks its Save button here, see tabsActionsId -->
+      <div id="instance-tabs-actions" class="px-2" />
+    </div>
     <v-tabs-items
       class="rounded-b-lg"
       style="background: var(--v-background-light-base)"
@@ -251,6 +251,17 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.tabs-row {
+  display: flex;
+  align-items: center;
+  background: var(--v-background-light-base);
+
+  .v-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
 .page__title {
   color: var(--v-primary-base);
   font-weight: 400;

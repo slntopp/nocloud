@@ -158,12 +158,18 @@ currentEditorValue.value = props.value;
   gap: 8px;
 }
 
+// No scroll of its own: the editor inside already scrolls, and a container
+// taller than its parent gave the page a second scrollbar on top of it.
 .editor-container {
   border-radius: 12px;
-  overflow-y: auto;
-  height: 110%;
   flex: 1;
   min-height: 0;
+}
+
+// JsonEditor-New is 500px tall by default (SettingsItem relies on that), here
+// it has to fill whatever height is left instead.
+.editor-container ::v-deep .editor-wrapper {
+  height: 100%;
 }
 
 .editor-readonly {
@@ -182,7 +188,6 @@ currentEditorValue.value = props.value;
     z-index: 10;
     border-radius: 12px;
     pointer-events: none;
-    height: 110%;
   }
 }
 </style>

@@ -75,7 +75,7 @@
       </confirm-dialog>
     </instance-control-btn>
 
-    <div class="save_button">
+    <div class="save_button" ref="saveButton">
       <instance-control-btn top hint="Save">
         <v-dialog persistent v-model="isBillingDialog" max-width="600px">
           <template v-slot:activator="{ on, attrs }">
@@ -1086,6 +1086,16 @@ export default {
       return this.$store.getters["settings/whmcsApi"];
     },
   },
+  // ponytail: Vue 2 has no Teleport, so the Save button is moved into the page's
+  // tab row by hand. It used to be position: fixed and followed the scroll.
+  mounted() {
+    document
+      .getElementById("instance-tabs-actions")
+      ?.appendChild(this.$refs.saveButton);
+  },
+  beforeDestroy() {
+    this.$refs.saveButton?.remove();
+  },
 };
 </script>
 
@@ -1093,13 +1103,8 @@ export default {
 .controls {
   max-width: calc(100% - 450px);
   min-width: 60%;
-}
-</style>
-
-<style>
-.save_button {
-  position: fixed;
-  top: 140px;
-  right: 40px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 </style>
