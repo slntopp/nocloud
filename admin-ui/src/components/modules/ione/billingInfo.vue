@@ -84,7 +84,14 @@
       >
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
-          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+          <template v-if="item.isAddon">
+            <v-chip small class="ml-1">Addon</v-chip>
+            <confirm-dialog @confirm="removeAddon(item)">
+              <v-btn icon small class="ml-1">
+                <v-icon small>mdi-delete</v-icon>
+              </v-btn>
+            </confirm-dialog>
+          </template>
         </template>
 
         <template v-slot:[`item.price`]="{ item }">
@@ -208,6 +215,7 @@ import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
+import ConfirmDialog from "@/components/confirmDialog.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
@@ -340,6 +348,12 @@ const getBillingItems = () => {
   }
 
   addons.value.forEach((addon, index) => {
+    // the instance may have dropped the addon since it was fetched, the index
+    // still has to point at the fetched array because item.path uses it
+    if (!template.value.addons?.includes(addon.uuid)) {
+      return;
+    }
+
     const { title, periods } = addon;
     const { period, kind } = billingPlan.value.products[template.value.product];
     items.push({
@@ -350,6 +364,7 @@ const getBillingItems = () => {
       accountPrice: toAccountPrice(periods[period]),
       quantity: 1,
       isAddon: true,
+      uuid: addon.uuid,
       kind,
       period,
     });
@@ -358,6 +373,13 @@ const getBillingItems = () => {
   return items.map((i) => {
     i.period = getBillingPeriod(i.period);
     return i;
+  });
+};
+
+const removeAddon = (item) => {
+  emit("update", {
+    key: "addons",
+    value: template.value.addons.filter((uuid) => uuid !== item.uuid),
   });
 };
 
@@ -388,6 +410,14 @@ const updatePrice = (item, isAccount) => {
     });
   }
 };
+
+// the addons dialog and the delete button both only change the uuid list
+watch(
+  () => template.value.addons,
+  () => {
+    billingItems.value = getBillingItems();
+  }
+);
 
 watch(accountRate, () => {
   billingItems.value = billingItems.value.map((i) => {

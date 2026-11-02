@@ -258,9 +258,7 @@ useSearch({
   noSearch: props.noSearch,
   defaultLayout: {
     title: "Default",
-    filter: {
-      status: notDeletedStatuses,
-    },
+    filter: {},
   },
 });
 
@@ -380,8 +378,6 @@ const searchParam = computed(() => store.getters["appSearch/param"]);
 const listOptions = computed(() => {
   const filters = {};
   const datekeys = ["created", "data.next_payment_date"];
-  // set once the State filter has said what to do about deleted instances
-  let statusDecided = false;
 
   for (const key of Object.keys(filter.value)) {
     const value = filter.value[key];
@@ -427,21 +423,26 @@ const listOptions = computed(() => {
       continue;
     }
 
-    // The DELETED chip reads status (DEL), not state.state, so picking DELETED
-    // in the State filter has to become a status filter. The backend ANDs the
-    // two, so "deleted OR running" is not expressible: with DELETED alongside
-    // live states we just stop hiding deleted ones.
+    // The DELETED chip reads status (DEL), not state.state, so the State filter
+    // owns deleted visibility and nothing else sets a status: no State filter
+    // means no status filter, so a plain search finds deleted instances too.
+    if (key === "status") {
+      continue;
+    }
+
     if (key === "state.state") {
       const states = value.filter((v) => v !== NoCloudState.DELETED);
       const withDeleted = states.length !== value.length;
 
-      if (states.length) {
+      if (!withDeleted) {
+        // a deleted instance can still carry a live state, hence the status too
         filters[key] = states;
-      } else if (withDeleted) {
+        filters.status = notDeletedStatuses;
+      } else if (!states.length) {
         filters.status = [NoCloudStatus.DEL];
       }
-
-      statusDecided = withDeleted;
+      // DELETED together with live states: the backend ANDs state and status,
+      // so "deleted OR running" can't be asked for — filter neither.
     } else if (key === "account_groups") {
       const groups = filter.value[key].filter((v) => v !== "no_group");
       const hasNoGroup = filter.value[key].includes("no_group");
@@ -471,16 +472,6 @@ const listOptions = computed(() => {
       continue;
     }
     filters[key] = value;
-  }
-
-  // a layout that never mentions DELETED still must not leak deleted instances
-  // (an empty status means "any", as the account page's Show deleted does)
-  if (
-    !statusDecided &&
-    !("status" in filters) &&
-    !("status" in (customFilter.value ?? {}))
-  ) {
-    filters.status = notDeletedStatuses;
   }
 
   return {
