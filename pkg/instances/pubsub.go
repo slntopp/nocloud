@@ -103,6 +103,12 @@ func (s *PubSub) ConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col strin
 // A writer that legitimately needs to move a date backwards (e.g. cancel_renew)
 // sets the transient "_authoritative_dates" flag in the payload to bypass the
 // guard. The flag is stripped before persisting.
+//
+// serviceId, once stored, is kept. A monitoring tick that started before the
+// order finished publishes a snapshot without it and would otherwise drop the
+// binding, so the next tick orders again. error is kept only until that
+// binding exists: a snapshot that omits it must not clear a permanent order
+// failure, and a snapshot that brings serviceId clears it.
 const updateDataQuery = `
 LET force = @data["_authoritative_dates"] == true
 LET incoming = UNSET(@data, "_authoritative_dates")
@@ -116,7 +122,21 @@ LET guards = MERGE(APPEND([{}], (
         FILTER IS_NUMBER(incoming[k]) AND IS_NUMBER(stored[k])
         RETURN { [k]: MAX([stored[k], incoming[k]]) }
 )))
-UPDATE DOCUMENT(@@collection, @key) WITH { data: MERGE(incoming, force ? {} : guards, { is_monitored: true }) } IN @@collection
+LET storedService = (IS_NUMBER(stored.serviceId) AND stored.serviceId > 0) ? stored.serviceId : null
+LET incomingService = (IS_NUMBER(incoming.serviceId) AND incoming.serviceId > 0) ? incoming.serviceId : null
+LET serviceId = storedService != null ? storedService : incomingService
+LET bound = serviceId != null
+LET keepError = (!bound AND IS_STRING(stored.error) AND stored.error != "" AND incoming.error == null)
+    ? { error: stored.error }
+    : {}
+LET merged = MERGE(
+    incoming,
+    force ? {} : guards,
+    bound ? { serviceId: serviceId } : {},
+    keepError,
+    { is_monitored: true }
+)
+UPDATE DOCUMENT(@@collection, @key) WITH { data: bound ? UNSET(merged, "error") : merged } IN @@collection
 `
 
 func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
