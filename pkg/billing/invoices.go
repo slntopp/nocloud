@@ -2084,7 +2084,13 @@ type invoiceLineInstance interface {
 func invoiceLineServiceName(invoicePrefix, productTitle string, inst invoiceLineInstance) string {
 	name := strings.TrimSpace(fmt.Sprintf("%s%s", invoicePrefix, productTitle))
 	if inst != nil {
-		if title := strings.TrimSpace(inst.GetTitle()); title != "" {
+		title := strings.TrimSpace(inst.GetTitle())
+		// A plan with an invoice prefix names the line itself: an instance named
+		// after its product would only repeat it ("AI СТАРТ - AI СТАРТ").
+		if strings.TrimSpace(invoicePrefix) != "" && title == strings.TrimSpace(productTitle) {
+			title = ""
+		}
+		if title != "" {
 			name = fmt.Sprintf("%s - %s", name, title)
 		}
 	}
