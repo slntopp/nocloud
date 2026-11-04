@@ -187,6 +187,18 @@
               />
             </template>
 
+            <!-- Read-only here: bots need verified capabilities, so the mark is
+                 set in the model's dialog where the driver validates it. -->
+            <template v-slot:[`item.bots`]="{ item }">
+              <v-chip
+                v-if="item.bots?.enabled"
+                small
+                :color="item.bots.default ? 'success' : 'primary'"
+              >
+                {{ item.bots.default ? "default" : "bots" }}
+              </v-chip>
+            </template>
+
             <template v-slot:[`item.key`]="{ item }">
               <v-tooltip bottom>
                 <template v-slot:activator="{ on, attrs }">
@@ -272,6 +284,93 @@
                 multiple
                 v-model="currentBillingSettings.types"
               />
+
+              <template v-if="(currentBillingSettings.types || []).includes('text')">
+                <v-card-title class="key_title" style="padding: 0px">
+                  Capabilities
+                </v-card-title>
+                <v-switch
+                  dense
+                  hide-details
+                  class="mb-2"
+                  v-model="capsEnabled"
+                  label="Capabilities are verified (the proxy and bots rely on them)"
+                />
+                <div v-if="!capsEnabled" class="key_text mb-4">
+                  Not set: requests to this model are sent exactly as before.
+                </div>
+                <v-row v-else dense align="center" class="mb-2">
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.tools" label="Tools" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.json_schema" label="JSON schema" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.temperature" label="Custom temperature" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.vision" label="Vision" />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-combobox
+                      dense
+                      outlined
+                      hide-details
+                      multiple
+                      chips
+                      small-chips
+                      label="Reasoning efforts (empty: not a reasoning model)"
+                      :items="reasoningEffortItems"
+                      v-model="capsForm.reasoning"
+                    />
+                  </v-col>
+                </v-row>
+
+                <v-card-title class="key_title" style="padding: 0px">
+                  AI bots
+                </v-card-title>
+                <v-row dense align="center" class="mb-2">
+                  <v-col cols="auto">
+                    <v-switch dense hide-details v-model="botsForm.enabled" label="Available for bots" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-switch dense hide-details v-model="botsForm.default" label="Default (recommended)" />
+                  </v-col>
+                  <v-col cols="4">
+                    <v-select
+                      dense
+                      outlined
+                      hide-details
+                      clearable
+                      label="Default reasoning effort"
+                      :items="capsEnabled ? capsForm.reasoning : []"
+                      v-model="botsForm.reasoning_effort"
+                    />
+                  </v-col>
+                </v-row>
+                <div class="key_text mb-4">
+                  Bots need Tools and JSON schema. Only one model can be the
+                  default: saving this one as default moves the mark here.
+                </div>
+
+                <v-card-title class="key_title" style="padding: 0px">
+                  Description
+                </v-card-title>
+                <v-row dense class="mb-4">
+                  <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
+                    <v-textarea
+                      dense
+                      outlined
+                      hide-details
+                      rows="2"
+                      auto-grow
+                      :label="lang"
+                      v-model="descForm[lang]"
+                    />
+                  </v-col>
+                </v-row>
+              </template>
 
               <v-row v-for="key in Object.keys(fieldsForAdd)" :key="key">
                 <v-col cols="12">
@@ -712,6 +811,7 @@ const newPricesHeaders = [
   { text: "Visibility", value: "visibility", width: 150 },
   { text: "Enabled", value: "disabled", width: 100 },
   { text: "Sitebuilder", value: "sitebuilder", width: 120 },
+  { text: "Bots", value: "bots", sortable: false, width: 110 },
   { text: "Billing", value: "billing", sortable: false, width: 100 },
   { text: "State", value: "state.state", width: 100 },
 ];
@@ -743,6 +843,16 @@ const isSaveModelLoading = ref(false);
 const isBillingSettingsOpen = ref(false);
 const billingSettinfsMessages = ref([]);
 const currentBillingSettings = ref({});
+// Capabilities, bots and description are edited in forms of their own and only
+// written back on save. Capabilities in particular must stay null until an
+// administrator verifies them: an empty object would tell the proxy the model
+// rejects temperature, and opening a model just to change a price would do that.
+const descriptionLangs = ["ru", "en", "pl", "fr", "vi"];
+const reasoningEffortItems = ["minimal", "low", "medium", "high"];
+const capsEnabled = ref(false);
+const capsForm = ref({});
+const botsForm = ref({});
+const descForm = ref({});
 const newKeysForMaps = ref({});
 const newSubkeysForMaps = ref({});
 const newResolution = ref("");
@@ -1095,7 +1205,55 @@ const openBillingSettings = (item) => {
   }
 
   currentBillingSettings.value = temp;
+  fillModelForms(temp);
   isBillingSettingsOpen.value = true;
+};
+
+const fillModelForms = (model) => {
+  capsEnabled.value = !!model.capabilities;
+  capsForm.value = {
+    tools: !!model.capabilities?.tools,
+    json_schema: !!model.capabilities?.json_schema,
+    // A model that was never checked keeps its temperature when enabled first.
+    temperature: model.capabilities ? !!model.capabilities.temperature : true,
+    vision: !!model.capabilities?.vision,
+    reasoning: [...(model.capabilities?.reasoning || [])],
+  };
+  botsForm.value = {
+    enabled: !!model.bots?.enabled,
+    default: !!model.bots?.default,
+    reasoning_effort: model.bots?.reasoning_effort || "",
+  };
+  descForm.value = Object.fromEntries(
+    descriptionLangs.map((lang) => [lang, model.description?.[lang] || ""])
+  );
+};
+
+// What the forms hold, in the shape of the driver's config. Empty means null,
+// so a model nobody touched here saves exactly as it was loaded.
+const modelFormsToConfig = () => {
+  const capabilities = capsEnabled.value
+    ? {
+        ...capsForm.value,
+        reasoning: (capsForm.value.reasoning || []).filter(Boolean),
+      }
+    : null;
+  const bots = botsForm.value;
+  const botsTouched = bots.enabled || bots.default || bots.reasoning_effort;
+  const description = Object.fromEntries(
+    Object.entries(descForm.value).filter(([, text]) => text && text.trim())
+  );
+  return {
+    capabilities,
+    bots: botsTouched
+      ? {
+          enabled: !!bots.enabled,
+          default: !!bots.default,
+          reasoning_effort: bots.reasoning_effort || "",
+        }
+      : null,
+    description: Object.keys(description).length ? description : null,
+  };
 };
 
 const resolutionColumns = (field) => {
@@ -1171,6 +1329,7 @@ const saveBillingSettings = async () => {
     JSON.stringify({ ...currentBillingSettings.value, billing: {} })
   );
   delete configModel.key;
+  Object.assign(configModel, modelFormsToConfig());
 
   for (const type of configModel.types) {
     for (const fields of fieldsForTypes[type].fields) {
@@ -1285,12 +1444,24 @@ const saveBillingSettings = async () => {
       (item) => item.key === resultModel.key
     );
     newPricesResources.value[index] = withMeta(resultModel);
+    // The driver moved the default mark onto this model; mirror it here, or the
+    // next full "Save" would send two defaults and be refused.
+    if (resultModel.bots?.default) {
+      newPricesResources.value.forEach((item) => {
+        if (item.key !== resultModel.key && item.bots?.default) {
+          item.bots = { ...item.bots, default: false };
+        }
+      });
+    }
 
     newPricesResources.value = [...newPricesResources.value];
     isBillingSettingsOpen.value = false;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during save prices",
+      message:
+        e.response?.data?.answer ||
+        e.response?.data?.message ||
+        "Error during save prices",
     });
   } finally {
     isSaveModelLoading.value = false;
@@ -1495,7 +1666,10 @@ const save = async () => {
     store.dispatch("reloadBtn/onclick");
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during save prices",
+      message:
+        e.response?.data?.answer ||
+        e.response?.data?.message ||
+        "Error during save prices",
     });
   } finally {
     isSaveLoading.value = false;
