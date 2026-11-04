@@ -285,93 +285,6 @@
                 v-model="currentBillingSettings.types"
               />
 
-              <template v-if="(currentBillingSettings.types || []).includes('text')">
-                <v-card-title class="key_title" style="padding: 0px">
-                  Capabilities
-                </v-card-title>
-                <v-switch
-                  dense
-                  hide-details
-                  class="mb-2"
-                  v-model="capsEnabled"
-                  label="Capabilities are verified (the proxy and bots rely on them)"
-                />
-                <div v-if="!capsEnabled" class="key_text mb-4">
-                  Not set: requests to this model are sent exactly as before.
-                </div>
-                <v-row v-else dense align="center" class="mb-2">
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.tools" label="Tools" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.json_schema" label="JSON schema" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.temperature" label="Custom temperature" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.vision" label="Vision" />
-                  </v-col>
-                  <v-col cols="12">
-                    <v-combobox
-                      dense
-                      outlined
-                      hide-details
-                      multiple
-                      chips
-                      small-chips
-                      label="Reasoning efforts (empty: not a reasoning model)"
-                      :items="reasoningEffortItems"
-                      v-model="capsForm.reasoning"
-                    />
-                  </v-col>
-                </v-row>
-
-                <v-card-title class="key_title" style="padding: 0px">
-                  AI bots
-                </v-card-title>
-                <v-row dense align="center" class="mb-2">
-                  <v-col cols="auto">
-                    <v-switch dense hide-details v-model="botsForm.enabled" label="Available for bots" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-switch dense hide-details v-model="botsForm.default" label="Default (recommended)" />
-                  </v-col>
-                  <v-col cols="4">
-                    <v-select
-                      dense
-                      outlined
-                      hide-details
-                      clearable
-                      label="Default reasoning effort"
-                      :items="capsEnabled ? capsForm.reasoning : []"
-                      v-model="botsForm.reasoning_effort"
-                    />
-                  </v-col>
-                </v-row>
-                <div class="key_text mb-4">
-                  Bots need Tools and JSON schema. Only one model can be the
-                  default: saving this one as default moves the mark here.
-                </div>
-
-                <v-card-title class="key_title" style="padding: 0px">
-                  Description
-                </v-card-title>
-                <v-row dense class="mb-4">
-                  <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
-                    <v-textarea
-                      dense
-                      outlined
-                      hide-details
-                      rows="2"
-                      auto-grow
-                      :label="lang"
-                      v-model="descForm[lang]"
-                    />
-                  </v-col>
-                </v-row>
-              </template>
-
               <v-row v-for="key in Object.keys(fieldsForAdd)" :key="key">
                 <v-col cols="12">
                   <v-card-title class="key_title" style="padding: 0px">{{
@@ -655,6 +568,97 @@
                   </v-row>
                 </v-col>
               </v-row>
+
+              <template v-if="(currentBillingSettings.types || []).includes('text')">
+                <v-card-title class="key_title mt-6" style="padding: 0px">
+                  Capabilities
+                </v-card-title>
+                <v-switch
+                  dense
+                  hide-details
+                  class="mb-2"
+                  v-model="capsEnabled"
+                  label="Capabilities are verified (the proxy and bots rely on them)"
+                />
+                <div v-if="!capsEnabled" class="key_text mb-4">
+                  Not set: requests to this model are sent exactly as before.
+                </div>
+                <v-row v-else dense align="center" class="mb-2">
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.tools" label="Tools" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.json_schema" label="JSON schema" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.temperature" label="Custom temperature" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox dense hide-details v-model="capsForm.vision" label="Vision" />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-combobox
+                      dense
+                      outlined
+                      hide-details
+                      multiple
+                      chips
+                      small-chips
+                      label="Supported reasoning efforts (pick from the list; empty: not a reasoning model)"
+                      :items="reasoningEffortItems"
+                      v-model="capsForm.reasoning"
+                    />
+                  </v-col>
+                </v-row>
+
+                <v-card-title class="key_title" style="padding: 0px">
+                  AI bots
+                </v-card-title>
+                <v-row dense align="center" class="mb-2">
+                  <v-col cols="auto">
+                    <v-switch dense hide-details v-model="botsForm.enabled" label="Available for bots" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-switch dense hide-details v-model="botsForm.default" label="Default (recommended)" />
+                  </v-col>
+                  <v-col cols="4" v-if="capsEnabled && (capsForm.reasoning || []).length">
+                    <v-select
+                      dense
+                      outlined
+                      hide-details
+                      clearable
+                      label="Default reasoning effort"
+                      :items="capsEnabled ? capsForm.reasoning : []"
+                      v-model="botsForm.reasoning_effort"
+                    />
+                  </v-col>
+                </v-row>
+                <div class="key_text mb-4">
+                  Bots need Tools and JSON schema. Only one model can be the
+                  default: saving this one as default moves the mark here.
+                </div>
+
+                <v-card-title class="key_title" style="padding: 0px">
+                  Description
+                </v-card-title>
+                <div class="key_text mb-2">
+                  Shown to bot owners under the model name in the bot settings,
+                  in their interface language. Empty: no text.
+                </div>
+                <v-row dense class="mb-4">
+                  <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
+                    <v-textarea
+                      dense
+                      outlined
+                      hide-details
+                      rows="2"
+                      auto-grow
+                      :label="lang"
+                      v-model="descForm[lang]"
+                    />
+                  </v-col>
+                </v-row>
+              </template>
 
               <div
                 class="d-flex justify-center align-center mt-2 mb-2"
@@ -1238,7 +1242,12 @@ const modelFormsToConfig = () => {
         reasoning: (capsForm.value.reasoning || []).filter(Boolean),
       }
     : null;
-  const bots = botsForm.value;
+  const bots = { ...botsForm.value };
+  // A default effort the model no longer lists is dropped, not sent: the
+  // field is hidden then and the driver would reject it.
+  if (!(capabilities?.reasoning || []).includes(bots.reasoning_effort)) {
+    bots.reasoning_effort = "";
+  }
   const botsTouched = bots.enabled || bots.default || bots.reasoning_effort;
   const description = Object.fromEntries(
     Object.entries(descForm.value).filter(([, text]) => text && text.trim())
