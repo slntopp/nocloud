@@ -569,96 +569,105 @@
                 </v-col>
               </v-row>
 
-              <template v-if="(currentBillingSettings.types || []).includes('text')">
-                <v-card-title class="key_title mt-6" style="padding: 0px">
-                  Capabilities
-                </v-card-title>
-                <v-switch
-                  dense
-                  hide-details
-                  class="mb-2"
-                  v-model="capsEnabled"
-                  label="Capabilities are verified (the proxy and bots rely on them)"
-                />
-                <div v-if="!capsEnabled" class="key_text mb-4">
-                  Not set: requests to this model are sent exactly as before.
-                </div>
-                <v-row v-else dense align="center" class="mb-2">
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.tools" label="Tools" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.json_schema" label="JSON schema" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.temperature" label="Custom temperature" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.vision" label="Vision" />
-                  </v-col>
-                  <v-col cols="12">
-                    <v-combobox
+              <v-expansion-panels
+                v-if="(currentBillingSettings.types || []).includes('text')"
+                flat
+                class="mt-6 mb-2"
+              >
+                <v-expansion-panel style="background: transparent">
+                  <v-expansion-panel-header class="px-0">
+                    <span class="key_title">AI bots and capabilities</span>
+                    <span class="key_text text-right mr-4">
+                      {{
+                        botsForm.enabled
+                          ? botsForm.default
+                            ? "Bots: available, default"
+                            : "Bots: available"
+                          : capsEnabled
+                          ? "Capabilities set"
+                          : "Not configured"
+                      }}
+                    </span>
+                  </v-expansion-panel-header>
+                  <v-expansion-panel-content>
+                    <div class="key_title mb-2">Capabilities</div>
+                    <v-switch
                       dense
-                      outlined
                       hide-details
-                      multiple
-                      chips
-                      small-chips
-                      label="Supported reasoning efforts (pick from the list; empty: not a reasoning model)"
-                      :items="reasoningEffortItems"
-                      v-model="capsForm.reasoning"
+                      class="mt-0 mb-2"
+                      v-model="capsEnabled"
+                      label="Capabilities are verified (the proxy and bots rely on them)"
                     />
-                  </v-col>
-                </v-row>
+                    <div v-if="!capsEnabled" class="key_text mb-4">
+                      Not set: requests to this model are sent exactly as before.
+                    </div>
+                    <template v-else>
+                      <div class="d-flex flex-wrap mb-3" style="gap: 24px">
+                        <v-checkbox dense hide-details class="mt-0" v-model="capsForm.tools" label="Tools" />
+                        <v-checkbox dense hide-details class="mt-0" v-model="capsForm.json_schema" label="JSON schema" />
+                        <v-checkbox dense hide-details class="mt-0" v-model="capsForm.temperature" label="Custom temperature" />
+                        <v-checkbox dense hide-details class="mt-0" v-model="capsForm.vision" label="Vision" />
+                      </div>
+                      <v-row dense class="mb-4">
+                        <v-col cols="12" md="6">
+                          <v-combobox
+                            dense
+                            outlined
+                            hide-details
+                            multiple
+                            small-chips
+                            label="Supported reasoning efforts (empty: not a reasoning model)"
+                            :items="reasoningEffortItems"
+                            v-model="capsForm.reasoning"
+                          />
+                        </v-col>
+                      </v-row>
+                    </template>
 
-                <v-card-title class="key_title" style="padding: 0px">
-                  AI bots
-                </v-card-title>
-                <v-row dense align="center" class="mb-2">
-                  <v-col cols="auto">
-                    <v-switch dense hide-details v-model="botsForm.enabled" label="Available for bots" />
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-switch dense hide-details v-model="botsForm.default" label="Default (recommended)" />
-                  </v-col>
-                  <v-col cols="4" v-if="capsEnabled && (capsForm.reasoning || []).length">
-                    <v-select
-                      dense
-                      outlined
-                      hide-details
-                      clearable
-                      label="Default reasoning effort"
-                      :items="capsEnabled ? capsForm.reasoning : []"
-                      v-model="botsForm.reasoning_effort"
-                    />
-                  </v-col>
-                </v-row>
-                <div class="key_text mb-4">
-                  Bots need Tools and JSON schema. Only one model can be the
-                  default: saving this one as default moves the mark here.
-                </div>
+                    <div class="key_title mb-2">AI bots</div>
+                    <div class="d-flex flex-wrap mb-3" style="gap: 24px">
+                      <v-switch dense hide-details class="mt-0" v-model="botsForm.enabled" label="Available for bots" />
+                      <v-switch dense hide-details class="mt-0" v-model="botsForm.default" label="Default (recommended)" />
+                    </div>
+                    <v-row dense v-if="capsEnabled && (capsForm.reasoning || []).length">
+                      <v-col cols="12" md="6">
+                        <v-select
+                          dense
+                          outlined
+                          hide-details
+                          clearable
+                          label="Default reasoning effort"
+                          :items="capsForm.reasoning"
+                          v-model="botsForm.reasoning_effort"
+                        />
+                      </v-col>
+                    </v-row>
+                    <div class="key_text mt-2 mb-4">
+                      Bots need Tools and JSON schema. Only one model can be the
+                      default: saving this one as default moves the mark here.
+                    </div>
 
-                <v-card-title class="key_title" style="padding: 0px">
-                  Description
-                </v-card-title>
-                <div class="key_text mb-2">
-                  Shown to bot owners under the model name in the bot settings,
-                  in their interface language. Empty: no text.
-                </div>
-                <v-row dense class="mb-4">
-                  <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
-                    <v-textarea
-                      dense
-                      outlined
-                      hide-details
-                      rows="2"
-                      auto-grow
-                      :label="lang"
-                      v-model="descForm[lang]"
-                    />
-                  </v-col>
-                </v-row>
-              </template>
+                    <div class="key_title mb-1">Description for bot owners</div>
+                    <div class="key_text mb-2">
+                      Optional. Shown under the model name in the bot's model
+                      picker, in the owner's interface language.
+                    </div>
+                    <v-row dense>
+                      <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
+                        <v-textarea
+                          dense
+                          outlined
+                          hide-details
+                          rows="1"
+                          auto-grow
+                          :label="lang"
+                          v-model="descForm[lang]"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-expansion-panel-content>
+                </v-expansion-panel>
+              </v-expansion-panels>
 
               <div
                 class="d-flex justify-center align-center mt-2 mb-2"
