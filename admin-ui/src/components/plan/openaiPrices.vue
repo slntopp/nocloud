@@ -861,7 +861,9 @@ const currentBillingSettings = ref({});
 // administrator verifies them: an empty object would tell the proxy the model
 // rejects temperature, and opening a model just to change a price would do that.
 const descriptionLangs = ["ru", "en", "pl", "fr", "vi"];
-const reasoningEffortItems = ["minimal", "low", "medium", "high"];
+// What OpenAI models accept; each model takes only some of them (gpt-6: none..xhigh,
+// gpt-5: minimal..high) — pick the ones the provider documents for it.
+const reasoningEffortItems = ["none", "minimal", "low", "medium", "high", "xhigh"];
 const capsEnabled = ref(false);
 const capsForm = ref({});
 const botsForm = ref({});
