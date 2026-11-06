@@ -674,6 +674,10 @@ const updatePlanQuery = `
 UPDATE DOCUMENT(@key) WITH { billing_plan: @billingPlan } IN @@collection
 `
 
+const updateAddonsQuery = `
+UPDATE DOCUMENT(@key) WITH { addons: @addons } IN @@collection
+`
+
 func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
@@ -722,8 +726,21 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 		mask.Title = inst.GetTitle()
 	}
 
-	if !reflect.DeepEqual(inst.GetAddons(), oldInst.GetAddons()) {
-		mask.Addons = inst.GetAddons()
+	// Not through mask: omitempty drops an empty list, so removing the last addon never reached the DB
+	if !slices.Equal(inst.GetAddons(), oldInst.GetAddons()) {
+		addons := inst.GetAddons()
+		if addons == nil {
+			addons = []string{}
+		}
+		_, err := ctrl.db.Query(ctx, updateAddonsQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+			"addons":      addons,
+		})
+		if err != nil {
+			log.Error("Failed to update addons", zap.Error(err))
+			return err
+		}
 	}
 
 	if inst.GetProduct() != oldInst.GetProduct() {
