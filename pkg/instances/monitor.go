@@ -158,19 +158,16 @@ func (a ActiveMonitoring) Start(sp string, freq int64, action func(), logger *za
 		t := time.NewTicker(time.Duration(mCtx.Frequency) * time.Second)
 		defer t.Stop()
 		for {
-			go func() {
-				start := time.Now()
-				action()
-				elapsed := time.Since(start).Seconds()
-				if elapsed >= float64(mCtx.Frequency) {
-					log.Error("[ERROR][error] Monitoring took longer than expected",
-						zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
-				}
-				if elapsed >= float64(mCtx.Frequency)/2 {
-					log.Warn("[WARNING][warn] Monitoring took half of expected time (Maybe lower frequency?)",
-						zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
-				}
-			}()
+			start := time.Now()
+			action()
+			elapsed := time.Since(start).Seconds()
+			if elapsed >= float64(mCtx.Frequency) {
+				log.Error("[ERROR][error] Monitoring took longer than expected",
+					zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
+			} else if elapsed >= float64(mCtx.Frequency)/2 {
+				log.Warn("[WARNING][warn] Monitoring took half of expected time (Maybe lower frequency?)",
+					zap.Float64("elapsed", elapsed), zap.Int64("freq", mCtx.Frequency))
+			}
 			select {
 			case <-mCtx.ctx.Done():
 				return

@@ -17,9 +17,10 @@ package instances
 
 import (
 	"context"
-	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"log"
 	"time"
+
+	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -111,8 +112,10 @@ func (s *PubSub) ConsumerInit(ch rabbitmq.Channel, exchange, subtopic, col strin
 // failure, and a snapshot that brings serviceId clears it.
 const updateDataQuery = `
 LET force = @data["_authoritative_dates"] == true
-LET incoming = UNSET(@data, "_authoritative_dates")
+LET patch = @data["_patch"] == true
+LET incoming = UNSET(@data, "_authoritative_dates", "_patch")
 LET stored = DOCUMENT(@@collection, @key).data
+LET base = IS_OBJECT(stored) ? stored : {}
 LET guards = MERGE(APPEND([{}], (
     FOR k IN ATTRIBUTES(incoming)
         FILTER k == "last_monitoring"
@@ -130,7 +133,8 @@ LET keepError = (!bound AND IS_STRING(stored.error) AND stored.error != "" AND i
     ? { error: stored.error }
     : {}
 LET merged = MERGE(
-    incoming,
+    patch ? base : incoming,
+    patch ? incoming : {},
     force ? {} : guards,
     bound ? { serviceId: serviceId } : {},
     keepError,

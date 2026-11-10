@@ -753,6 +753,8 @@ func (ctrl *instancesController) Update(ctx context.Context, _ string, inst, old
 
 	equalPlans := reflect.DeepEqual(inst.GetBillingPlan(), oldInst.GetBillingPlan())
 
+	enqueueResourceOps(inst, oldInst)
+
 	if !equalPlans {
 		log.Debug("Update plan")
 		_, err := ctrl.db.Query(ctx, removePlanQuery, map[string]interface{}{
