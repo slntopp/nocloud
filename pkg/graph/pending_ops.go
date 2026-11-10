@@ -55,9 +55,7 @@ func enqueueResourceOps(inst, oldInst *pb.Instance) {
 	}
 	cur := inst.Data["pending_ops"].GetListValue()
 	if cur == nil {
-		lv, _ := structpb.NewValue(extra)
-		inst.Data["pending_ops"] = lv
-		return
+		cur = &structpb.ListValue{}
 	}
 	cur.Values = append(cur.Values, extra...)
 	inst.Data["pending_ops"] = structpb.NewListValue(cur)
