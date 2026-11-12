@@ -116,6 +116,7 @@ import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 import NotificationsCell from "@/components/ui/notificationsCell.vue";
 import AccountGrade from "@/components/ui/accountGrade.vue";
+import { gradeFilterConditions } from "@/accountGrades.js";
 import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
@@ -261,6 +262,10 @@ const requestOptions = computed(() => {
           },
           account_groups: groups?.length ? groups : undefined,
           no_group: hasNoGroup ? true : undefined,
+          grade: gradeFilterConditions(
+            filter.value?.grade,
+            store.getters["settings/accountGrades"],
+          ),
           search_param:
             searchParam.value || filter.value.search_param || undefined,
         }
@@ -293,6 +298,15 @@ const searchFields = computed(() => [
     ],
   },
   { title: "Balance", key: "balance", type: "number-range" },
+  {
+    title: "Grade",
+    key: "grade",
+    type: "select",
+    items: store.getters["settings/accountGrades"].map((g) => ({
+      text: g.title,
+      value: g.title,
+    })),
+  },
   { title: "Email", key: "data.email", type: "input" },
   { title: "Phone verified", key: "is_phone_verified", type: "logic-select" },
   { title: "Created date", key: "data.date_create", type: "date" },

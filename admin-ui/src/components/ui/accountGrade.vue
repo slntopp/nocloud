@@ -37,8 +37,13 @@ const spendingText = computed(() => {
   const spending = grade.value?.spending;
   if (!spending) return "Not counted yet";
   const amount = (+spending.amount || 0).toFixed(2);
-  const code = spending.currency?.code || spending.currency?.title || "";
-  return `Paid ${amount} ${code} in the last ${spending.periodDays || 90} days`;
+  // NCU (or no currency) means the default currency, as elsewhere in the app.
+  let code = spending.currency?.code || spending.currency?.title || "";
+  if (!code || code === "NCU") {
+    code = store.getters["currencies/default"]?.code || code;
+  }
+  const months = Math.round(((spending.periodDays || 395) * 12) / 365);
+  return `Pays ${amount} ${code} per month on average over the last ${months} months`;
 });
 </script>
 
