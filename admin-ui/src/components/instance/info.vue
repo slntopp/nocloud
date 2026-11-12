@@ -36,6 +36,7 @@
             label="Account"
             :value="account?.title"
           />
+          <account-grade :account="account" />
           <v-btn icon @click="moveDialog = true">
             <v-icon size="30">mdi-arrow-up-bold</v-icon>
           </v-btn>
@@ -201,6 +202,7 @@ import { addToClipboard } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import AdminNotesPinned from "@/components/adminNotesPinned.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 export default {
   name: "instance-info",
@@ -214,6 +216,7 @@ export default {
     instanceActions,
     JsonTextarea,
     AdminNotesPinned,
+    AccountGrade,
   },
   mixins: [snackbar],
   props: {

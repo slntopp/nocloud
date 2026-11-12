@@ -89,6 +89,10 @@
                 "—"
               }}
             </router-link>
+            <account-grade
+              v-if="!isAccountsLoading && !isInstancesLoading"
+              :account="getAccount(linkedInstanceId(item))"
+            />
             <v-skeleton-loader type="text" v-else />
           </template>
         </template>
@@ -150,6 +154,7 @@ import useSearch from "@/hooks/useSearch";
 import plansAutoComplete from "@/components/ui/plansAutoComplete.vue";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
 import { timestampToDateTimeLocal, formatDateToTimestamp } from "@/functions";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["template", "plan"]);
 const { template, plan } = toRefs(props);

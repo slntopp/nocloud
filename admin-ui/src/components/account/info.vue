@@ -65,6 +65,7 @@
             {{ account.currency?.code }}</v-chip
           >
         </hint-btn>
+        <account-grade :account="account" />
       </div>
     </div>
 
@@ -104,6 +105,17 @@
             {{ item.title }}
           </template>
         </v-select>
+      </v-col>
+      <v-col lg="2" md="4" sm="6" cols="12">
+        <v-select
+          :items="gradeItems"
+          v-model="gradeOverride"
+          label="Grade"
+          placeholder="By payments"
+          persistent-placeholder
+          clearable
+          hint="Set by hand, otherwise counted from payments"
+        />
       </v-col>
       <v-col lg="2" md="4" sm="6" cols="12">
         <v-select
@@ -276,10 +288,11 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import hintBtn from "@/components/ui/hintBtn.vue";
 import { formatSecondsToDate, notDeletedStatuses } from "@/functions";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
-import { computed, onMounted, onUnmounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, set, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
 import AdminNotesPinned from "@/components/adminNotesPinned.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["account"]);
 const { account } = toRefs(props);
@@ -307,6 +320,7 @@ const showDeletedInstances = ref(false);
 const statusChangeValue = ref("");
 const viewport = ref(window.innerWidth);
 const accountGroup = ref(null);
+const gradeOverride = ref(null);
 const phoneVerified = ref(!!account.value.isPhoneVerified);
 
 const onPhoneVerifiedChange = async (val) => {
@@ -332,6 +346,7 @@ onMounted(() => {
   currency.value = account.value.currency;
   uuid.value = account.value.uuid;
   accountGroup.value = account.value.accountGroup;
+  gradeOverride.value = account.value.gradeOverride || null;
   keys.value = account.value.data?.ssh_keys || [];
   store.dispatch("services/fetch", { showDeleted: true });
   store.dispatch("accountGroups/fetch");
@@ -352,6 +367,9 @@ const currencies = computed(() =>
   store.getters["currencies/all"].filter((c) => c.title !== "NCU")
 );
 const accountGroups = computed(() => store.getters["accountGroups/all"]);
+const gradeItems = computed(() =>
+  store.getters["settings/accountGrades"].map((g) => g.title),
+);
 
 const isCurrencyReadonly = computed(
   () => account.value.currency && account.value.currency.code !== "NCU"
@@ -426,6 +444,7 @@ const editAccount = async () => {
     ...account.value,
     title: title.value,
     currency: currency.value,
+    gradeOverride: gradeOverride.value || "",
     data: {
       ...(account.value.data || {}),
       tax_rate: taxRate.value / 100,
@@ -438,7 +457,12 @@ const editAccount = async () => {
 
   isEditLoading.value = true;
   try {
-    const promises = [updateAccount(newAccount), updateAccountGroup()];
+    const promises = [
+      updateAccount(newAccount).then((res) => {
+        if (res) set(account.value, "gradeOverride", newAccount.gradeOverride);
+      }),
+      updateAccountGroup(),
+    ];
 
     await promises;
 

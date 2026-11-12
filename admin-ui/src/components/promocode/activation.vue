@@ -11,6 +11,7 @@
       >
         {{ account(value) && accounts[value]?.title }}
       </router-link>
+      <account-grade v-if="!isAccountsLoading" :account="accounts[value]" />
       <v-skeleton-loader type="text" v-else />
     </template>
 
@@ -32,6 +33,7 @@ import { ref, toRefs } from "vue";
 import api from "@/api";
 import { formatSecondsToDate } from "../../functions";
 import { useStore } from "@/store";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["promocode"]);
 const { promocode } = toRefs(props);
