@@ -1,4 +1,5 @@
 import api from "@/api.js";
+import { ACCOUNT_GRADES_KEY, parseAccountGrades } from "@/accountGrades.js";
 
 export default {
   namespaced: true,
@@ -97,6 +98,9 @@ export default {
     },
     ksefEnabled(state) {
       return JSON.parse(state.values["app"] || "{}").ksef_enabled;
+    },
+    accountGrades(state) {
+      return parseAccountGrades(state.values[ACCOUNT_GRADES_KEY]);
     },
   },
 };

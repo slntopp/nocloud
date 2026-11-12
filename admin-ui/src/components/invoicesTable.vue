@@ -27,6 +27,7 @@
       >
         {{ account(value) }}
       </router-link>
+      <account-grade v-if="!isAccountsLoading" :account="accounts[value]" />
       <v-skeleton-loader type="text" v-else />
     </template>
 
@@ -132,6 +133,7 @@ import api from "@/api";
 import useInvoices from "../hooks/useInvoices";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import invoicePreview from "@/components/ui/invoicePreview.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 import {
   ActionType,
   BillingStatus,

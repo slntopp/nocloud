@@ -28,6 +28,7 @@
       >
         {{ getAccount(value)?.title }}
       </router-link>
+      <account-grade v-if="!isAccountsLoading" :account="getAccount(value)" />
       <v-skeleton-loader type="text" v-else />
     </template>
 
@@ -229,6 +230,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 import Balance from "./balance.vue";
 import NotificationsCell from "@/components/ui/notificationsCell.vue";
 import useSearch from "@/hooks/useSearch";
