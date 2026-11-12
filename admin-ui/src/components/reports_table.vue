@@ -120,6 +120,7 @@
         >
           {{ getShortName(getAccount(value)?.title || value) }}
         </router-link>
+        <account-grade v-if="!isAccountsLoading" :account="getAccount(value)" />
         <v-skeleton-loader type="text" v-else />
       </template>
     </nocloud-table>
@@ -136,6 +137,7 @@ import useCurrency from "@/hooks/useCurrency";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import { useRouter } from "vue-router/composables";
 import { formatPrice } from "../functions";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps({
   filters: { type: Object },

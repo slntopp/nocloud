@@ -712,6 +712,10 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
+	if !s.isNocloudAdmin(ctx, requestor) {
+		stripAdminOnlyFields(acc.Account)
+	}
+
 	if acc.Key == requestor {
 		return acc.Account, nil
 	}
@@ -757,10 +761,14 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
+	isAdmin := s.isNocloudAdmin(ctx, requestor)
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
 		if acc.Access.Level < access.Level_ROOT {
 			acc.Account.SuspendConf = nil
+		}
+		if !isAdmin {
+			stripAdminOnlyFields(acc.Account)
 		}
 		result[i] = acc.Account
 	}
@@ -1314,6 +1322,19 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	if acc.GetStatus() != request.GetStatus() {
 		log.Debug("Status patch detected")
 		patch["status"] = request.GetStatus()
+	}
+
+	// spending is written only by billing. The manual grade is admin-only and
+	// silently ignored for everyone else, like suspend_conf above.
+	if request.GradeOverride != nil && s.isNocloudAdmin(ctx, requestor) {
+		grade, ok, err := gradeOverridePatch(acc.GetGradeOverride(), request.GradeOverride)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			log.Debug("Grade override patch detected")
+			patch["grade_override"] = grade
+		}
 	}
 
 	var requestData map[string]any

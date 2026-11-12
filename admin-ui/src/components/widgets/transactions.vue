@@ -54,6 +54,10 @@
               >
                 {{ getShortName(getAccount(report.account)?.title) }}
               </router-link>
+              <account-grade
+                v-if="!isAccountsLoading"
+                :account="getAccount(report.account)"
+              />
               <v-skeleton-loader type="text" v-else />
 
               <balance-display
@@ -81,6 +85,7 @@ import {
 } from "../../functions";
 import BalanceDisplay from "@/components/balance.vue";
 import { useStore } from "@/store";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);

@@ -5,6 +5,7 @@
         navTitle("Accounts")
       }}</router-link>
       / {{ accountTitle }}
+      <account-grade :account="account" />
     </h1>
     <v-tabs
       show-arrows
@@ -42,6 +43,7 @@ import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import config from "@/config.js";
 
+import AccountGrade from "@/components/ui/accountGrade.vue";
 import AccountsInfo from "@/components/account/info.vue";
 import AccountsTemplate from "@/components/account/template.vue";
 import AccountsEvents from "@/components/account/events.vue";

@@ -50,6 +50,10 @@
       </div>
     </template>
 
+    <template v-slot:[`item.spending.amount`]="{ item }">
+      <account-grade :account="item" />
+    </template>
+
     <template v-slot:[`item.notifications`]="{ item }">
       <notifications-cell :uuid="item.uuid" />
     </template>
@@ -111,6 +115,7 @@ import { useRouter } from "vue-router/composables";
 import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 import NotificationsCell from "@/components/ui/notificationsCell.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
@@ -149,6 +154,7 @@ const headers = ref([
   { text: "Account Group", value: "account_group" },
   { text: "Status", value: "status" },
   { text: "Balance", value: "balance" },
+  { text: "Grade", value: "spending.amount" },
   { text: "Email", value: "data.email" },
   // How much has gone out to this customer in the last thirty days — the
   // campaigns plugin's journal, both halves of it. Sorting by it would mean

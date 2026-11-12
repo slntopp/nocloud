@@ -80,6 +80,10 @@
             >
               {{ accounts[chat.owner]?.title }}
             </router-link>
+            <account-grade
+              v-if="!isAccountsLoading"
+              :account="accounts[chat.owner]"
+            />
             <v-skeleton-loader type="text" v-else />
           </div>
         </div>
@@ -111,6 +115,7 @@ import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import { formatSecondsToDate, getShortName, getDatesPeriod } from "@/functions";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);

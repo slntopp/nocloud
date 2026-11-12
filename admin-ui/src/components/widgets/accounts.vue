@@ -59,6 +59,7 @@
               >
                 {{ getShortName(account.title) }}
               </router-link>
+              <account-grade :account="account" />
               <balance-display
                 small
                 :currency="account.currency"
@@ -79,6 +80,7 @@ import BalanceDisplay from "@/components/balance.vue";
 import api from "@/api";
 import { getShortName, getDatesPeriod } from "@/functions";
 import { useStore } from "@/store";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
