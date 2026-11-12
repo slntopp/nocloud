@@ -17,8 +17,15 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// AccountSpendingPeriodDays is the window Account.spending covers.
-const AccountSpendingPeriodDays = 90
+// Account.spending.amount is the average real money an account pays per
+// month over the last AccountSpendingPeriodMonths. A long window catches
+// clients who pay once a year; averaging keeps the grade thresholds monthly.
+const AccountSpendingPeriodMonths = 13
+
+// AccountSpendingPeriodDays is the window in days (13 average months). It is
+// fixed so the stored period_days does not change every day and the daily run
+// keeps writing only accounts whose average changed.
+const AccountSpendingPeriodDays = AccountSpendingPeriodMonths * 365 / 12
 
 // Real money the account paid: PAID invoices that were not paid from balance.
 // Balance top-ups are BALANCE invoices paid by gateway, so they count once and
@@ -105,7 +112,7 @@ func (s *BillingServiceServer) RecomputeAccountsSpending(ctx context.Context, lo
 		amounts[row.Account] += row.Total * rate
 	}
 	for acc, amount := range amounts {
-		amounts[acc] = graph.Round(amount, def.GetPrecision(), def.GetRounding())
+		amounts[acc] = graph.Round(amount/AccountSpendingPeriodMonths, def.GetPrecision(), def.GetRounding())
 	}
 
 	uvars := map[string]interface{}{

@@ -50,3 +50,8 @@ func gradeOverridePatch(current string, requested *string) (value any, ok bool, 
 	}
 	return grade, true, nil
 }
+
+// isAdminOnlySortField reports sort fields that would reveal admin-only data.
+func isAdminOnlySortField(field string) bool {
+	return strings.HasPrefix(field, "spending") || strings.HasPrefix(field, "grade_override")
+}
