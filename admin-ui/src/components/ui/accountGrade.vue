@@ -43,7 +43,7 @@ const spendingText = computed(() => {
     code = store.getters["currencies/default"]?.code || code;
   }
   const months = Math.round(((spending.periodDays || 395) * 12) / 365);
-  return `Pays ${amount} ${code} per month on average over the last ${months} months`;
+  return `Pays ${amount} ${code} per month on average (payments of the last ${months} months)`;
 });
 </script>
 
