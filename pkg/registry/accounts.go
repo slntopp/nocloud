@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	redis "github.com/go-redis/redis/v8"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/ssh"
@@ -754,14 +755,26 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	offset := (page - 1) * limit
 
-	pool, count, active, err := s.ctrl.ListImproved(ctx, acc.GetUuid(), depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
+	// Filtering or sorting by grade would let others guess an account spending.
+	isAdmin := s.isNocloudAdmin(ctx, requestor)
+	filters, field := request.GetFilters(), request.GetField()
+	if !isAdmin {
+		if _, ok := filters["grade"]; ok {
+			filters = maps.Clone(filters)
+			delete(filters, "grade")
+		}
+		if isAdminOnlySortField(field) {
+			field = ""
+		}
+	}
+
+	pool, count, active, err := s.ctrl.ListImproved(ctx, acc.GetUuid(), depth, offset, limit, field, request.GetSort(), filters)
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
-	isAdmin := s.isNocloudAdmin(ctx, requestor)
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
 		if acc.Access.Level < access.Level_ROOT {
