@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -20,6 +21,9 @@ import (
 // Account.spending.amount is the average real money an account pays per
 // month over the last AccountSpendingPeriodMonths. A long window catches
 // clients who pay once a year; averaging keeps the grade thresholds monthly.
+// The sum is divided by the months since the first payment in the window
+// (1..13), so a new or returning client is not diluted by months before it
+// started paying.
 const AccountSpendingPeriodMonths = 13
 
 // AccountSpendingPeriodDays is the window in days (13 average months). It is
@@ -40,8 +44,9 @@ FOR inv IN @@invoices
   FILTER inv.meta.paid_with_balance != true
   %s
   LET currency = inv.currency == null ? -1 : (inv.currency.id == null ? 0 : inv.currency.id)
-  COLLECT account = inv.account, cid = currency AGGREGATE total = SUM(inv.total)
-  RETURN { account, currency: cid, total }
+  COLLECT account = inv.account, cid = currency
+    AGGREGATE total = SUM(inv.total), first = MIN(inv.payment)
+  RETURN { account, currency: cid, total, first }
 `
 
 // Writes only accounts whose value changed, so the daily run touches few
@@ -63,6 +68,15 @@ type accountCurrencySum struct {
 	Account  string  `json:"account"`
 	Currency int32   `json:"currency"`
 	Total    float64 `json:"total"`
+	First    int64   `json:"first"`
+}
+
+// accountSpendingMonths is how many months the average is taken over: from the
+// first payment in the window till now, rounded up, between 1 and 13.
+func accountSpendingMonths(first int64, now time.Time) float64 {
+	const month = 365.0 / 12 * 24 * 60 * 60
+	months := math.Ceil(float64(now.Unix()-first) / month)
+	return math.Max(1, math.Min(AccountSpendingPeriodMonths, months))
 }
 
 // RecomputeAccountsSpending refreshes Account.spending for the given accounts,
@@ -90,10 +104,14 @@ func (s *BillingServiceServer) RecomputeAccountsSpending(ctx context.Context, lo
 
 	rates := map[int32]float64{}
 	amounts := map[string]float64{}
+	firsts := map[string]int64{}
 	for cur.HasMore() {
 		var row accountCurrencySum
 		if _, err = cur.ReadDocument(ctx, &row); err != nil {
 			return fmt.Errorf("failed to read invoice sum: %w", err)
+		}
+		if f, ok := firsts[row.Account]; !ok || row.First < f {
+			firsts[row.Account] = row.First
 		}
 		if row.Currency < 0 || row.Currency == def.GetId() {
 			amounts[row.Account] += row.Total
@@ -112,7 +130,8 @@ func (s *BillingServiceServer) RecomputeAccountsSpending(ctx context.Context, lo
 		amounts[row.Account] += row.Total * rate
 	}
 	for acc, amount := range amounts {
-		amounts[acc] = graph.Round(amount/AccountSpendingPeriodMonths, def.GetPrecision(), def.GetRounding())
+		months := accountSpendingMonths(firsts[acc], now)
+		amounts[acc] = graph.Round(amount/months, def.GetPrecision(), def.GetRounding())
 	}
 
 	uvars := map[string]interface{}{
