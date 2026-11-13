@@ -4,10 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,9 +16,15 @@ const maxGradeOverrideLength = 32
 // isNocloudAdmin reports root on the root namespace. Access to the account
 // itself is not enough: clients get ROOT on their own account and resellers
 // on their clients.
-func (s *AccountsServiceServer) isNocloudAdmin(ctx context.Context, requestor string) bool {
-	rootNs := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	return s.ca.HasAccess(ctx, requestor, rootNs, access.Level_ROOT)
+//
+// The level comes from the token's root claim, which Token computes from the
+// permissions graph when asked (the admin UI always asks; service tokens carry
+// ROOT), and the auth interceptor puts it into the context. This is the check
+// the settings service uses, and it saves a graph query on every Get and List.
+// A token without the claim is treated as not an admin.
+func isNocloudAdmin(ctx context.Context) bool {
+	lvl, ok := ctx.Value(nocloud.NoCloudRootAccess).(int)
+	return ok && lvl >= int(access.Level_ROOT)
 }
 
 // stripAdminOnlyFields drops what only nocloud admins may see.
