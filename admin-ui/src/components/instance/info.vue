@@ -122,6 +122,18 @@
       </v-row>
 
       <nocloud-expansion-panels
+        v-if="type === 'empty'"
+        title="Service data (visible to client)"
+        class="mb-5"
+      >
+        <rich-editor
+          class="pa-5"
+          :value="copyInstance.config?.service_data"
+          @input="updateServiceData"
+        />
+      </nocloud-expansion-panels>
+
+      <nocloud-expansion-panels
         title="Description"
         class="mb-5"
         v-if="template.billingPlan.products[template.product]"
@@ -278,6 +290,12 @@ export default {
       }
       this.copyInstance = { ...this.copyInstance };
       console.log(this.copyInstance);
+    },
+    updateServiceData(value) {
+      if (!this.copyInstance.config) {
+        this.copyInstance = { ...this.copyInstance, config: {} };
+      }
+      this.update({ key: "config.service_data", value });
     },
     goToPlan() {
       this.$router.push({
