@@ -713,7 +713,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
-	if !s.isNocloudAdmin(ctx, requestor) {
+	if !isNocloudAdmin(ctx) {
 		stripAdminOnlyFields(acc.Account)
 	}
 
@@ -756,7 +756,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	offset := (page - 1) * limit
 
 	// Filtering or sorting by grade would let others guess an account spending.
-	isAdmin := s.isNocloudAdmin(ctx, requestor)
+	isAdmin := isNocloudAdmin(ctx)
 	filters, field := request.GetFilters(), request.GetField()
 	if !isAdmin {
 		if _, ok := filters["grade"]; ok {
@@ -1339,7 +1339,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 
 	// spending is written only by billing. The manual grade is admin-only and
 	// silently ignored for everyone else, like suspend_conf above.
-	if request.GradeOverride != nil && s.isNocloudAdmin(ctx, requestor) {
+	if request.GradeOverride != nil && isNocloudAdmin(ctx) {
 		grade, ok, err := gradeOverridePatch(acc.GetGradeOverride(), request.GradeOverride)
 		if err != nil {
 			return nil, err

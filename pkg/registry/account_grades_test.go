@@ -1,10 +1,12 @@
 package registry
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 )
 
 func ptr(s string) *string { return &s }
@@ -53,4 +55,22 @@ func TestStripAdminOnlyFields(t *testing.T) {
 		t.Fatalf("title changed: %q", acc.Title)
 	}
 	stripAdminOnlyFields(nil)
+}
+
+func TestIsNocloudAdmin(t *testing.T) {
+	cases := []struct {
+		name string
+		ctx  context.Context
+		want bool
+	}{
+		{"no root claim", context.Background(), false},
+		{"root", context.WithValue(context.Background(), nocloud.NoCloudRootAccess, 4), true},
+		{"admin is not root", context.WithValue(context.Background(), nocloud.NoCloudRootAccess, 3), false},
+		{"none", context.WithValue(context.Background(), nocloud.NoCloudRootAccess, 0), false},
+	}
+	for _, c := range cases {
+		if got := isNocloudAdmin(c.ctx); got != c.want {
+			t.Errorf("%s: got %v, want %v", c.name, got, c.want)
+		}
+	}
 }
