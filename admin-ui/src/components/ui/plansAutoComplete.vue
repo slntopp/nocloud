@@ -44,6 +44,14 @@ const { modelValue: value, fetchValue, multiple, loading, returnObject, customPa
 // Vuetify 3+ return-object does not match a uuid string against the item
 // objects (Vuetify 2 did), so map uuid strings to the loaded items for display.
 const fieldValue = computed(() => {
+  // an empty {} model (initial state of some forms) showed nothing in Vuetify 2
+  if (
+    value.value &&
+    typeof value.value === "object" &&
+    !Array.isArray(value.value) &&
+    !Object.keys(value.value).length
+  )
+    return null;
   if (!returnObject.value) return value.value;
   const resolve = (v) =>
     typeof v === "string" ? (allPlans.value.find((i) => i.uuid === v) ?? v) : v;
