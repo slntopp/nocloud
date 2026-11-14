@@ -9,7 +9,7 @@
       style="z-index: 0; position: relative; top: -15px; right: 20px"
     >
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
-        <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
+        <v-chip variant="flat" class="mr-2" :color="getTotalColor(newInvoice)">
           Subtotal:
           {{
             `${newInvoice.subtotal} ${
@@ -18,7 +18,7 @@
           }}
         </v-chip>
 
-        <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
+        <v-chip variant="flat" class="mr-2" :color="getTotalColor(newInvoice)">
           Total:
           {{
             `${newInvoice.total} ${
@@ -27,7 +27,7 @@
           }}
         </v-chip>
 
-        <v-chip v-if="isEdit" :color="getInvoiceStatusColor(newInvoice.status)">
+        <v-chip variant="flat" v-if="isEdit" :color="getInvoiceStatusColor(newInvoice.status)">
           {{ `${newInvoice.status}` }}
         </v-chip>
       </div>

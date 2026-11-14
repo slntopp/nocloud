@@ -69,7 +69,7 @@
           v-model="newSettings.whmcs_paid_on_balance_payment"
           label="Mark WHMCS invoice as paid on balance payment"
         />
-        <div class="text-caption text--secondary mb-4">
+        <div class="text-caption text-medium-emphasis mb-4">
           Off: NoCloud Paid, WHMCS stays Unpaid (proforma). On: both NoCloud and WHMCS Paid.
         </div>
       </v-col>

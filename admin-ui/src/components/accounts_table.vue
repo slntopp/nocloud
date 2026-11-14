@@ -98,7 +98,7 @@
       </v-tooltip>
     </template>
     <template v-slot:[`item.access.level`]="{ item }">
-      <v-chip :color="item.access.color">
+      <v-chip variant="flat" :color="item.access.color">
         {{ item.access.level }}
       </v-chip>
     </template>
@@ -174,7 +174,7 @@ const levelColorMap = ref({
   ROOT: "info",
   ADMIN: "success",
   MGMT: "warning",
-  READ: "gray",
+  READ: "grey-lighten-2",
   NONE: "error",
 });
 

@@ -90,7 +90,7 @@ const options = ref({});
 const fetchError = ref("");
 
 const statusMap = {
-  DEL: { title: "DELETED", color: "blue-grey darken-2" },
+  DEL: { title: "DELETED", color: "blue-grey-darken-2" },
   UNSPECIFIED: { title: "ACTIVE", color: "success" },
 };
 

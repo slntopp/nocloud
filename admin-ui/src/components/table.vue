@@ -33,49 +33,101 @@
     @update:options="updateOptions"
     @update:items-per-page="saveItemsPerPage"
   >
+    <!--
+      This cell is rendered for every row, so it uses plain markup with
+      Vuetify's chip/button classes instead of v-chip/v-btn components:
+      same look, much cheaper to render for long tables.
+    -->
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
-        <v-chip v-if="isKeyInCircle" color="gray">
-          {{ props.value }}
-        </v-chip>
+        <span v-if="isKeyInCircle" :class="lightChipClass">
+          <span class="v-chip__underlay"></span>
+          <div class="v-chip__content">{{ props.value }}</div>
+        </span>
         <template v-else>
           {{ props.value }}
         </template>
-        <v-btn icon variant="text" size="small" @click="hideID(props.index)">
-          <v-icon>mdi-close-circle-outline</v-icon>
-        </v-btn>
+        <button
+          type="button"
+          :class="lightIconBtnClass"
+          @click="hideID(props.index)"
+        >
+          <span class="v-btn__overlay"></span>
+          <span class="v-btn__underlay"></span>
+          <span class="v-btn__content">
+            <i :class="lightIconClass('mdi-close-circle-outline')"></i>
+          </span>
+        </button>
       </template>
       <template v-else>
         <template v-if="!isKeyOnlyAfterClick">
-          <v-chip v-if="isKeyInCircle" color="gray">
-            {{ makeIdShort(props.value) }}
-          </v-chip>
+          <span v-if="isKeyInCircle" :class="lightChipClass">
+            <span class="v-chip__underlay"></span>
+            <div class="v-chip__content">{{ makeIdShort(props.value) }}</div>
+          </span>
           <template v-else>
             {{ makeIdShort(props.value) }}
           </template>
         </template>
-        <v-btn
+        <button
           v-if="!isIdShort(props.value) || isKeyOnlyAfterClick"
-          icon
-          variant="text"
-          size="small"
+          type="button"
+          :class="lightIconBtnClass"
           @click="showID(props.index)"
         >
-          <v-icon>mdi-eye-outline</v-icon>
-        </v-btn>
+          <span class="v-btn__overlay"></span>
+          <span class="v-btn__underlay"></span>
+          <span class="v-btn__content">
+            <i :class="lightIconClass('mdi-eye-outline')"></i>
+          </span>
+        </button>
       </template>
 
-      <v-btn
-        icon
-        variant="text"
-        size="small"
+      <button
+        type="button"
+        :class="lightIconBtnClass"
         @click="addToClipboard(props.value, props.index)"
       >
-        <v-icon v-if="copyed == props.index"> mdi-check </v-icon>
-        <v-icon v-else> mdi-content-copy </v-icon>
-      </v-btn>
+        <span class="v-btn__overlay"></span>
+        <span class="v-btn__underlay"></span>
+        <span class="v-btn__content">
+          <i
+            :class="
+              lightIconClass(
+                copyed == props.index ? 'mdi-check' : 'mdi-content-copy',
+              )
+            "
+          ></i>
+        </span>
+      </button>
 
       <slot name="uuid-actions" v-bind="{ item: props.item }" />
+    </template>
+
+    <!-- row checkbox as plain markup (a VCheckboxBtn per row is expensive) -->
+    <template v-if="showSelect" v-slot:[`item.data-table-select`]="{ props }">
+      <button
+        type="button"
+        :class="[lightIconBtnClass, { 'text-primary': props.modelValue }]"
+        :disabled="props.disabled"
+        :aria-checked="props.modelValue"
+        role="checkbox"
+        @click="props.onClick"
+      >
+        <span class="v-btn__overlay"></span>
+        <span class="v-btn__underlay"></span>
+        <span class="v-btn__content">
+          <i
+            :class="
+              lightIconClass(
+                props.modelValue
+                  ? 'mdi-checkbox-marked'
+                  : 'mdi-checkbox-blank-outline',
+              )
+            "
+          ></i>
+        </span>
+      </button>
     </template>
 
     <template v-slot:[`item.titleLink`]="{ item }">
@@ -196,8 +248,11 @@
 <script>
 import Sortable from "sortablejs";
 import {
+  VBtn,
+  VChip,
   VDataTable,
   VDataTableServer,
+  VIcon,
   VSelect,
   VTextField,
 } from "vuetify/components";
@@ -325,6 +380,8 @@ export default {
       default: () => [10, 25, 50, 100, 500, 1000],
     },
   },
+  // registered so their styles are loaded for the plain-markup uuid cell
+  components: { VBtn, VChip, VIcon },
   emits: [
     "update:modelValue",
     "update:expanded",
@@ -350,6 +407,10 @@ export default {
     };
   },
   computed: {
+    lightChipClass: () =>
+      "v-chip text-gray v-chip--density-default v-chip--size-default v-chip--variant-tonal",
+    lightIconBtnClass: () =>
+      "v-btn v-btn--icon v-btn--density-default v-btn--size-default v-btn--variant-text",
     // server-side pagination needs VDataTableServer in Vuetify 3
     tableComponent() {
       return this.serverItemsLength !== undefined &&
@@ -406,6 +467,9 @@ export default {
     },
   },
   methods: {
+    lightIconClass(icon) {
+      return `${icon} mdi v-icon notranslate v-icon--size-default`;
+    },
     handleSelect(items) {
       this.selected = items;
       this.$emit("update:modelValue", items);

@@ -18,7 +18,7 @@
         
 
         <template #prepend>
-          <v-chip size="small" :color="chipsColor(item.status.status)">
+          <v-chip variant="flat" size="small" :color="chipsColor(item.status.status)">
             {{ item.status.status }}
           </v-chip>
         </template>
@@ -75,7 +75,7 @@ export default {
       if (this.loading) {
         return {
           icon: "mdi-help-circle",
-          color: "grey darken-1",
+          color: "grey-darken-1",
         };
       }
 
@@ -127,10 +127,10 @@ export default {
         case "STOPPED":
           return "warning";
         case "NOEXIST":
-          return "gray";
+          return "grey-lighten-2";
 
         default:
-          return "gray";
+          return "grey-lighten-2";
       }
     },
     ts2str(ts) {

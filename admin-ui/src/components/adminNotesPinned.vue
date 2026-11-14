@@ -26,7 +26,7 @@
           border
         >
           <div class="d-flex justify-space-between align-center mb-2">
-            <v-chip size="x-small" color="primary" v-if="!isAccountsLoading">
+            <v-chip variant="flat" size="x-small" color="primary" v-if="!isAccountsLoading">
               {{ getAccount(note.admin)?.title || note.admin }}
             </v-chip>
             <v-skeleton-loader type="chip" v-else />

@@ -46,7 +46,7 @@
             <p>name: {{ node.name }}</p>
             <p>
               state:
-              <v-chip size="x-small" :color="node.state === 'ONLINE' ? 'success' : 'error'">{{ node.state }}</v-chip>
+              <v-chip variant="flat" size="x-small" :color="node.state === 'ONLINE' ? 'success' : 'error'">{{ node.state }}</v-chip>
             </p>
             <p>uptime: {{ uptime(node.uptime) }}</p>
             <p>bridges: {{ (node.bridges || []).join(", ") || "-" }}</p>

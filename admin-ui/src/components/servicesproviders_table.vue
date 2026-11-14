@@ -11,12 +11,12 @@
     :footer-error="fetchError"
   >
     <template v-slot:[`item.state`]="{ value }">
-      <v-chip size="small" :color="getStateChipColor(value)">
+      <v-chip variant="flat" size="small" :color="getStateChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
     <template v-slot:[`item.status`]="{ value }">
-      <v-chip size="small" :color="getStatusChipColor(value)">
+      <v-chip variant="flat" size="small" :color="getStatusChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
@@ -102,7 +102,7 @@ export default {
     },
     getStateChipColor(state) {
       if (!state) {
-        return "gray";
+        return "grey-lighten-2";
       }
       return this.stateColorMap[state.toLowerCase()] || "";
     },

@@ -154,7 +154,7 @@
                     {{ amount(usage.left) }} / {{ amount(usage.total) }}
                     {{ defaultCurrency?.code }}
                   </div>
-                  <div class="text-caption text--secondary">
+                  <div class="text-caption text-medium-emphasis">
                     used {{ amount(usage.total - usage.left) }}
                   </div>
                 </template>

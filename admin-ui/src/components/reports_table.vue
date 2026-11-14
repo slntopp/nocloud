@@ -68,7 +68,7 @@
       </template>
       <template v-slot:[`item.status`]="{ item }">
         <div class="d-flex justify-center">
-          <v-chip :color="getStatusColor(item)">
+          <v-chip variant="flat" :color="getStatusColor(item)">
             {{ getStatus(item) }}
           </v-chip>
         </div>
@@ -356,7 +356,7 @@ const getStatusColor = (item) => {
   return {
     Paid: "success",
     Unpaid: "error",
-    Terminate: "blue-grey darken-2",
+    Terminate: "blue-grey-darken-2",
     Draft: "blue",
     Cancelled: "warning",
   }[getStatus(item)];

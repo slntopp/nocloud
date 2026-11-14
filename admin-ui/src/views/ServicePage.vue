@@ -6,7 +6,7 @@
       }}</router-link>
       /
       {{ serviceTitle }}
-      <v-chip size="x-small" :color="chipColor"> </v-chip>
+      <v-chip variant="flat" size="x-small" :color="chipColor"> </v-chip>
     </div>
 
     <v-tabs
@@ -111,11 +111,11 @@ export default {
     },
     chipColor() {
       const dict = {
-        init: "orange darken-2",
-        up: "green darken-2",
-        del: "gray darken-2",
+        init: "orange-darken-2",
+        up: "green-darken-2",
+        del: "grey-lighten-2",
       };
-      return dict?.[this?.service?.status] ?? "blue-grey darken-2";
+      return dict?.[this?.service?.status] ?? "blue-grey-darken-2";
     },
     serviceTitle() {
       return this?.service?.title ?? "not found";

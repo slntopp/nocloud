@@ -52,7 +52,7 @@
         v-for="item of templateOs"
         :key="item.id"
       >
-        <v-chip
+        <v-chip variant="flat"
           closable
           :color="!hidedOs?.includes(item.id) ? 'info' : 'error'"
           :close-icon="

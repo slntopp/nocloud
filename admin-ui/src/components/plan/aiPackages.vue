@@ -50,7 +50,7 @@
         <span v-if="!item.isAi">—</span>
         <span v-else-if="!packageModels(item.form).length">All models</span>
         <template v-else>
-          <v-chip
+          <v-chip variant="flat"
             v-for="model in packageModels(item.form).slice(0, MODELS_SHOWN)"
             :key="model"
             size="x-small"

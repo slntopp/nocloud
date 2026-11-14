@@ -272,7 +272,7 @@
                 
                   <v-list-item-title
                     >{{ navTitle("Chats") }}
-                    <v-chip
+                    <v-chip variant="flat"
                       color="red"
                       class="pa-2"
                       v-if="unreadChatsCount"

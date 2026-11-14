@@ -23,7 +23,7 @@
             <v-chip size="x-small" color="success" variant="outlined">free {{ net.free }}</v-chip>
             <v-chip size="x-small" color="info" variant="outlined">used {{ net.used }}</v-chip>
             <v-chip size="x-small" color="warning" variant="outlined">hold {{ net.hold }}</v-chip>
-            <v-chip v-if="conflicts(kind)" size="x-small" color="error">conflict {{ conflicts(kind) }}</v-chip>
+            <v-chip variant="flat" v-if="conflicts(kind)" size="x-small" color="error">conflict {{ conflicts(kind) }}</v-chip>
             <v-chip v-if="outside(kind)" size="x-small" color="error" variant="outlined">outside {{ outside(kind) }}</v-chip>
             <v-chip size="x-small" variant="outlined">total {{ net.total }}</v-chip>
           </div>

@@ -16,7 +16,7 @@
         
 
         <template #prepend>
-          <v-chip size="small" :color="item.status == 'SERVING' ? 'success' : 'error'">
+          <v-chip variant="flat" size="small" :color="item.status == 'SERVING' ? 'success' : 'error'">
             {{ item.status.status || item.status }}
           </v-chip>
         </template>
@@ -54,7 +54,7 @@ export default {
       if (this.loading) {
         return {
           icon: "mdi-help-circle",
-          color: "grey darken-1",
+          color: "grey-darken-1",
         };
       }
 

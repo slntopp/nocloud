@@ -4,7 +4,7 @@
       <v-col>
         <div>
           service state:
-          <v-chip x-small :color="chipColor">
+          <v-chip variant="flat" x-small :color="chipColor">
             {{ this.service.status }}
           </v-chip>
         </div>
@@ -77,7 +77,7 @@
         >
           <v-expansion-panel-title>
             {{ group.title }} | Type: {{ group.type }} |
-            <v-chip class="instance-group-status" size="small" color="grey">
+            <v-chip variant="flat" class="instance-group-status" size="small" color="grey">
               {{ group.instances.length }}
             </v-chip>
             <v-icon
@@ -140,7 +140,7 @@
                   >
                     <v-expansion-panel-title>
                       {{ instance.title }}
-                      <v-chip
+                      <v-chip variant="flat"
                         size="x-small"
                         class="ml-2"
                         style="max-width: 10px; max-height: 10px; padding: 0"
@@ -347,10 +347,10 @@ export default {
       const dict = {
         INIT: "orange-darken-2",
         ACTIVE: "green-darken-2",
-        UNKNOWN: "gray-darken-2",
+        UNKNOWN: "grey-lighten-2",
         POWEROFF: "red-darken-2",
         SUSPENDED: "orange-darken-2",
-        OPERATION: "gray-darken-2",
+        OPERATION: "grey-lighten-2",
       };
 
       return dict[state] ?? "blue-grey-darken-2";

@@ -28,7 +28,7 @@
       >
         <div class="d-flex justify-space-between mb-3">
           <div class="d-flex">
-            <v-chip class="mx-1" color="primary" v-if="!isAccountsLoading">{{
+            <v-chip variant="flat" class="mx-1" color="primary" v-if="!isAccountsLoading">{{
               getAccount(note.admin)?.title || note.admin
             }}</v-chip>
             <v-skeleton-loader type="chip" v-else />

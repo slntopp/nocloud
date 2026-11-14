@@ -1,5 +1,5 @@
 <template>
-  <v-chip
+  <v-chip variant="flat"
     @click="$emit('click')"
     style="cursor: pointer"
     v-if="balance !== undefined"
@@ -51,7 +51,7 @@ export default {
       } else if (+this.balance < 0) {
         return this["negative-color"] || "error";
       } else {
-        return "gray";
+        return "grey-lighten-2";
       }
     },
   },

@@ -13,7 +13,7 @@
         @update:model-value="(open) => open && load()"
       >
         <template v-slot:activator="{ props }">
-          <v-chip
+          <v-chip variant="flat"
             v-bind="props"
             size="x-small"
             :color="tag.color"

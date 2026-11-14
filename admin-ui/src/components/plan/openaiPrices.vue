@@ -82,7 +82,7 @@
               v-model="filterTypes"
             >
               <template v-slot:selection="{ internalItem: item, index }">
-                <v-chip
+                <v-chip variant="flat"
                   v-if="index < 1"
                   size="x-small"
                   style="color: white"
@@ -189,7 +189,7 @@
             <!-- Read-only here: bots need verified capabilities, so the mark is
                  set in the model's dialog where the driver validates it. -->
             <template v-slot:[`item.bots`]="{ item }">
-              <v-chip
+              <v-chip variant="flat"
                 v-if="item.bots?.enabled"
                 size="small"
                 :color="item.bots.default ? 'success' : 'primary'"
@@ -225,7 +225,7 @@
 
             <template v-slot:[`item.types`]="{ item }">
               <template v-if="item.types?.length">
-                <v-chip
+                <v-chip variant="flat"
                   v-for="type in item.types"
                   :key="type"
                   class="ml-1"
@@ -241,7 +241,7 @@
             <template v-slot:[`item.state.state`]="{ item }">
               <v-tooltip location="left">
                 <template v-slot:activator="{ props }">
-                  <v-chip
+                  <v-chip variant="flat"
                     v-bind="props"
                     style="color: white"
                     :color="item.state?.state === 'broken' ? 'red' : 'green'"
@@ -258,7 +258,7 @@
             </template>
 
             <template v-slot:[`item.provider`]="{ item }">
-              <v-chip color="blue">{{ item.provider }}</v-chip>
+              <v-chip variant="flat" color="blue">{{ item.provider }}</v-chip>
             </template>
           </nocloud-table>
 
@@ -858,12 +858,12 @@ const availableTypes = [
   "vision",
 ];
 const typesColorMap = {
-  text: "indigo darken-4",
+  text: "indigo-darken-4",
   text_to_audio: "purple",
-  audio_to_text: "pink darken-4",
-  image: "red darken-4",
-  video: "orange darken-3",
-  vision: "blue darken-3",
+  audio_to_text: "pink-darken-4",
+  image: "red-darken-4",
+  video: "orange-darken-3",
+  vision: "blue-darken-3",
 };
 
 const keyLabelMap = {

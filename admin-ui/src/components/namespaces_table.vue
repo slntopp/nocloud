@@ -13,7 +13,7 @@
     @update:options="setOptions"
   >
     <template v-slot:[`item.access`]="{ item }">
-      <v-chip color="info" v-if="!isAccountsLoading">
+      <v-chip variant="flat" color="info" v-if="!isAccountsLoading">
         {{ accounts[item.access.namespace]?.title }}
         ({{ item.access.level }})
       </v-chip>
