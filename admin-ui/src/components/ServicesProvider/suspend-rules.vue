@@ -157,7 +157,8 @@ const changeEnableAll = (day) => {
 };
 
 const save = async () => {
-  if (!suspendRulesForm.value.validate()) {
+  const { valid } = await suspendRulesForm.value.validate();
+  if (!valid) {
     store.commit("snackbar/showSnackbarError", {
       message: "Rules not valid!!!",
     });

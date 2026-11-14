@@ -10,7 +10,7 @@
 
       <v-col v-for="key in Object.keys(template.resources || {})" :key="key">
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="emit('update', { key: `resources.${key}`, value: $event })"
           :label="key"
           :model-value="template.resources[key]"

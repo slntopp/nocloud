@@ -5,11 +5,10 @@
       <router-link :to="route"> Look up. </router-link>
     </template>
 
-    <template v-slot:action="{ attrs }">
+    <template v-slot:actions>
       <v-btn
         :color="buttonColor"
         variant="text"
-        v-bind="attrs"
         @click="visibility = false"
       >
         Close

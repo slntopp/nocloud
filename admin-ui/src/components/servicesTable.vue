@@ -2,8 +2,8 @@
   <nocloud-table
     table-name="services"
     show-expand
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     :items="services"
     :headers="headers"
     :loading="isLoading"
@@ -95,10 +95,10 @@ import { useStore } from "@/store";
 import { debounce, getShortName } from "@/functions";
 import api from "@/api";
 
-const props = defineProps(["value", "refetch"]);
-const { value, refetch } = toRefs(props);
+const props = defineProps(["modelValue", "refetch"]);
+const { modelValue: value, refetch } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 
@@ -195,7 +195,7 @@ const fetchServices = async () => {
 const fetchServicesDebounce = debounce(fetchServices);
 
 const chipColor = (state) => {
-  return stateMap[state]?.color ?? "blue-grey darken-2";
+  return stateMap[state]?.color ?? "blue-grey-darken-2";
 };
 const accessColor = (level) => {
   return accessMap[level]?.color;
@@ -262,12 +262,12 @@ watch(refetch, fetchServicesDebounce);
 import search from "@/mixins/search.js";
 
 const stateMap = {
-  INIT: { color: "orange darken-2", id: 1, title: "INIT" },
-  SUS: { color: "orange darken-2", title: "SUSPENDED", id: 7 },
-  UP: { color: "green darken-2", id: 3, title: "UP" },
-  DEL: { color: "gray darken-2", id: 5, title: "DEL" },
-  UNSPECIFIED: { color: "red darken-2", title: "UNKNOWN", id: 0 },
-  DOWN: { color: "orange darken-2", id: 4, title: "STOPPED" },
+  INIT: { color: "orange-darken-2", id: 1, title: "INIT" },
+  SUS: { color: "orange-darken-2", title: "SUSPENDED", id: 7 },
+  UP: { color: "green-darken-2", id: 3, title: "UP" },
+  DEL: { color: "gray-darken-2", id: 5, title: "DEL" },
+  UNSPECIFIED: { color: "red-darken-2", title: "UNKNOWN", id: 0 },
+  DOWN: { color: "orange-darken-2", id: 4, title: "STOPPED" },
 };
 
 const accessMap = {

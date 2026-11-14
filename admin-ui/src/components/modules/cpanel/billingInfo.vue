@@ -7,7 +7,7 @@
           label="Price model"
           :model-value="template.billingPlan.title"
         >
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
             <v-icon
               @click="
@@ -34,9 +34,9 @@
       <v-col>
         <date-picker
           label="Date (create)"
-          :value="timestampToDateTimeLocal(template?.created)"
+          :model-value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
@@ -48,9 +48,9 @@
       <v-col>
         <date-picker
           label="Deleted date"
-          :value="timestampToDateTimeLocal(template?.deleted)"
+          :model-value="timestampToDateTimeLocal(template?.deleted)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'deleted',
               value: formatDateToTimestamp($event),
@@ -69,7 +69,7 @@
           readonly
           label="Due to date/next payment"
           :model-value="dueDate"
-          :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
+          :append-inner-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click="changeDatesDialog = true"
         />
       </v-col>
@@ -94,7 +94,7 @@
               v-model="item.price"
               :suffix="defaultCurrency?.code"
               @update:model-value="updatePrice(item, false)"
-              append-icon="mdi-pencil"
+              append-inner-icon="mdi-pencil"
             />
             <v-text-field
               class="ml-2"
@@ -102,7 +102,7 @@
               style="color: rgb(var(--v-theme-primary))"
               v-model="item.accountPrice"
               @update:model-value="updatePrice(item, true)"
-              append-icon="mdi-pencil"
+              append-inner-icon="mdi-pencil"
             />
           </div>
         </template>

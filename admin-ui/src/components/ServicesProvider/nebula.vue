@@ -73,7 +73,7 @@
                 <v-text-field v-model="item.title" />
               </template>
               <template v-slot:[`item.pass`]="{ item }">
-                <password-text-field :value="item.config.password" />
+                <password-text-field :model-value="item.config.password" />
               </template>
               <template v-slot:[`item.os`]="{ item }">
                 {{

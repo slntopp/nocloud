@@ -4,8 +4,8 @@
     class="mt-4"
     :items="plans"
     :headers="headers"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     :loading="isLoading"
     :footer-error="fetchError"
     @update:options="setOptions"
@@ -149,12 +149,12 @@ import { Plan, PlanKind } from "nocloud-proto/proto/es/billing/billing_pb";
 import useSearch from "@/hooks/useSearch";
 
 const statusMap = {
-  DEL: { title: "DELETED", color: "blue-grey darken-2" },
+  DEL: { title: "DELETED", color: "blue-grey-darken-2" },
   UNSPECIFIED: { title: "ACTIVE", color: "success" },
 };
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   tableName: { type: String, default: "plans-table" },
   showSelect: { type: Boolean, default: false },
   customParams: { type: Object, default: () => ({}) },
@@ -166,7 +166,7 @@ const props = defineProps({
   isLoading: { type: Boolean, default: false },
 });
 const {
-  value,
+  modelValue: value,
   refetch,
   customParams,
   noSearch,
@@ -176,7 +176,7 @@ const {
   customHeaders,
 } = toRefs(props);
 
-const emit = defineEmits(["input", "update:options", "fetch:plans"]);
+const emit = defineEmits(["update:modelValue", "update:options", "fetch:plans"]);
 
 const store = useStore();
 useSearch({

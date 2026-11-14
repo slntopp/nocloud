@@ -18,11 +18,14 @@
                 :items="types"
                 :loading="isFetchLoading"
               >
-                <template v-slot:item="{ item }">
-                  <span>{{ item.title }} - {{ item.amount.title }}</span>
+                <template v-slot:item="{ item, props: itemProps }">
+                  <v-list-item
+                    v-bind="itemProps"
+                    :title="`${item.raw.title} - ${item.raw.amount.title}`"
+                  />
                 </template>
                 <template v-slot:selection="{ item }">
-                  <span>{{ item.title }} - {{ item.amount.title }}</span>
+                  <span>{{ item.raw.title }} - {{ item.raw.amount.title }}</span>
                 </template>
               </v-select>
             </v-col>
@@ -63,7 +66,7 @@
             </v-col>
             <v-col cols="9">
               <v-autocomplete
-                :customFilter="defaultFilterObject"
+                :custom-filter="filterObject"
                 label="Service"
                 item-value="uuid"
                 item-title="title"
@@ -82,7 +85,7 @@
             </v-col>
             <v-col cols="9">
               <v-autocomplete
-                :customFilter="defaultFilterObject"
+                :custom-filter="filterObject"
                 multiple
                 label="Instances"
                 item-value="uuid"
@@ -114,47 +117,46 @@
             </v-col>
             <v-col cols="4" v-for="type of [date, time]" :key="type.title">
               <v-menu
-                
                 min-width="auto"
                 transition="scale-transition"
                 v-model="type.visible"
-                :ref="`menu${type.title}`"
                 :close-on-content-click="false"
-                v-model:return-value="type.value"
               >
                 <template v-slot:activator="{ props }">
                   <v-text-field
                     readonly
-                    v-model="type.value"
-                   
+                    :model-value="type.value"
                     v-bind="props"
                     :label="type.title"
                   />
                 </template>
+                <!-- v-menu return-value/save() are gone in Vuetify 3: the date
+                     is picked into a draft and applied on OK -->
                 <v-date-picker
-                  no-title
-                  scrollable
-                  v-model="type.value"
-                  v-if="date.visible"
+                  hide-header
+                  v-model="dateDraft"
+                  v-if="type === date && date.visible"
                 >
-                  <v-spacer />
-                  <v-btn variant="text" color="primary" @click="type.visible = false">
-                    Cancel
-                  </v-btn>
-                  <v-btn
-                    variant="text"
-                    color="primary"
-                    @click="$refs.menuDate[0].save(type.value)"
-                  >
-                    OK
-                  </v-btn>
+                  <template v-slot:actions>
+                    <v-spacer />
+                    <v-btn
+                      variant="text"
+                      color="primary"
+                      @click="date.visible = false"
+                    >
+                      Cancel
+                    </v-btn>
+                    <v-btn variant="text" color="primary" @click="applyDate">
+                      OK
+                    </v-btn>
+                  </template>
                 </v-date-picker>
                 <v-time-picker
                   use-seconds
                   format="24hr"
-                  v-if="time.visible"
-                  v-model="type.value"
-                  @click:second="$refs.menuTime[0].save(type.value)"
+                  v-if="type === time && time.visible"
+                  v-model="time.value"
+                  @update:second="time.visible = false"
                 />
               </v-menu>
             </v-col>
@@ -260,6 +262,8 @@ export default {
       value: "",
       visible: false,
     },
+    // VDatePicker v3 works with Date objects, date.value stays "YYYY-MM-DD"
+    dateDraft: null,
     generalRule: [(v) => !!v || "This field is required!"],
     isValid: false,
     isLoading: false,
@@ -291,7 +295,21 @@ export default {
     isServicesLoading: false,
   }),
   methods: {
-    defaultFilterObject,
+    // Vuetify 3 custom-filter is (value, query, internalItem); the shared helper
+    // keeps the Vuetify 2 (item, query) signature
+    filterObject(_, query, internalItem) {
+      return defaultFilterObject(internalItem?.raw, query);
+    },
+    applyDate() {
+      const d = this.dateDraft;
+      if (d) {
+        const pad = (n) => n.toString().padStart(2, "0");
+        this.date.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+          d.getDate()
+        )}`;
+      }
+      this.date.visible = false;
+    },
     setTransactionType() {
       let amount = "";
 
@@ -306,9 +324,8 @@ export default {
       ].join(" ");
     },
     async tryToSend(withEmail = false) {
-      if (!this.isValid) {
-        this.$refs.form.validate();
-
+      const { valid } = await this.$refs.form.validate();
+      if (!valid) {
         this.showSnackbarError({
           message: "Validation failed!",
         });
@@ -493,6 +510,13 @@ export default {
     },
   },
   watch: {
+    "date.visible"(visible) {
+      if (visible) {
+        this.dateDraft = this.date.value
+          ? new Date(`${this.date.value}T00:00:00`)
+          : null;
+      }
+    },
     "transaction.service"() {
       this.transaction.meta.instances = [];
     },

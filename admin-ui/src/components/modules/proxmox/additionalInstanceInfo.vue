@@ -9,7 +9,7 @@
       </v-col>
       <v-col>
         <v-select
-          append-icon="mdi-pencil"
+          menu-icon="mdi-pencil"
           :model-value="template.config.template_id"
           label="OS (template)"
           :items="allOs"
@@ -21,20 +21,20 @@
           @update:model-value="emit('update', { key: 'config.username', value: $event })"
           :model-value="template.config.username"
           label="Username"
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
         />
       </v-col>
       <v-col>
         <password-text-field
           :readonly="false"
-          @input="emit('update', { key: 'config.password', value: $event })"
-          :value="template.config.password"
+          @update:model-value="emit('update', { key: 'config.password', value: $event })"
+          :model-value="template.config.password"
           copy
         />
       </v-col>
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="emit('update', { key: 'config.hostname', value: $event })"
           :model-value="template.config?.hostname"
           label="Hostname"
@@ -44,7 +44,7 @@
       </v-col>
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           type="number"
           @update:model-value="emit('update', { key: 'config.ssh_port', value: +$event || $event })"
           :model-value="template.config?.ssh_port || template.data?.ssh_port"
@@ -74,7 +74,7 @@
       </v-col>
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="emit('update', { key: 'resources.cpu', value: +$event })"
           :model-value="template.resources.cpu"
           label="CPU"
@@ -83,7 +83,7 @@
       <v-col>
         <v-text-field
           @update:model-value="emit('update', { key: 'resources.ram', value: toGB($event) })"
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           :model-value="getGB(template.resources.ram)"
           label="RAM (GB)"
         />
@@ -91,7 +91,7 @@
       <v-col>
         <v-select
           @update:model-value="emit('update', { key: 'resources.drive_type', value: $event })"
-          append-icon="mdi-pencil"
+          menu-icon="mdi-pencil"
           :items="driveTypes"
           :model-value="template.resources.drive_type"
           label="Disk type"
@@ -100,7 +100,7 @@
       <v-col>
         <v-text-field
           @update:model-value="emit('update', { key: 'resources.drive_size', value: toGB($event) })"
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           :model-value="getGB(template.resources.drive_size)"
           label="Disk size (GB)"
         />

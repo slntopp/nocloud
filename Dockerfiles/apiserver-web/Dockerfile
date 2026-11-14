@@ -7,7 +7,7 @@ RUN upx ./apiserver_web
 
 RUN adduser -SD nocloud
 
-FROM node:18 AS ui-builder
+FROM node:22 AS ui-builder
 
 ADD admin-ui /app
 WORKDIR /app

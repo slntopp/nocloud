@@ -405,8 +405,8 @@ export default {
       this.plan.addons = val;
     },
     async tryToSend(action, bindPlan = false) {
-      if (!this.isValid || !this.isFeeValid) {
-        this.$refs.form.validate();
+      const { valid } = await this.$refs.form.validate();
+      if (!valid || !this.isFeeValid) {
         return this.showSnackbarError({ message: "Validation failed!" });
       }
 
@@ -718,7 +718,7 @@ export default {
   margin-bottom: 10px;
 }
 
-.theme--dark.v-tabs-items {
+.v-theme--dark.v-window {
   background: rgb(var(--v-theme-background));
 }
 

@@ -2,8 +2,8 @@
   <nocloud-table
     :table-name="tableName"
     class="mt-4"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     sort-by="created"
     sort-desc
     :items="invoices"
@@ -142,15 +142,15 @@ import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
-  value: {},
+  modelValue: {},
   customFilter: {},
   noSearch: { type: Boolean, default: false },
   hideSelect: { type: Boolean, default: false },
   refetch: { type: Boolean, default: false },
 });
-const { tableName, value, refetch, noSearch, customFilter } = toRefs(props);
+const { tableName, modelValue: value, refetch, noSearch, customFilter } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 const { getInvoiceStatusColor, getTotalColor } = useInvoices();

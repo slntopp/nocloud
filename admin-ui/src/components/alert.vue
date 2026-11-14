@@ -1,7 +1,7 @@
 <template>
 	<v-snackbar
 		:model-value="snackbar.visibility || false"
-		@change="(state) => $emit('change', state)"
+		@update:model-value="(state) => $emit('change', state)"
 		:timeout="snackbar.timeout || 3000"
 		:color="snackbar.color || 'background'"
 	>
@@ -13,11 +13,10 @@
 		</template>
 		
 
-		<template v-if="!hideClose" v-slot:action="{ attrs }">
+		<template v-if="!hideClose" v-slot:actions>
 			<v-btn
 				:color="snackbar.buttonColor"
 				variant="text"
-				v-bind="attrs"
 				@click="$emit('change', false)"
 			>
 				Close
@@ -29,6 +28,7 @@
 <script>
 export default {
 	name: 's-alert',
+	emits: ['change'],
 	props: {
 		snackbar: {
 			type: Object,

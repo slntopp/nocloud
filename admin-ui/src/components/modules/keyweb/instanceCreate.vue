@@ -42,12 +42,12 @@
         </v-col>
         <v-col cols="6">
           <plans-autocomplete
-            :value="instance.billing_plan"
+            :model-value="instance.billing_plan"
             :custom-params="{
               filters: { type: ['keyweb'], 'meta.isIndividual': [false] },
               anonymously: false,
             }"
-            @input="setValue('billing_plan', $event)"
+            @update:model-value="setValue('billing_plan', $event)"
             return-object
             label="Price model"
             :rules="planRules"
@@ -190,7 +190,7 @@ onMounted(() => {
 const setValue = (key, value) => {
   emits("set-value", { key, value });
 
-   
+  /* eslint-disable */
   switch (key) {
     case "product": {
       product.value = value;
@@ -204,7 +204,7 @@ const setValue = (key, value) => {
       setValue("data.serviceId", undefined);
     }
   }
-   
+  /* eslint-enable */
 };
 
 const setAddons = () => {

@@ -2,14 +2,14 @@
 import { computed, toRefs } from "vue";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   label: {},
   disabled: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
 });
-const { disabled, dense, value, label } = toRefs(props);
+const { disabled, dense, modelValue: value, label } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const fromRules = computed(() => {
   if (!value.value?.from) {
@@ -34,7 +34,7 @@ const onInput = (key, e) => {
   }
 
   newValue[key] = e || undefined;
-  emit("input", newValue);
+  emit("update:modelValue", newValue);
 };
 </script>
 

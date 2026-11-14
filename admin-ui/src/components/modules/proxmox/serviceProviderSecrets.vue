@@ -9,7 +9,7 @@
           <v-text-field readonly :model-value="secrets.token_id" label="token_id" />
         </v-col>
         <v-col cols="12" md="4">
-          <password-text-field :value="secrets.token_secret" label="token_secret" />
+          <password-text-field :model-value="secrets.token_secret" label="token_secret" />
         </v-col>
       </template>
       <template v-else>
@@ -17,7 +17,7 @@
           <v-text-field readonly :model-value="secrets.user" label="user" />
         </v-col>
         <v-col cols="12" md="4">
-          <password-text-field :value="secrets.pass" label="pass" />
+          <password-text-field :model-value="secrets.pass" label="pass" />
         </v-col>
       </template>
       <v-col cols="12" md="4">

@@ -1,14 +1,14 @@
 <template>
   <component
-    offset-y
     max-width="1280"
     :is="type === 'dialog' ? VDialog : VMenu"
-    :value="visible"
+    :model-value="visible"
     :close-on-content-click="false"
-    @input="emits('close')"
+    @update:model-value="emits('close')"
   >
-    <template v-slot:activator="{ on, attrs }">
-      <slot v-on="on" v-bind="attrs" name="activator" />
+    <template v-slot:activator="{ props: activatorProps }">
+      <!-- the parent must bind these props to its activator element so the overlay can anchor to it -->
+      <slot name="activator" :props="activatorProps" />
     </template>
 
     <v-card

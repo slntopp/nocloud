@@ -7,7 +7,7 @@
           label="Price model"
           :model-value="template.billingPlan.title"
         >
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <v-icon
               v-if="isPriceModelCanBeChange"
               @click="priceModelDialog = true"
@@ -30,8 +30,8 @@
           readonly
           label="Product name"
           :model-value="tarrif.title"
-          :append-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
-          @click:append="
+          :append-inner-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
+          @click:append-inner="
             isPriceModelCanBeChange ? (priceModelDialog = true) : undefined
           "
         />
@@ -39,9 +39,9 @@
       <v-col>
         <date-picker
           label="Date (create)"
-          :value="timestampToDateTimeLocal(template?.created)"
+          :model-value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
@@ -53,9 +53,9 @@
       <v-col>
         <date-picker
           label="Deleted date"
-          :value="timestampToDateTimeLocal(template?.deleted)"
+          :model-value="timestampToDateTimeLocal(template?.deleted)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'deleted',
               value: formatDateToTimestamp($event),
@@ -90,7 +90,7 @@
               @change="onUpdatePrice(item, false)"
               :suffix="defaultCurrency?.code"
               type="number"
-              append-icon="mdi-pencil"
+              append-inner-icon="mdi-pencil"
             ></v-text-field>
             <v-text-field
               class="ml-2"
@@ -99,7 +99,7 @@
               @change="onUpdatePrice(item, true)"
               :suffix="accountCurrency?.code"
               type="number"
-              append-icon="mdi-pencil"
+              append-inner-icon="mdi-pencil"
             ></v-text-field>
           </div>
         </template>

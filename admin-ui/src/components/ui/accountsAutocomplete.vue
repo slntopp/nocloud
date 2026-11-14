@@ -4,7 +4,7 @@
     :items="allAccounts"
     :customFilter="accountsFilter"
     :model-value="value"
-    @update:model-value="emit('input', $event)"
+    @update:model-value="emit('update:modelValue', $event)"
     item-title="title"
     item-value="uuid"
     :rules="rules"
@@ -18,11 +18,11 @@
     :density="dense ? 'compact' : undefined"
   >
     <template v-if="advanced" v-slot:selection="{ item }">
-      {{ getAdvancedItem(item) }}
+      {{ getAdvancedItem(item.raw) }}
     </template>
 
-    <template v-if="advanced" v-slot:item="{ item }">
-      {{ getAdvancedItem(item) }}
+    <template v-if="advanced" v-slot:item="{ item, props: itemProps }">
+      <v-list-item v-bind="itemProps" :title="getAdvancedItem(item.raw)" />
     </template>
   </v-autocomplete>
 </template>
@@ -33,7 +33,7 @@ import api from "@/api";
 import { debounce } from "@/functions";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   label: {},
   rules: {},
   returnObject: { type: Boolean, default: false },
@@ -45,9 +45,9 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   advanced: { type: Boolean, default: false },
 });
-const { value, fetchValue, multiple, loading, returnObject } = toRefs(props);
+const { modelValue: value, fetchValue, multiple, loading, returnObject } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const allAccounts = ref([]);
 const isLoading = ref(false);
@@ -81,9 +81,11 @@ const updateAccounts = async (value) => {
 
 const updateAccountsDebounce = debounce(updateAccounts, 300);
 
-const accountsFilter = (item) => {
+// Vuetify 3 custom-filter signature: (value, query, internalItem)
+const accountsFilter = (_, __, internalItem) => {
+  const item = internalItem?.raw;
   if (multiple.value) {
-    return !(value.value?.includes(item.uuid) || value.value?.includes(item));
+    return !(value.value?.includes(item?.uuid) || value.value?.includes(item));
   }
   return true;
 };
@@ -123,7 +125,7 @@ const fetchAccount = async () => {
           await api.accounts.get(value.value?.uuid || value.value),
         ];
         if (returnObject.value) {
-          emit("input", allAccounts.value[0]);
+          emit("update:modelValue", allAccounts.value[0]);
         }
       }
     } finally {

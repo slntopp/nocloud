@@ -5,7 +5,7 @@
         v-if="!isLoading"
         :to="{ name: 'Account', params: { accountId: user?.uuid } }"
         label="User"
-        :value="user?.title"
+        :model-value="user?.title"
       />
       <account-grade v-if="!isLoading" :account="user" />
       <v-skeleton-loader type="text" v-else />

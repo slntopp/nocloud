@@ -189,7 +189,7 @@ export default {
       };
     },
     createAccount() {
-      if (!this.formValid) return;
+      if (this.formValid === false) return;
       this.loading = true;
       api.accounts
         .create(this.newAccount)

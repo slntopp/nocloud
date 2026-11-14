@@ -31,7 +31,7 @@
       <v-row>
         <v-col cols="6">
           <plans-autocomplete
-            :value="instance.billing_plan"
+            :model-value="instance.billing_plan"
             :custom-params="{
               filters: {
                 type: [`ovh ${ovhType}`],
@@ -39,7 +39,7 @@
               },
               anonymously: false,
             }"
-            @input="setValue('billing_plan', $event)"
+            @update:model-value="setValue('billing_plan', $event)"
             return-object
             label="Price model"
             :rules="planRules"

@@ -226,7 +226,7 @@ const updateAutomaticDebit = (value) => {
 }
 
 /* "Automatic debit" is the first thing to break when the row gets tight */
-.billing-actions ::v-deep .v-label {
+.billing-actions :deep(.v-label) {
   white-space: nowrap;
 }
 </style>

@@ -9,10 +9,9 @@
           @click="searchDomains"
           :disabled="!searchDomainString"
           size="small"
-          
           :loading="isDomainsLoading"
         >
-          <v-icon > mdi-magnify </v-icon>
+          <v-icon> mdi-magnify </v-icon>
           Search
         </v-btn>
       </v-col>
@@ -30,10 +29,10 @@
           :items="domainPeriods"
         >
           <template v-slot:selection="{ item }">
-            {{ item + " years" }}
+            {{ item.title + " years" }}
           </template>
-          <template v-slot:item="{ item }">
-            {{ item + " years" }}
+          <template v-slot:item="{ item, props }">
+            <v-list-item v-bind="props" :title="item.title + ' years'" />
           </template>
         </v-select>
       </v-col>
@@ -41,7 +40,7 @@
     <v-row class="flex-column pa-md-5">
       <nocloud-table
         table-name="open-srs-domains"
-        @input="(item) => changeDomain(item)"
+        @update:model-value="(item) => changeDomain(item)"
         :footer-error="tableError"
         item-key="domain"
         single-select

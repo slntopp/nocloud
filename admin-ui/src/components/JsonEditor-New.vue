@@ -11,7 +11,7 @@ import { ref, onMounted, onUnmounted, shallowRef, watch, toRefs } from "vue";
 import { JSONEditor } from "vanilla-jsoneditor";
 
 const props = defineProps({
-  value: {
+  modelValue: {
     type: [Object, Array, String],
     default: () => ({})
   },
@@ -21,9 +21,9 @@ const props = defineProps({
   }
 });
 
-const { value, readOnly } = toRefs(props);
+const { modelValue: value, readOnly } = toRefs(props);
 
-const emit = defineEmits(["input", "change"]);
+const emit = defineEmits(["update:modelValue", "change"]);
 
 const editorContainer = ref(null);
 const editor = shallowRef(null);
@@ -64,7 +64,7 @@ function initEditor() {
             updated = JSON.parse(content.text);
           } catch (e) { return; }
         }
-        emit("input", updated);
+        emit("update:modelValue", updated);
         emit("change", updated);
       }
     }
@@ -164,7 +164,7 @@ button[title*="table"] {
   display: none !important;
 }
 
-.v-application.theme--dark {
+.v-application.v-theme--dark {
   .json-editor {
     --jse-background-color: #1a1c2a;
     --jse-panel-background: #1a1c2a;

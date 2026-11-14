@@ -7,7 +7,6 @@
       prepend-icon=""
       hide-input
       :accept="'.'+accept"
-      type="file"
       @update:model-value="$emit('file',$event)"
     />
     <slot></slot>
@@ -18,6 +17,7 @@
 export default {
   name: "uploadFileButton",
   props: ["accept"],
+  emits: ["file"],
   methods: {
     trigerInput() {
       document.getElementById('fileInput').click()

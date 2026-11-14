@@ -129,7 +129,7 @@
 
           <v-btn
             color="primary"
-            :disabled="!formValid || !categoryData.title"
+            :disabled="formValid === false || !categoryData.title"
             :loading="isSaveLoading"
             @click="saveCategory"
           >
@@ -277,7 +277,8 @@ const resetForm = () => {
 };
 
 const saveCategory = async () => {
-  if (!categoryForm.value.validate()) {
+  const { valid } = await categoryForm.value.validate();
+  if (!valid) {
     store.commit("snackbar/showSnackbarError", {
       message: "Please fill in all required fields correctly",
     });

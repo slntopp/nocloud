@@ -451,8 +451,9 @@
       @close="overlay.isVisible = false"
       @hover="hoverOverlay"
     >
-      <template #activator>
+      <template #activator="{ props }">
         <v-btn
+          v-bind="props"
           variant="outlined"
           color="success"
           :style="{

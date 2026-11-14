@@ -1,15 +1,14 @@
 <template>
   <v-text-field
-    @click:append="goTo(props.to)"
+    @click:append-inner="goTo(props.to)"
     readonly
-    append-icon="mdi-login"
+    append-inner-icon="mdi-login"
     :label="props.label"
-    :model-value="props.value"
+    :model-value="props.modelValue"
   />
 </template>
 
 <script setup>
-import { defineProps } from "vue";
 import {useRouter} from "vue-router";
 
 
@@ -19,7 +18,7 @@ const props = defineProps({
     required: true,
   },
   label: String,
-  value: String,
+  modelValue: String,
 });
 
 const router=useRouter()

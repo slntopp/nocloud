@@ -10,8 +10,8 @@
           :label="label"
           :model-value="value"
           clearable
-          @update:model-value="emit('input', $event)"
-          @click:clear="emit('input', '')"
+          @update:model-value="emit('update:modelValue', $event)"
+          @click:clear="emit('update:modelValue', '')"
         />
         <v-icon class="ml-3" style="height: 25px" v-bind="props">
           mdi-palette
@@ -22,8 +22,8 @@
       <v-color-picker
         mode="hexa"
         :model-value="value || '#FFFFFFFF'"
-        @update:model-value="emit('input', $event.hex || $event)"
-        hide-mode-switch
+        @update:model-value="emit('update:modelValue', $event.hex || $event)"
+        :modes="['hexa']"
       ></v-color-picker>
       <v-card-actions class="justify-end pt-0">
         <v-btn size="small" variant="text" @click="isMenuOpen = false">Close</v-btn>
@@ -35,10 +35,10 @@
 <script setup>
 import { ref, toRefs } from "vue";
 
-const props = defineProps(["value", "label"]);
-const emit = defineEmits(["input"]);
+const props = defineProps(["modelValue", "label"]);
+const emit = defineEmits(["update:modelValue"]);
 
-const { value } = toRefs(props);
+const { modelValue: value } = toRefs(props);
 const isMenuOpen = ref(false);
 </script>
 

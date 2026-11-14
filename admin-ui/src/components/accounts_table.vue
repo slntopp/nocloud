@@ -3,11 +3,11 @@
     :table-name="tableName"
     :headers="headers"
     :items="accounts"
-    :value="selected"
+    :model-value="selected"
     :loading="loading || isAccountsLoading"
     :single-select="singleSelect"
     :footer-error="fetchError"
-    @input="handleSelect"
+    @update:model-value="handleSelect"
     :server-items-length="total"
     :server-side-page="options.page"
     @update:options="setOptions"
@@ -120,7 +120,7 @@ import { gradeFilterConditions } from "@/accountGrades.js";
 import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
-  value: {
+  modelValue: {
     type: Array,
     default: () => [],
   },
@@ -133,10 +133,10 @@ const props = defineProps({
   customFilter: { type: Object },
   tableName: { type: String, default: "accounts" },
 });
-const { value, singleSelect, customSearchParam, noSearch, customFilter } =
+const { modelValue: value, singleSelect, customSearchParam, noSearch, customFilter } =
   toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 const router = useRouter();
@@ -380,7 +380,7 @@ const fetchAccountsDebounce = debounce(() => {
 }, 300);
 
 const handleSelect = (item) => {
-  emit("input", item);
+  emit("update:modelValue", item);
 };
 const colorChip = (level) => {
   return levelColorMap.value[level];

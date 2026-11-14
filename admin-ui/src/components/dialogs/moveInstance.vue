@@ -1,7 +1,7 @@
 <template>
   <v-dialog
     :persistent="isMoveLoading"
-    @update:model-value="emit('input', $event)"
+    @update:model-value="emit('update:modelValue', $event)"
     width="50%"
     :model-value="value"
   >
@@ -20,7 +20,7 @@
       />
 
       <v-card-actions class="d-flex justify-end">
-        <v-btn @click="emit('input', false)" :disabled="isMoveLoading"
+        <v-btn @click="emit('update:modelValue', false)" :disabled="isMoveLoading"
           >Close
         </v-btn>
         <v-btn
@@ -35,14 +35,14 @@
 </template>
 
 <script setup>
-import { defineEmits, defineProps, ref, toRefs } from "vue";
+import { ref, toRefs } from "vue";
 import { useStore } from "@/store";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import { TransferInstanceRequest } from "nocloud-proto/proto/es/instances/instances_pb";
 
-const props = defineProps(["value", "template"]);
-const { value, template } = toRefs(props);
-const emit = defineEmits(["refresh", "input"]);
+const props = defineProps(["modelValue", "template"]);
+const { modelValue: value, template } = toRefs(props);
+const emit = defineEmits(["refresh", "update:modelValue"]);
 
 const store = useStore();
 

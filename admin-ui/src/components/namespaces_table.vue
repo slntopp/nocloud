@@ -4,8 +4,8 @@
     :loading="isLoading"
     :items="namespaces"
     :headers="headers"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     :single-select="singleSelect"
     :footer-error="fetchError"
     :server-items-length="total"
@@ -36,7 +36,7 @@ import { debounce, getShortName } from "@/functions";
 import api from "@/api";
 
 const props = defineProps({
-  value: {
+  modelValue: {
     type: Array,
     default: () => [],
   },
@@ -49,9 +49,9 @@ const props = defineProps({
     default: false,
   },
 });
-const { value, singleSelect, refetch } = toRefs(props);
+const { modelValue: value, singleSelect, refetch } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 

@@ -1,8 +1,8 @@
 <template>
   <v-dialog
     persistent
-    :model-value="value"
-    @update:model-value="emit('input', value)"
+    :model-value="modelValue"
+    @update:model-value="emit('update:modelValue', modelValue)"
     max-width="60%"
   >
     <v-card class="pa-5">
@@ -32,7 +32,7 @@
           v-model="isChangeAll"
           label="All at the same time"
         />
-        <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
+        <v-btn class="mx-3" @click="emit('update:modelValue', false)">Close</v-btn>
         <v-btn class="mx-3" :loading="changeDatesLoading" @click="changeDates"
           >Change dates</v-btn
         >
@@ -51,8 +51,8 @@ import {
   timestampToDateTimeLocal,
 } from "../../functions";
 
-const props = defineProps(["template", "service", "value"]);
-const emit = defineEmits(["refresh", "input"]);
+const props = defineProps(["template", "service", "modelValue"]);
+const emit = defineEmits(["refresh", "update:modelValue"]);
 
 const store = useStore();
 
@@ -137,7 +137,7 @@ const changeDates = async () => {
     });
   } finally {
     changeDatesLoading.value = false;
-    emit("input", false);
+    emit("update:modelValue", false);
   }
 };
 

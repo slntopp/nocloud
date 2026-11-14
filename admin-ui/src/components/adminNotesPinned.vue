@@ -36,7 +36,7 @@
             </v-chip>
           </div>
           <EditorContainer
-            :value="note.msg"
+            :model-value="note.msg"
             class="pinned-note-content"
           ></EditorContainer>
         </v-card>

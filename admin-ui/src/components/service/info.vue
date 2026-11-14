@@ -17,8 +17,8 @@
           :model-value="service.uuid"
           label="service uuid"
           style="display: inline-block; width: 330px"
-          :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
-          @click:append="addToClipboard(service.uuid, 'rootUUID')"
+          :append-inner-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
+          @click:append-inner="addToClipboard(service.uuid, 'rootUUID')"
         >
         </v-text-field>
       </v-col>
@@ -37,8 +37,8 @@
           :model-value="hashpart(service.hash)"
           label="service hash"
           style="display: inline-block; width: 150px"
-          :append-icon="copyed == 'rootHash' ? 'mdi-check' : 'mdi-content-copy'"
-          @click:append="addToClipboard(service.hash, 'rootHash')"
+          :append-inner-icon="copyed == 'rootHash' ? 'mdi-check' : 'mdi-content-copy'"
+          @click:append-inner="addToClipboard(service.hash, 'rootHash')"
         >
         </v-text-field>
       </v-col>
@@ -108,10 +108,10 @@
                   :model-value="group.uuid"
                   label="group uuid"
                   style="display: inline-block; width: 330px"
-                  :append-icon="
+                  :append-inner-icon="
                     copyed == `${group}-UUID` ? 'mdi-check' : 'mdi-content-copy'
                   "
-                  @click:append="addToClipboard(group.uuid, `${group}-UUID`)"
+                  @click:append-inner="addToClipboard(group.uuid, `${group}-UUID`)"
                 >
                 </v-text-field>
               </v-col>
@@ -121,10 +121,10 @@
                   :model-value="hashpart(group.hash)"
                   label="group hash"
                   style="display: inline-block; width: 150px"
-                  :append-icon="
+                  :append-inner-icon="
                     copyed == `${group}-hash` ? 'mdi-check' : 'mdi-content-copy'
                   "
-                  @click:append="addToClipboard(group.hash, `${group}-hash`)"
+                  @click:append-inner="addToClipboard(group.hash, `${group}-hash`)"
                 >
                 </v-text-field>
               </v-col>
@@ -244,6 +244,7 @@
 </template>
 
 <script>
+import { markRaw } from "vue";
 import { moduleComponent, moduleTypes } from "@/modules";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
@@ -255,6 +256,7 @@ export default {
     ServiceDeploy,
   },
   mixins: [snackbar],
+  emits: ["refresh"],
   props: {
     service: {
       type: Object,
@@ -343,15 +345,15 @@ export default {
     },
     stateColor(state) {
       const dict = {
-        INIT: "orange darken-2",
-        ACTIVE: "green darken-2",
-        UNKNOWN: "gray darken-2",
-        POWEROFF: "red darken-2",
-        SUSPENDED: "orange darken-2",
-        OPERATION: "gray darken-2",
+        INIT: "orange-darken-2",
+        ACTIVE: "green-darken-2",
+        UNKNOWN: "gray-darken-2",
+        POWEROFF: "red-darken-2",
+        SUSPENDED: "orange-darken-2",
+        OPERATION: "gray-darken-2",
       };
 
-      return dict[state] ?? "blue-grey darken-2";
+      return dict[state] ?? "blue-grey-darken-2";
     },
     editService() {
       this.isLoading = true;
@@ -382,8 +384,9 @@ export default {
     getInstanceCardComponent(type) {
       return this.templates[type] ?? this.templates.custom;
     },
-    moveInstanceGroup() {
-      if (!this.$refs.addServiceCard.validate()) {
+    async moveInstanceGroup() {
+      const { valid } = await this.$refs.addServiceCard.validate();
+      if (!valid) {
         return;
       }
       this.isMoveLoading = true;
@@ -508,7 +511,9 @@ export default {
   },
   created() {
     moduleTypes("instanceCard").forEach((type) => {
-      this.templates[type] = moduleComponent("instanceCard", type);
+      const component = moduleComponent("instanceCard", type);
+      // async components must not be made reactive through data()
+      this.templates[type] = component && markRaw(component);
     });
   },
   mounted() {
@@ -545,7 +550,7 @@ export default {
   justify-content: center;
 }
 
-.confirm-card .buttons >>> button {
+.confirm-card .buttons :deep(button) {
   margin: 0 20px;
 }
 </style>

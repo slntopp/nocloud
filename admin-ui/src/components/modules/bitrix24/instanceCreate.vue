@@ -19,12 +19,12 @@
       <v-row>
         <v-col cols="6">
           <plans-autocomplete
-            :value="bilingPlan"
+            :model-value="bilingPlan"
             :custom-params="{
               filters: { type: ['empty'], 'meta.isIndividual': [false] },
               anonymously: false,
             }"
-            @input="setValue('billing_plan', $event)"
+            @update:model-value="setValue('billing_plan', $event)"
             return-object
             label="Price model"
             :rules="planRules"
@@ -41,14 +41,16 @@
             item-value="key"
             @update:model-value="changeProduct"
           >
-            <template v-slot:item="{ item }">
-              <div
-                style="width: 100%"
-                class="d-flex justify-space-between align-center"
-              >
-                <span>{{ item.key }}</span>
-                <span class="ml-4">{{ item.title }}</span>
-              </div>
+            <template v-slot:item="{ item, props: itemProps }">
+              <v-list-item v-bind="itemProps" title="">
+                <div
+                  style="width: 100%"
+                  class="d-flex justify-space-between align-center"
+                >
+                  <span>{{ item.raw.key }}</span>
+                  <span class="ml-4">{{ item.raw.title }}</span>
+                </div>
+              </v-list-item>
             </template>
           </v-autocomplete>
         </v-col>

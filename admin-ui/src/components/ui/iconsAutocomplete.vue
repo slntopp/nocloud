@@ -6,20 +6,21 @@
     :loading="isIconsLoading"
     :items="icons"
     :model-value="value"
-    @update:model-value="emits('input:value', $event)"
+    @update:model-value="emits('update:modelValue', $event)"
   >
     <template v-slot:prepend>
       <nocloud-icon :type="currentIcon?.type" :icon="currentIcon?.icon" />
     </template>
-    <template v-slot:item="{ item }">
-      <div class="d-flex justify-space-between" style="width: 100%">
-        <span>{{ toKebabCase(item.icon) }}</span>
-        <nocloud-icon
-          :type="item.type"
-          :icon="item.icon"
-          style="font-size: 24px"
-        />
-      </div>
+    <template v-slot:item="{ item, props: itemProps }">
+      <v-list-item v-bind="itemProps" :title="toKebabCase(item.raw.icon)">
+        <template v-slot:append>
+          <nocloud-icon
+            :type="item.raw.type"
+            :icon="item.raw.icon"
+            style="font-size: 24px"
+          />
+        </template>
+      </v-list-item>
     </template>
   </v-autocomplete>
 </template>
@@ -35,12 +36,12 @@ import {
 } from "@/components/ui/nocloudIcons";
 
 const props = defineProps({
-  value: { type: String, default: "CloudOutlined" },
+  modelValue: { type: String, default: "CloudOutlined" },
   label: { type: String, default: "" },
 });
-const emits = defineEmits(["input:value"]);
+const emits = defineEmits(["update:modelValue"]);
 
-const { value } = toRefs(props);
+const { modelValue: value } = toRefs(props);
 const icons = ref([]);
 const currentIcon = computed(() =>
   icons.value.find((icon) => icon.icon === value.value)

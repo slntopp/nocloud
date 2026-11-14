@@ -506,7 +506,12 @@ export async function getClientIP() {
   return text.match(regexp)[0];
 }
 
-export function defaultFilterObject(item, queryText) {
+// Works both as a plain (item, query) helper and as a Vuetify 3 custom-filter,
+// which is called with (value, query, internalItem).
+export function defaultFilterObject(item, queryText, internalItem) {
+  if (internalItem?.raw) item = internalItem.raw;
+  if (!queryText) return true;
+
   return (
     item?.title?.toLocaleLowerCase().indexOf(queryText.toLocaleLowerCase()) !==
       -1 ||

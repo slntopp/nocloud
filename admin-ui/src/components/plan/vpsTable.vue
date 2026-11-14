@@ -21,7 +21,7 @@
       <div class="mr-10">
         <v-text-field
           v-model="searchParam"
-          append-icon="mdi-magnify"
+          append-inner-icon="mdi-magnify"
           label="Search"
           single-line
           hide-details

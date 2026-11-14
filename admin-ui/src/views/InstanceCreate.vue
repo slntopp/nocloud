@@ -14,7 +14,7 @@
         </v-col>
         <v-col v-if="servicesByAccount.length > 2" cols="4" md="3" lg="2">
           <v-autocomplete
-            :customFilter="defaultFilterObject"
+            :custom-filter="filterObject"
             label="service"
             item-title="title"
             :items="servicesByAccount"
@@ -34,7 +34,7 @@
         </v-col>
         <v-col cols="4" md="3" lg="2">
           <v-autocomplete
-            :customFilter="defaultFilterObject"
+            :custom-filter="filterObject"
             label="service provider"
             item-value="uuid"
             item-title="title"
@@ -71,9 +71,9 @@
           <date-picker
             :loading="isLoading"
             label="Next payment date"
-            :value="timestampToDateTimeLocal(nextPaymentDate)"
+            :model-value="timestampToDateTimeLocal(nextPaymentDate)"
             clearable
-            @input="nextPaymentDate = formatDateToTimestamp($event)"
+            @update:model-value="nextPaymentDate = formatDateToTimestamp($event)"
           />
         </v-col>
       </v-row>
@@ -102,7 +102,7 @@
 import { moduleComponent, moduleTypes } from "@/modules";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import api from "@/api";
-import { computed, onMounted, watch, ref } from "vue";
+import { computed, onMounted, watch, ref, markRaw } from "vue";
 import {
   defaultFilterObject,
   replaceNullWithUndefined,
@@ -182,7 +182,9 @@ const isInstanceControlsShowed = computed(
 onMounted(async () => {
   moduleTypes("instanceCreate").forEach((type) => {
     typeItems.value.push(type);
-    templates.value[type] = moduleComponent("instanceCreate", type);
+    const component = moduleComponent("instanceCreate", type);
+    // async components must not be made reactive
+    templates.value[type] = component && markRaw(component);
   });
 
   try {
@@ -239,8 +241,14 @@ const setValue = ({ key, value }) => {
     }
   }
 };
+// Vuetify 3 custom-filter is (value, query, internalItem); the shared helper
+// keeps the Vuetify 2 (item, query) signature
+const filterObject = (_, query, internalItem) =>
+  defaultFilterObject(internalItem?.raw, query);
+
 const save = async () => {
-  if (!form.value.validate()) {
+  const { valid } = await form.value.validate();
+  if (!valid) {
     return;
   }
 

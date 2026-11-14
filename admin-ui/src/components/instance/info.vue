@@ -26,7 +26,7 @@
             params: { namespaceId: namespace?.uuid },
           }"
           label="Group(Namespace)"
-          :value="!namespace ? '' : namespace.title"
+          :model-value="!namespace ? '' : namespace.title"
         />
       </v-col>
       <v-col>
@@ -34,7 +34,7 @@
           <route-text-field
             :to="{ name: 'Account', params: { accountId: account?.uuid } }"
             label="Account"
-            :value="account?.title"
+            :model-value="account?.title"
           />
           <account-grade :account="account" />
           <v-btn icon @click="moveDialog = true">
@@ -47,8 +47,8 @@
           readonly
           label="Email"
           :model-value="account?.data?.email"
-          append-icon="mdi-content-copy"
-          @click:append="addToClipboard(account?.data?.email)"
+          append-inner-icon="mdi-content-copy"
+          @click:append-inner="addToClipboard(account?.data?.email)"
         />
       </v-col>
       <v-col>
@@ -74,7 +74,7 @@
             ref="instance-title"
             label="Instance name"
           >
-            <template v-slot:append>
+            <template v-slot:append-inner>
               <v-icon class="mr-2" @click="$refs['instance-title'].focus()"
                 >mdi-pencil</v-icon
               >
@@ -91,21 +91,21 @@
             :model-value="template.uuid"
             readonly
             label="UUID"
-            append-icon="mdi-content-copy"
-            @click:append="addToClipboard(template.uuid)"
+            append-inner-icon="mdi-content-copy"
+            @click:append-inner="addToClipboard(template.uuid)"
           />
         </v-col>
         <v-col>
           <route-text-field
             :to="{ name: 'Service', params: { serviceId: service?.uuid } }"
-            :value="!service ? '' : service.title"
+            :model-value="!service ? '' : service.title"
             label="Service"
           />
         </v-col>
         <v-col>
           <route-text-field
             :to="{ name: 'ServicesProvider', params: { uuid: sp?.uuid } }"
-            :value="sp?.title"
+            :model-value="sp?.title"
             label="Service provider"
           />
         </v-col>
@@ -128,8 +128,8 @@
       >
         <rich-editor
           class="pa-5"
-          :value="copyInstance.config?.service_data"
-          @input="updateServiceData"
+          :model-value="copyInstance.config?.service_data"
+          @update:model-value="updateServiceData"
         />
       </nocloud-expansion-panels>
 
@@ -141,7 +141,7 @@
         <rich-editor
           class="pa-5"
           disabled
-          :value="
+          :model-value="
             template.billingPlan.products[template.product].meta?.description
           "
         />

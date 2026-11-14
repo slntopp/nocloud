@@ -4,7 +4,7 @@
     style="cursor: pointer"
     v-if="balance !== undefined"
     :color="colorChip"
-    :small="small"
+    :size="small ? 'small' : undefined"
   >
     {{ title }}{{ abs ? Math.abs(balance) : balance }}
     {{ (!hideCurrency && (currency?.code || defaultCurrency?.code)) || "" }}
@@ -16,6 +16,7 @@ import { formatPrice } from "../functions";
 
 export default {
   name: "balance-display",
+  emits: ["click"],
   props: {
     title: {},
     value: {},

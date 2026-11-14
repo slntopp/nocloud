@@ -39,7 +39,7 @@
           <v-expansion-panel style="background: rgb(var(--v-theme-background-light))">
             <v-expansion-panel-title
               style="padding: 5px 20px"
-              disable-icon-rotate
+              collapse-icon="$expand"
             >
               Invoice Order Settings
 
@@ -120,7 +120,7 @@
           <v-expansion-panel style="background: rgb(var(--v-theme-background-light))">
             <v-expansion-panel-title
               style="padding: 5px 20px"
-              disable-icon-rotate
+              collapse-icon="$expand"
             >
               Invoice Parameters Custom
 
@@ -391,7 +391,8 @@ const setAccountGroup = (val) => {
 };
 
 const saveAccountGroup = async () => {
-  if (!(await accountGroupForm.value.validate())) {
+  const { valid } = await accountGroupForm.value.validate();
+  if (!valid) {
     return;
   }
   isSaveLoading.value = true;

@@ -19,7 +19,7 @@
           @keydown.enter="hideSearch"
           v-model="param"
         >
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <div class="d-flex" style="margin-top: 2px">
               <v-btn v-if="!isResetAllHide" icon size="small" @click="resetAll">
                 <v-icon size="23">mdi-close</v-icon>
@@ -103,7 +103,7 @@
                     density="compact"
                     class="pa-0 ma-0"
                   >
-                    <template v-slot:append>
+                    <template v-slot:append-inner>
                       <v-btn
                         @click="setPinned(layout.id)"
                         size="small"
@@ -130,9 +130,9 @@
                       density="compact"
                       class="pa-0 ma-0"
                     >
-                      <template v-slot:append>
+                      <template v-slot:append-inner>
                         <v-btn
-                          :disabled="!isNewLayoutValid"
+                          :disabled="isNewLayoutValid === false"
                           @click="saveNewLayout"
                           size="small"
                           icon
@@ -182,6 +182,7 @@
                   clearable
                   :disabled="isFieldsDisabled"
                   dense
+                  density="compact"
                   :multiple="
                     currentFields[fieldKey]?.type === 'select'
                       ? !currentFields[fieldKey]?.single
@@ -189,7 +190,7 @@
                   "
                   :label="currentFields[fieldKey].title"
                   :item-value="currentFields[fieldKey].item?.value"
-                  :item-text="currentFields[fieldKey].item?.title"
+                  :item-title="currentFields[fieldKey].item?.title"
                   :items="currentFields[fieldKey].items"
                   :is="getFieldComponent(currentFields[fieldKey])"
                   v-model="localFilter[fieldKey]"
@@ -255,7 +256,7 @@
                     cols="4"
                   >
                     <v-checkbox
-                      dense
+                      density="compact"
                       :model-value="
                         currentFieldsKeys.find((key) => key === field.key)
                       "
@@ -754,15 +755,15 @@ export default {
 </style>
 
 <style>
-.search__input .v-input__control .v-input__slot {
+.search__input .v-input__control .v-field {
   padding: 0 10px;
 }
 
-.search__input .v-input__append-inner {
+.search__input .v-field__append-inner {
   margin-top: 0px;
 }
 
-.search__input .v-input__prepend-inner {
+.search__input .v-field__prepend-inner {
   margin-right: unset !important;
 }
 </style>

@@ -56,8 +56,8 @@
             <v-btn variant="text" color="error" class="mr-3 action-btn-text">Delete</v-btn>
           </confirm-dialog>
 
-          <confirm-dialog :disabled="!isValid" @confirm="saveSetting">
-            <v-btn class="px-8 action-btn-main" :loading="isSaveLoading" :disabled="!isValid" elevation="0">
+          <confirm-dialog :disabled="isValid === false" @confirm="saveSetting">
+            <v-btn class="px-8 action-btn-main" :loading="isSaveLoading" :disabled="isValid === false" elevation="0">
               {{ isEdit ? "Save" : "Create" }}
             </v-btn>
           </confirm-dialog>
@@ -183,5 +183,5 @@ onMounted(init);
 .action-btn-main { text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }
 .action-btn-text { text-transform: uppercase; font-weight: 600; color: #adb0b7; }
 
-.v-application.theme--dark .editor-header { color: #adb0b7; }
+.v-application.v-theme--dark .editor-header { color: #adb0b7; }
 </style>

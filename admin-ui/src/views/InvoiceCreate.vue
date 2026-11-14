@@ -51,7 +51,7 @@
           <accounts-autocomplete
             advanced
             :loading="isInstancesLoading"
-            @input="onChangeAccount"
+            @update:model-value="onChangeAccount"
             :disabled="isEdit"
             label="Account"
             v-model="newInvoice.account"
@@ -82,7 +82,7 @@
         <div class="item">
           <v-autocomplete
             :disabled="isEdit || isBalanceInvoice"
-            :customFilter="defaultFilterObject"
+            :custom-filter="instancesFilter"
             label="Instances"
             v-model="newInvoice.instances"
             multiple
@@ -95,21 +95,23 @@
             <template v-slot:selection="{ item }">
               <div class="mr-1">
                 <span>
-                  {{ item.title }}
-                  ({{ item.uuid.slice(0, 6) }})
+                  {{ item.raw.title }}
+                  ({{ item.raw.uuid.slice(0, 6) }})
                 </span>
               </div>
-              <instance-state only-color small :template="item" />
+              <instance-state only-color small :template="item.raw" />
             </template>
 
-            <template v-slot:item="{ item }">
-              <div>
-                <span>
-                  {{ item.title }}
-                  ({{ item.uuid.slice(0, 6) }})
-                </span>
-                <instance-state only-color small :template="item" />
-              </div>
+            <template v-slot:item="{ item, props: itemProps }">
+              <v-list-item v-bind="itemProps">
+                <template v-slot:title>
+                  <span>
+                    {{ item.raw.title }}
+                    ({{ item.raw.uuid.slice(0, 6) }})
+                  </span>
+                  <instance-state only-color small :template="item.raw" />
+                </template>
+              </v-list-item>
             </template>
           </v-autocomplete>
         </div>
@@ -430,6 +432,10 @@ const addPaymentOptions = ref({
   paymentDate: formatSecondsToDateString(Date.now() / 1000),
 });
 
+// Vuetify 3 custom-filter gets (value, query, item); item.raw is the instance
+const instancesFilter = (value, query, item) =>
+  defaultFilterObject(item?.raw, query);
+
 const isInstancesLoading = ref(true);
 const instancesAccountMap = ref({});
 
@@ -567,7 +573,8 @@ const getInvoiceDateTs = (originalTs, newDate) => {
 };
 
 const saveInvoice = async (withEmail = false, status) => {
-  if (!(await invoiceForm.value.validate())) {
+  const { valid } = await invoiceForm.value.validate();
+  if (!valid) {
     return;
   }
   isSaveLoading.value = true;

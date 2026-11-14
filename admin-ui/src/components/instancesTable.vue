@@ -2,8 +2,8 @@
   <nocloud-table
     :table-name="tableName"
     class="mt-4"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     sort-by="created"
     sort-desc
     :items="instances"
@@ -241,7 +241,7 @@ import { NoCloudState } from "nocloud-proto/proto/es/states/states_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "instances-table" },
-  value: { type: Array, required: false },
+  modelValue: { type: Array, required: false },
   refetch: { type: Boolean, default: false },
   headers: {},
   showSelect: { type: Boolean, default: true },
@@ -249,10 +249,10 @@ const props = defineProps({
   noSearch: { type: Boolean, default: false },
   customFilter: { type: Object, default: () => {} },
 });
-const { value, refetch, showSelect, openInNewTab, customFilter } =
+const { modelValue: value, refetch, showSelect, openInNewTab, customFilter } =
   toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 const { defaultCurrency, convertTo } = useCurrency();

@@ -145,8 +145,8 @@
 
           <rich-editor
             class="html-editor"
-            :value="item?.description"
-            @input="changeResource('description', $event, item)"
+            :model-value="item?.description"
+            @update:model-value="changeResource('description', $event, item)"
           />
         </td>
       </template>

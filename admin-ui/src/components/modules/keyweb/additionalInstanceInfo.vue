@@ -23,7 +23,7 @@
 
       <v-col cols="2">
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="emit('update', { key: 'config.username', value: $event })"
           :model-value="template.config.username"
           label="Username"
@@ -33,13 +33,13 @@
       <v-col cols="2">
         <password-text-field
           :readonly="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'config.password',
               value: $event,
             })
           "
-          :value="template.config.password"
+          :model-value="template.config.password"
           copy
         />
       </v-col>
@@ -50,7 +50,7 @@
 
       <v-col cols="2">
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="emit('update', { key: 'config.hostname', value: $event })"
           :model-value="template.config.hostname"
           label="Hostname"

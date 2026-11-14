@@ -132,7 +132,8 @@ const saveEventOverrides = (data) => {
 };
 
 const addNewEvent = async () => {
-  if (!addOverrideForm.value.validate()) {
+  const { valid } = await addOverrideForm.value.validate();
+  if (!valid) {
     return;
   }
 

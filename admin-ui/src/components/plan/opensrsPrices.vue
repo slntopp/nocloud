@@ -48,7 +48,7 @@
                 class="mr-2"
                 v-model.number="item.price"
                 type="number"
-                append-icon="mdi-pencil"
+                append-inner-icon="mdi-pencil"
               />
             </template>
           </nocloud-table>

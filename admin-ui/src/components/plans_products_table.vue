@@ -220,8 +220,8 @@
               <v-list-subheader class="px-0"> Description: </v-list-subheader>
               <rich-editor
                 class="html-editor"
-                @input="changeProduct('description', $event, item.id)"
-                :value="item.description"
+                @update:model-value="changeProduct('description', $event, item.id)"
+                :model-value="item.description"
               />
 
               <template v-if="type === 'empty'">

@@ -72,7 +72,7 @@
         </div>
         <EditorContainer
           v-if="!isEditMode || editedNoteIndex !== index"
-          :value="note.msg"
+          :model-value="note.msg"
         ></EditorContainer>
         <div v-else style="position: relative">
           <rich-editor v-model="note.msg"> </rich-editor>

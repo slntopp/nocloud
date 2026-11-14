@@ -35,8 +35,8 @@
           label="password"
           style="display: inline-block; width: 330px"
           :type="showPassword ? 'text' : 'password'"
-          :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-          @click:append="() => (showPassword = !showPassword)"
+          :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+          @click:append-inner="() => (showPassword = !showPassword)"
         >
         </v-text-field>
       </v-col>

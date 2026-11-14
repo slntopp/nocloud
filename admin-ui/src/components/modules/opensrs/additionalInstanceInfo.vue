@@ -3,7 +3,7 @@
     <v-row>
       <v-col cols="2">
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', { key: 'resources.reg_username', value: $event })
           "
@@ -15,20 +15,20 @@
       <v-col cols="2">
         <password-text-field
           :readonly="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'resources.reg_password',
               value: $event,
             })
           "
-          :value="template.resources.reg_password"
+          :model-value="template.resources.reg_password"
           copy
         />
       </v-col>
 
       <v-col cols="2">
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="emit('update', { key: 'resources.domain', value: $event })"
           :model-value="template.resources.domain"
           label="Domain"
@@ -37,7 +37,7 @@
 
       <v-col cols="2">
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', { key: 'resources.user.email', value: $event })
           "

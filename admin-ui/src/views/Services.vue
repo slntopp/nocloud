@@ -166,7 +166,7 @@ export default {
   margin-bottom: 10px;
 }
 
-.v-expansion-panel-content .v-expansion-panel-content__wrap {
+.v-expansion-panel-text .v-expansion-panel-text__wrapper {
   padding: 22px;
 }
 

@@ -5,7 +5,7 @@
       class="mt-2 normal-color"
       :headers="headers"
       :items="dns"
-      sort-by="calories"
+      :sort-by="[{ key: 'calories', order: 'asc' }]"
     >
       <template v-slot:top>
         <v-toolbar color="background-light" flat class="d-flex justify-end">
@@ -62,13 +62,13 @@ export default {
       selected: [],
       headers: [
         {
-          text: "Type",
-          value: "type",
+          title: "Type",
+          key: "type",
         },
-        { text: "Subdomain", value: "subdomain" },
+        { title: "Subdomain", key: "subdomain" },
         {
-          text: "Actions",
-          value: "actions",
+          title: "Actions",
+          key: "actions",
           align: "end",
           width: "200px",
         },

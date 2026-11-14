@@ -5,9 +5,9 @@
         <v-col cols="3">
           <date-picker
             label="Next forced renew invoice"
-            :value="nextForcedRenewInvoice"
+            :model-value="nextForcedRenewInvoice"
             :clearable="false"
-            @input="nextForcedRenewInvoice = $event"
+            @update:model-value="nextForcedRenewInvoice = $event"
             :disabled="isSaveLoading"
           />
         </v-col>

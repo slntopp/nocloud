@@ -1,7 +1,7 @@
 <template>
   <nocloud-table
-    :value="value"
-    @input="emits('input', $event)"
+    :model-value="value"
+    @update:model-value="emits('update:modelValue', $event)"
     :headers="headers"
     item-key="uuid"
     table-name="showcases"
@@ -76,10 +76,10 @@ import api from "@/api";
 import { useStore } from "@/store";
 import { getShortName } from "@/functions";
 
-const props = defineProps(["items", "loading", "value"]);
-const emits = defineEmits(["input"]);
+const props = defineProps(["items", "loading", "modelValue"]);
+const emits = defineEmits(["update:modelValue"]);
 
-const { value, loading, items } = toRefs(props);
+const { modelValue: value, loading, items } = toRefs(props);
 
 const store = useStore();
 

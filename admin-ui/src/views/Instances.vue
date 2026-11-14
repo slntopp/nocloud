@@ -44,7 +44,7 @@
                     : newInstance.type,
               },
             }"
-            :disabled="!newInstance.isValid"
+            :disabled="newInstance.isValid === false"
           >
             OK
           </v-btn>

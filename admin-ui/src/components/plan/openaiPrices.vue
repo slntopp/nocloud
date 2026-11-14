@@ -86,8 +86,8 @@
                   v-if="index < 1"
                   size="x-small"
                   style="color: white"
-                  :color="typesColorMap[item]"
-                  >{{ item }}</v-chip
+                  :color="typesColorMap[item.raw]"
+                  >{{ item.title }}</v-chip
                 >
                 <span v-else-if="index === 1" class="text-caption ml-1"
                   >+{{ filterTypes.length - 1 }}</span
@@ -110,7 +110,6 @@
             <v-menu
               v-model="isGroupMenu"
               :close-on-content-click="false"
-              
               location="left"
             >
               <template v-slot:activator="{ props }">
@@ -232,7 +231,6 @@
                   class="ml-1"
                   style="color: white"
                   size="small"
-                  dense
                   :color="typesColorMap[type]"
                   >{{ type }}</v-chip
                 >
@@ -244,11 +242,8 @@
               <v-tooltip location="left">
                 <template v-slot:activator="{ props }">
                   <v-chip
-                    dense
-                   
                     v-bind="props"
                     style="color: white"
-                    y
                     :color="item.state?.state === 'broken' ? 'red' : 'green'"
                     >{{ item.state?.state }}</v-chip
                   >
@@ -263,7 +258,7 @@
             </template>
 
             <template v-slot:[`item.provider`]="{ item }">
-              <v-chip dense color="blue">{{ item.provider }}</v-chip>
+              <v-chip color="blue">{{ item.provider }}</v-chip>
             </template>
           </nocloud-table>
 
@@ -301,16 +296,16 @@
                 </div>
                 <v-row v-else dense align="center" class="mb-2">
                   <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.tools" label="Tools" />
+                    <v-checkbox density="compact" hide-details v-model="capsForm.tools" label="Tools" />
                   </v-col>
                   <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.json_schema" label="JSON schema" />
+                    <v-checkbox density="compact" hide-details v-model="capsForm.json_schema" label="JSON schema" />
                   </v-col>
                   <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.temperature" label="Custom temperature" />
+                    <v-checkbox density="compact" hide-details v-model="capsForm.temperature" label="Custom temperature" />
                   </v-col>
                   <v-col cols="auto">
-                    <v-checkbox dense hide-details v-model="capsForm.vision" label="Vision" />
+                    <v-checkbox density="compact" hide-details v-model="capsForm.vision" label="Vision" />
                   </v-col>
                   <v-col cols="12">
                     <v-combobox
@@ -318,7 +313,6 @@
                       variant="outlined"
                       hide-details
                       multiple
-                      chips
                       chips
                       label="Reasoning efforts (empty: not a reasoning model)"
                       :items="reasoningEffortItems"

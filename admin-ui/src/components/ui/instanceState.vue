@@ -1,5 +1,5 @@
 <template>
-  <v-chip v-if="!onlyColor" :small="small" :color="chipColor">
+  <v-chip v-if="!onlyColor" :size="small ? 'small' : undefined" :color="chipColor">
     {{ state }} {{ isDetached ? "(Hided)" : "" }}
     {{ isFreezed ? "(Freezed)" : "" }}
   </v-chip>

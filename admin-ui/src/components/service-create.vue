@@ -351,10 +351,9 @@ export default {
       const action = this.$route.params.serviceId ? "edit" : "create";
       const data = this.getService();
 
-      if (!this.formValid) {
-        this.$refs.form.validate();
-        return;
-      }
+      // v3 form model stays null until validated, so check the validate() result
+      const { valid } = await this.$refs.form.validate();
+      if (!valid) return;
 
       this.isLoading = true;
       try {

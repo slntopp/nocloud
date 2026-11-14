@@ -9,7 +9,7 @@
       </v-col>
       <v-col>
         <v-select
-          append-icon="mdi-pencil"
+          menu-icon="mdi-pencil"
           :model-value="template.config.template_id"
           label="OS"
           :items="allOs"
@@ -31,19 +31,19 @@
           "
           :model-value="template.config.username"
           label="Username"
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
         />
       </v-col>
       <v-col>
         <password-text-field
           :readonly="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'config.password',
               value: $event,
             })
           "
-          :value="template.config.password"
+          :model-value="template.config.password"
           copy
         />
       </v-col>
@@ -58,7 +58,7 @@
       </v-col>
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: 'resources.cpu',
@@ -77,7 +77,7 @@
               value: toGB($event),
             })
           "
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           :model-value="getGB(template.resources.ram)"
           label="RAM (GB)"
         />
@@ -90,7 +90,7 @@
               value: $event,
             })
           "
-          append-icon="mdi-pencil"
+          menu-icon="mdi-pencil"
           :items="driveTypes"
           :model-value="template.resources.drive_type"
           label="Disk type"
@@ -104,7 +104,7 @@
               value: toGB($event),
             })
           "
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           :model-value="getGB(template.resources.drive_size)"
           label="Disk size (GB)"
         />

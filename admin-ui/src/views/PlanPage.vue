@@ -38,9 +38,10 @@ import { defineAsyncComponent } from "vue";
 import config from "@/config.js";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 
-const planComponents = require
-  .context("@/components/plan/", true, /\.vue$/)
-  .keys();
+// "./<name>.vue" paths of the plan components, like require.context keys
+const planComponents = Object.keys(
+  import.meta.glob("@/components/plan/**/*.vue"),
+).map((path) => path.replace(/^.*\/components\/plan\//, "./"));
 
 export default {
   name: "plan-view",

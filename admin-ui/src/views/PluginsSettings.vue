@@ -20,8 +20,12 @@
           <template v-slot:prepend>
             <v-icon class="ml-3">{{ `mdi-${item.icon}` }}</v-icon>
           </template>
-          <template v-slot:item="{ item }">
-            <icon-title-preview :icon="item" :title="item" type="mdi" />
+          <template v-slot:item="{ item: icon, props: iconProps }">
+            <v-list-item v-bind="iconProps">
+              <template v-slot:title>
+                <icon-title-preview :icon="icon.raw" :title="icon.raw" type="mdi" />
+              </template>
+            </v-list-item>
           </template>
         </v-autocomplete>
       </template>

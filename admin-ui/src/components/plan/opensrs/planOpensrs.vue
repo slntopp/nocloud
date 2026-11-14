@@ -11,42 +11,38 @@
               Ranged margin (%)
             </v-expansion-panel-title>
             <v-expansion-panel-text color="background">
-              <v-list v-if="currentFee.ranges.length > 0" color="background">
-                <v-list-item-group>
-                  <template
-                    v-for="(item, index) in currentFee.ranges"
-                    :key="generateKey(index)"
-                  >
-                    <v-list-item>
-                      <template v-slot:default>
-                        
-                          <v-list-item-title>
-                            Price from: {{ item.from }}
-                            {{ defaultCurrency?.code }}, Price to:
-                            {{ item.to }} {{ defaultCurrency?.code }}, Margin:
-                            {{ item.factor }}%
-                          </v-list-item-title>
-                        
+              <v-list
+                v-if="currentFee.ranges.length > 0"
+                bg-color="background"
+              >
+                <template
+                  v-for="(item, index) in currentFee.ranges"
+                  :key="generateKey(index)"
+                >
+                  <v-list-item>
+                    <v-list-item-title>
+                      Price from: {{ item.from }}
+                      {{ defaultCurrency?.code }}, Price to:
+                      {{ item.to }} {{ defaultCurrency?.code }}, Margin:
+                      {{ item.factor }}%
+                    </v-list-item-title>
 
-                        <v-list-item-action>
-                          <v-list-item-action-text></v-list-item-action-text>
+                    <template v-slot:append>
+                      <v-list-item-action>
+                        <v-icon
+                          @click="deleteRange(index)"
+                          color="grey-lighten-1"
+                        >
+                          mdi-delete
+                        </v-icon>
+                      </v-list-item-action>
+                    </template>
+                  </v-list-item>
 
-                          <v-icon
-                            @click="deleteRange(index)"
-                            color="grey-lighten-1"
-                          >
-                            mdi-delete
-                          </v-icon>
-                        </v-list-item-action>
-                      </template>
-                    </v-list-item>
-
-                    <v-divider
-                      v-if="index < currentFee.ranges.length - 1"
-                      :key="index"
-                    ></v-divider>
-                  </template>
-                </v-list-item-group>
+                  <v-divider
+                    v-if="index < currentFee.ranges.length - 1"
+                  ></v-divider>
+                </template>
               </v-list>
               <p v-else class="text-center">Margin clear</p>
               <v-form
@@ -141,6 +137,7 @@ export default {
     isEdit: { type: Boolean, default: false },
   },
   name: "plan-opensrs",
+  emits: ["changeFee", "onValid"],
   data() {
     return {
       currentFee: {
@@ -184,11 +181,10 @@ export default {
         (item, i) => i !== index
       );
     },
-    addRange() {
-      if (!this.isNewRangeValid) {
-        this.$refs.newRangeForm.validate();
-        return;
-      }
+    async addRange() {
+      // Vuetify 3 keeps the form model null until validated, so validate here
+      const { valid } = await this.$refs.newRangeForm.validate();
+      if (!valid) return;
 
       const { to, from, factor } = this.newRange;
       const range = this.currentFee.ranges.find((el) => {
@@ -214,11 +210,9 @@ export default {
 
       this.newRange = { from: 0, to: 0, factor: 0 };
     },
-    changeFee() {
-      if (!this.isValid) {
-        this.$refs.opensrsForm.validate();
-        return;
-      }
+    async changeFee() {
+      const { valid } = await this.$refs.opensrsForm.validate();
+      if (!valid) return;
 
       const { precision, round, ranges } = this.currentFee;
 

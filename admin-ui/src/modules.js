@@ -1,4 +1,4 @@
-import { defineAsyncComponent } from "vue";
+import { defineAsyncComponent, markRaw } from "vue";
 
 // Per-provider components live in src/components/modules/<type>/<kind>.vue.
 // import.meta.glob replaces webpack's require.context: the keys tell which
@@ -36,7 +36,8 @@ export function moduleComponent(kind, type) {
   const entry = Object.entries(kinds[kind]).find(
     ([path]) => typeOf(path) === type,
   );
-  const component = entry ? defineAsyncComponent(entry[1]) : null;
+  // markRaw: callers keep these in reactive data, components must not be proxied
+  const component = entry ? markRaw(defineAsyncComponent(entry[1])) : null;
 
   cache.set(key, component);
   return component;

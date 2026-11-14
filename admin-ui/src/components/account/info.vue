@@ -75,7 +75,7 @@
       </v-col>
       <v-col lg="2" md="4" sm="6" cols="12">
         <v-text-field v-model="title" label="name">
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <login-in-account-icon :uuid="account.uuid" />
           </template>
         </v-text-field>
@@ -89,17 +89,20 @@
           label="Account Group"
           clearable
         >
-          <template v-slot:item="{ item }">
-            <div
-              :style="{ backgroundColor: item.color }"
-              class="box-color"
-            ></div>
-            {{ item.title }}
+          <template v-slot:item="{ item, props: itemProps }">
+            <v-list-item v-bind="itemProps">
+              <template v-slot:prepend>
+                <div
+                  :style="{ backgroundColor: item.raw.color }"
+                  class="box-color"
+                ></div>
+              </template>
+            </v-list-item>
           </template>
 
           <template v-slot:selection="{ item }">
             <div
-              :style="{ backgroundColor: item.color }"
+              :style="{ backgroundColor: item.raw.color }"
               class="box-color"
             ></div>
             {{ item.title }}
@@ -192,7 +195,7 @@
 
       <v-col lg="1" md="2" sm="3" cols="4">
         <v-text-field readonly :model-value="account.data?.whmcs_id" label="WHMCS id">
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <whmcs-btn :account="account" />
           </template>
         </v-text-field>
@@ -223,7 +226,6 @@
     <div class="pt-4">
       <v-menu
         location="bottom"
-        
         transition="slide-y-transition"
         v-model="isVisible"
         :close-on-content-click="false"

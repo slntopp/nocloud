@@ -7,7 +7,7 @@
     </v-row>
     <json-actions
       :json="json"
-      :isValid="isValid"
+      :isValid="isValid !== false"
       :disabled="disabledDelete"
       :changeField="changeField"
       :deleteField="deleteField"

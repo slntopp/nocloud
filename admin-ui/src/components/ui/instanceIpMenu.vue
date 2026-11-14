@@ -1,28 +1,26 @@
 <template>
   <v-menu
-    location="bottom"
-    nudge-top="20"
-    nudge-left="15"
+    location="bottom start"
+    :offset="[-20, 15]"
     transition="slide-y-transition"
     :close-on-content-click="false"
   >
-    <template v-slot:activator="{ props }">
+    <template v-slot:activator="{ props: activatorProps }">
       <v-text-field
         :label="`IPs_${type}`"
-        v-if="props.ui !== 'span'"
-        v-bind="attrs"
-        v-on="on"
+        v-if="ui !== 'span'"
+        v-bind="activatorProps"
         readonly
         :model-value="ip"
       >
-        <template v-slot:append>
+        <template v-slot:append-inner>
           <v-icon v-if="!edit && ip" @click="addToClipboard(ip)"
             >mdi-content-copy</v-icon
           >
           <v-icon v-else>mdi-swap-horizontal</v-icon>
         </template>
       </v-text-field>
-      <span v-else v-bind="props">{{ ip }}</span>
+      <span v-else v-bind="activatorProps">{{ ip }}</span>
     </template>
 
     <v-list v-if="!edit && item.state.meta?.networking?.[type]?.length" density="compact">
@@ -35,7 +33,7 @@
     <v-list v-else>
       <v-list-item v-for="(net, index) of newIps" :key="net + index">
         <v-text-field :model-value="net" @update:model-value="newIps[index] = $event" density="compact">
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <v-btn icon @click="deleteFromNewIps(index)">
               <v-icon> mdi-delete</v-icon>
             </v-btn>
@@ -66,7 +64,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, ref, watch, toRefs } from "vue";
+import { computed, ref, watch, toRefs } from "vue";
 import { addToClipboard } from "@/functions";
 import { useStore } from "@/store";
 
@@ -76,7 +74,7 @@ const props = defineProps({
   type: { type: String, default: "public" },
   edit: { type: Boolean, default: false },
 });
-const { type, item } = toRefs(props);
+const { type, item, ui } = toRefs(props);
 
 const store = useStore();
 

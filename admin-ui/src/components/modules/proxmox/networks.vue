@@ -7,14 +7,14 @@
         <v-icon size="small" start>mdi-refresh</v-icon>refresh leases
       </v-btn>
     </div>
-    <v-alert v-if="error" density="compact" text type="error">{{ error }}</v-alert>
+    <v-alert v-if="error" density="compact" variant="tonal" type="error">{{ error }}</v-alert>
 
     <v-expansion-panels v-model="opened" multiple flat>
       <v-expansion-panel v-for="(net, kind) in networks" :key="kind" class="mb-2">
         <v-expansion-panel-title color="background">
           <div class="d-flex align-center" style="gap: 16px; flex-wrap: wrap">
             <strong class="text-capitalize">{{ kind }}</strong>
-            <span class="text--secondary">
+            <span class="text-medium-emphasis">
               {{ net.bridge }}<span v-if="net.vlan_tag"> · vlan {{ net.vlan_tag }}</span>
               · gw {{ net.gateway || "-" }} · /{{ net.prefix }}
               <span v-if="(net.dns || []).length"> · dns {{ net.dns.join(", ") }}</span>
@@ -59,7 +59,7 @@
                   <td>
                     <v-text-field v-model="editAR.ip" density="compact" hide-details placeholder="First IP" />
                   </td>
-                  <td class="text--secondary">{{ editLast }}</td>
+                  <td class="text-medium-emphasis">{{ editLast }}</td>
                   <td>
                     <v-text-field v-model.number="editAR.size" density="compact" hide-details type="number" min="1" style="max-width: 80px" />
                   </td>
@@ -97,8 +97,8 @@
                   <td>{{ ar.size }}</td>
                   <td>{{ ar.used }}</td>
                   <td>{{ ar.hold }}</td>
-                  <td :class="ar.free === 0 ? 'error--text' : ''">{{ ar.free }}</td>
-                  <td class="text--secondary">
+                  <td :class="ar.free === 0 ? 'text-error' : ''">{{ ar.free }}</td>
+                  <td class="text-medium-emphasis">
                     <span v-if="ar.gateway">gw {{ ar.gateway }} </span>
                     <span v-if="ar.prefix">/{{ ar.prefix }} </span>
                     <span v-if="ar.bridge">{{ ar.bridge }} </span>
@@ -161,20 +161,25 @@
             :headers="leaseHeaders"
             :items="filteredLeases(kind)"
             :items-per-page="25"
-            :footer-props="{ 'items-per-page-options': [25, 50, 100, -1] }"
-            item-key="ip"
+            :items-per-page-options="[
+              { value: 25, title: '25' },
+              { value: 50, title: '50' },
+              { value: 100, title: '100' },
+              { value: -1, title: 'All' },
+            ]"
+            item-value="ip"
           >
             <template v-slot:[`item.ar`]="{ item }">
               <span v-if="item.ar === 0 || item.ar > 0">{{ item.ar }}</span>
-              <span v-else class="text--disabled">—</span>
+              <span v-else class="text-disabled">—</span>
             </template>
             <template v-slot:[`item.state`]="{ item }">
               <v-select
                 v-if="item.state === 'free' || item.state === 'hold'"
                 :model-value="item.state"
                 :items="[
-                  { text: 'free', value: 'free' },
-                  { text: 'hold', value: 'hold' },
+                  { title: 'free', value: 'free' },
+                  { title: 'hold', value: 'hold' },
                 ]"
                 density="compact"
                 hide-details
@@ -191,14 +196,14 @@
                 </div>
               </template>
               <span v-else-if="item.vmid">{{ item.vmid }} · {{ item.vm || "-" }} @ {{ item.node }}</span>
-              <span v-else class="text--disabled">-</span>
+              <span v-else class="text-disabled">-</span>
             </template>
             <template v-slot:[`item.instance`]="{ item }">
               <router-link v-if="item.instance" :to="{ name: 'Instance', params: { instanceId: item.instance } }">
                 {{ item.instance.slice(0, 8) }}…
               </router-link>
-              <span v-else-if="item.vmid" class="text--secondary">not managed</span>
-              <span v-else class="text--disabled">-</span>
+              <span v-else-if="item.vmid" class="text-medium-emphasis">not managed</span>
+              <span v-else class="text-disabled">-</span>
             </template>
             <template v-slot:[`item.actions`]="{ item }">
               <v-btn v-if="item.state === 'free'" size="x-small" variant="text" :loading="isSaving" @click="hold(kind, item.ip)">hold</v-btn>
@@ -274,13 +279,13 @@ export default {
     editId: null,
     editAR: { ip: "", size: 1, gateway: "", prefix: null, bridge: "", vlan_tag: null },
     leaseHeaders: [
-      { text: "IP", value: "ip", width: 150 },
-      { text: "AR", value: "ar", width: 60 },
-      { text: "State", value: "state", width: 120 },
-      { text: "VM", value: "vm" },
-      { text: "Instance", value: "instance", width: 140 },
-      { text: "Source", value: "source", width: 90 },
-      { text: "", value: "actions", sortable: false, width: 90 },
+      { title: "IP", key: "ip", width: 150 },
+      { title: "AR", key: "ar", width: 60 },
+      { title: "State", key: "state", width: 120 },
+      { title: "VM", key: "vm" },
+      { title: "Instance", key: "instance", width: 140 },
+      { title: "Source", key: "source", width: 90 },
+      { title: "", key: "actions", sortable: false, width: 90 },
     ],
   }),
   computed: {

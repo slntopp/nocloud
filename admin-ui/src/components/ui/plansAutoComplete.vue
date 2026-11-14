@@ -2,9 +2,9 @@
   <v-autocomplete
     placeholder="Start typing..."
     :items="allPlans"
-    :customFilter="plansFilter"
+    :custom-filter="plansFilter"
     :model-value="value"
-    @update:model-value="emit('input', $event)"
+    @update:model-value="emit('update:modelValue', $event)"
     item-title="title"
     item-value="uuid"
     :rules="rules"
@@ -26,7 +26,7 @@ import { useStore } from "@/store";
 import { ListRequest } from "nocloud-proto/proto/es/billing/billing_pb";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   label: {},
   rules: {},
   returnObject: { type: Boolean, default: false },
@@ -38,10 +38,10 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   customParams: { type: Object, default: () => ({ filters: {} }) },
 });
-const { value, fetchValue, multiple, loading, returnObject, customParams } =
+const { modelValue: value, fetchValue, multiple, loading, returnObject, customParams } =
   toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 
@@ -99,7 +99,9 @@ const updatePlansDebounce = debounce(updatePlans, 1500);
 const isEqualObjects = (val1, val2) =>
   JSON.stringify(val1) === JSON.stringify(val2);
 
-const plansFilter = (item) => {
+// Vuetify 3 custom-filter signature: (value, query, internalItem)
+const plansFilter = (_value, _query, internalItem) => {
+  const item = internalItem?.raw;
   if (multiple.value) {
     return !(value.value?.includes(item.uuid) || value.value?.includes(item));
   }
@@ -139,7 +141,7 @@ const fetchPlan = async () => {
           }),
         ];
         if (returnObject.value) {
-          emit("input", allPlans.value[0]);
+          emit("update:modelValue", allPlans.value[0]);
         }
       }
     } finally {

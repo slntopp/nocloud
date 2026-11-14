@@ -44,8 +44,7 @@
         location="bottom"
         open-on-hover
         v-else
-        nudge-top="20"
-        nudge-left="15"
+        :offset="[-20, -15]"
         transition="slide-y-transition"
       >
         <template v-slot:activator="{ props }">
@@ -144,13 +143,13 @@ export default {
 </script>
 
 <style scoped>
-.v-card__text .v-chip {
+.v-card-text .v-chip {
   width: 48%;
   display: flex;
   justify-content: center;
   align-items: center;
 }
-.v-card__text .hash {
+.v-card-text .hash {
   width: 100%;
 }
 </style>

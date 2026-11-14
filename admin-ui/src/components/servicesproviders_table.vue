@@ -3,8 +3,8 @@
     table-name="service-providers-table"
     :loading="loading"
     :items="filteredSp"
-    :value="selected"
-    @input="handleSelect"
+    :model-value="selected"
+    @update:model-value="handleSelect"
     :single-select="singleSelect"
     :headers="Headers"
     item-key="uuid"
@@ -49,11 +49,11 @@ const Headers = [
 ];
 
 const statusMap = {
-  DEL: { title: "DELETED", color: "blue-grey darken-2" },
+  DEL: { title: "DELETED", color: "blue-grey-darken-2" },
   UNSPECIFIED: { title: "ACTIVE", color: "success" },
   UNKNOWN: {
     title: "UNKNOWN",
-    color: "red darken-2",
+    color: "red-darken-2",
   },
 };
 
@@ -68,8 +68,9 @@ export default {
   components: {
     "nocloud-table": noCloudTable,
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    modelValue: {
       type: Array,
       default: () => [],
     },
@@ -80,7 +81,7 @@ export default {
   },
   data() {
     return {
-      selected: this.value,
+      selected: this.modelValue,
       loading: false,
       Headers,
       fetchError: "",
@@ -97,7 +98,7 @@ export default {
   },
   methods: {
     handleSelect(item) {
-      this.$emit("input", item);
+      this.$emit("update:modelValue", item);
     },
     getStateChipColor(state) {
       if (!state) {

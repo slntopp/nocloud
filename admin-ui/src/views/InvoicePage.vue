@@ -196,11 +196,11 @@ export default { name: "invoice-view" };
   }
 }
 
-::v-deep .page__title-input .v-input__control {
+:deep(.page__title-input .v-input__control) {
   margin-top: 0;
 }
 
-::v-deep .page__title-input input {
+:deep(.page__title-input input) {
   font-size: 32px;
   font-weight: 400;
   font-family: "Quicksand", sans-serif;

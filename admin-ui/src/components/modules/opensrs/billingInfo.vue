@@ -5,7 +5,7 @@
         <route-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
           :to="{ name: 'Plan', params: { planId: template.billingPlan.uuid } }"
         />
       </v-col>
@@ -21,9 +21,9 @@
       <v-col>
         <date-picker
           label="Date (create)"
-          :value="timestampToDateTimeLocal(template?.created)"
+          :model-value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
@@ -35,9 +35,9 @@
       <v-col>
         <date-picker
           label="Deleted date"
-          :value="timestampToDateTimeLocal(template?.deleted)"
+          :model-value="timestampToDateTimeLocal(template?.deleted)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'deleted',
               value: formatDateToTimestamp($event),
@@ -77,7 +77,7 @@
               v-model="item.price"
               type="number"
               @update:model-value="updatePrice(item, false)"
-              append-icon="mdi-pencil"
+              append-inner-icon="mdi-pencil"
             />
             <v-text-field
               style="color: rgb(var(--v-theme-primary))"
@@ -86,7 +86,7 @@
               :suffix="accountCurrency?.code"
               v-model="item.accountPrice"
               @update:model-value="updatePrice(item, true)"
-              append-icon="mdi-pencil"
+              append-inner-icon="mdi-pencil"
             />
           </div>
         </template>

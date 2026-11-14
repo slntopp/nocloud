@@ -1,7 +1,7 @@
 <template>
   <nocloud-table
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     @update:options="setOptions"
     :loading="isLoading"
     :items="addons"
@@ -43,7 +43,7 @@ import { useStore } from "@/store";
 import { debounce } from "@/functions";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   tableName: { type: String, default: "addons-table" },
   showSelect: { type: Boolean, default: false },
   sortBy: {},
@@ -51,10 +51,10 @@ const props = defineProps({
   editable: { type: Boolean, default: false },
   refetch: { type: Boolean, default: false },
 });
-const { showSelect, tableName, value, sortBy, sortDesc, refetch } =
+const { showSelect, tableName, modelValue: value, sortBy, sortDesc, refetch } =
   toRefs(props);
 
-const emit = defineEmits(["input", "update:options"]);
+const emit = defineEmits(["update:modelValue", "update:options"]);
 
 const store = useStore();
 

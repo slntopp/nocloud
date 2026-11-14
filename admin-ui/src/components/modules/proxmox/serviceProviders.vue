@@ -182,8 +182,8 @@
       <v-col cols="8">
         <ip-pool-editor
           title="public_ip_pool"
-          :value="getJSON('public_ip_pool').default"
-          @input="(v) => changeJSON('public_ip_pool', { ...getJSON('public_ip_pool'), default: v })"
+          :model-value="getJSON('public_ip_pool').default"
+          @update:model-value="(v) => changeJSON('public_ip_pool', { ...getJSON('public_ip_pool'), default: v })"
         />
         <div v-if="errors.public_ip_pool" class="text-error">
           {{ errors.public_ip_pool }}
@@ -215,8 +215,8 @@
       <v-col cols="8">
         <ip-pool-editor
           title="private_vnet_tmpl"
-          :value="getJSON('private_vnet_tmpl').default"
-          @input="(v) => changeJSON('private_vnet_tmpl', { ...getJSON('private_vnet_tmpl'), default: v })"
+          :model-value="getJSON('private_vnet_tmpl').default"
+          @update:model-value="(v) => changeJSON('private_vnet_tmpl', { ...getJSON('private_vnet_tmpl'), default: v })"
         />
       </v-col>
     </v-row>

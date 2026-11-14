@@ -16,25 +16,24 @@
         @update:model-value="updateInput"
         :label="label"
         :disabled="disabled"
-        :append-icon="editIcon ? 'mdi-pencil' : undefined"
+        :append-inner-icon="editIcon ? 'mdi-pencil' : undefined"
       />
     </template>
     <v-date-picker
-      scrollable
       :disabled="disabled"
-      :min="min"
-      :range="range"
-      :value="value"
-      @input="updateInput"
+      :min="pickerMin"
+      :multiple="range ? 'range' : false"
+      :model-value="pickerValue"
+      @update:model-value="onPickerInput"
     ></v-date-picker>
   </v-menu>
 </template>
 
 <script setup>
-import { toRefs } from "vue";
+import { computed, toRefs } from "vue";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   min: {},
   label: {},
   dense: { type: Boolean, default: false },
@@ -44,9 +43,42 @@ const props = defineProps({
   editIcon: { type: Boolean, default: false },
   placeholder: {},
 });
-const { value, min, label, dense } = toRefs(props);
+const { modelValue: value, min, label, dense } = toRefs(props);
 
-const emits = defineEmits(["input"]);
+const emits = defineEmits(["update:modelValue"]);
+
+// VDatePicker v3 works with Date objects; the outside contract stays 'YYYY-MM-DD' strings
+const toDate = (str) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(str ?? "");
+  if (!match) return undefined;
+  return new Date(+match[1], +match[2] - 1, +match[3]);
+};
+const toDateString = (date) => {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate()
+  )}`;
+};
+
+const pickerMin = computed(() => toDate(min.value) ?? min.value);
+const pickerValue = computed(() => {
+  if (props.range) {
+    return Array.isArray(value.value)
+      ? value.value.map(toDate).filter(Boolean)
+      : [];
+  }
+  return toDate(value.value) ?? null;
+});
+
+const onPickerInput = (val) => {
+  if (Array.isArray(val)) {
+    // multiple="range" emits every date of the range: keep only the bounds
+    const bounds = val.length > 1 ? [val[0], val[val.length - 1]] : val;
+    updateInput(bounds.map(toDateString));
+    return;
+  }
+  updateInput(val ? toDateString(val) : val);
+};
 
 const updateInput = (value) => {
   if (props.range && Array.isArray(value) && value.length === 2) {
@@ -55,13 +87,13 @@ const updateInput = (value) => {
       const ta = new Date(a).getTime();
       const tb = new Date(b).getTime();
       if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta > tb) {
-        emits("input", [b, a]);
+        emits("update:modelValue", [b, a]);
         return;
       }
     }
   }
 
-  emits("input", value);
+  emits("update:modelValue", value);
 };
 </script>
 

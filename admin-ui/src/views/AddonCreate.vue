@@ -157,7 +157,8 @@ const deleteSelectedPeriods = () => {
 };
 
 const saveAddon = async () => {
-  if (!(await addonCreateForm.value.validate())) {
+  const { valid } = await addonCreateForm.value.validate();
+  if (!valid) {
     return;
   }
   isSaveLoading.value = true;

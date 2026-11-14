@@ -15,12 +15,12 @@
           <v-card class="pa-5 ma-auto">
             <v-card-title class="text-center">New event:</v-card-title>
             <v-autocomplete
-              @update:model-value.native="userKey = $event.target.value"
+              @update:search="userKey = $event"
               :items="keysWithNew"
               v-model="newEvent.key"
             />
             <v-autocomplete
-              @update:model-value.native="userType = $event.target.value"
+              @update:search="userType = $event"
               :items="eventsTypesWithNew"
               v-model="newEvent.type"
             />

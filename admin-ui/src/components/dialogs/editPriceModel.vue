@@ -1,8 +1,8 @@
 <template>
   <v-dialog
     persistent
-    :model-value="value"
-    @update:model-value="emit('input', value)"
+    :model-value="modelValue"
+    @update:model-value="emit('update:modelValue', modelValue)"
     max-width="80%"
   >
     <v-card class="pa-5">
@@ -113,11 +113,11 @@ import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 const props = defineProps([
   "template",
   "service",
-  "value",
+  "modelValue",
   "accountRate",
   "accountCurrency",
 ]);
-const emit = defineEmits(["refresh", "input"]);
+const emit = defineEmits(["refresh", "update:modelValue"]);
 
 const { convertTo, defaultCurrency } = useCurrency();
 
@@ -258,13 +258,13 @@ const changePM = () => {
     })
     .finally(() => {
       isChangePMLoading.value = false;
-      emit("input", false);
+      emit("update:modelValue", false);
     });
 };
 
 const cancel = () => {
   setDefaultPlan();
-  emit("input", false);
+  emit("update:modelValue", false);
 };
 
 const setDefaultPlan = () => {

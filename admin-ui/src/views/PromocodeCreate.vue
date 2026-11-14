@@ -18,7 +18,7 @@
             :rules="[requiredRule, codeRule]"
             label="Code"
           >
-            <template v-slot:append>
+            <template v-slot:append-inner>
               <v-btn size="small" @click="newPromocode.code = generateCode()" icon
                 ><v-icon size="small">mdi-pound</v-icon></v-btn
               >
@@ -38,7 +38,7 @@
           <date-picker
             disabled
             label="Created"
-            :value="formatSecondsToDateString(promocode.created)"
+            :model-value="formatSecondsToDateString(promocode.created)"
           />
         </v-col>
 
@@ -62,7 +62,6 @@
             :rules="[requiredRule]"
             label="Promocode type"
             :items="promocodeTypes"
-            item-key="value"
             item-title="text"
           />
         </v-col>
@@ -297,7 +296,7 @@ const props = defineProps({
 });
 const { isEdit, promocode } = toRefs(props);
 
-const emit = defineEmits("refresh");
+const emit = defineEmits(["refresh"]);
 
 const { defaultCurrency } = useCurrency();
 const store = useStore();
@@ -354,9 +353,9 @@ const bindedPlansHeaders = ref([
 const planProducts = ref({});
 
 const productItems = (plan) => [
-  { text: "All products", value: "" },
+  { title: "All products", value: "" },
   ...Object.entries(plan.products || {}).map(([key, product]) => ({
-    text: product.title ? `${product.title} (${key})` : key,
+    title: product.title ? `${product.title} (${key})` : key,
     value: key,
   })),
 ];
@@ -447,7 +446,8 @@ const fetchAvailablePlans = async (options) => {
 };
 
 const savePromocode = async () => {
-  if (!(await promocodeForm.value.validate())) {
+  const { valid } = await promocodeForm.value.validate();
+  if (!valid) {
     return;
   }
   isSaveLoading.value = true;

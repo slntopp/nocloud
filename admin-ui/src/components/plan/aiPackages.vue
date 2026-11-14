@@ -166,7 +166,6 @@
                   persistent-hint
                   multiple
                   chips
-                  chips
                   closable-chips
                 />
               </v-col>
@@ -180,7 +179,6 @@
                   persistent-hint
                   multiple
                   chips
-                  chips
                   closable-chips
                 />
               </v-col>
@@ -192,7 +190,6 @@
                 :loading="isModelsLoading"
                 label="Models"
                 multiple
-                chips
                 chips
                 closable-chips
               />

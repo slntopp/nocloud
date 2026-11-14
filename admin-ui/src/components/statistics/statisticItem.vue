@@ -86,7 +86,7 @@
           item-value="value"
         >
           <template v-slot:selection="{ item, index }">
-            <span v-if="index === 0">{{ item.label }}</span>
+            <span v-if="index === 0">{{ item.title }}</span>
             <span v-if="index === 1" class="text-grey text-caption">
               (+{{ fields?.length - 1 }} others)
             </span>

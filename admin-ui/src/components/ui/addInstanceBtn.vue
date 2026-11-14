@@ -16,6 +16,7 @@
 export default {
   name: "add-instance-btn",
   props: ["disabled"],
+  emits: ["click"],
 };
 </script>
 

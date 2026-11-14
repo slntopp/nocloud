@@ -79,7 +79,6 @@
               multiple
               hide-details
               chips
-              chips
               closable-chips
               :items="
                 selectedProviders.length
@@ -98,7 +97,6 @@
               multiple
               chips
               closable-chips
-              chips
               hide-details
               :items="
                 Object.keys(modelsByProviders).map((a) => ({

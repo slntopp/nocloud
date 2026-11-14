@@ -6,8 +6,8 @@
           readonly
           :label="`Provider API ${ovhType}Name`"
           :model-value="template.data?.[ovhType + 'Name']"
-          @click:append="addToClipboard(template.data?.[ovhType + 'Name'])"
-          append-icon="mdi-content-copy"
+          @click:append-inner="addToClipboard(template.data?.[ovhType + 'Name'])"
+          append-inner-icon="mdi-content-copy"
         />
       </v-col>
 
@@ -20,7 +20,7 @@
 
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: 'config.username',
@@ -35,20 +35,20 @@
       <v-col>
         <password-text-field
           :readonly="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'config.password',
               value: $event,
             })
           "
-          :value="template.config.password"
+          :model-value="template.config.password"
           copy
         />
       </v-col>
 
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: `config.configuration.${ovhType}_os`,
@@ -63,7 +63,7 @@
     <v-row>
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: `config.configuration.${ovhType}_datacenter`,
@@ -77,7 +77,7 @@
 
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: `resources.cpu`,
@@ -91,7 +91,7 @@
 
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: `resources.ram`,
@@ -105,7 +105,7 @@
 
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: `resources.drive_type`,
@@ -119,7 +119,7 @@
 
       <v-col>
         <v-text-field
-          append-icon="mdi-pencil"
+          append-inner-icon="mdi-pencil"
           @update:model-value="
             emit('update', {
               key: `resources.drive_size`,

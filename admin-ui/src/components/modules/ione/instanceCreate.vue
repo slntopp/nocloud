@@ -21,12 +21,12 @@
       <v-row>
         <v-col cols="6">
           <plans-autocomplete
-            :value="bilingPlan"
+            :model-value="bilingPlan"
             :custom-params="{
               filters: { type: ['ione'], 'meta.isIndividual': [false] },
               anonymously: false,
             }"
-            @input="changeBilling"
+            @update:model-value="changeBilling"
             return-object
             label="Price model"
             :rules="planRules"

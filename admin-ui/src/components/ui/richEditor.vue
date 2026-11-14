@@ -11,20 +11,20 @@ import { computed, toRefs, watch, ref } from "vue";
 import { useStore } from "@/store";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   disabled: { type: Boolean, default: false },
 });
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 
 const isVisible = ref(true);
 
 const onInput = (e) => {
-  emit("input", e);
+  emit("update:modelValue", e);
 };
 
-const { value, disabled } = toRefs(props);
+const { modelValue: value, disabled } = toRefs(props);
 
 const theme = computed(() => store.getters["app/theme"]);
 

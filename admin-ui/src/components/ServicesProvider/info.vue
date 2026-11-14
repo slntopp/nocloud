@@ -7,8 +7,8 @@
           label="template uuid"
           style="display: inline-block; width: 330px"
           :model-value="provider.uuid"
-          :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
-          @click:append="addToClipboard(provider.uuid, 'rootUUID')"
+          :append-inner-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
+          @click:append-inner="addToClipboard(provider.uuid, 'rootUUID')"
         />
       </v-col>
       <v-col>

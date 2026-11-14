@@ -41,7 +41,7 @@
           </slot>
         </g>
 
-        <g v-for="(icon, id) in markerIcons" v-html="icon" :id="id"></g>
+        <g v-for="(icon, id) in markerIcons" :key="id" v-html="icon" :id="id"></g>
       </defs>
       <g
         class="map__viewport"
@@ -143,8 +143,9 @@ import mapData from "./map.json";
 
 export default {
   name: "nc-map",
+  emits: ["update:modelValue"],
   props: {
-    value: { type: String, required: true },
+    modelValue: { type: String, required: true },
     markers: { type: Array, required: true },
     mapActiveColor: { type: String, default: null },
     markerActiveColor: { type: String, default: null },
@@ -183,7 +184,7 @@ export default {
 
       if (event.target.dataset.id) {
         this.selected = event.target.getAttribute("data-id");
-        this.$emit("input", this.selected);
+        this.$emit("update:modelValue", this.selected);
       }
     },
     mouseEnterHandler(id, e, select) {
@@ -401,10 +402,10 @@ export default {
     },
   },
   created() {
-    this.selected = this.value ?? this.selected;
+    this.selected = this.modelValue ?? this.selected;
 
     if (this.markers.length === 1) {
-      this.$emit('input', this.markers[0].id);
+      this.$emit('update:modelValue', this.markers[0].id);
     }
 
     this.markers.forEach(({ id, title }) => {
@@ -439,7 +440,7 @@ export default {
     window.removeEventListener('touchend', this.endDrag);
 	},
   watch: {
-    value(newVal) {
+    modelValue(newVal) {
       this.selected = newVal;
     },
     markers(value) {

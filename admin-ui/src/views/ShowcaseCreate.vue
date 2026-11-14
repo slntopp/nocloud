@@ -32,8 +32,7 @@
           <icons-autocomplete
             v-if="!isIconUrl"
             label="Preview icon"
-            :value="showcase.icon"
-            @input:value="showcase.icon = $event"
+            v-model="showcase.icon"
           />
           <v-text-field
             v-else

@@ -1,9 +1,15 @@
 <template>
-  <v-dialog :model-value="value" @update:model-value="emit('input', $event)" max-width="60%">
+  <v-dialog
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
+    max-width="60%"
+  >
     <v-card>
-      <v-tabs>
+      <v-tabs v-model="tab">
         <v-tab>Base</v-tab>
         <v-tab>Individual</v-tab>
+      </v-tabs>
+      <v-window v-model="tab">
         <v-window-item>
           <v-card class="pa-5">
             <v-row>
@@ -30,7 +36,7 @@
               </v-col>
             </v-row>
             <v-row justify="end">
-              <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
+              <v-btn class="mx-3" @click="emit('update:modelValue', false)">Close</v-btn>
               <v-btn
                 class="mx-3"
                 @click="changeTariff"
@@ -86,7 +92,7 @@
               </v-col>
             </v-row>
             <v-row justify="end">
-              <v-btn class="mx-3" @click="$emit('input', false)">Close</v-btn>
+              <v-btn class="mx-3" @click="emit('update:modelValue', false)">Close</v-btn>
               <v-btn
                 class="mx-3"
                 @click="createIndividual"
@@ -96,7 +102,7 @@
             </v-row>
           </v-card>
         </v-window-item>
-      </v-tabs>
+      </v-window>
     </v-card>
   </v-dialog>
 </template>
@@ -111,17 +117,25 @@ import { useStore } from "@/store";
 const props = defineProps([
   "template",
   "service",
-  "value",
+  "modelValue",
   "billingPlan",
   "availableTarrifs",
   "sp",
 ]);
-const emit = defineEmits(["refresh", "input"]);
+const emit = defineEmits(["refresh", "update:modelValue"]);
 
 const store = useStore();
 
-const { template, service, billingPlan, value, availableTarrifs, sp } =
+const {
+  template,
+  service,
+  billingPlan,
+  modelValue: value,
+  availableTarrifs,
+  sp,
+} =
   toRefs(props);
+const tab = ref(0);
 const selectedTariff = ref({});
 const individualPlan = ref({ product: {}, resources: {} });
 const changeTariffLoading = ref(false);
@@ -157,7 +171,7 @@ const changeTariff = async () => {
     });
   } finally {
     changeTariffLoading.value = false;
-    emit("input", false);
+    emit("update:modelValue", false);
   }
 };
 

@@ -17,12 +17,12 @@
 
         <v-col cols="6">
           <plans-autocomplete
-            :value="instance.billing_plan"
+            :model-value="instance.billing_plan"
             :custom-params="{
               filters: { type: ['opensrs'], 'meta.isIndividual': [false] },
               anonymously: false,
             }"
-            @input="changeBilling"
+            @update:model-value="changeBilling"
             return-object
             label="Price model"
             :rules="planRules"

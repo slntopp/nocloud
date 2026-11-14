@@ -138,7 +138,7 @@ const setDefaultAccount = () => {
 };
 
 const createAccount = async () => {
-  if (!formValid.value) return;
+  if (formValid.value === false) return;
   isAccountCreateLoading.value = true;
   try {
     await api.accounts.create({

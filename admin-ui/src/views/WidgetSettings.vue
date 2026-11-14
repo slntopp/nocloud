@@ -9,8 +9,8 @@
       color="background-light"
       :model-value="script"
       readonly
-      append-icon="mdi-content-copy"
-      @click:append="copyScript"
+      append-inner-icon="mdi-content-copy"
+      @click:append-inner="copyScript"
     />
     <div ref="script" id="script"></div>
     <div
@@ -35,7 +35,7 @@ export default {
     this.$refs.script.appendChild(script);
     script.onload = () => {
       const apiURL = api.axios.defaults.baseURL;
-       
+      // eslint-disable-next-line
       const previewWidget = new SupportMap({
         container: document.getElementById("preview-widget"),
         apiPort: 8624,

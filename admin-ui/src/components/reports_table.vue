@@ -4,21 +4,21 @@
       <div style="max-width: 300px" class="mx-3">
         <date-picker
           label="from"
-          :value="duration.from"
-          @input="emit('input:duration', { ...duration, from: $event })"
+          :model-value="duration.from"
+          @update:model-value="emit('input:duration', { ...duration, from: $event })"
         />
       </div>
       <div style="max-width: 300px" class="mx-3">
         <date-picker
           label="to"
-          :value="duration.to"
-          @input="emit('input:duration', { ...duration, to: $event })"
+          :model-value="duration.to"
+          @update:model-value="emit('input:duration', { ...duration, to: $event })"
         />
       </div>
     </v-row>
     <nocloud-table
       :table-name="tableName"
-      @input="selectRecord"
+      @update:model-value="selectRecord"
       :headers="reportsHeaders"
       :items="reports"
       :loading="isLoading"

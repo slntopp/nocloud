@@ -17,12 +17,12 @@
         </v-col>
         <v-col cols="6">
           <plans-autocomplete
-            :value="billingPlanId"
+            :model-value="billingPlanId"
             :custom-params="{
               filters: { type: ['cpanel'], 'meta.isIndividual': [false] },
               anonymously: false,
             }"
-            @input="setValue('billing_plan', $event)"
+            @update:model-value="setValue('billing_plan', $event)"
             return-object
             label="Price model"
             :rules="planRules"
