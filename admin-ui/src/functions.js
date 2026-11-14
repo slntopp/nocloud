@@ -1,5 +1,3 @@
-import yaml from "yaml";
-import XlsxService from "@/services/XlsxService";
 import store from "@/store";
 import { Rounding } from "nocloud-proto/proto/es/billing/billing_pb";
 import { NoCloudStatus } from "nocloud-proto/proto/es/statuses/statuses_pb";
@@ -236,15 +234,22 @@ export function downloadJSONFile(obj, name) {
   downloadFile(blob, name);
 }
 
-export function objectToYAMLString(obj) {
+// yaml and xlsx are heavy and rarely used, so they are loaded on demand
+// to keep them out of the initial bundle.
+const loadYaml = () => import("yaml").then((m) => m.default ?? m);
+const loadXlsxService = () =>
+  import("@/services/XlsxService").then((m) => m.default);
+
+export async function objectToYAMLString(obj) {
+  const yaml = await loadYaml();
   const doc = new yaml.Document();
   doc.contents = obj;
 
   return doc.toString();
 }
 
-export function downloadYAMLFile(obj, name) {
-  const blob = new Blob([objectToYAMLString(obj)], {});
+export async function downloadYAMLFile(obj, name) {
+  const blob = new Blob([await objectToYAMLString(obj)], {});
 
   downloadFile(blob, name, "yaml");
 }
@@ -262,7 +267,9 @@ export function readJSONFile(file) {
   });
 }
 
-export function readYAMLFile(file) {
+export async function readYAMLFile(file) {
+  const yaml = await loadYaml();
+
   return new Promise((resolve) => {
     if (!file) return;
 
@@ -682,7 +689,8 @@ export function addToClipboard(text) {
   }
 }
 
-export function downloadPlanXlsx(plans) {
+export async function downloadPlanXlsx(plans) {
+  const XlsxService = await loadXlsxService();
   const baseHeaders = [
     { title: "Title", key: "title" },
     { title: "Price", key: "price" },

@@ -704,7 +704,6 @@ import { useStore } from "@/store";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import { getMarginedValue, getShortName } from "@/functions";
 import confirmDialog from "@/components/confirmDialog.vue";
-import XlsxService from "@/services/XlsxService";
 import { getTodayFullDate } from "../../functions";
 
 const props = defineProps(["template"]);
@@ -1550,6 +1549,7 @@ const exportToXlsx = async () => {
       (r) => !r.disabled && r.state?.state !== "broken"
     );
 
+    const { default: XlsxService } = await import("@/services/XlsxService");
     return XlsxService.downloadXlsx(template.value.title + getTodayFullDate(), [
       {
         name: template.value.title,

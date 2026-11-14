@@ -47,7 +47,8 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import { EditorContainer } from "nocloud-ui";
+// import the module directly: the package index also pulls in the 1.2 MB world map
+import EditorContainer from "nocloud-ui/modules/editorContainer.vue";
 import { formatSecondsToDate } from "@/functions";
 import api from "@/api";
 
