@@ -265,7 +265,7 @@ const stateMap = {
   INIT: { color: "orange-darken-2", id: 1, title: "INIT" },
   SUS: { color: "orange-darken-2", title: "SUSPENDED", id: 7 },
   UP: { color: "green-darken-2", id: 3, title: "UP" },
-  DEL: { color: "grey-lighten-2", id: 5, title: "DEL" },
+  DEL: { color: "neutral", id: 5, title: "DEL" },
   UNSPECIFIED: { color: "red-darken-2", title: "UNKNOWN", id: 0 },
   DOWN: { color: "orange-darken-2", id: 4, title: "STOPPED" },
 };
@@ -274,7 +274,7 @@ const accessMap = {
   ROOT: { color: "info", id: 4, title: "ROOT" },
   ADMIN: { color: "success", id: 3, title: "ADMIN" },
   MGMT: { color: "warning", id: 2, title: "MGMT" },
-  READ: { color: "grey-lighten-2", id: 1, title: "READ" },
+  READ: { color: "neutral", id: 1, title: "READ" },
   NONE: { color: "error", id: 0, title: "NONE" },
 };
 

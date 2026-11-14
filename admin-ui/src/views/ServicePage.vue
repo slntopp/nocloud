@@ -113,7 +113,7 @@ export default {
       const dict = {
         init: "orange-darken-2",
         up: "green-darken-2",
-        del: "grey-lighten-2",
+        del: "neutral",
       };
       return dict?.[this?.service?.status] ?? "blue-grey-darken-2";
     },

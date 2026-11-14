@@ -127,10 +127,10 @@ export default {
         case "STOPPED":
           return "warning";
         case "NOEXIST":
-          return "grey-lighten-2";
+          return "neutral";
 
         default:
-          return "grey-lighten-2";
+          return "neutral";
       }
     },
     ts2str(ts) {

@@ -16,7 +16,7 @@ const useInvoices = () => {
         return "green";
       }
       case BillingStatus.UNPAID: {
-        return "grey-lighten-2";
+        return "neutral";
       }
       case BillingStatus.BILLING_STATUS_UNKNOWN:
       case BillingStatus.TERMINATED:
@@ -34,7 +34,7 @@ const useInvoices = () => {
       return "red";
     }
 
-    return "grey-lighten-2";
+    return "neutral";
   };
 
   return { getInvoiceStatusColor, getTotalColor };

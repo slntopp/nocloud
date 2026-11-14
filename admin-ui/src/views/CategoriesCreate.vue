@@ -117,7 +117,7 @@
           </div>
 
           <div v-else class="text-center text-grey">
-            <v-icon size="48" color="grey-lighten-2">mdi-translate-off</v-icon>
+            <v-icon size="48" color="neutral">mdi-translate-off</v-icon>
             <p class="mt-2">No translations added yet</p>
           </div>
         </v-card-text>

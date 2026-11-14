@@ -51,7 +51,7 @@ export default {
       } else if (+this.balance < 0) {
         return this["negative-color"] || "error";
       } else {
-        return "grey-lighten-2";
+        return "neutral";
       }
     },
   },

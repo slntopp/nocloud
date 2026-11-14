@@ -6,7 +6,7 @@
       disabled: !tableName,
     }"
     :item-value="itemKey"
-    class="elevation-0 background-light rounded-lg"
+    class="elevation-0 bg-background-light rounded-lg"
     :loading="loading"
     loading-text="Loading... Please wait"
     :items="tableItems"

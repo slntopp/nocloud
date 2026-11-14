@@ -347,10 +347,10 @@ export default {
       const dict = {
         INIT: "orange-darken-2",
         ACTIVE: "green-darken-2",
-        UNKNOWN: "grey-lighten-2",
+        UNKNOWN: "neutral",
         POWEROFF: "red-darken-2",
         SUSPENDED: "orange-darken-2",
-        OPERATION: "grey-lighten-2",
+        OPERATION: "neutral",
       };
 
       return dict[state] ?? "blue-grey-darken-2";

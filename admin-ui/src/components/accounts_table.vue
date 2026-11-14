@@ -174,7 +174,7 @@ const levelColorMap = ref({
   ROOT: "info",
   ADMIN: "success",
   MGMT: "warning",
-  READ: "grey-lighten-2",
+  READ: "neutral",
   NONE: "error",
 });
 

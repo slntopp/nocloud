@@ -37,8 +37,15 @@ export default createVuetify({
   theme: {
     defaultTheme: config.dark ?? true ? "dark" : "light",
     themes: {
-      dark: { dark: true, colors: config.colors?.dark ?? {} },
-      light: { dark: false, colors: config.colors?.light ?? {} },
+      // "neutral": the default chip color of Vuetify 2, used for neutral states
+      dark: {
+        dark: true,
+        colors: { neutral: "#555555", ...(config.colors?.dark ?? {}) },
+      },
+      light: {
+        dark: false,
+        colors: { neutral: "#e0e0e0", ...(config.colors?.light ?? {}) },
+      },
     },
     variations: false,
   },

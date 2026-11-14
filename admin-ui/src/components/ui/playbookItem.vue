@@ -10,7 +10,7 @@
     />
 
     <v-data-table
-      class="elevation-0 background-light rounded-lg"
+      class="elevation-0 bg-background-light rounded-lg"
       color="background-light"
       :headers="varsHeaders"
       :items="playbookVars"

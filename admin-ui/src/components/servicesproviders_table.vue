@@ -102,7 +102,7 @@ export default {
     },
     getStateChipColor(state) {
       if (!state) {
-        return "grey-lighten-2";
+        return "neutral";
       }
       return this.stateColorMap[state.toLowerCase()] || "";
     },
