@@ -27,7 +27,6 @@
     "json-schema": "^0.4.0",
     "nocloud-proto": "https://github.com/slntopp/nocloud-proto#703807c5866494654eae8d44896c4a401eec3598",
     "nocloudjsrest": "^1.5.17",
-    "qs": "^6.13.0",
     "sha256-uint8array": "^0.10.7",
     "sortablejs": "^1.15.0",
     "vanilla-jsoneditor": "^3.11.0",

@@ -472,7 +472,7 @@
 </template>
 
 <script>
-import { reactive, ref } from "vue";
+import { defineAsyncComponent, reactive, ref } from "vue";
 import { mapGetters } from "vuex";
 import useLoginClient from "@/hooks/useLoginInClient.js";
 import api from "@/api.js";
@@ -480,11 +480,16 @@ import config from "@/config.js";
 import languages from "@/components/header/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
-import instancesTableModal from "@/components/instances_table_modal.vue";
+// only shown for the chats overlay; keeps the table and Sortable out of the entry chunk
+const instancesTableModal = defineAsyncComponent(() =>
+  import("@/components/instances_table_modal.vue"),
+);
 import Themes from "@/components/header/themes.vue";
 import userMenu from "@/components/header/userMenu.vue";
 import notifications from "@/components/header/notifications.vue";
-import { Buffer } from "buffer";
+
+// base64 of the UTF-8 bytes of a string, like Buffer.from(str).toString("base64")
+const utf8Base64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 export default {
   name: "App",
@@ -586,9 +591,7 @@ export default {
       });
 
       return window.open(
-        `/cc.ui/?a=${Buffer.from(
-          unescape(encodeURIComponent(fullParams))
-        ).toString("base64")}`,
+        `/cc.ui/?a=${utf8Base64(unescape(encodeURIComponent(fullParams)))}`,
         "_blanc"
       );
     },

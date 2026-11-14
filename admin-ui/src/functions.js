@@ -898,3 +898,21 @@ export function replaceNullWithUndefined(obj) {
   }
   return obj;
 }
+
+// Same output as qs.stringify(params, { arrayFormat: "repeat" }) without the
+// qs dependency (~35 KB with its polyfills).
+export function serializeParams(params) {
+  const parts = [];
+  const add = (key, value) => {
+    if (value === undefined) return;
+    if (value === null) return parts.push(encodeURIComponent(key) + "=");
+    if (value instanceof Date) value = value.toISOString();
+    if (Array.isArray(value)) return value.forEach((v) => add(key, v));
+    if (typeof value === "object") {
+      return Object.keys(value).forEach((k) => add(`${key}[${k}]`, value[k]));
+    }
+    parts.push(encodeURIComponent(key) + "=" + encodeURIComponent(value));
+  };
+  Object.keys(params || {}).forEach((k) => add(k, params[k]));
+  return parts.join("&");
+}
