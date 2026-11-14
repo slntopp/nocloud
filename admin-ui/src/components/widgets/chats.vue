@@ -49,7 +49,7 @@
       <v-card
         v-for="chat in lastActivityChats"
         :key="chat.uuid"
-        dense
+        density="compact"
         color="transparent"
         class="d-flex justify-space-between pa-3"
         style="margin: 3px"

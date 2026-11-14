@@ -56,8 +56,10 @@
             </div>
           </router-link>
 
+          <!-- min-height: a fixed-height v-list clips its items in Vuetify 3+
+               (Vuetify 2 let them overflow into the scrolling drawer) -->
           <v-list
-            style="height: 100%"
+            style="min-height: 100%"
             v-if="isLoggedIn"
             density="compact"
             :theme="asideDark ? 'dark' : undefined"
@@ -77,7 +79,7 @@
               </v-btn>
             </div>
 
-            <div style="height: 100%" id="drawer-menu-hover">
+            <div style="min-height: 100%" id="drawer-menu-hover">
               <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
                 <template #prepend>
                   <v-icon>mdi-view-dashboard-variant</v-icon>

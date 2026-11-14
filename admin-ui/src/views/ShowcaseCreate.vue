@@ -1,7 +1,7 @@
 <template>
   <div class="pa-10 h-100 w-100">
     <h1 class="page__title" v-if="!isEdit">Create showcase</h1>
-    <v-form ref="showcaseForm" align="center">
+    <v-form ref="showcaseForm">
       <v-row>
         <v-col cols="4">
           <v-text-field
@@ -101,7 +101,7 @@
             </v-icon>
           </v-expansion-panel-title>
 
-          <v-expansion-panel-text color="background">
+          <v-expansion-panel-text class="bg-background">
             <v-row>
               <v-col cols="6">
                 <v-autocomplete

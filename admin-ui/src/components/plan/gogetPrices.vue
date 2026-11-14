@@ -6,7 +6,7 @@
         <v-expansion-panel-title color="background">
           Margin rules:
         </v-expansion-panel-title>
-        <v-expansion-panel-text color="background">
+        <v-expansion-panel-text class="bg-background">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"

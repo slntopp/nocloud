@@ -5,7 +5,6 @@
       open-on-click
       :open-on-hover="false"
       :open-on-focus="false"
-      :offset-overflow="true"
       v-if="infoText && isInfoExists"
       location="bottom"
     >

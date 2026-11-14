@@ -37,7 +37,6 @@
           <v-radio-group
             :disabled="allowedKinds.length === 1"
             inline
-            mandatory
             v-model="selectedKind"
           >
             <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">

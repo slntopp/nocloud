@@ -238,3 +238,50 @@
     opacity: 0;
   }
 }
+
+/* Vuetify 2 v-list-item-content (removed in Vuetify 3), for the few places
+   where it was used outside a list item: a wrapping flex row whose children
+   take the full width. */
+@layer vuetify-overrides {
+  .legacy-list-item-content {
+    align-items: center;
+    align-self: center;
+    display: flex;
+    flex-wrap: wrap;
+    flex: 1 1;
+    overflow: hidden;
+    padding: 12px 0;
+  }
+  .legacy-list-item-content > * {
+    flex: 1 0 100%;
+  }
+}
+
+/* Vuetify 2 scrolled the dialog/menu container itself, so content could
+   never be cut off. Vuetify 4 scrolls only a direct v-card/v-sheet child, and
+   not at all if that card has overflow: hidden (common in this app) or the
+   child is not a card. The container itself must stay non-scrollable (the
+   block scroll strategy would hide it), so make any direct child scroll
+   vertically instead; its horizontal overflow is left as authored. */
+@layer vuetify-overrides {
+  .v-dialog:not(.v-dialog--fullscreen):not(.v-dialog--scrollable) > .v-overlay__content > *,
+  .v-dialog:not(.v-dialog--fullscreen):not(.v-dialog--scrollable) > .v-overlay__content > form > * {
+    min-height: 0;
+    overflow-y: auto !important;
+  }
+  .v-menu > .v-overlay__content {
+    overflow-y: auto;
+  }
+}
+
+/* Vuetify 3+ renders text inputs with size="1", so a field in a container
+   that sizes to its content (e.g. a div with only max-width) collapsed to its
+   label. Vuetify 2 inputs had the browser's default ~20 character width.
+   Give the input that natural width back; it still grows and shrinks with
+   its container like before. */
+@layer vuetify-overrides {
+  input.v-field__input[size="1"] {
+    width: 174px;
+    flex: 1 1 auto;
+  }
+}

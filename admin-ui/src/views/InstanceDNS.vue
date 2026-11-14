@@ -15,10 +15,10 @@
             max-width="500px"
           >
             <template v-slot:activator="{}">
-              <v-btn class="mr-5" color="background-light" @click="addNew">
+              <v-btn variant="elevated" class="mr-5" color="background-light" @click="addNew">
                 Add
               </v-btn>
-              <v-btn color="background-light" @click="saveDNS"> Save </v-btn>
+              <v-btn variant="elevated" color="background-light" @click="saveDNS"> Save </v-btn>
             </template>
             <v-card color="background-light">
               <add-DNS

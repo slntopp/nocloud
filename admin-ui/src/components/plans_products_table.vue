@@ -34,7 +34,7 @@
 
               <v-dialog width="90vw" v-model="isEditOpen">
                 <template v-slot:activator="{ props }">
-                  <v-btn
+                  <v-btn variant="elevated"
                     :disabled="selected.length < 1"
                    
                     v-bind="props"
@@ -50,15 +50,15 @@
                   <rich-editor v-model="newMeta.description" />
 
                   <v-row class="mt-5 justify-end">
-                    <v-btn class="mx-2" @click="isEditOpen = false"
+                    <v-btn variant="elevated" class="mx-2" @click="isEditOpen = false"
                       >Close</v-btn
                     >
-                    <v-btn @click="saveNewMeta" class="mx-2">Save</v-btn>
+                    <v-btn variant="elevated" @click="saveNewMeta" class="mx-2">Save</v-btn>
                   </v-row>
                 </v-card>
               </v-dialog>
 
-              <v-btn
+              <v-btn variant="elevated"
                 :disabled="selected.length < 1"
                 class="mr-2"
                 color="background-light"
@@ -67,11 +67,11 @@
                 Copy
               </v-btn>
 
-              <v-btn class="mr-2" color="background-light" @click="addConfig">
+              <v-btn variant="elevated" class="mr-2" color="background-light" @click="addConfig">
                 Create
               </v-btn>
               <confirm-dialog @confirm="removeConfig">
-                <v-btn color="background-light" :disabled="selected.length < 1">
+                <v-btn variant="elevated" color="background-light" :disabled="selected.length < 1">
                   Delete
                 </v-btn>
               </confirm-dialog>
@@ -170,7 +170,6 @@
             <v-radio-group
               :disabled="isOneTime(item)"
               inline
-              mandatory
               :model-value="item.kind"
               @update:model-value="(value) => changeProduct('kind', value, item.id)"
             >

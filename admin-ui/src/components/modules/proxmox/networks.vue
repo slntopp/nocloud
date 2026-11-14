@@ -29,7 +29,7 @@
           </div>
         </v-expansion-panel-title>
 
-        <v-expansion-panel-text color="background">
+        <v-expansion-panel-text class="bg-background">
           <!-- Address ranges -->
           <div class="d-flex align-center mt-2 mb-1">
             <span class="text-subtitle-2">Address ranges</span>

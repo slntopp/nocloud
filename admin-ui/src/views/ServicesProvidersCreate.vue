@@ -67,7 +67,7 @@
                   <v-icon size="x-large"> $expand </v-icon>
                 </template>
               </v-expansion-panel-title>
-              <v-expansion-panel-text color="background-light">
+              <v-expansion-panel-text class="bg-background-light">
                 <json-editor
                   :json="provider.meta"
                   @changeValue="(data) => (provider.meta = data)"
@@ -108,7 +108,7 @@
             <v-tab>Extentions</v-tab>
           </v-tabs>
 
-          <v-window v-model="tabs" color="primary">
+          <v-window v-model="tabs">
             <v-window-item>
               <v-card color="background">
                 <v-row>

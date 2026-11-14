@@ -23,12 +23,16 @@
 
 <script>
 import api from "@/api";
+import { containExternalStyles } from "@/services/containExternalStyles";
+
 export default {
   data: () => ({
     script:
       "https://cdn.jsdelivr.net/npm/nocloud-map-widget@latest/dist/map-widget.js",
   }),
   mounted() {
+    // the widget bundles global CSS (Ant Design reset) that would restyle the app
+    this.stopContainingStyles = containExternalStyles();
     let script = document.createElement("script");
     script.setAttribute("src", this.script);
     script.setAttribute("type", "module");
@@ -45,6 +49,9 @@ export default {
 
       previewWidget.init();
     };
+  },
+  beforeUnmount() {
+    this.stopContainingStyles?.();
   },
   methods: {
     copyScript() {

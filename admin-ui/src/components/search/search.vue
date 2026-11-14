@@ -1,11 +1,16 @@
 <template>
   <div class="search_container">
+    <!--
+      The menu is opened programmatically; in Vuetify 2 it was positioned (and
+      sized) by the search field. Vuetify 3+ needs an explicit target for that.
+    -->
     <v-menu
       @update:model-value="setLayoutMode('preview')"
       content-class="search"
       :close-on-content-click="false"
       v-model="isOpen"
-      
+      target="parent"
+      location="bottom"
     >
       <template v-slot:activator="{ props }">
         <v-text-field
@@ -81,6 +86,7 @@
                 :disabled="isLayoutModeAdd"
                 @click="setCurrentLayout(layout)"
               >
+                  <div class="legacy-list-item-content ma-0 pa-0">
                   <v-list-item-title
                     :style="{
                       color:
@@ -121,9 +127,11 @@
                       </v-btn>
                     </template>
                   </v-text-field>
+                  </div>
               </v-card>
 
               <v-card v-if="isLayoutModeAdd" style="box-shadow: none">
+                <div class="legacy-list-item-content">
                 
                   <v-form ref="addNewLayoutForm" v-model="isNewLayoutValid">
                     <v-text-field
@@ -145,6 +153,7 @@
                     </v-text-field>
                   </v-form>
                 
+                </div>
               </v-card>
 
               <v-card
@@ -152,6 +161,7 @@
                 :disabled="isLayoutModeAdd"
                 @click="onAddClick"
               >
+                <div class="legacy-list-item-content">
                 
                   <v-btn
                     :disabled="isLayoutModeAdd"
@@ -162,6 +172,7 @@
                     Add <v-icon size="small">mdi-plus</v-icon></v-btn
                   >
                 
+                </div>
               </v-card>
             </v-list>
           </v-col>
@@ -725,7 +736,8 @@ export default {
       min-height: calc(40vh - 55px) !important;
       .layouts {
         min-height: calc(40vh - 55px) !important;
-        * {
+        // skip Vuetify 3+ state layers: an opaque underlay hides button text
+        *:not(.v-btn__overlay):not(.v-btn__underlay):not(.v-field__overlay) {
           background-color: inherit !important;
         }
       }
@@ -738,7 +750,7 @@ export default {
     }
     .layout__controls {
       background-color: rgb(var(--v-theme-background));
-      * {
+      *:not(.v-btn__overlay):not(.v-btn__underlay):not(.v-field__overlay) {
         background-color: inherit !important;
       }
     }

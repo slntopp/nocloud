@@ -24,6 +24,15 @@ const itemProps = (item) => {
 };
 const selectDefaults = { ...underlined, itemTitle, itemProps };
 
+// Vuetify 2 default status colors (Vuetify 4 uses e.g. #CF6679 / #B00020 for
+// error); installations can still override them in config.js
+const vuetify2StatusColors = {
+  error: "#FF5252",
+  info: "#2196F3",
+  success: "#4CAF50",
+  warning: "#FB8C00",
+};
+
 export default createVuetify({
   // Vuetify 4 lowered the breakpoints; keep the Vuetify 3 ones (also set in Sass)
   display: {
@@ -61,6 +70,7 @@ export default createVuetify({
         dark: true,
         // surface: Vuetify 2 dark card color (Vuetify 4 uses #212121)
         colors: {
+          ...vuetify2StatusColors,
           neutral: "#555555",
           surface: "#1E1E1E",
           ...(config.colors?.dark ?? {}),
@@ -68,7 +78,11 @@ export default createVuetify({
       },
       light: {
         dark: false,
-        colors: { neutral: "#e0e0e0", ...(config.colors?.light ?? {}) },
+        colors: {
+          ...vuetify2StatusColors,
+          neutral: "#e0e0e0",
+          ...(config.colors?.light ?? {}),
+        },
       },
     },
     variations: false,

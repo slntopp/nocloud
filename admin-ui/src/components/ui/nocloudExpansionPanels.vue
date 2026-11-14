@@ -7,7 +7,7 @@
           <v-icon color="primary" size="x-large"> $expand </v-icon>
         </template>
       </v-expansion-panel-title>
-      <v-expansion-panel-text color="background-light">
+      <v-expansion-panel-text class="bg-background-light">
         <slot />
       </v-expansion-panel-text>
     </v-expansion-panel>

@@ -191,7 +191,7 @@
         cols="12"
       >
         <v-row>
-          <v-col class="order-2 order-lg-1" cols="12" lg="6" order-2>
+          <v-col class="order-2 order-lg-1" cols="12" lg="6">
             <div class="title_progress">
               <span>{{ datastor.drive_type }}</span>
               <div>
@@ -209,7 +209,7 @@
               </template>
             </v-progress-linear>
           </v-col>
-          <v-col class="order-1 order-lg-2" cols="12" lg="6" order-1>
+          <v-col class="order-1 order-lg-2" cols="12" lg="6">
             <p>name: {{ datastor.name }}</p>
             <p>tm_mad: {{ datastor.tm_mad }}</p>
             <p>ds_mad: {{ datastor.tm_mad }}</p>

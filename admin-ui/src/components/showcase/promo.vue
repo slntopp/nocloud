@@ -36,7 +36,6 @@
             <v-switch
               class="ml-4"
               v-model.trim="currentLocation.previewEnable"
-              variant="outlined"
             />
           </v-card-title>
           <rich-editor v-model="currentLocation.preview" />
@@ -47,7 +46,7 @@
                 <v-expansion-panel-title color="background-light">
                   {{ product.title }}
                 </v-expansion-panel-title>
-                <v-expansion-panel-text color="background-light">
+                <v-expansion-panel-text class="bg-background-light">
                   <v-card-subtitle>Description:</v-card-subtitle>
                   <rich-editor
                     v-model="currentLocation.products[product.id].description"
@@ -148,7 +147,7 @@
                 <v-expansion-panel-title color="background-light"
                   >{{ location.title }}
                 </v-expansion-panel-title>
-                <v-expansion-panel-text color="background-light">
+                <v-expansion-panel-text class="bg-background-light">
                   <v-card-subtitle>Description:</v-card-subtitle>
                   <rich-editor
                     v-model="
@@ -188,8 +187,7 @@
             <v-card-title>Icons:</v-card-title>
             <v-row>
               <v-col
-                heigh="100%"
-                xs="4"
+                cols="4"
                 md="3"
                 lg="2"
                 xl="2"

@@ -4,7 +4,7 @@
       <v-col>
         <div>
           service state:
-          <v-chip variant="flat" x-small :color="chipColor">
+          <v-chip variant="flat" size="x-small" :color="chipColor">
             {{ this.service.status }}
           </v-chip>
         </div>

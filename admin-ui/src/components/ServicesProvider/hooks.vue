@@ -37,7 +37,7 @@
             </confirm-dialog>
           </div>
         </v-expansion-panel-title>
-        <v-expansion-panel-text color="background-light">
+        <v-expansion-panel-text class="bg-background-light">
           <v-text-field label="key" v-model="hook.key" />
 
           <playbook-item

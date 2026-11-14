@@ -14,6 +14,34 @@ const vuetifyComponents = readdirSync(
   .filter((entry) => entry.isDirectory() && /^V[A-Z]/.test(entry.name))
   .map((entry) => `vuetify/components/${entry.name}`);
 
+// Vuetify 4 utility classes (pa-3, d-flex, text-*) are no longer !important,
+// so any app rule for the same property would now beat them. Vuetify 2/3
+// utilities always won. Put the app's own CSS into the "app" cascade layer,
+// ordered between Vuetify components and utilities, and third-party CSS into
+// the low "external" layer (see public/layers.css).
+const appCssLayer = {
+  postcssPlugin: "app-css-layer",
+  Once(root, { AtRule }) {
+    const file = root.source?.input?.file || "";
+    let name = null;
+    if (file.includes("/node_modules/")) {
+      // third-party CSS (jodit, editors, charts): low "external" layer, so
+      // global rules in it cannot restyle Vuetify components or the app
+      if (!file.includes("/node_modules/vuetify/")) name = "external";
+    } else if (file.includes("/src/") && !file.includes("/src/styles/vuetify/")) {
+      name = "app";
+    }
+    if (!name) return;
+    const layer = new AtRule({ name: "layer", params: name });
+    root.each((node) => {
+      if (node.type === "atrule" && ["import", "charset", "layer"].includes(node.name) && !node.nodes) return;
+      layer.append(node.clone());
+      node.remove();
+    });
+    if (layer.nodes?.length) root.append(layer);
+  },
+};
+
 export default defineConfig({
   // the app is served under /admin (see apiserver_web and traefik)
   base: "/admin/",
@@ -43,6 +71,7 @@ export default defineConfig({
     extensions: [".mjs", ".js", ".json", ".vue"],
   },
   css: {
+    postcss: { plugins: [appCssLayer] },
     preprocessorOptions: {
       scss: {
         // the styles still use @import; migrating them to @use is a separate step

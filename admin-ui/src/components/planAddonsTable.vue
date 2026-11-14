@@ -20,7 +20,7 @@
 
         <v-dialog v-model="isAddDialog" width="80vw">
           <template v-slot:activator="{ props }">
-            <v-btn
+            <v-btn variant="elevated"
              
               v-bind="props"
               class="mr-2"
@@ -32,7 +32,7 @@
           <v-card color="background-light">
             <addonsTable show-select v-model="selectedToAdd" />
             <div class="d-flex justify-end pa-3">
-              <v-btn @click="addAddons" :disabled="selectedToAdd.length < 1"
+              <v-btn variant="elevated" @click="addAddons" :disabled="selectedToAdd.length < 1"
                 >Add</v-btn
               >
             </div>
@@ -43,7 +43,7 @@
           @confirm="removeAddons"
           :disabled="selectedToRemove.length < 1"
         >
-          <v-btn
+          <v-btn variant="elevated"
             color="background-light"
             :disabled="selectedToRemove.length < 1"
             >Disabled</v-btn

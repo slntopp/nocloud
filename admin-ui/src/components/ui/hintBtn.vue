@@ -1,5 +1,5 @@
 <template>
-  <v-tooltip :location="!top ? 'bottom' : undefined" :top="top">
+  <v-tooltip :location="top ? 'top' : 'bottom'">
     <template v-slot:activator="{ props }">
       <div class="d-inline-block" v-bind="props">
         <slot></slot>

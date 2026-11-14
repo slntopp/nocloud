@@ -47,7 +47,7 @@
     <template v-slot:[`item.total`]="{ item }">
       <v-tooltip location="bottom">
         <template v-slot:activator="{ props }">
-          <v-chip variant="flat" v-bind="props" :color="getTotalColor(item)" abs>
+          <v-chip variant="flat" v-bind="props" :color="getTotalColor(item)">
             {{
               `${formatPrice(item.total, item.currency)} ${
                 item.currency?.code || defaultCurrency.code
@@ -62,7 +62,7 @@
     <template v-slot:[`item.subtotal`]="{ item }">
       <v-tooltip location="bottom">
         <template v-slot:activator="{ props }">
-          <v-chip variant="flat" v-bind="props" :color="getTotalColor(item)" abs>
+          <v-chip variant="flat" v-bind="props" :color="getTotalColor(item)">
             {{
               `${formatPrice(item.subtotal, item.currency)} ${
                 item.currency?.code || defaultCurrency.code

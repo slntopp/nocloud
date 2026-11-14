@@ -10,7 +10,7 @@
             >
               Ranged margin (%)
             </v-expansion-panel-title>
-            <v-expansion-panel-text color="background">
+            <v-expansion-panel-text class="bg-background">
               <v-list
                 v-if="currentFee.ranges.length > 0"
                 bg-color="background"

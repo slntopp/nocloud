@@ -1,5 +1,5 @@
 <template>
-  <v-btn class="mr-2" @click="downloadFile" :disabled="disabled" :small="small">
+  <v-btn class="mr-2" @click="downloadFile" :disabled="disabled" :size="small ? 'small' : undefined">
     {{ title || `Download ${fullType}` }}
   </v-btn>
 </template>

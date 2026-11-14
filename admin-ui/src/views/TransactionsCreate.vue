@@ -187,7 +187,7 @@
                   <v-icon size="x-large"> $expand </v-icon>
                 </template>
               </v-expansion-panel-title>
-              <v-expansion-panel-text color="background-light">
+              <v-expansion-panel-text class="bg-background-light">
                 <invoice-items-table
                   sort-by="date"
                   :account="transaction.account"
@@ -206,7 +206,7 @@
                   <v-icon size="x-large"> $expand </v-icon>
                 </template>
               </v-expansion-panel-title>
-              <v-expansion-panel-text color="background-light">
+              <v-expansion-panel-text class="bg-background-light">
                 <json-editor
                   :json="transaction.meta"
                   @changeValue="(data) => (transaction.meta = data)"

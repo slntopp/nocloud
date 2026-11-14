@@ -15,14 +15,14 @@
           <v-divider inset vertical class="mx-4" />
           <v-spacer />
 
-          <v-btn class="mr-2" color="background-light" @click="addConfig">
+          <v-btn variant="elevated" class="mr-2" color="background-light" @click="addConfig">
             Create
           </v-btn>
           <confirm-dialog
             @confirm="removeConfig"
             :disabled="selected.length < 1"
           >
-            <v-btn color="background-light" :disabled="selected.length < 1"
+            <v-btn variant="elevated" color="background-light" :disabled="selected.length < 1"
               >Delete</v-btn
             >
           </confirm-dialog>
@@ -108,7 +108,6 @@
         <v-radio-group
           :disabled="isOneTimePayment(item)"
           inline
-          mandatory
           :model-value="item.kind"
           @update:model-value="changeResource('kind', $event, item.id)"
         >

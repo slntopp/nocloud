@@ -36,7 +36,7 @@
         </v-col>
       </v-row>
 
-      <v-card color="background-light" class="mt-6" variant="outlined">
+      <v-card color="background-light" class="mt-6">
         <v-card-title class="text-h6 bg-primary">
           <v-icon start>mdi-translate</v-icon>
           Translations
@@ -66,7 +66,6 @@
             <v-col cols="1" class="d-flex align-center">
               <v-btn
                 color="primary"
-                variant="outlined"
                 size="small"
                 @click="addTranslation"
                 :disabled="
@@ -89,7 +88,7 @@
             >
               <v-row class="align-center">
                 <v-col cols="1">
-                  <v-chip color="primary" variant="outlined" size="small">
+                  <v-chip color="primary">
                     {{ locale.toUpperCase() }}
                   </v-chip>
                 </v-col>
@@ -105,7 +104,6 @@
                   <v-btn
                     size="small"
                     color="error"
-                    variant="text"
                     @click="removeTranslation(locale)"
                     icon
                   >
@@ -125,7 +123,7 @@
 
       <v-row class="mt-6">
         <v-col cols="12" class="d-flex justify-end gap-3">
-          <v-btn variant="outlined" @click="resetForm"> Reset </v-btn>
+          <v-btn @click="resetForm"> Reset </v-btn>
 
           <v-btn
             color="primary"
@@ -143,7 +141,6 @@
             <v-btn
               v-if="isEdit"
               color="error"
-              variant="outlined"
               :loading="isDeleteLoading"
             >
               <v-icon start>mdi-delete</v-icon>

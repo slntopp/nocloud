@@ -85,7 +85,7 @@
           <v-expansion-panel-title color="background-light"
             >Edit json</v-expansion-panel-title
           >
-          <v-expansion-panel-text color="background-light">
+          <v-expansion-panel-text class="bg-background-light">
             <json-editor :json="settings" @changeValue="edit" />
           </v-expansion-panel-text>
         </v-expansion-panel>
