@@ -203,7 +203,7 @@
             </v-btn>
           </v-col>
           <v-col cols="12" v-if="vmsError">
-            <v-alert density="compact" text type="error">{{ vmsError }}</v-alert>
+            <v-alert density="compact" variant="tonal" type="error">{{ vmsError }}</v-alert>
           </v-col>
         </template>
       </v-row>

@@ -290,6 +290,7 @@ import useCurrency from "@/hooks/useCurrency";
 
 export default {
   name: "dedicated-table",
+  emits: ["changeFee"],
   components: { nocloudTable, planAddonsTable },
   props: {
     fee: { type: Object, required: true },
@@ -841,9 +842,13 @@ export default {
     },
   },
   watch: {
-    plans() {
-      this.setPlanGroups();
-      this.setCpuGroups();
+    // deep: plans are replaced by index (was this.$set in Vue 2)
+    plans: {
+      handler() {
+        this.setPlanGroups();
+        this.setCpuGroups();
+      },
+      deep: true,
     },
   },
 };

@@ -64,7 +64,7 @@ import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { getTimestamp, getFullDate } from "@/functions";
 
 const props = defineProps(["period", "periodKind"]);
-const emits = defineEmits(["changeDate"]);
+const emits = defineEmits(["changeDate", "changePeriodKind"]);
 const { period, periodKind } = toRefs(props);
 
 const date = ref("");

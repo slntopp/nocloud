@@ -83,6 +83,7 @@
 
 <script>
 export default {
+  emits: ["changeAdd", "changeValue"],
   props: {
     fieldKey: { type: String, required: true },
     newKey: { type: String, required: true },

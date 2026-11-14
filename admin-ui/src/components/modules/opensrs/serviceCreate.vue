@@ -169,6 +169,7 @@ import AddInstanceBtn from "@/components/ui/addInstanceBtn.vue";
 
 export default {
   name: "ione-create-service-module",
+  emits: ["update:instances-group"],
   props: ["instances-group", "plans", "planRules"],
   components: { AddInstanceBtn, domainsTable },
   mixins: [snackbar],

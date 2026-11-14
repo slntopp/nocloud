@@ -76,6 +76,7 @@ const getDefaultInstance = () => ({
 
 export default {
   name: "instance-custom-create",
+  emits: ["set-instance", "set-value"],
   components: { JsonEditor },
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
   mounted() {

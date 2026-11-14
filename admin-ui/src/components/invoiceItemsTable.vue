@@ -172,7 +172,7 @@ const props = defineProps({
 const { items, account, showDelete, showDate, readonly, sortBy, taxRate } =
   toRefs(props);
 
-const emit = defineEmits("click:delete");
+const emit = defineEmits(["click:delete"]);
 
 const store = useStore();
 

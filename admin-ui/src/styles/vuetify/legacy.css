@@ -215,3 +215,26 @@
     color: rgb(var(--v-theme-primary));
   }
 }
+
+/* Vuetify 2 button colors: default (no color) buttons and grey disabled buttons.
+   Vuetify 3+ draws disabled buttons as a faded version of their color. */
+@layer vuetify-overrides {
+  .v-theme--dark .v-btn--variant-elevated:not([class*="bg-"]):not(.v-btn--disabled) {
+    background-color: #272727;
+  }
+  .v-theme--light .v-btn--variant-elevated:not([class*="bg-"]):not(.v-btn--disabled) {
+    background-color: #f5f5f5;
+  }
+  .v-btn.v-btn--disabled {
+    opacity: 1;
+    color: rgba(var(--v-theme-on-surface), 0.26) !important;
+  }
+  .v-btn.v-btn--disabled.v-btn--variant-elevated,
+  .v-btn.v-btn--disabled.v-btn--variant-flat {
+    background-color: rgba(var(--v-theme-on-surface), 0.12) !important;
+    box-shadow: none;
+  }
+  .v-btn.v-btn--disabled .v-btn__overlay {
+    opacity: 0;
+  }
+}

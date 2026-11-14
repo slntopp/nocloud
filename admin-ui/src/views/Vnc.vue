@@ -1,6 +1,5 @@
 <template>
   <div class="vnc__page">
-    <template>
       <div id="noVNC_status"></div>
 
       <div id="noVNC_control_bar_anchor" class="noVNC_vcenter">
@@ -361,7 +360,6 @@
       <main>
         <div id="vnc-screen" ref="vncscreen"></div>
       </main>
-    </template>
   </div>
 </template>
 

@@ -65,7 +65,6 @@
     <!--      :template="template"-->
     <!--      @refresh="refreshInstance"-->
     <!--    />-->
-    <template>
       <v-card-title class="text-primary">Instance info</v-card-title>
       <v-row>
         <v-col>
@@ -180,7 +179,6 @@
         :account="account"
         @refresh="refreshInstance"
       />
-    </template>
     <move-instance
       @refresh="refreshInstance"
       :account="account"

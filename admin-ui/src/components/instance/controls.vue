@@ -133,6 +133,7 @@ import { Addon } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 export default {
   name: "instance-actions",
+  emits: ["refresh"],
   components: { InstanceControlBtn, PluginIframe, ConfirmDialog },
   mixins: [snackbar],
   props: {

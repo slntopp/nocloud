@@ -25,7 +25,9 @@
                   />
                 </template>
                 <template v-slot:selection="{ internalItem: item }">
-                  <span>{{ item.raw.title }} - {{ item.raw.amount.title }}</span>
+                  <template v-if="item.raw && typeof item.raw === 'object'">
+                    <span>{{ item.raw.title }} - {{ item.raw.amount.title }}</span>
+                  </template>
                 </template>
               </v-select>
             </v-col>

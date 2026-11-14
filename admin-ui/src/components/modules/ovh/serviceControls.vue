@@ -23,6 +23,7 @@
   
   export default {
     name: "service-state",
+    emits: ["closePanel"],
     mixins: [snackbar],
     props: {
       service: { type: Object, required: true },

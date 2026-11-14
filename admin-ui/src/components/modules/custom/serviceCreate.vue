@@ -70,6 +70,7 @@ import AddInstanceBtn from "@/components/ui/addInstanceBtn.vue";
 
 export default {
   name: "custom-create-service-module",
+  emits: ["update:instances-group"],
   components: { AddInstanceBtn, JsonEditor },
   props: ["instances-group", "plans", "planRules"],
   data: () => ({

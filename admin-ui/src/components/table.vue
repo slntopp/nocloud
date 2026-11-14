@@ -24,8 +24,6 @@
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
-    :page="serverSidePage || page"
-    @update:page="onPageUpdate"
     v-model:items-per-page="itemsPerPage"
     :group-by="groupByV3"
     :key="anIncreasingNumber"
@@ -394,6 +392,7 @@ export default {
       showed: [],
       copyed: -1,
       page: 1,
+      serverPage: this.serverSidePage || 1,
       anIncreasingNumber: 0,
       itemsPerPage: 10,
       columns: {},
@@ -419,17 +418,34 @@ export default {
         : VDataTable;
     },
     // Vuetify 3 headers use title/key; callers still pass Vuetify 2 text/value
+    // Server tables: the page is controlled here and reported to the parent
+    // via update:options (it refetches and passes serverSidePage back).
+    // Client tables keep Vuetify's own page state, as in Vuetify 2, where the
+    // page stored in localStorage was never applied to them.
     serverProps() {
       return this.tableComponent === VDataTableServer
-        ? { itemsLength: this.serverItemsLength }
-        : {};
+        ? {
+            // a missing count used to show "0-0 of 0" in Vuetify 2, not NaN
+            itemsLength: Number.isFinite(+this.serverItemsLength)
+              ? +this.serverItemsLength
+              : 0,
+            page: this.serverPage,
+            "onUpdate:page": this.onServerPageUpdate,
+          }
+        : { "onUpdate:page": (page) => (this.page = page) };
     },
     tableHeaders() {
-      return this.filtredHeaders.filter(Boolean).map((header) => ({
+      const headers = this.filtredHeaders.filter(Boolean).map((header) => ({
         ...header,
         title: header.title ?? header.text,
         key: header.key ?? header.value,
       }));
+      // Vuetify 3+ appends the expand column at the end of the row; Vuetify 2
+      // put it first, followed by the checkbox. Keep the old order.
+      const leading = [];
+      if (this.showExpand) leading.push({ key: "data-table-expand" });
+      if (this.showSelect) leading.push({ key: "data-table-select" });
+      return [...leading, ...headers];
     },
     tableSortByV3() {
       return this.tableSortBy
@@ -478,8 +494,9 @@ export default {
       this.tableSortBy = sortBy[0]?.key ?? "";
       this.tableSortDesc = sortBy[0]?.order === "desc";
     },
-    onPageUpdate(page) {
-      if (!this.serverSidePage) this.page = page;
+    onServerPageUpdate(page) {
+      this.serverPage = page;
+      this.page = page;
     },
     addToClipboard(text, index) {
       if (navigator?.clipboard) {
@@ -793,6 +810,9 @@ export default {
     this.configureColumns();
   },
   watch: {
+    serverSidePage(value) {
+      if (value) this.serverPage = value;
+    },
     page(value) {
       localStorage.setItem("page", value);
       localStorage.setItem("url", this.$route.path);

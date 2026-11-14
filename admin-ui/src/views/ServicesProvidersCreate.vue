@@ -122,7 +122,7 @@
                           )
                           .map((el) => ({
                             value: el,
-                            text: extentionsMap[el].title,
+                            text: extentionsMap[el]?.title ?? el,
                           }))
                       "
                       label="extention"

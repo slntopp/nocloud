@@ -139,6 +139,7 @@ import NcMap from "@/components/nocloud-ui/map.vue";
 import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {
+  emits: ["save", "set-locations"],
   components: { ColorPicker, NcMap },
   mixins: [snackbar],
   name: "support-map",

@@ -48,6 +48,7 @@
 
 <script>
 export default {
+  emits: ["changeDisable", "changeKey"],
   props: {
     json: { type: Object, required: true },
     isValid: { type: Boolean, required: true },

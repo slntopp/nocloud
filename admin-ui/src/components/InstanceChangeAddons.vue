@@ -43,7 +43,7 @@ const props = defineProps({
 });
 const { instance } = toRefs(props);
 
-const emit = defineEmits(["update:options"]);
+const emit = defineEmits(["update", "update:options"]);
 
 const store = useStore();
 

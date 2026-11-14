@@ -73,6 +73,7 @@ import { Buffer } from "buffer";
 
 export default {
   name: "tunnelmesh-extention-create",
+  emits: ["change:data", "change:provider", "remove"],
   data() {
     return {
       rules: [(value) => !!value || "Field is required"],

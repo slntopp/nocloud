@@ -121,7 +121,7 @@ import PasswordTextField from "@/components/ui/passwordTextField.vue";
 const props = defineProps(["template", "sp"]);
 const { template } = toRefs(props);
 
-const emit = defineEmits("update");
+const emit = defineEmits(["update"]);
 
 const allOs = computed(() => {
   const os = [];

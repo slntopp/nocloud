@@ -1,6 +1,7 @@
 <template>
   <div class="login-view">
-    <v-container fluid fill-height>
+    <!-- Vuetify 4: fill-height no longer centers vertically by itself -->
+    <v-container fluid class="fill-height d-flex align-center flex-wrap">
       <v-row class="align-center justify-center">
         <v-col cols="12" sm="8" md="4" xl="3">
           <v-card class="elevation-12">

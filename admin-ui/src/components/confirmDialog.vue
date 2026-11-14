@@ -32,6 +32,7 @@
 </template>
 <script>
 export default {
+  emits: ["cancel", "confirm"],
   props: {
     successDisabled: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },

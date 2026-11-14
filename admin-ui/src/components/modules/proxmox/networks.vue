@@ -128,7 +128,7 @@
           <!-- Leases -->
           <div class="d-flex align-center mt-4 mb-1" style="gap: 12px">
             <span class="text-subtitle-2">Leases</span>
-            <v-btn-toggle v-model="stateFilter[kind]" density="compact" mandatory>
+            <v-btn-toggle v-model="stateFilter[kind]" density="compact" mandatory="force">
               <v-btn size="x-small" value="">all</v-btn>
               <v-btn size="x-small" value="free">free</v-btn>
               <v-btn size="x-small" value="used">used</v-btn>

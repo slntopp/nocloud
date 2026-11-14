@@ -71,6 +71,7 @@ import AddInstanceBtn from "@/components/ui/addInstanceBtn.vue";
 
 export default {
   name: "ovh-create-service-module",
+  emits: ["update:instances-group"],
   components: { AddInstanceBtn },
   props: ["instances-group", "plans", "planRules", "meta"],
   data: () => ({

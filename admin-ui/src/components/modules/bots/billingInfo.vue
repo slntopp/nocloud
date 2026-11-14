@@ -226,7 +226,7 @@ import { formatPrice } from "../../../functions";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits(["refresh", "update"]);
 
 const { template, service, account, addons } = toRefs(props);
 

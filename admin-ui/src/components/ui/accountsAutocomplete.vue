@@ -3,7 +3,7 @@
     placeholder="Start typing..."
     :items="allAccounts"
     :customFilter="accountsFilter"
-    :model-value="value"
+    :model-value="fieldValue"
     @update:model-value="emit('update:modelValue', $event)"
     item-title="title"
     item-value="uuid"
@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { toRefs, ref, onMounted, watch } from "vue";
+import { toRefs, ref, onMounted, watch, computed } from "vue";
 import api from "@/api";
 import { debounce } from "@/functions";
 
@@ -46,6 +46,15 @@ const props = defineProps({
   advanced: { type: Boolean, default: false },
 });
 const { modelValue: value, fetchValue, multiple, loading, returnObject } = toRefs(props);
+
+// Vuetify 3+ return-object does not match a uuid string against the item
+// objects (Vuetify 2 did), so map uuid strings to the loaded items for display.
+const fieldValue = computed(() => {
+  if (!returnObject.value) return value.value;
+  const resolve = (v) =>
+    typeof v === "string" ? (allAccounts.value.find((i) => i.uuid === v) ?? v) : v;
+  return Array.isArray(value.value) ? value.value.map(resolve) : resolve(value.value);
+});
 
 const emit = defineEmits(["update:modelValue"]);
 
@@ -73,7 +82,9 @@ const updateAccounts = async (value) => {
         search_param: value,
       },
     });
-    allAccounts.value.push(...data.pool);
+    // skip accounts already in the list (searches can overlap)
+    const known = new Set(allAccounts.value.map((acc) => acc.uuid));
+    allAccounts.value.push(...data.pool.filter((acc) => !known.has(acc.uuid)));
   } finally {
     isLoading.value = false;
   }
@@ -90,10 +101,14 @@ const accountsFilter = (_, __, internalItem) => {
   return true;
 };
 
+// Vuetify 3+ emits update:search also on focus/selection, not only while
+// typing (Vuetify 2's update:search-input); ignore repeats of the same text.
+let lastSearch = "";
 const onSearchInput = async (e) => {
-  if (isInitLoading.value) {
+  if (isInitLoading.value || (e ?? "") === lastSearch) {
     return;
   }
+  lastSearch = e ?? "";
 
   isLoading.value = true;
 
@@ -134,8 +149,9 @@ const fetchAccount = async () => {
   }
 };
 
+// account may be a plain uuid: Vuetify 3+ also renders values missing from items
 const getAdvancedItem = (account) =>
-  `${account.title} ${
+  typeof account !== "object" || !account ? String(account ?? "") : `${account.title} ${
     account.data?.email ? "- " + account.data?.email : ""
   } (${account.uuid.slice(0, 6)})`;
 

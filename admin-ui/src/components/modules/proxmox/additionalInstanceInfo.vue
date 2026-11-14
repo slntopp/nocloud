@@ -108,7 +108,7 @@
     </v-row>
     <v-row v-if="template.data?.error || template.data?.last_task">
       <v-col v-if="template.data?.error" cols="12">
-        <v-alert density="compact" text type="error">{{ template.data.error }}</v-alert>
+        <v-alert density="compact" variant="tonal" type="error">{{ template.data.error }}</v-alert>
       </v-col>
       <v-col v-if="template.data?.last_task" cols="12">
         <v-text-field readonly label="Running PVE task" :model-value="template.data.last_task" />

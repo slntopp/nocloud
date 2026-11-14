@@ -27,7 +27,7 @@
         <v-text-field readonly :model-value="secrets.ca_cert ? 'set' : '-'" label="ca_cert" />
       </v-col>
       <v-col cols="12" v-if="!secrets.user">
-        <v-alert density="compact" text type="warning">
+        <v-alert density="compact" variant="tonal" type="warning">
           VNC console needs user + pass: PVE vncwebsocket rejects API tokens.
         </v-alert>
       </v-col>

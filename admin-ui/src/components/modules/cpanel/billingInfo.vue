@@ -196,7 +196,7 @@ import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits(["refresh", "update"]);
 
 const { template, addons, account } = toRefs(props);
 

@@ -19,6 +19,7 @@ import api from '@/api.js'
 
 export default {
     name: "namespace-info",
+    emits: ["input:title"],
     data: () => ({ isEditLoading: false, newTitle: '' }),
     props: ['namespace', 'loading'],
     methods: {

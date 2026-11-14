@@ -27,7 +27,7 @@
           <v-radio label="User + password" value="password" />
           <v-radio label="API token" value="token" />
         </v-radio-group>
-        <v-alert v-if="authMode === 'token'" density="compact" text type="info">
+        <v-alert v-if="authMode === 'token'" density="compact" variant="tonal" type="info">
           PVE vncwebsocket does not accept API tokens: the VNC console requires
           user + password. Everything else works with a token.
         </v-alert>
@@ -370,6 +370,7 @@ const DEFAULT_VARS = {
 
 export default {
   name: "servicesProviders-create-proxmox",
+  emits: ["change:secrets", "change:vars", "passed"],
   components: { JsonEditor, subheaderWithInfo, IpPoolEditor },
   props: {
     secrets: { type: Object, default: () => ({}) },

@@ -18,7 +18,7 @@ const props = defineProps({
 });
 const { name, template, type, disabled, small, title } = toRefs(props);
 
-const emit = defineEmits("click:xlsx");
+const emit = defineEmits(["click:xlsx"]);
 
 const isJson = computed(() => {
   return type.value === "JSON";

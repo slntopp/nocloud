@@ -93,13 +93,15 @@
             :loading="isInstancesLoading"
           >
             <template v-slot:selection="{ internalItem: item }">
-              <div class="mr-1">
-                <span>
-                  {{ item.raw.title }}
-                  ({{ item.raw.uuid.slice(0, 6) }})
-                </span>
-              </div>
-              <instance-state only-color small :template="item.raw" />
+              <template v-if="item.raw && typeof item.raw === 'object'">
+                <div class="mr-1">
+                  <span>
+                    {{ item.raw.title }}
+                    ({{ item.raw.uuid.slice(0, 6) }})
+                  </span>
+                </div>
+                <instance-state only-color small :template="item.raw" />
+              </template>
             </template>
 
             <template v-slot:item="{ internalItem: item, props: itemProps }">

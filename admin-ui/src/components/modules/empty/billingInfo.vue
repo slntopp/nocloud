@@ -295,7 +295,7 @@ import useAiPackage from "@/hooks/useAiPackage";
 import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits(["refresh", "update"]);
 
 const { template, service, account, addons } = toRefs(props);
 

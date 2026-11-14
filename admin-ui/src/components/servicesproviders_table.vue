@@ -215,11 +215,16 @@ export default {
     tableData() {
       this.fetchError = "";
     },
-    allTypes(val) {
-      if (val) {
-        this.$store.commit("appSearch/setSearchName", "services-providers");
-        this.$store.commit("appSearch/setFields", this.searchFields);
-      }
+    // deep: types are pushed into the array; Vue 3 array watchers only fire
+    // on replacement unless deep
+    allTypes: {
+      handler(val) {
+        if (val) {
+          this.$store.commit("appSearch/setSearchName", "services-providers");
+          this.$store.commit("appSearch/setFields", this.searchFields);
+        }
+      },
+      deep: true,
     },
   },
 };

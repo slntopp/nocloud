@@ -101,11 +101,13 @@
           </template>
 
           <template v-slot:selection="{ internalItem: item }">
-            <div
-              :style="{ backgroundColor: item.raw.color }"
-              class="box-color"
-            ></div>
-            {{ item.title }}
+            <template v-if="item.raw && typeof item.raw === 'object'">
+              <div
+                :style="{ backgroundColor: item.raw.color }"
+                class="box-color"
+              ></div>
+              {{ item.title }}
+            </template>
           </template>
         </v-select>
       </v-col>

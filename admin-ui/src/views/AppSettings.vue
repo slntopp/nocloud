@@ -51,7 +51,6 @@
         <v-text-field v-model="settings.app.title" label="App title" />
       </v-col>
       <v-col cols="2">
-        <template>
           <v-menu open-on-hover location="top" >
             <template v-slot:activator="{ props }">
               <v-text-field
@@ -64,7 +63,6 @@
               filename with extension or path from ./img, blank if don't need
             </v-card-title>
           </v-menu>
-        </template>
       </v-col>
       <v-col cols="2">
         <v-select

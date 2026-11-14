@@ -16,7 +16,7 @@
       </v-btn>
     </div>
 
-    <v-alert v-if="modelsError" type="warning" text density="compact">
+    <v-alert v-if="modelsError" type="warning" variant="tonal" density="compact">
       {{ modelsError }}
     </v-alert>
 
@@ -221,7 +221,7 @@
               />
             </v-col>
           </v-row>
-          <v-alert v-if="formMessage" type="error" text density="compact" class="mt-3 mb-0">
+          <v-alert v-if="formMessage" type="error" variant="tonal" density="compact" class="mt-3 mb-0">
             {{ formMessage }}
           </v-alert>
         </v-card-text>
