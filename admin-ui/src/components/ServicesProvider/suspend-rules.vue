@@ -23,7 +23,7 @@
             :model-value="suspendRules[day]?.rules?.length === 0"
             label="Enable all day"
           />
-          <v-btn @click="addNewIn(day)" class="ml-2" icon>
+          <v-btn @click="addNewIn(day)" class="ml-2" icon variant="text">
             <v-icon>mdi-plus</v-icon>
           </v-btn></v-card-title
         >
@@ -59,7 +59,7 @@
           </div>
 
           <div class="d-flex justify-center align-center">
-            <v-btn @click="deleteRangeFromDay(day, index)" class="mr-2" icon>
+            <v-btn @click="deleteRangeFromDay(day, index)" class="mr-2" icon variant="text">
               <v-icon>mdi-delete</v-icon>
             </v-btn>
           </div>

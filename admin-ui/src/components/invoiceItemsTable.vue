@@ -54,7 +54,7 @@
 
     <template v-slot:[`item.actions`]="{ index }">
       <div class="d-flex justify-center">
-        <v-btn icon @click="emit('click:delete', index)"
+        <v-btn icon variant="text" @click="emit('click:delete', index)"
           ><v-icon>mdi-delete</v-icon></v-btn
         >
       </div>

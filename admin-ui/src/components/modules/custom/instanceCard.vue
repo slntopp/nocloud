@@ -4,7 +4,7 @@
       <h3 v-if="dense">Config:</h3>
       <v-card-title v-else class="px-0">Config:</v-card-title>
     </v-row>
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col v-for="(item, key) in template.config" :key="key">
         <v-text-field
           readonly
@@ -19,7 +19,7 @@
       <h3 v-if="dense">Resources:</h3>
       <v-card-title v-else class="px-0">Resources:</v-card-title>
     </v-row>
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col v-for="(item, key) in template.resources" :key="key">
         <v-text-field
           readonly

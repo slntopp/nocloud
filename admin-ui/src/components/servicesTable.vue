@@ -14,7 +14,7 @@
     @update:options="setOptions"
   >
     <template v-slot:[`item.hash`]="{ item, index }">
-      <v-btn icon @click="addToClipboard(item.hash, index)">
+      <v-btn icon variant="text" @click="addToClipboard(item.hash, index)">
         <v-icon v-if="copyed == index"> mdi-check </v-icon>
         <v-icon v-else> mdi-content-copy </v-icon>
       </v-btn>

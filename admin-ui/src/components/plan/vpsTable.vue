@@ -1,10 +1,8 @@
 <template>
   <div>
     <v-row
-      class="my-4"
+      class="my-4 align-center justify-space-between"
       v-if="!isPlansLoading"
-      align="center"
-      justify="space-between"
     >
       <div>
         <v-btn class="ml-3" @click="refreshPlans" :loading="isRefreshLoading"

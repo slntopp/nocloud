@@ -89,7 +89,7 @@
           label="Account Group"
           clearable
         >
-          <template v-slot:item="{ item, props: itemProps }">
+          <template v-slot:item="{ internalItem: item, props: itemProps }">
             <v-list-item v-bind="itemProps">
               <template v-slot:prepend>
                 <div
@@ -100,7 +100,7 @@
             </v-list-item>
           </template>
 
-          <template v-slot:selection="{ item }">
+          <template v-slot:selection="{ internalItem: item }">
             <div
               :style="{ backgroundColor: item.raw.color }"
               class="box-color"

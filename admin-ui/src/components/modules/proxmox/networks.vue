@@ -67,7 +67,7 @@
                   <td>{{ ar.hold }}</td>
                   <td>{{ ar.free }}</td>
                   <td>
-                    <v-row dense>
+                    <v-row density="compact">
                       <v-col cols="6">
                         <v-text-field v-model="editAR.gateway" density="compact" hide-details placeholder="gateway" />
                       </v-col>
@@ -83,10 +83,10 @@
                     </v-row>
                   </td>
                   <td class="text-no-wrap">
-                    <v-btn icon size="x-small" color="success" :loading="isSaving" :disabled="!editAR.ip || !(editAR.size > 0)" @click="saveAR(kind, ar.id)">
+                    <v-btn icon variant="text" size="x-small" color="success" :loading="isSaving" :disabled="!editAR.ip || !(editAR.size > 0)" @click="saveAR(kind, ar.id)">
                       <v-icon size="small">mdi-check</v-icon>
                     </v-btn>
-                    <v-btn icon size="x-small" @click="cancelEditAR">
+                    <v-btn icon variant="text" size="x-small" @click="cancelEditAR">
                       <v-icon size="small">mdi-close</v-icon>
                     </v-btn>
                   </td>
@@ -106,13 +106,13 @@
                     <span v-if="!ar.gateway && !ar.prefix && !ar.bridge && !ar.vlan_tag">—</span>
                   </td>
                   <td class="text-no-wrap">
-                    <v-btn icon size="x-small" :disabled="isSaving" title="edit range" @click="startEditAR(kind, ar)">
+                    <v-btn icon variant="text" size="x-small" :disabled="isSaving" title="edit range" @click="startEditAR(kind, ar)">
                       <v-icon size="small">mdi-pencil</v-icon>
                     </v-btn>
                     <v-tooltip location="bottom">
                       <template v-slot:activator="{ props }">
                         <span v-bind="props">
-                          <v-btn icon size="x-small" :disabled="ar.used > 0 || isSaving" @click="removeAR(kind, ar.id)">
+                          <v-btn icon variant="text" size="x-small" :disabled="ar.used > 0 || isSaving" @click="removeAR(kind, ar.id)">
                             <v-icon size="small">mdi-delete</v-icon>
                           </v-btn>
                         </span>
@@ -219,7 +219,7 @@
       <v-card color="background-light">
         <v-card-title>Add address range — {{ addKind }}</v-card-title>
         <v-card-text>
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="7"><v-text-field label="First IP" v-model="newAR.ip" placeholder="185.66.69.151" /></v-col>
             <v-col cols="5"><v-text-field label="Size" type="number" min="1" v-model.number="newAR.size" /></v-col>
           </v-row>
@@ -229,7 +229,7 @@
             <v-expansion-panel>
               <v-expansion-panel-title class="px-0">Overrides (optional)</v-expansion-panel-title>
               <v-expansion-panel-text>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="6"><v-text-field density="compact" label="Gateway" v-model="newAR.gateway" /></v-col>
                   <v-col cols="6"><v-text-field density="compact" type="number" label="Prefix" v-model.number="newAR.prefix" /></v-col>
                   <v-col cols="6"><v-text-field density="compact" label="Bridge" v-model="newAR.bridge" /></v-col>

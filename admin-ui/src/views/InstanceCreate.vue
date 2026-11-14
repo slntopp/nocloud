@@ -1,7 +1,7 @@
 <template>
   <v-form v-model="formValid" ref="form">
     <v-container>
-      <v-row justify="start">
+      <v-row class="justify-start">
         <v-col cols="4" md="3" lg="2">
           <accounts-autocomplete
             label="account"
@@ -91,7 +91,7 @@
         :sp-uuid="serviceProviderId"
         :is="templates[type] ?? templates.custom"
       />
-      <v-row class="mx-5" justify="end">
+      <v-row class="mx-5 justify-end">
         <v-btn :loading="isCreateLoading" @click="save">Create</v-btn>
       </v-row>
     </v-container>

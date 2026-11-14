@@ -9,7 +9,7 @@
     :model-value="value"
     @update:model-value="emits('update:modelValue', $event)"
   >
-    <template v-slot:item="{ item, props: itemProps }">
+    <template v-slot:item="{ internalItem: item, props: itemProps }">
       <v-list-item v-bind="itemProps" :title="undefined">
         <span
           >{{ item.title }} {{ item.raw.sp ? `(${item.raw.sp})` : "" }}

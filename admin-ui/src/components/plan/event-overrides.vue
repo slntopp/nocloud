@@ -28,11 +28,11 @@
             <v-btn
               :loading="isDeleteOverrideLoading"
               @click="deleteOverride(eventOverride)"
-              icon
+              icon variant="text"
             >
               <v-icon>mdi-delete</v-icon>
             </v-btn>
-            <v-btn @click="editOverride(eventOverride)" icon>
+            <v-btn @click="editOverride(eventOverride)" icon variant="text">
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
           </div>

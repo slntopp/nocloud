@@ -91,7 +91,7 @@
               </template>
 
               <template v-slot:[`item.addons`]="{ item }">
-                <v-btn icon @click="openAddons(item)">
+                <v-btn icon variant="text" @click="openAddons(item)">
                   <v-icon> mdi-menu-open </v-icon>
                 </v-btn>
               </template>

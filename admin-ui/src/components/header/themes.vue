@@ -76,7 +76,14 @@ watch(theme, (newValue) => {
 <template>
   <v-menu transition="slide-y-transition">
     <template v-slot:activator="{ props }">
-      <v-btn class="mx-2" icon color="background-light" v-bind="props">
+      <v-btn
+        class="mx-2"
+        icon
+        variant="elevated"
+        size="large"
+        color="background-light"
+        v-bind="props"
+      >
         <v-icon> {{ currentTheme.icon }} </v-icon>
       </v-btn>
     </template>

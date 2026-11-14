@@ -41,7 +41,7 @@
             item-value="key"
             @update:model-value="changeProduct"
           >
-            <template v-slot:item="{ item, props: itemProps }">
+            <template v-slot:item="{ internalItem: item, props: itemProps }">
               <v-list-item v-bind="itemProps">
                 <template #title>
                   <div

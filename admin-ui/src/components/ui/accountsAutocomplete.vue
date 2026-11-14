@@ -17,11 +17,11 @@
     :clearable="clearable"
     :density="dense ? 'compact' : undefined"
   >
-    <template v-if="advanced" v-slot:selection="{ item }">
+    <template v-if="advanced" v-slot:selection="{ internalItem: item }">
       {{ getAdvancedItem(item.raw) }}
     </template>
 
-    <template v-if="advanced" v-slot:item="{ item, props: itemProps }">
+    <template v-if="advanced" v-slot:item="{ internalItem: item, props: itemProps }">
       <v-list-item v-bind="itemProps" :title="getAdvancedItem(item.raw)" />
     </template>
   </v-autocomplete>

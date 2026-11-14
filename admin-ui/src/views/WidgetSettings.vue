@@ -1,6 +1,6 @@
 <template>
   <div class="settings pa-10">
-    <v-row justify="center">
+    <v-row class="justify-center">
       <v-card-title>Map settings</v-card-title>
     </v-row>
     <v-card-title>Map widget script:</v-card-title>

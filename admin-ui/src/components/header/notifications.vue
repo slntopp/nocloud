@@ -5,6 +5,8 @@
         class="mx-2"
         :loading="isFetchLoading"
         icon
+        variant="elevated"
+        size="large"
         color="background-light"
        
         v-bind="props"

@@ -51,13 +51,13 @@
           </v-col>
         </v-row>
 
-        <v-row justify="end" class="mt-6 mx-0">
+        <v-row class="mt-6 mx-0 justify-end">
           <confirm-dialog v-if="isEdit" @confirm="deleteSetting">
             <v-btn variant="text" color="error" class="mr-3 action-btn-text">Delete</v-btn>
           </confirm-dialog>
 
-          <confirm-dialog :disabled="isValid === false" @confirm="saveSetting">
-            <v-btn class="px-8 action-btn-main" :loading="isSaveLoading" :disabled="isValid === false" elevation="0">
+          <confirm-dialog :disabled="!isValid" @confirm="saveSetting">
+            <v-btn class="px-8 action-btn-main" :loading="isSaveLoading" :disabled="!isValid" elevation="0">
               {{ isEdit ? "Save" : "Create" }}
             </v-btn>
           </confirm-dialog>

@@ -19,7 +19,7 @@
             label="Code"
           >
             <template v-slot:append-inner>
-              <v-btn size="small" @click="newPromocode.code = generateCode()" icon
+              <v-btn size="small" @click="newPromocode.code = generateCode()" icon variant="text"
                 ><v-icon size="small">mdi-pound</v-icon></v-btn
               >
             </template>
@@ -251,7 +251,7 @@
         </v-window-item>
       </v-window>
 
-      <v-row justify="space-between" class="mt-4 mb-4">
+      <v-row class="mt-4 mb-4 justify-space-between">
         <div class="mt-2 ml-1">
           <v-btn
             class="mx-3"

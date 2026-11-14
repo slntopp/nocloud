@@ -35,7 +35,7 @@
                 ></v-text-field>
               </v-col>
             </v-row>
-            <v-row justify="end">
+            <v-row class="justify-end">
               <v-btn class="mx-3" @click="emit('update:modelValue', false)">Close</v-btn>
               <v-btn
                 class="mx-3"
@@ -91,7 +91,7 @@
                 ></v-text-field>
               </v-col>
             </v-row>
-            <v-row justify="end">
+            <v-row class="justify-end">
               <v-btn class="mx-3" @click="emit('update:modelValue', false)">Close</v-btn>
               <v-btn
                 class="mx-3"

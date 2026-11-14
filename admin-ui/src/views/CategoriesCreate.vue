@@ -87,7 +87,7 @@
               :key="locale"
               class="mb-2"
             >
-              <v-row align="center">
+              <v-row class="align-center">
                 <v-col cols="1">
                   <v-chip color="primary" variant="outlined" size="small">
                     {{ locale.toUpperCase() }}
@@ -129,7 +129,7 @@
 
           <v-btn
             color="primary"
-            :disabled="formValid === false || !categoryData.title"
+            :disabled="!formValid || !categoryData.title"
             :loading="isSaveLoading"
             @click="saveCategory"
           >

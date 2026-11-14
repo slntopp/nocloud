@@ -90,7 +90,7 @@
                 ></v-select>
               </v-col>
             </v-row>
-            <v-row justify="end">
+            <v-row class="justify-end">
               <v-col md="5">
                 <v-btn :loading="loading" @click="createAccount"> send </v-btn>
               </v-col>

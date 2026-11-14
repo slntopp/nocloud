@@ -65,7 +65,7 @@
                 </v-text-field>
               </v-col>
             </v-row>
-            <v-row justify="end">
+            <v-row class="justify-end">
               <v-btn :loading="isAccountCreateLoading" @click="createAccount">
                 create
               </v-btn>
@@ -138,7 +138,7 @@ const setDefaultAccount = () => {
 };
 
 const createAccount = async () => {
-  if (formValid.value === false) return;
+  if (!formValid.value) return;
   isAccountCreateLoading.value = true;
   try {
     await api.accounts.create({

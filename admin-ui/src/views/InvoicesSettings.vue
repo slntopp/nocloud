@@ -14,7 +14,7 @@
           />
           <v-tooltip location="bottom">
             <template v-slot:activator="{ props }">
-              <v-btn icon v-bind="props">
+              <v-btn icon variant="text" v-bind="props">
                 <v-icon>mdi-help</v-icon>
               </v-btn>
             </template>
@@ -101,7 +101,7 @@
       </v-col>
     </v-row>
 
-    <v-row justify="end" class="mx-5">
+    <v-row class="mx-5 justify-end">
       <v-btn
         @click="resetSettings"
         :disabled="isSettingsLoading"

@@ -1,0 +1,6 @@
+/*
+ * Cascade layer order for Vuetify 4. Must load before any bundled CSS
+ * (linked from index.html, not imported), otherwise the order depends on
+ * chunk order and e.g. the reset layer can override component styles.
+ */
+@layer vuetify-core, vuetify-components, vuetify-overrides, vuetify-utilities, vuetify-final;

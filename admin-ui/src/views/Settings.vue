@@ -73,7 +73,7 @@
             {{ item.key }}
           </router-link>
 
-          <v-btn icon size="small" @click.stop="copyKey(item.key)" class="ml-1">
+          <v-btn icon variant="text" size="small" @click.stop="copyKey(item.key)" class="ml-1">
             <v-icon size="small">mdi-content-copy</v-icon>
           </v-btn>
         </div>

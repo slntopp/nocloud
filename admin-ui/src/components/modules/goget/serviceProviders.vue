@@ -1,6 +1,6 @@
 <template>
   <div class="sp-goget">
-    <v-row align="center" v-for="field in Object.keys(fields)" :key="field">
+    <v-row class="align-center" v-for="field in Object.keys(fields)" :key="field">
       <v-col cols="4">
         <v-list-subheader>
           {{ fields[field].subheader || field }}

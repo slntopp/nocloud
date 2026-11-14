@@ -10,7 +10,7 @@
           <v-icon size="small" class="mr-1">mdi-pin</v-icon>
           Pinned Notes ({{ pinnedNotes.length }})
         </span>
-        <v-btn icon size="small" @click="closePinned">
+        <v-btn icon variant="text" size="small" @click="closePinned">
           <v-icon size="small">mdi-close</v-icon>
         </v-btn>
       </v-card-title>

@@ -2,7 +2,7 @@
   <div>
     <h3 v-if="dense">Resources:</h3>
     <v-card-title v-else class="px-0">Resources:</v-card-title>
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col v-for="(item, key) in resources" :key="key">
         <v-text-field
           readonly
@@ -15,7 +15,7 @@
 
     <h3 v-if="dense">CSR:</h3>
     <v-card-title v-else class="px-0 pb-0">CSR:</v-card-title>
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col lg="6" cols="12">
         <v-textarea readonly :model-value="template.resources.csr" />
       </v-col>
@@ -23,7 +23,7 @@
 
     <h3 v-if="dense">User:</h3>
     <v-card-title v-else class="px-0">User:</v-card-title>
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col v-for="(item, key) in user" :key="key">
         <v-text-field
           readonly

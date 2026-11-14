@@ -21,7 +21,7 @@
         <v-tooltip location="bottom">
           <template v-slot:activator="{ props }">
             <v-btn
-              icon
+              icon variant="text"
               color="primary"
              
               v-bind="props"
@@ -56,7 +56,7 @@
         </v-btn>
       </confirm-dialog>
     </div>
-    <v-row class="mt-0" align="center" justify="end">
+    <v-row class="mt-0 align-center justify-end">
       <v-col class="d-flex justify-end px-1">
         <instance-state :template="template" />
       </v-col>

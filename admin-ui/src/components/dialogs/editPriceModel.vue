@@ -7,7 +7,7 @@
   >
     <v-card class="pa-5">
       <v-card-title class="text-center">Change price model</v-card-title>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="12">
           <plans-autocomplete
             v-model="plan"
@@ -21,7 +21,7 @@
           />
         </v-col>
       </v-row>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
           <v-select
             v-model="selectedPeriod"
@@ -56,7 +56,7 @@
         </v-col>
       </v-row>
 
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
           <v-text-field
             :model-value="fullProduct?.resources?.cpu"
@@ -89,7 +89,7 @@
         </v-col>
       </v-row>
 
-      <v-row justify="end">
+      <v-row class="justify-end">
         <v-btn class="mx-3" @click="cancel">Cancel</v-btn>
         <v-btn
           class="mx-3"

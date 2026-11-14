@@ -32,7 +32,7 @@
 
       <template v-slot:item.actions="{ index }">
         <div class="d-flex justify-center">
-          <v-btn icon>
+          <v-btn icon variant="text">
             <v-icon @click="() => deleteVar(index)"> mdi-delete </v-icon>
           </v-btn>
         </div>

@@ -43,7 +43,7 @@
         </template>
       </nocloud-table>
     </v-row>
-    <v-row justify="end">
+    <v-row class="justify-end">
       <v-btn :loading="isSaveLoading" @click="saveOffering">Save</v-btn>
     </v-row>
   </v-container>

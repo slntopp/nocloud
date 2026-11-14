@@ -25,3 +25,4 @@ pnpm-debug.log*
 
 # temporary codemod config
 eslint.migrate.config.js
+eslint.migrate4.config.js

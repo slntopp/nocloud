@@ -15,7 +15,7 @@
     :show-select="!hideSelect"
   >
     <template v-slot:[`uuid-actions`]="{ item }">
-      <v-btn @click="downloadInvoice(item)" icon>
+      <v-btn @click="downloadInvoice(item)" icon variant="text">
         <v-icon>mdi-download</v-icon>
       </v-btn>
     </template>

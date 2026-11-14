@@ -1,5 +1,5 @@
 <template>
-  <v-row dense>
+  <v-row density="compact">
     <v-col class="d-flex align-center">
       <v-text-field
         density="compact"

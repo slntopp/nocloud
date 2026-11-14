@@ -4,7 +4,7 @@
     <v-form v-model="isValid" ref="form">
       <v-row>
         <v-col lg="6" cols="12">
-          <v-row align="center">
+          <v-row class="align-center">
             <v-col cols="3">
               <v-list-subheader>Type</v-list-subheader>
             </v-col>
@@ -18,13 +18,13 @@
                 :items="types"
                 :loading="isFetchLoading"
               >
-                <template v-slot:item="{ item, props: itemProps }">
+                <template v-slot:item="{ internalItem: item, props: itemProps }">
                   <v-list-item
                     v-bind="itemProps"
                     :title="`${item.raw.title} - ${item.raw.amount.title}`"
                   />
                 </template>
-                <template v-slot:selection="{ item }">
+                <template v-slot:selection="{ internalItem: item }">
                   <span>{{ item.raw.title }} - {{ item.raw.amount.title }}</span>
                 </template>
               </v-select>
@@ -34,7 +34,7 @@
       </v-row>
       <v-row>
         <v-col lg="6" cols="12">
-          <v-row align="center">
+          <v-row class="align-center">
             <v-col cols="3">
               <v-list-subheader>Account</v-list-subheader>
             </v-col>
@@ -51,7 +51,7 @@
                 />
                 <v-btn
                   @click="openAccountWindow"
-                  icon
+                  icon variant="text"
                   v-if="isEdit && !isFetchLoading"
                 >
                   <v-icon>mdi-login</v-icon>
@@ -60,7 +60,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center">
+          <v-row class="align-center">
             <v-col cols="3">
               <v-list-subheader>Service</v-list-subheader>
             </v-col>
@@ -79,7 +79,7 @@
             </v-col>
           </v-row>
 
-          <v-row v-if="transaction.service && instances?.length" align="center">
+          <v-row class="align-center" v-if="transaction.service && instances?.length">
             <v-col cols="3">
               <v-list-subheader>Instances</v-list-subheader>
             </v-col>
@@ -96,7 +96,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center">
+          <v-row class="align-center">
             <v-col cols="3">
               <v-list-subheader>Amount</v-list-subheader>
             </v-col>
@@ -111,7 +111,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center" v-if="isTransaction">
+          <v-row class="align-center" v-if="isTransaction">
             <v-col cols="3">
               <v-list-subheader>Date</v-list-subheader>
             </v-col>
@@ -215,7 +215,7 @@
         </v-col>
       </v-row>
 
-      <v-row justify="start" class="mb-4">
+      <v-row class="mb-4 justify-start">
         <v-btn
           class="mx-3"
           color="background-light"

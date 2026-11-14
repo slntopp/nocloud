@@ -40,7 +40,7 @@
             <v-btn
               :disabled="isRemoveLoading"
               class="mx-1"
-              icon
+              icon variant="text"
               color="primary"
               @click="startEdit(index)"
             >
@@ -51,7 +51,7 @@
               :disabled="isRemoveLoading && removedNoteIndex !== index"
               @click="removeNote(index)"
               class="mx-1"
-              icon
+              icon variant="text"
               color="primary"
             >
               <v-icon>mdi-delete</v-icon>
@@ -62,7 +62,7 @@
               :disabled="isPinLoading && pinNoteIndex !== index"
               @click="pinNote(index, !note.pinned)"
               class="mx-1"
-              icon
+              icon variant="text"
               color="primary"
             >
               <v-icon v-if="!note.pinned">mdi-pin</v-icon>

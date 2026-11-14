@@ -171,7 +171,7 @@
       </v-row>
 
       <!-- Existing: bind an already running PVE guest (TZ §15) -->
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
           <v-switch label="Existing" v-model="existing" />
         </v-col>
@@ -198,7 +198,7 @@
             />
           </v-col>
           <v-col cols="2">
-            <v-btn icon :loading="isVMsLoading" @click="fetchVMs">
+            <v-btn icon variant="text" :loading="isVMsLoading" @click="fetchVMs">
               <v-icon>mdi-refresh</v-icon>
             </v-btn>
           </v-col>

@@ -37,7 +37,7 @@
             :model-value="account?.title"
           />
           <account-grade :account="account" />
-          <v-btn icon @click="moveDialog = true">
+          <v-btn icon variant="text" @click="moveDialog = true">
             <v-icon size="30">mdi-arrow-up-bold</v-icon>
           </v-btn>
         </div>

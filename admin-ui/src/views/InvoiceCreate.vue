@@ -62,7 +62,7 @@
           <v-btn
             style="margin-top: 20px"
             @click="openAccountWindow"
-            icon
+            icon variant="text"
             v-if="isEdit && newInvoice.account && !isInstancesLoading"
           >
             <v-icon>mdi-login</v-icon>
@@ -92,7 +92,7 @@
             @update:model-value="onChangeInstance"
             :loading="isInstancesLoading"
           >
-            <template v-slot:selection="{ item }">
+            <template v-slot:selection="{ internalItem: item }">
               <div class="mr-1">
                 <span>
                   {{ item.raw.title }}
@@ -102,7 +102,7 @@
               <instance-state only-color small :template="item.raw" />
             </template>
 
-            <template v-slot:item="{ item, props: itemProps }">
+            <template v-slot:item="{ internalItem: item, props: itemProps }">
               <v-list-item v-bind="itemProps">
                 <template v-slot:title>
                   <span>
@@ -204,7 +204,7 @@
         />
       </nocloud-expansion-panels>
 
-      <v-row justify="space-between" class="mt-4 mb-4">
+      <v-row class="mt-4 mb-4 justify-space-between">
         <div class="mt-2 ml-1">
           <v-btn
             v-if="!isEdit"

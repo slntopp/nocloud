@@ -13,20 +13,22 @@
           placeholder="Search..."
           single-line
           bg-color="background-light"
-          dence
-          rounded
+          variant="solo"
+          flat
+          density="compact"
+          rounded="pill"
           class="search__input"
           @keydown.enter="hideSearch"
           v-model="param"
         >
           <template v-slot:append-inner>
             <div class="d-flex" style="margin-top: 2px">
-              <v-btn v-if="!isResetAllHide" icon size="small" @click="resetAll">
+              <v-btn v-if="!isResetAllHide" icon variant="text" size="small" @click="resetAll">
                 <v-icon size="23">mdi-close</v-icon>
               </v-btn>
               <v-btn
                 v-if="searchName"
-                icon
+                icon variant="text"
                 size="small"
                 @click="isOpen ? hideSearch() : showSearch()"
               >
@@ -45,7 +47,7 @@
               color="primary"
               v-if="currentLayout"
               >{{ currentLayout.title }}
-              <v-btn icon size="x-small" @click.stop="setCurrentLayout('')">
+              <v-btn icon variant="text" size="x-small" @click.stop="setCurrentLayout('')">
                 <v-icon size="small">mdi-close</v-icon>
               </v-btn>
             </v-chip>
@@ -107,14 +109,14 @@
                       <v-btn
                         @click="setPinned(layout.id)"
                         size="small"
-                        icon
+                        icon variant="text"
                         :color="isPinned(layout) ? 'primary' : undefined"
                       >
                         <v-icon size="small">{{
                           isPinned(layout) ? "mdi-pin" : "mdi-pin-off"
                         }}</v-icon>
                       </v-btn>
-                      <v-btn @click="deleteLayout(layout.id)" size="small" icon>
+                      <v-btn @click="deleteLayout(layout.id)" size="small" icon variant="text">
                         <v-icon size="small">mdi-close</v-icon>
                       </v-btn>
                     </template>
@@ -132,10 +134,10 @@
                     >
                       <template v-slot:append-inner>
                         <v-btn
-                          :disabled="isNewLayoutValid === false"
+                          :disabled="!isNewLayoutValid"
                           @click="saveNewLayout"
                           size="small"
-                          icon
+                          icon variant="text"
                         >
                           <v-icon size="small">mdi-content-save</v-icon>
                         </v-btn>
@@ -198,7 +200,7 @@
                 />
                 <v-btn
                   :disabled="isFieldsDisabled"
-                  icon
+                  icon variant="text"
                   size="small"
                   @click="changeFields(currentFields[fieldKey], false)"
                 >
@@ -208,7 +210,7 @@
             </v-row>
           </v-col>
         </v-row>
-        <v-row justify="space-between">
+        <v-row class="justify-space-between">
           <v-col
             cols="3"
             :class="{
@@ -248,7 +250,7 @@
                 >
               </template>
               <v-card class="pa-5">
-                <v-row align="center" style="max-width: 35vw">
+                <v-row class="align-center" style="max-width: 35vw">
                   <v-col
                     v-for="field in allFields"
                     :key="field.key"

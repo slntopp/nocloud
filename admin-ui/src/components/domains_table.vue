@@ -28,10 +28,10 @@
           v-model="selectedPeriodIndex"
           :items="domainPeriods"
         >
-          <template v-slot:selection="{ item }">
+          <template v-slot:selection="{ internalItem: item }">
             {{ item.title + " years" }}
           </template>
-          <template v-slot:item="{ item, props }">
+          <template v-slot:item="{ internalItem: item, props }">
             <v-list-item v-bind="props" :title="item.title + ' years'" />
           </template>
         </v-select>

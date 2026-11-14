@@ -1,7 +1,14 @@
 <template>
   <v-menu transition="slide-y-transition">
     <template v-slot:activator="{ props }">
-      <v-btn class="mx-2" icon color="background-light" v-bind="props">
+      <v-btn
+        class="mx-2"
+        icon
+        variant="elevated"
+        size="large"
+        color="background-light"
+        v-bind="props"
+      >
         <v-icon > mdi-account </v-icon>
       </v-btn>
     </template>

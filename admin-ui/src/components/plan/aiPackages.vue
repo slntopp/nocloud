@@ -83,10 +83,10 @@
       </template>
       <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex">
-          <v-btn icon size="small" title="Edit" @click="openEdit(item.key)">
+          <v-btn icon variant="text" size="small" title="Edit" @click="openEdit(item.key)">
             <v-icon size="small">mdi-pencil</v-icon>
           </v-btn>
-          <v-btn icon size="small" title="Duplicate" @click="duplicate(item.key)">
+          <v-btn icon variant="text" size="small" title="Duplicate" @click="duplicate(item.key)">
             <v-icon size="small">mdi-content-copy</v-icon>
           </v-btn>
           <confirm-dialog
@@ -94,7 +94,7 @@
             text="Instances bought on it keep running but lose their product: renewals and AI credit stop working for them. Save to apply."
             @confirm="remove(item.key)"
           >
-            <v-btn icon size="small" title="Delete">
+            <v-btn icon variant="text" size="small" title="Delete">
               <v-icon size="small" color="error">mdi-delete</v-icon>
             </v-btn>
           </confirm-dialog>
@@ -108,7 +108,7 @@
           {{ editingKey ? "Edit package" : "New package" }}
         </v-card-title>
         <v-card-text>
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="6">
               <v-text-field
                 v-model="form.key"

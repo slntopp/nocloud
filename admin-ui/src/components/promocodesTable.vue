@@ -21,7 +21,7 @@
     <template v-slot:[`item.code`]="{ item }">
       <div>
         <v-chip>{{ item.code }}</v-chip>
-        <v-btn icon @click="copyCode(item)" class="ml-2">
+        <v-btn icon variant="text" @click="copyCode(item)" class="ml-2">
           <v-icon>mdi-content-copy</v-icon>
         </v-btn>
       </div>

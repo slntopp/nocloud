@@ -6,6 +6,7 @@
   <v-btn
     v-else
     icon
+    variant="flat"
     :color="chipColor"
     size="x-small"
     style="width: 15px; height: 15px"

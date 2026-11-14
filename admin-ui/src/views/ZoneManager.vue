@@ -66,7 +66,7 @@
               </v-text-field>
             </v-col>
           </v-row>
-          <v-row justify="end">
+          <v-row class="justify-end">
             <v-col class="d-flex justify-end">
               <v-btn :loading="newHost.loading" @click="createZone">
                 send

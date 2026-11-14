@@ -34,10 +34,10 @@
       <v-list-item v-for="(net, index) of newIps" :key="net + index">
         <v-text-field :model-value="net" @update:model-value="newIps[index] = $event" density="compact">
           <template v-slot:append-inner>
-            <v-btn icon @click="deleteFromNewIps(index)">
+            <v-btn icon variant="text" @click="deleteFromNewIps(index)">
               <v-icon> mdi-delete</v-icon>
             </v-btn>
-            <v-btn icon @click="addToClipboard(net)">
+            <v-btn icon variant="text" @click="addToClipboard(net)">
               <v-icon> mdi-content-copy</v-icon>
             </v-btn>
           </template>
@@ -52,10 +52,10 @@
       </v-list-item>
 
       <v-list-item class="d-flex justify-end">
-        <v-btn icon @click="addToNewIps()">
+        <v-btn icon variant="text" @click="addToNewIps()">
           <v-icon> mdi-plus</v-icon>
         </v-btn>
-        <v-btn :loading="isSaveNewIpLoading" icon @click="saveNewIps()">
+        <v-btn :loading="isSaveNewIpLoading" icon variant="text" @click="saveNewIps()">
           <v-icon> mdi-content-save</v-icon>
         </v-btn>
       </v-list-item>

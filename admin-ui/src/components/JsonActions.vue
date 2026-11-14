@@ -1,5 +1,5 @@
 <template>
-  <v-row dense>
+  <v-row density="compact">
     <v-col class="column justify-end" cols="4">
       <v-btn
         

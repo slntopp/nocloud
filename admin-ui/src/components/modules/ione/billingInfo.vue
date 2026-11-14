@@ -87,7 +87,7 @@
           <template v-if="item.isAddon">
             <v-chip size="small" class="ml-1">Addon</v-chip>
             <confirm-dialog @confirm="removeAddon(item)">
-              <v-btn icon size="small" class="ml-1">
+              <v-btn icon variant="text" size="small" class="ml-1">
                 <v-icon size="small">mdi-delete</v-icon>
               </v-btn>
             </confirm-dialog>

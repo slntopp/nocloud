@@ -301,7 +301,7 @@
       <v-divider class="my-4" />
 
       <!-- Actions -->
-      <v-row class="mt-3" justify="end">
+      <v-row class="mt-3 justify-end">
         <v-col cols="3">
           <v-btn
             :loading="isSaveLoading"

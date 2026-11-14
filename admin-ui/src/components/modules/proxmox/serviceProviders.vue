@@ -1,7 +1,7 @@
 <template>
   <div class="sp-proxmox">
     <!-- Connection -->
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.host">Host</subheader-with-info>
       </v-col>
@@ -16,7 +16,7 @@
       </v-col>
     </v-row>
 
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.auth_mode">
           Authorization
@@ -35,7 +35,7 @@
     </v-row>
 
     <template v-if="authMode === 'token'">
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="4">
           <subheader-with-info infoText="SPInfo.proxmox.token_id">Token ID</subheader-with-info>
         </v-col>
@@ -48,7 +48,7 @@
           />
         </v-col>
       </v-row>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="4">
           <subheader-with-info infoText="SPInfo.proxmox.token_secret">Token secret</subheader-with-info>
         </v-col>
@@ -64,7 +64,7 @@
       </v-row>
     </template>
     <template v-else>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="4">
           <subheader-with-info infoText="SPInfo.proxmox.user">User</subheader-with-info>
         </v-col>
@@ -77,7 +77,7 @@
           />
         </v-col>
       </v-row>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="4">
           <subheader-with-info infoText="SPInfo.proxmox.pass">Password</subheader-with-info>
         </v-col>
@@ -93,7 +93,7 @@
       </v-row>
     </template>
 
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.insecure">Skip TLS verify</subheader-with-info>
       </v-col>
@@ -119,7 +119,7 @@
       </v-col>
     </v-row>
 
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.pool">Pool</subheader-with-info>
       </v-col>
@@ -191,7 +191,7 @@
       </v-col>
     </v-row>
 
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.private_vnet_ban">
           Private network functions
@@ -224,7 +224,7 @@
     <v-divider class="my-4" />
 
     <!-- VM options -->
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.full_clone">Full clone</subheader-with-info>
       </v-col>
@@ -237,7 +237,7 @@
       </v-col>
     </v-row>
 
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.vmid_range">VMID range</subheader-with-info>
       </v-col>
@@ -260,7 +260,7 @@
       </v-col>
     </v-row>
 
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.suspend_mode">Suspend mode</subheader-with-info>
       </v-col>
@@ -273,7 +273,7 @@
       </v-col>
     </v-row>
 
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col cols="4">
         <subheader-with-info infoText="SPInfo.proxmox.qemu_agent_required">
           QEMU guest agent

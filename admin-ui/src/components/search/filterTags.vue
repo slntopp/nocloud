@@ -8,7 +8,7 @@
       variant="outlined"
       color="primary"
       >{{ tag.title }}
-      <v-btn icon size="x-small" @click.stop="deleteParam(tag)">
+      <v-btn icon variant="text" size="x-small" @click.stop="deleteParam(tag)">
         <v-icon size="small">mdi-close</v-icon>
       </v-btn>
     </v-chip>

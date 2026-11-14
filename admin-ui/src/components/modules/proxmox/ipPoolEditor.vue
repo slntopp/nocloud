@@ -3,7 +3,7 @@
     <div class="d-flex align-center mb-1">
       <span class="text-subtitle-1 font-weight-medium">{{ title }}</span>
       <v-spacer />
-      <v-btn icon size="small" :title="rawMode ? 'form' : 'edit as JSON'" @click="rawMode = !rawMode">
+      <v-btn icon variant="text" size="small" :title="rawMode ? 'form' : 'edit as JSON'" @click="rawMode = !rawMode">
         <v-icon size="small">{{ rawMode ? "mdi-form-select" : "mdi-code-json" }}</v-icon>
       </v-btn>
     </div>
@@ -13,7 +13,7 @@
     <template v-else>
       <!-- Network attributes -->
       <div class="section-label">Network</div>
-      <v-row dense>
+      <v-row density="compact">
         <v-col cols="8">
           <v-text-field density="compact" variant="outlined" hide-details="auto" label="Bridge" placeholder="vmbr0" :model-value="pool.bridge" :rules="[required]" @change="set('bridge', $event.target.value)" />
         </v-col>
@@ -45,7 +45,7 @@
       </div>
 
       <v-card v-for="(ar, i) in ars" :key="i" border class="ar-row mb-2" color="background-light">
-        <v-row dense align="center" class="px-3 pt-2">
+        <v-row density="compact" class="px-3 pt-2 align-center">
           <v-col cols="auto">
             <v-chip size="small" label variant="outlined" class="ar-id">AR {{ ar.id }}</v-chip>
           </v-col>
@@ -56,10 +56,10 @@
             <v-text-field density="compact" variant="outlined" hide-details="auto" type="number" min="1" label="Size" :model-value="ar.size" @change="setAR(i, 'size', Math.max(1, +$event.target.value || 1))" />
           </v-col>
           <v-col cols="auto">
-            <v-btn icon size="small" :color="expanded[i] ? 'primary' : ''" title="per-range overrides" @click="toggle(i)">
+            <v-btn icon variant="text" size="small" :color="expanded[i] ? 'primary' : ''" title="per-range overrides" @click="toggle(i)">
               <v-icon size="small">mdi-tune-variant</v-icon>
             </v-btn>
-            <v-btn icon size="small" title="remove range" @click="removeAR(i)">
+            <v-btn icon variant="text" size="small" title="remove range" @click="removeAR(i)">
               <v-icon size="small">mdi-close</v-icon>
             </v-btn>
           </v-col>
@@ -72,7 +72,7 @@
         <v-expand-transition>
           <div v-show="expanded[i]" class="px-3 pb-3">
             <div class="text-caption text-medium-emphasis mb-1">Overrides for this range (empty = inherit from network)</div>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="8">
                 <v-text-field density="compact" variant="outlined" hide-details label="Gateway" :model-value="ar.gateway" @change="setAR(i, 'gateway', $event.target.value)" />
               </v-col>

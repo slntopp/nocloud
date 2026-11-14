@@ -1,7 +1,7 @@
 <template>
   <v-card color="background-light">
     <v-card-title>
-      <v-row justify="space-between">
+      <v-row class="justify-space-between">
         <v-col> NoCloud Tunnelmesh </v-col>
         <v-col cols="1">
           <v-icon size="large" color="primary" @click="$emit('remove')">
@@ -11,7 +11,7 @@
       </v-row>
     </v-card-title>
     <v-card-text>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
           <v-list-subheader> hostname </v-list-subheader>
         </v-col>
@@ -27,7 +27,7 @@
           ></v-text-field>
         </v-col>
       </v-row>
-      <v-row align="center">
+      <v-row class="align-center">
 				<v-col cols="2">
 					<v-list-subheader>hash</v-list-subheader>
 				</v-col>
@@ -36,7 +36,7 @@
 					<v-text-field label="your certificate hash" v-model="fingerprint" />
 				</v-col>
 			</v-row>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
           <v-list-subheader> cerificate </v-list-subheader>
         </v-col>

@@ -11,7 +11,7 @@
     <template v-slot:prepend>
       <nocloud-icon :type="currentIcon?.type" :icon="currentIcon?.icon" />
     </template>
-    <template v-slot:item="{ item, props: itemProps }">
+    <template v-slot:item="{ internalItem: item, props: itemProps }">
       <v-list-item v-bind="itemProps" :title="toKebabCase(item.raw.icon)">
         <template v-slot:append>
           <nocloud-icon

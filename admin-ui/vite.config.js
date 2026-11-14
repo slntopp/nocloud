@@ -17,8 +17,12 @@ export default defineConfig({
         },
       },
     }),
-    // auto-imports only the Vuetify components and directives that are used
-    vuetify({ autoImport: true }),
+    // auto-imports only the Vuetify components and directives that are used;
+    // styles are compiled from Sass with our settings (MD2 look, v3 breakpoints)
+    vuetify({
+      autoImport: true,
+      styles: { configFile: "src/styles/vuetify/settings.scss" },
+    }),
   ],
   resolve: {
     alias: {

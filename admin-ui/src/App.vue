@@ -11,7 +11,7 @@
         v-if="isFullscreenAvailable && isFullscreen"
         style="position: fixed; right: 5vw; z-index: 100; margin-top: 1vh"
       >
-        <v-btn @click="toggleFullscreen" color="background-light" icon size="small">
+        <v-btn @click="toggleFullscreen" color="background-light" icon variant="elevated" size="small">
           <v-icon>mdi-fullscreen-exit</v-icon>
         </v-btn>
       </div>
@@ -71,7 +71,7 @@
               }"
             >
               <v-list-subheader>MAIN</v-list-subheader>
-              <v-btn @click="isMenuMinimize = !isMenuMinimize" icon>
+              <v-btn @click="isMenuMinimize = !isMenuMinimize" icon variant="text">
                 <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
                 <v-icon v-else>mdi-arrow-left</v-icon>
               </v-btn>
@@ -383,9 +383,7 @@
         <v-app-bar color="background" elevation="0">
           <v-row
             style="width: 100%"
-            justify="center"
-            align="center"
-            class="flex-nowrap"
+            class="flex-nowrap justify-center align-center"
           >
             <template v-if="isLoggedIn">
               <v-col :style="viewport < 600 ? 'padding: 6px' : null">
@@ -400,6 +398,7 @@
                   :disabled="btnStates.disabled"
                   color="background-light"
                   icon
+                  variant="elevated"
                   size="small"
                   :loading="btnLoading"
                   @click="() => this.$store.dispatch('reloadBtn/onclick')"
@@ -412,6 +411,7 @@
                   v-if="isFullscreenAvailable && !isFullscreen"
                   @click="toggleFullscreen"
                   icon
+                  variant="elevated"
                   size="small"
                 >
                   <v-icon>mdi-fullscreen</v-icon>
@@ -763,6 +763,14 @@ export default {
   },
 };
 </script>
+
+<style lang="scss">
+/* Vuetify 2 dense lists used smaller titles in the navigation drawer */
+.v-navigation-drawer .v-list--density-compact .v-list-item-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+</style>
 
 <style scoped lang="scss">
 @import "@/styles/globalStyles.scss";

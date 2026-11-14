@@ -83,7 +83,7 @@
         </v-expansion-panels>
       </v-col>
       <v-col>
-        <v-row align="center">
+        <v-row class="align-center">
           <v-col cols="3">
             <v-list-subheader>Fixed margin (%)</v-list-subheader>
           </v-col>
@@ -97,7 +97,7 @@
             />
           </v-col>
         </v-row>
-        <v-row align="center">
+        <v-row class="align-center">
           <v-col cols="3">
             <v-list-subheader>Round</v-list-subheader>
           </v-col>
@@ -111,7 +111,7 @@
             />
           </v-col>
         </v-row>
-        <v-row align="center">
+        <v-row class="align-center">
           <v-col cols="3">
             <v-list-subheader>Rounding precision</v-list-subheader>
           </v-col>

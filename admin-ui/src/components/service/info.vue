@@ -10,7 +10,7 @@
         </div>
       </v-col>
     </v-row> -->
-    <v-row align="center">
+    <v-row class="align-center">
       <v-col>
         <v-text-field
           readonly
@@ -68,7 +68,7 @@
     </v-row>
 
     groups:
-    <v-row justify="center" class="px-2 pb-2">
+    <v-row class="px-2 pb-2 justify-center">
       <v-expansion-panels variant="inset" v-model="opened" multiple>
         <v-expansion-panel
           v-for="(group, i) in service.instancesGroups"

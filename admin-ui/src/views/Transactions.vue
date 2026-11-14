@@ -1,6 +1,6 @@
 <template>
   <div class="pa-4">
-    <v-row align="start" class="ml-2 mb-4">
+    <v-row class="ml-2 mb-4 align-start">
       <v-btn
         class="ml-2"
         color="background-light"

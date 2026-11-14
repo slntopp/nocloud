@@ -3,7 +3,7 @@
     <v-row
       v-for="field in Object.keys(fields)"
       :key="field"
-      :align="!fields[field].isJSON ? 'center' : null"
+      :class="{ 'align-center': !fields[field].isJSON }"
     >
       <v-col cols="4">
         <v-list-subheader>

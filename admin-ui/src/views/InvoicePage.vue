@@ -15,12 +15,12 @@
         hide-details
       />
       <template v-if="invoiceTitle">
-        <v-btn v-if="!isEditingTitle" icon class="ml-2" @click="startEditTitle">
+        <v-btn v-if="!isEditingTitle" icon variant="text" class="ml-2" @click="startEditTitle">
           <v-icon size="large">mdi-pencil</v-icon>
         </v-btn>
         <template v-else>
           <v-btn
-            icon
+            icon variant="text"
             class="ml-1"
             :loading="isSavingTitle"
             @click="saveTitle"
@@ -29,7 +29,7 @@
             <v-icon size="large">mdi-content-save</v-icon>
           </v-btn>
           <v-btn
-            icon
+            icon variant="text"
             size="large"
             class="ml-1"
             @click="cancelEditTitle"

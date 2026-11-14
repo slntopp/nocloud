@@ -81,7 +81,7 @@
               :items="availableTypes"
               v-model="filterTypes"
             >
-              <template v-slot:selection="{ item, index }">
+              <template v-slot:selection="{ internalItem: item, index }">
                 <v-chip
                   v-if="index < 1"
                   size="x-small"
@@ -218,7 +218,7 @@
             </template>
 
             <template v-slot:[`item.billing`]="{ item }">
-              <v-btn icon @click="openBillingSettings(item)">
+              <v-btn icon variant="text" @click="openBillingSettings(item)">
                 <v-icon> mdi-menu-open </v-icon>
               </v-btn>
             </template>
@@ -294,7 +294,7 @@
                 <div v-if="!capsEnabled" class="key_text mb-4">
                   Not set: requests to this model are sent exactly as before.
                 </div>
-                <v-row v-else dense align="center" class="mb-2">
+                <v-row v-else density="compact" class="mb-2 align-center">
                   <v-col cols="auto">
                     <v-checkbox density="compact" hide-details v-model="capsForm.tools" label="Tools" />
                   </v-col>
@@ -324,7 +324,7 @@
                 <v-card-title class="key_title" style="padding: 0px">
                   AI bots
                 </v-card-title>
-                <v-row dense align="center" class="mb-2">
+                <v-row density="compact" class="mb-2 align-center">
                   <v-col cols="auto">
                     <v-switch density="compact" hide-details v-model="botsForm.enabled" label="Available for bots" />
                   </v-col>
@@ -351,7 +351,7 @@
                 <v-card-title class="key_title" style="padding: 0px">
                   Description
                 </v-card-title>
-                <v-row dense class="mb-4">
+                <v-row density="compact" class="mb-4">
                   <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
                     <v-textarea
                       density="compact"
@@ -373,8 +373,7 @@
                   }}</v-card-title>
                 </v-col>
                 <v-col cols="12">
-                  <v-row
-                    align="center"
+                  <v-row class="align-center"
                     v-for="field in fieldsForAdd[key]"
                     :key="field.key"
                   >
@@ -434,7 +433,7 @@
                                 >
                                   <span>{{ resolution }}</span>
                                   <v-btn
-                                    icon
+                                    icon variant="text"
                                     size="x-small"
                                     @click="removeResolution(field, resolution)"
                                     ><v-icon size="small">mdi-close</v-icon></v-btn
@@ -489,7 +488,7 @@
                             </tbody>
                           </table>
                         </div>
-                        <v-row justify="end" class="mt-2">
+                        <v-row class="mt-2 justify-end">
                           <v-col cols="3">
                             <v-text-field
                               density="compact"
@@ -512,14 +511,13 @@
                     <template v-else-if="field.type === 'map-number'">
                       <v-col cols="12" :key="field.subkey">
                         <span class="key_text">{{ fieldLabel(field) }}</span>
-                        <v-row
+                        <v-row class="align-center"
                           v-for="resolution in Object.keys(
                             currentBillingSettings.billing[field.key][
                               field.subkey
                             ] || {}
                           )"
                           :key="resolution"
-                          align="center"
                         >
                           <v-col cols="2">
                             <span class="key_text">{{ resolution }}</span>
@@ -580,7 +578,7 @@
                                 >{{ key }} {{ subkey }}</span
                               >
 
-                              <v-btn icon @click="deleteFromMap(field, key)"
+                              <v-btn icon variant="text" @click="deleteFromMap(field, key)"
                                 ><v-icon>mdi-delete</v-icon></v-btn
                               >
                             </v-col>
@@ -613,7 +611,7 @@
                           </v-row>
                         </template>
 
-                        <v-row justify="end">
+                        <v-row class="justify-end">
                           <v-col cols="3">
                             <v-text-field
                               density="compact"

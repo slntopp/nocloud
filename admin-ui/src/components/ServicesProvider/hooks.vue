@@ -31,7 +31,7 @@
             Key {{ hook.key }}
 
             <confirm-dialog @confirm="updateSp(hook, undefined)">
-              <v-btn icon>
+              <v-btn icon variant="text">
                 <v-icon> mdi-delete </v-icon>
               </v-btn>
             </confirm-dialog>

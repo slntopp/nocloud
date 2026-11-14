@@ -1,6 +1,6 @@
 <template>
   <div class="pa-10">
-    <v-row align="center" justify="space-between">
+    <v-row class="align-center justify-space-between">
       <v-col cols="6">
         <v-select
           label="current language"
@@ -200,7 +200,7 @@
                   <v-img :src="icon.src" />
                   <v-divider />
                   <div class="d-flex flex-row-reverse">
-                    <v-btn color="primary" @click="deleteIcon(icon.id)" icon>
+                    <v-btn color="primary" @click="deleteIcon(icon.id)" icon variant="text">
                       <v-icon>mdi-delete</v-icon>
                     </v-btn>
                   </div>

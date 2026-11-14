@@ -6,7 +6,7 @@
     <v-container>
       <v-row>
         <v-col lg="6" cols="12">
-          <v-row align="center">
+          <v-row class="align-center">
             <v-col cols="3">
               <v-list-subheader> Provider type </v-list-subheader>
             </v-col>
@@ -27,7 +27,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center">
+          <v-row class="align-center">
             <v-col cols="3">
               <v-list-subheader> Provider title </v-list-subheader>
             </v-col>
@@ -42,7 +42,7 @@
 
           <v-row
             v-if="!isProxyHide"
-            :align="provider.vars.console?.value ? null : 'center'"
+            :class="{ 'align-center': !provider.vars.console?.value }"
           >
             <v-col cols="3">
               <v-list-subheader> Proxy </v-list-subheader>
@@ -76,7 +76,7 @@
             </v-expansion-panel>
           </v-expansion-panels>
 
-          <v-row align="center">
+          <v-row class="align-center">
             <v-col cols="3">
               <v-list-subheader> Public </v-list-subheader>
             </v-col>

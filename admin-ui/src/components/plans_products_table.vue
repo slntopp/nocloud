@@ -49,7 +49,7 @@
                   <v-list-subheader class="px-0"> Description: </v-list-subheader>
                   <rich-editor v-model="newMeta.description" />
 
-                  <v-row class="mt-5" justify="end">
+                  <v-row class="mt-5 justify-end">
                     <v-btn class="mx-2" @click="isEditOpen = false"
                       >Close</v-btn
                     >
@@ -149,18 +149,18 @@
               />
               <v-text-field v-else v-model="groupActionPayload" />
               <template v-if="productId !== item.id">
-                <v-btn icon @click="setGroupAction('edit', products[item.key])">
+                <v-btn icon variant="text" @click="setGroupAction('edit', products[item.key])">
                   <v-icon>mdi-pencil</v-icon>
                 </v-btn>
-                <v-btn icon @click="setGroupAction('add', products[item.key])">
+                <v-btn icon variant="text" @click="setGroupAction('add', products[item.key])">
                   <v-icon>mdi-plus</v-icon>
                 </v-btn>
               </template>
               <template v-else>
-                <v-btn icon @click="setGroupAction('')">
+                <v-btn icon variant="text" @click="setGroupAction('')">
                   <v-icon>mdi-cancel</v-icon>
                 </v-btn>
-                <v-btn icon @click="invokeGroupAction(item)">
+                <v-btn icon variant="text" @click="invokeGroupAction(item)">
                   <v-icon>mdi-content-save</v-icon>
                 </v-btn>
               </template>

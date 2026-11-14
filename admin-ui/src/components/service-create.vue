@@ -1,6 +1,6 @@
 <template>
   <v-form v-model="formValid" ref="form">
-    <v-row justify="start">
+    <v-row class="justify-start">
       <v-col cols="6" md="4" lg="3">
         <v-text-field
           label="service title"

@@ -26,7 +26,7 @@
         </v-col>
       </v-row>
 
-      <v-row justify="end">
+      <v-row class="justify-end">
         <v-switch
           class="mx-3 mt-0"
           v-model="isChangeAll"

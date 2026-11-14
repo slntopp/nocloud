@@ -8,7 +8,7 @@
           </v-btn>
         </template>
         <v-card class="pa-4">
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="12">
               <v-text-field
                 density="compact"
@@ -147,7 +147,7 @@
           <v-btn
             :disabled="!editedCurrencies[item.id]"
             @click="saveCurrency(item)"
-            icon
+            icon variant="text"
             ><v-icon :color="editedCurrencies[item.id] ? 'primary' : ''"
               >mdi-content-save</v-icon
             ></v-btn
