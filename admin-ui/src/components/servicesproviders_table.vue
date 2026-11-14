@@ -11,12 +11,12 @@
     :footer-error="fetchError"
   >
     <template v-slot:[`item.state`]="{ value }">
-      <v-chip small :color="getStateChipColor(value)">
+      <v-chip size="small" :color="getStateChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
     <template v-slot:[`item.status`]="{ value }">
-      <v-chip small :color="getStatusChipColor(value)">
+      <v-chip size="small" :color="getStatusChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
@@ -24,6 +24,7 @@
 </template>
 
 <script>
+import { moduleTypes } from "@/modules";
 import noCloudTable from "@/components/table.vue";
 import {
   compareSearchValue,
@@ -111,19 +112,8 @@ export default {
       return this.statusMap[statusKey]?.color;
     },
     getInstanceTypes() {
-      const types = require.context(
-        "@/components/modules/",
-        true,
-        /instanceCreate\.vue$/
-      );
-
-      types.keys().forEach((key) => {
-        const matched = key.match(
-          /\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i
-        );
-        if (matched && matched.length > 1) {
-          this.allTypes.push(matched[1]);
-        }
+      moduleTypes("instanceCreate").forEach((type) => {
+        this.allTypes.push(type);
       });
     },
   },

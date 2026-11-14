@@ -42,8 +42,8 @@
 
     <instance-control-btn hint="Playbook">
       <v-dialog style="height: 100%" v-if="isAnsibleActive && !isDeleted">
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn class="ma-1" v-bind="attrs" v-on="on">
+        <template v-slot:activator="{ props }">
+          <v-btn class="ma-1" v-bind="props">
             <v-icon>mdi-book</v-icon>
           </v-btn>
         </template>
@@ -78,10 +78,9 @@
     <div class="save_button" ref="saveButton">
       <instance-control-btn top hint="Save">
         <v-dialog persistent v-model="isBillingDialog" max-width="600px">
-          <template v-slot:activator="{ on, attrs }">
+          <template v-slot:activator="{ props }">
             <v-btn
-              v-bind="isBillingChange && !isDeleted ? attrs : undefined"
-              v-on="isBillingChange && !isDeleted ? on : undefined"
+              v-bind="isBillingChange && !isDeleted ? props : undefined"
               :disabled="isDeleted"
               @click="onSaveClick"
               class="ma-1"
@@ -122,6 +121,7 @@
   </div>
 </template>
 <script>
+import { defineAsyncComponent } from "vue";
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
@@ -499,7 +499,7 @@ export default {
           {
             action: "start",
             type: "method",
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             method: this.startInstance,
             disabled: this.ioneActions?.start,
           },
@@ -513,8 +513,8 @@ export default {
             title: "Unsuspend",
             disabled: this.ioneActions?.resume,
             type: "method",
-            component: () =>
-              import("@/components/dialogs/unsuspendInstance.vue"),
+            component: defineAsyncComponent(() =>
+              import("@/components/dialogs/unsuspendInstance.vue")),
             method: (date) => this.unsuspendInstance("resume", date),
           },
           {
@@ -541,7 +541,7 @@ export default {
           {
             action: "start",
             type: "method",
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             method: this.startInstance,
             disabled: this.ioneActions?.start,
           },
@@ -555,8 +555,8 @@ export default {
             title: "Unsuspend",
             disabled: this.ioneActions?.resume,
             type: "method",
-            component: () =>
-              import("@/components/dialogs/unsuspendInstance.vue"),
+            component: defineAsyncComponent(() =>
+              import("@/components/dialogs/unsuspendInstance.vue")),
             method: (date) => this.unsuspendInstance("resume", date),
           },
           {
@@ -578,7 +578,7 @@ export default {
           {
             action: "migrate",
             title: "Migrate",
-            component: () => import("@/components/dialogs/migrateInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/migrateInstance.vue")),
             disabled: !this.template.data?.vmid && !this.template.data?.vm_id,
           },
           ...this.baseVmControls,
@@ -587,7 +587,7 @@ export default {
           {
             action: "start",
             type: "method",
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             method: this.startInstance,
             disabled: this.ovhActions?.start,
           },
@@ -620,8 +620,8 @@ export default {
             disabled: this.ovhActions?.resume,
             title: "Unsuspend",
             type: "method",
-            component: () =>
-              import("@/components/dialogs/unsuspendInstance.vue"),
+            component: defineAsyncComponent(() =>
+              import("@/components/dialogs/unsuspendInstance.vue")),
             method: (date) => this.unsuspendInstance("resume_vm", date),
           },
           {
@@ -633,7 +633,7 @@ export default {
           {
             action: "reboot_vm",
             title: "reboot",
-            component: () => import("@/components/dialogs/rebootInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/rebootInstance.vue")),
             disabled: this.ovhActions?.reboot,
           },
           {
@@ -655,7 +655,7 @@ export default {
             action: "start",
             type: "method",
             method: this.startInstance,
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             disabled: this.ovhActions?.start,
           },
           {
@@ -682,7 +682,7 @@ export default {
             action: "rebuild",
             type: "method",
             method: this.rebuildVps,
-            component: () => import("@/components/dialogs/rebuildVps.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/rebuildVps.vue")),
             disabled: this.ovhActions?.rebuild,
             icon: "mdi-account-convert",
           },
@@ -699,7 +699,7 @@ export default {
             action: "change_state",
             data: { state: 3 },
             title: "start",
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             disabled: this.emptyActions?.start,
           },
           {
@@ -723,7 +723,7 @@ export default {
             action: "change_state",
             data: { state: 3 },
             title: "start",
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             disabled: this.emptyActions?.start,
           },
           {
@@ -747,7 +747,7 @@ export default {
             action: "auto_start",
             type: "method",
             title: "start",
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             method: this.startInstance,
             disabled: !this.keywebActions?.auto_start,
           },
@@ -780,8 +780,8 @@ export default {
             title: "unsuspend",
             disabled: !this.keywebActions?.unsuspend,
             type: "method",
-            component: () =>
-              import("@/components/dialogs/unsuspendInstance.vue"),
+            component: defineAsyncComponent(() =>
+              import("@/components/dialogs/unsuspendInstance.vue")),
             method: (date) => this.unsuspendInstance("unsuspend", date),
           },
           {
@@ -798,7 +798,7 @@ export default {
             title: "Start",
             action: "reboot",
             disabled: this.botsActions?.start,
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
           },
           {
             title: "Stop",
@@ -816,8 +816,8 @@ export default {
             title: "Unsuspend",
             disabled: this.botsActions?.resume,
             type: "method",
-            component: () =>
-              import("@/components/dialogs/unsuspendInstance.vue"),
+            component: defineAsyncComponent(() =>
+              import("@/components/dialogs/unsuspendInstance.vue")),
             method: (date) => this.unsuspendInstance("resume", date),
           },
 
@@ -827,7 +827,7 @@ export default {
           {
             action: "start",
             type: "method",
-            component: () => import("@/components/dialogs/startInstance.vue"),
+            component: defineAsyncComponent(() => import("@/components/dialogs/startInstance.vue")),
             method: this.startInstance,
             disabled: this.template.config.auto_start,
           },
@@ -849,7 +849,7 @@ export default {
         actions.unshift({
           action: "activate",
           type: "method",
-          component: () => import("@/components/dialogs/activateInstance.vue"),
+          component: defineAsyncComponent(() => import("@/components/dialogs/activateInstance.vue")),
           method: this.activateInstance,
         });
       }
@@ -1093,7 +1093,7 @@ export default {
       .getElementById("instance-tabs-actions")
       ?.appendChild(this.$refs.saveButton);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.$refs.saveButton?.remove();
   },
 };

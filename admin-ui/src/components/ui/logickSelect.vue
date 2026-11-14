@@ -20,12 +20,12 @@ const items = ref([
 <template>
   <v-select
     :label="label"
-    :value="value"
+    :model-value="value"
     :items="items"
     :disabled="disabled"
-    :dense="dense"
-    @input="emit('input', $event)"
-    item-text="title"
+    :density="dense ? 'compact' : undefined"
+    @update:model-value="emit('input', $event)"
+    item-title="title"
     item-value="value"
     clearable
   />

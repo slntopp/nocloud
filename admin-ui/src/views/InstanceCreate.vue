@@ -14,9 +14,9 @@
         </v-col>
         <v-col v-if="servicesByAccount.length > 2" cols="4" md="3" lg="2">
           <v-autocomplete
-            :filter="defaultFilterObject"
+            :customFilter="defaultFilterObject"
             label="service"
-            item-text="title"
+            item-title="title"
             :items="servicesByAccount"
             return-object
             v-model="service"
@@ -34,10 +34,10 @@
         </v-col>
         <v-col cols="4" md="3" lg="2">
           <v-autocomplete
-            :filter="defaultFilterObject"
+            :customFilter="defaultFilterObject"
             label="service provider"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             v-model="serviceProviderId"
             :items="servicesProviders"
             :loading="isLoading"
@@ -99,6 +99,7 @@
 </template>
 
 <script setup>
+import { moduleComponent, moduleTypes } from "@/modules";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import api from "@/api";
 import { computed, onMounted, watch, ref } from "vue";
@@ -179,19 +180,9 @@ const isInstanceControlsShowed = computed(
 );
 
 onMounted(async () => {
-  const types = require.context(
-    "@/components/modules/",
-    true,
-    /instanceCreate\.vue$/
-  );
-  types.keys().forEach((key) => {
-    const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i);
-    if (matched && matched.length > 1) {
-      const type = matched[1];
-      typeItems.value.push(type);
-      templates.value[type] = () =>
-        import(`@/components/modules/${type}/instanceCreate.vue`);
-    }
+  moduleTypes("instanceCreate").forEach((type) => {
+    typeItems.value.push(type);
+    templates.value[type] = moduleComponent("instanceCreate", type);
   });
 
   try {
@@ -472,7 +463,7 @@ watch(type, () => {
 
 <script>
 import snackbar from "@/mixins/snackbar.js";
-import { useRoute, useRouter } from "vue-router/composables";
+import { useRoute, useRouter } from "vue-router";
 
 export default {
   name: "instance-create",

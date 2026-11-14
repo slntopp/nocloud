@@ -5,7 +5,7 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
           <template v-slot:append>
             <v-icon
@@ -29,7 +29,7 @@
         <v-text-field
           readonly
           label="Product name"
-          :value="tarrif.title"
+          :model-value="tarrif.title"
           :append-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
           @click:append="
             isPriceModelCanBeChange ? (priceModelDialog = true) : undefined
@@ -68,7 +68,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="dueDate"
+          :model-value="dueDate"
         />
       </v-col>
     </v-row>
@@ -94,7 +94,7 @@
             ></v-text-field>
             <v-text-field
               class="ml-2"
-              style="color: var(--v-primary-base)"
+              style="color: rgb(var(--v-theme-primary))"
               v-model="item.accountPrice"
               @change="onUpdatePrice(item, true)"
               :suffix="accountCurrency?.code"
@@ -108,7 +108,7 @@
         </template>
         <template v-slot:[`item.title`]="{ item }">
           <span v-html="item.title" />
-          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+          <v-chip v-if="item.isAddon" size="small" class="ml-1">Addon</v-chip>
         </template>
         <template v-slot:body.append>
           <tr>
@@ -123,8 +123,8 @@
             <td>
               <div class="d-flex justify-end">
                 <v-dialog v-model="isAddonsDialog" max-width="60%">
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn class="mr-4" color="primary" v-bind="attrs" v-on="on"
+                  <template v-slot:activator="{ props }">
+                    <v-btn class="mr-4" color="primary" v-bind="props"
                       >addons</v-btn
                     >
                   </template>
@@ -140,7 +140,7 @@
                     "
                   />
                 </v-dialog>
-                <v-chip outlined color="primary" class="mr-4">
+                <v-chip variant="outlined" color="primary" class="mr-4">
                   {{
                     [
                       formatPrice(totalNewPrice, defaultCurrency),

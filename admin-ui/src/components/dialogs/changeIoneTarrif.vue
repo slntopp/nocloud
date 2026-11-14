@@ -1,10 +1,10 @@
 <template>
-  <v-dialog :value="value" @input="emit('input', $event)" max-width="60%">
+  <v-dialog :model-value="value" @update:model-value="emit('input', $event)" max-width="60%">
     <v-card>
       <v-tabs>
         <v-tab>Base</v-tab>
         <v-tab>Individual</v-tab>
-        <v-tab-item>
+        <v-window-item>
           <v-card class="pa-5">
             <v-row>
               <v-col cols="3">
@@ -12,7 +12,7 @@
                 <v-select
                   v-model="selectedTariff"
                   :items="availableTarrifs"
-                  item-text="title"
+                  item-title="title"
                   return-object
                 ></v-select>
               </v-col>
@@ -24,7 +24,7 @@
                     selectedTariff?.resources || {}
                   )"
                   :key="resource"
-                  :value="selectedTariff?.resources?.[resource]"
+                  :model-value="selectedTariff?.resources?.[resource]"
                   :label="resource"
                 ></v-text-field>
               </v-col>
@@ -40,8 +40,8 @@
               >
             </v-row>
           </v-card>
-        </v-tab-item>
-        <v-tab-item>
+        </v-window-item>
+        <v-window-item>
           <v-card class="pa-5">
             <v-row>
               <v-col cols="5">
@@ -95,7 +95,7 @@
               >
             </v-row>
           </v-card>
-        </v-tab-item>
+        </v-window-item>
       </v-tabs>
     </v-card>
   </v-dialog>

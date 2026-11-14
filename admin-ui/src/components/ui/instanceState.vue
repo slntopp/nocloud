@@ -5,9 +5,9 @@
   </v-chip>
   <v-btn
     v-else
-    fab
+    icon
     :color="chipColor"
-    x-small
+    size="x-small"
     style="width: 15px; height: 15px"
   >
   </v-btn>

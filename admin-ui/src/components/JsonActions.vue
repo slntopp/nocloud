@@ -2,8 +2,8 @@
   <v-row dense>
     <v-col class="column justify-end" cols="4">
       <v-btn
-        dark
-        small
+        
+        size="small"
         color="success"
         :disabled="!isValid"
         @click="changeField"
@@ -13,17 +13,17 @@
     </v-col>
     <v-col class="d-flex" cols="4">
       <v-select
-        dense
+        density="compact"
         required
         label="Choose key"
         v-model="key"
         :items="keys"
         :rules="[v => !!v || 'This field is required!']"
-        @change="changeKeys"
+        @update:model-value="changeKeys"
       />
       <v-icon
-        dark
-        small
+        
+        size="small"
         color="red"
         class="ml-2 mb-2"
         v-if="key !== null"
@@ -34,8 +34,8 @@
     </v-col>
     <v-col class="column" cols="4">
       <v-btn
-        dark
-        small
+        
+        size="small"
         color="error"
         :disabled="disabled"
         @click="deleteField"

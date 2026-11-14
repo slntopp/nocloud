@@ -9,14 +9,14 @@
       <div class="d-flex justify-end">
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.period"
-          @change="
+          density="compact"
+          :model-value="data.period"
+          @update:model-value="
             emit('update:key', { value: $event || data.period, key: 'period' })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in periods">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>
         </v-btn-toggle>
@@ -41,7 +41,7 @@ import widget from "@/components/widgets/widget.vue";
 import { computed, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
-import apexchart from "vue-apexcharts";
+import apexchart from "vue3-apexcharts";
 import { getDatesPeriod } from "@/functions";
 
 const props = defineProps(["data"]);

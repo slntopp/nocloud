@@ -2,26 +2,26 @@
   <v-row dense>
     <v-col class="d-flex align-center">
       <v-text-field
-        dense
+        density="compact"
         required
         label="New key"
         v-if="add"
-        :value="newKey"
+        :model-value="newKey"
         :rules="generalRule"
-        @change="(value) => changeValue('newKey', value)"
+        @change="changeValue('newKey', $event.target.value)"
       />
       <v-text-field
-        dense
+        density="compact"
         required
         label="Key"
         v-else
-        :value="newKey"
+        :model-value="newKey"
         :rules="generalRule"
-        @change="(value) => changeValue('newKey', value)"
+        @change="changeValue('newKey', $event.target.value)"
       />
       <v-icon
-        dark
-        dense
+        
+        size="small"
         class="ml-2 mb-2"
         color="yellow"
         v-if="add"
@@ -30,8 +30,8 @@
         mdi-minus
       </v-icon>
       <v-icon
-        dark
-        dense
+        
+        size="small"
         class="ml-2 mb-2"
         color="green"
         v-else-if="typeValue === 'object'"
@@ -42,40 +42,40 @@
     </v-col>
     <v-col>
       <v-select
-        dense
+        density="compact"
         required
         label="Choose type"
-        :value="typeValue"
+        :model-value="typeValue"
         :items="typesValue"
         :rules="generalRule"
-        @change="(value) => changeValue('typeValue', value)"
+        @update:model-value="(value) => changeValue('typeValue', value)"
       />
     </v-col>
     <v-col>
       <v-select
-        dense
+        density="compact"
         required
         v-if="typeValue === 'boolean'"
         :label="(add) ? 'New value' : 'Value'"
-        :value="newValue"
+        :model-value="newValue"
         :items="['true', 'false']"
         :rules="generalRule"
-        @change="(value) => changeValue('newValue', value)"
+        @update:model-value="(value) => changeValue('newValue', value)"
       />
       <v-text-field
-        dense
+        density="compact"
         disabled
         :label="(add) ? 'New value' : 'Value'"
-        value="{}"
+        model-value="{}"
         v-else-if="typeValue === 'object'"
       />
       <v-text-field
-        dense
+        density="compact"
         :label="(add) ? 'New value' : 'Value'"
         v-else
-        :value="newValue"
+        :model-value="newValue"
         :rules="typeRule"
-        @change="(value) => changeValue('newValue', value)"
+        @change="changeValue('newValue', $event.target.value)"
       />
     </v-col>
   </v-row>

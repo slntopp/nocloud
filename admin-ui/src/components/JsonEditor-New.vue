@@ -105,7 +105,7 @@ onUnmounted(() => editor.value?.destroy());
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.12);
-  background: var(--v-background-light-base);
+  background: rgb(var(--v-theme-background-light));
   height: 100%;
   flex: 1;
 }

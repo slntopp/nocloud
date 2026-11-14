@@ -9,9 +9,9 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('title', newVal)"
+            @change="setValue('title', $event.target.value)"
             label="Name"
-            :value="instance.title"
+            :model-value="instance.title"
           >
           </v-text-field>
         </v-col>
@@ -41,12 +41,12 @@
         <v-col lg="6" cols="12">
           <v-autocomplete
             label="Price model"
-            item-text="title"
+            item-title="title"
             item-value="uuid"
-            :value="instance.plan"
+            :model-value="instance.plan"
             :items="plans"
             :rules="planRules"
-            @change="(newVal) => setValue('billing_plan', newVal)"
+            @update:model-value="(newVal) => setValue('billing_plan', newVal)"
           />
         </v-col>
       </v-row>

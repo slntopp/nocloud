@@ -39,7 +39,7 @@
           <v-select
             :disabled="isEdit"
             item-value="id"
-            item-text="title"
+            item-title="title"
             label="Type"
             v-model="newInvoice.type"
             :items="types"
@@ -71,8 +71,8 @@
 
         <div class="item" style="max-width: 80px">
           <v-text-field
-            :value="newInvoice.taxRate * 100"
-            @input="newInvoice.taxRate = $event / 100"
+            :model-value="newInvoice.taxRate * 100"
+            @update:model-value="newInvoice.taxRate = $event / 100"
             label="tax rate"
             type="number"
             suffix="%"
@@ -82,14 +82,14 @@
         <div class="item">
           <v-autocomplete
             :disabled="isEdit || isBalanceInvoice"
-            :filter="defaultFilterObject"
+            :customFilter="defaultFilterObject"
             label="Instances"
             v-model="newInvoice.instances"
             multiple
-            item-text="title"
+            item-title="title"
             item-value="uuid"
             :items="instances"
-            @change="onChangeInstance"
+            @update:model-value="onChangeInstance"
             :loading="isInstancesLoading"
           >
             <template v-slot:selection="{ item }">
@@ -118,9 +118,9 @@
           <v-text-field
             type="number"
             label="Total"
-            :value="newInvoice.total"
+            :model-value="newInvoice.total"
             :suffix="accountCurrency?.code"
-            @input="newInvoice.items[0].price = +$event"
+            @update:model-value="newInvoice.items[0].price = +$event"
           />
         </div>
 
@@ -174,7 +174,7 @@
       </div>
 
       <v-textarea
-        outlined
+        variant="outlined"
         no-resize
         label="Admin note"
         v-model="newInvoice.meta.note"
@@ -182,7 +182,7 @@
 
       <div class="mt-2">
         <div v-if="!isBalanceInvoice" class="d-flex justify-space-between">
-          <v-subheader>Invoice items</v-subheader>
+          <v-list-subheader>Invoice items</v-list-subheader>
           <v-btn @click="addInvoiceItem">Add</v-btn>
         </div>
         <invoice-items-table
@@ -256,7 +256,7 @@
                 :disabled="isKsefDisabled"
               >
                 Ksef
-                <v-icon v-if="newInvoice.meta?.ksef_number || newInvoice.meta?.ksef_last_error" small class="ml-1">
+                <v-icon v-if="newInvoice.meta?.ksef_number || newInvoice.meta?.ksef_last_error" size="small" class="ml-1">
                   {{ newInvoice.meta?.ksef_last_error ? 'mdi-alert-circle' : 'mdi-check-circle' }}
                 </v-icon>
               </v-btn>
@@ -269,7 +269,7 @@
             color="background-light"
             @click="downloadInvoice"
           >
-            download <v-icon small>mdi-download</v-icon>
+            download <v-icon size="small">mdi-download</v-icon>
           </v-btn>
 
           <confirm-dialog
@@ -343,7 +343,7 @@
           <v-btn
             :disabled="isAddPaymentLoading"
             color="primary"
-            text
+            variant="text"
             @click="isAddPaymentDialogOpen = false"
           >
             Close</v-btn
@@ -352,7 +352,7 @@
           <v-btn
             color="primary"
             :loading="isAddPaymentLoading"
-            text
+            variant="text"
             @click="changeStatusToPaid"
           >
             Add payment
@@ -371,7 +371,7 @@ import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import datePicker from "@/components/ui/datePicker.vue";
 import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
-import { useRoute, useRouter } from "vue-router/composables";
+import { useRoute, useRouter } from "vue-router";
 import {
   BillingStatus,
   CreateInvoiceRequest,
@@ -896,7 +896,7 @@ watch(
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

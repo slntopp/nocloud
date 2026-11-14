@@ -7,18 +7,18 @@
       >
         <v-col cols="5">
           <v-text-field
-            dense
+            density="compact"
             hide-details
-            :value="eventOverride.key"
+            :model-value="eventOverride.key"
             disabled
             label="Key"
           />
         </v-col>
         <v-col cols="5">
           <v-text-field
-            dense
+            density="compact"
             hide-details
-            :value="eventOverride.override"
+            :model-value="eventOverride.override"
             disabled
             label="Override"
           />

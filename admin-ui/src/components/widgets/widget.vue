@@ -9,7 +9,7 @@
     :style="{ width: width < 1375 ? '100%' : 'auto' }"
     :loading="loading"
   >
-    <template slot="progress">
+    <template v-slot:progress>
       <v-progress-linear
         color="primary"
         height="5"
@@ -20,7 +20,7 @@
 
     <div class="d-flex justify-space-between align-center px-3">
       <v-card-title>{{ title }}</v-card-title>
-      <v-btn v-if="more" @click="$router.push(more)" small text> More </v-btn>
+      <v-btn v-if="more" @click="$router.push(more)" size="small" variant="text"> More </v-btn>
     </div>
 
     <v-divider class="mx-4"></v-divider>

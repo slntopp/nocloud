@@ -17,7 +17,7 @@
         />
       </v-col>
     </v-row>
-    <v-card-title class="primary--text">Client info</v-card-title>
+    <v-card-title class="text-primary">Client info</v-card-title>
     <v-row>
       <v-col>
         <route-text-field
@@ -46,7 +46,7 @@
         <v-text-field
           readonly
           label="Email"
-          :value="account?.data?.email"
+          :model-value="account?.data?.email"
           append-icon="mdi-content-copy"
           @click:append="addToClipboard(account?.data?.email)"
         />
@@ -55,7 +55,7 @@
         <v-text-field
           readonly
           label="Balance"
-          :value="account?.balance?.toFixed(2) || 0"
+          :model-value="account?.balance?.toFixed(2) || 0"
         />
       </v-col>
     </v-row>
@@ -66,7 +66,7 @@
     <!--      @refresh="refreshInstance"-->
     <!--    />-->
     <template>
-      <v-card-title class="primary--text">Instance info</v-card-title>
+      <v-card-title class="text-primary">Instance info</v-card-title>
       <v-row>
         <v-col>
           <v-text-field
@@ -88,7 +88,7 @@
         </v-col>
         <v-col>
           <v-text-field
-            :value="template.uuid"
+            :model-value="template.uuid"
             readonly
             label="UUID"
             append-icon="mdi-content-copy"
@@ -112,12 +112,12 @@
         <v-col>
           <v-text-field
             label="Location"
-            :value="template.config?.location || 'Unknown'"
-            @input="update({ key: 'config.location', value: $event })"
+            :model-value="template.config?.location || 'Unknown'"
+            @update:model-value="update({ key: 'config.location', value: $event })"
           />
         </v-col>
         <v-col>
-          <v-text-field readonly :value="type" label="Type" />
+          <v-text-field readonly :model-value="type" label="Type" />
         </v-col>
       </v-row>
 
@@ -168,7 +168,7 @@
         :addons="copyAddons"
         :template="template"
       />
-      <v-card-title class="primary--text">Billing info</v-card-title>
+      <v-card-title class="text-primary">Billing info</v-card-title>
       <component
         @update="update"
         :is="billingInfoComponent"
@@ -202,6 +202,8 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
+import { moduleComponent, moduleTypes } from "@/modules";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
@@ -322,33 +324,22 @@ export default {
       return this.template.billingPlan;
     },
     additionalInstanceInfoComponent() {
-      return () =>
-        import(`@/components/modules/${this.type}/additionalInstanceInfo.vue`);
+      return defineAsyncComponent(() =>
+        import(`@/components/modules/${this.type}/additionalInstanceInfo.vue`));
     },
     billingInfoComponent() {
-      return () => import(`@/components/modules/${this.type}/billingInfo.vue`);
+      return defineAsyncComponent(() => import(`@/components/modules/${this.type}/billingInfo.vue`));
     },
     billingLabelComponent() {
-      return () => import(`@/components/modules/${this.type}/billingLabel.vue`);
+      return defineAsyncComponent(() => import(`@/components/modules/${this.type}/billingLabel.vue`));
     },
     type() {
       return this.template.type;
     },
   },
   created() {
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /instanceCard\.vue$/,
-    );
-
-    types.keys().forEach((key) => {
-      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCard\.vue/i);
-
-      if (matched && matched.length > 1) {
-        this.templates[matched[1]] = () =>
-          import(`@/components/modules/${matched[1]}/instanceCard.vue`);
-      }
+    moduleTypes("instanceCard").forEach((type) => {
+      this.templates[type] = moduleComponent("instanceCard", type);
     });
   },
   mounted() {

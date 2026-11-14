@@ -9,7 +9,7 @@
           :disabled="defaultLayouts[layout].id === currentSearchLayout"
           @click="setInvoicesLayout(layout)"
         >
-          <v-icon small class="mr-1">mdi-filter</v-icon>
+          <v-icon size="small" class="mr-1">mdi-filter</v-icon>
           {{ layout }}</v-btn
         >
       </div>

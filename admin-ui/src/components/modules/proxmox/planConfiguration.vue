@@ -5,8 +5,8 @@
         <v-select
           label="Preferred disk type"
           :items="['HDD', 'SSD']"
-          :value="meta.preferedDiskType"
-          @change="meta.preferedDiskType = $event || undefined"
+          :model-value="meta.preferedDiskType"
+          @update:model-value="meta.preferedDiskType = $event || undefined"
           clearable
         />
       </v-col>
@@ -45,7 +45,7 @@
     </v-row>
     <div class="os-tab__card mb-5" v-if="templateOs.length">
       <v-card
-        outlined
+        border
         class="pt-4 pl-4 d-flex"
         style="gap: 10px"
         color="background"
@@ -53,7 +53,7 @@
         :key="item.id"
       >
         <v-chip
-          close
+          closable
           :color="!hidedOs?.includes(item.id) ? 'info' : 'error'"
           :close-icon="
             hidedOs?.includes(item.id) ? 'mdi-plus-circle' : 'mdi-close-circle'
@@ -68,7 +68,7 @@
     </div>
     <v-card
       v-else
-      outlined
+      border
       class="pt-4 pl-4 d-flex mb-5"
       style="gap: 10px"
       color="background"
@@ -178,7 +178,7 @@ export default {
 .os-tab__card {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
   padding-bottom: 16px;
 }
 </style>

@@ -11,7 +11,7 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue(index + '.title', newVal)"
+            @change="setValue(index + '.title', $event.target.value)"
             label="title"
             v-model="instance.title"
           />
@@ -24,18 +24,14 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.first_name', newVal)
-            "
+            @change="setValue(index + '.resources.user.first_name', $event.target.value)"
             label="first name"
             v-model="instance.resources.user.first_name"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.last_name', newVal)
-            "
+            @change="setValue(index + '.resources.user.last_name', $event.target.value)"
             label="last name"
             v-model="instance.resources.user.last_name"
           />
@@ -45,82 +41,63 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.org_name', newVal)
-            "
+            @change="setValue(index + '.resources.user.org_name', $event.target.value)"
             label="organization name"
             v-model="instance.resources.user.org_name"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.address1', newVal)
-            "
+            @change="setValue(index + '.resources.user.address1', $event.target.value)"
             label="address1"
             v-model="instance.resources.user.address1"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.address2', newVal)
-            "
+            @change="setValue(index + '.resources.user.address2', $event.target.value)"
             label="address2"
             v-model="instance.resources.user.address2"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.city', newVal)
-            "
+            @change="setValue(index + '.resources.user.city', $event.target.value)"
             label="city"
             v-model="instance.resources.user.city"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.country', newVal)
-            "
+            @change="setValue(index + '.resources.user.country', $event.target.value)"
             label="country"
             v-model="instance.resources.user.country"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.state', newVal)
-            "
+            @change="setValue(index + '.resources.user.state', $event.target.value)"
             label="state"
             v-model="instance.resources.user.state"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) =>
-                setValue(index + '.resources.user.postal_code', newVal)
-            "
+            @change="setValue(index + '.resources.user.postal_code', $event.target.value)"
             label="postal_code"
             v-model="instance.resources.user.postal_code"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.phone', newVal)
-            "
+            @change="setValue(index + '.resources.user.phone', $event.target.value)"
             label="phone"
             v-model="instance.resources.user.phone"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.email', newVal)
-            "
+            @change="setValue(index + '.resources.user.email', $event.target.value)"
             label="email"
             v-model="instance.resources.user.email"
           />
@@ -129,18 +106,14 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.reg_username', newVal)
-            "
+            @change="setValue(index + '.resources.reg_username', $event.target.value)"
             label="reg_username"
             v-model="instance.resources.reg_username"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.reg_password', newVal)
-            "
+            @change="setValue(index + '.resources.reg_password', $event.target.value)"
             label="reg_password"
             v-model="instance.resources.reg_password"
           />
@@ -149,7 +122,7 @@
       <v-row>
         <v-col cols="4">
           <v-switch
-            @change="
+            @update:model-value="
               (newVal) => setValue(index + '.resources.auto_renew', newVal)
             "
             v-model="instance.resources.auto_renew"
@@ -158,7 +131,7 @@
         </v-col>
         <v-col cols="4">
           <v-switch
-            @change="
+            @update:model-value="
               (newVal) => setValue(index + '.resources.who_is_privacy', newVal)
             "
             v-model="instance.resources.who_is_privacy"
@@ -167,7 +140,7 @@
         </v-col>
         <v-col cols="4">
           <v-switch
-            @change="
+            @update:model-value="
               (newVal) => setValue(index + '.resources.lock_domain', newVal)
             "
             v-model="instance.resources.lock_domain"

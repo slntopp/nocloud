@@ -20,10 +20,10 @@
       <template v-slot:[`item.enabled`]="{ item }">
         <div class="enabled_column">
           <v-switch
-            dense
+            density="compact"
             hide-details
-            :input-value="instance.addons?.includes(item.uuid)"
-            @change="toggleAddon(item)"
+            :model-value="instance.addons?.includes(item.uuid)"
+            @update:model-value="toggleAddon(item)"
           />
         </div>
       </template>

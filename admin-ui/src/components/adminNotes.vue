@@ -2,7 +2,7 @@
   <v-card min-height="50vh" color="background-light">
     <v-card
       class="px-5 pt-3"
-      outlined
+      border
       color="background-light"
       style="position: relative"
     >
@@ -19,10 +19,10 @@
         class="my-3 pa-3"
         style="
           border: 2px solid;
-          border-color: var(--v-primary-base) !important;
+          border-color: rgb(var(--v-theme-primary)) !important;
           border-radius: 10px;
         "
-        outlined
+        border
         v-for="(note, index) in filteredNotes"
         :key="index"
       >
@@ -94,8 +94,7 @@
 import RichEditor from "@/components/ui/richEditor.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-// import the module directly: the package index also pulls in the 1.2 MB world map
-import EditorContainer from "nocloud-ui/modules/editorContainer.vue";
+import EditorContainer from "@/components/nocloud-ui/editorContainer.vue";
 import { formatSecondsToDate } from "@/functions";
 import api from "@/api";
 

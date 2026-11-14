@@ -14,7 +14,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="service.uuid"
+          :model-value="service.uuid"
           label="service uuid"
           style="display: inline-block; width: 330px"
           :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
@@ -25,7 +25,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="service && service.status"
+          :model-value="service && service.status"
           label="state"
           style="display: inline-block; width: 150px"
         >
@@ -34,7 +34,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="hashpart(service.hash)"
+          :model-value="hashpart(service.hash)"
           label="service hash"
           style="display: inline-block; width: 150px"
           :append-icon="copyed == 'rootHash' ? 'mdi-check' : 'mdi-content-copy'"
@@ -45,7 +45,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="service.access?.namespace"
+          :model-value="service.access?.namespace"
           label="namespace"
           style="display: inline-block; width: 150px"
         >
@@ -54,7 +54,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="service.access?.level"
+          :model-value="service.access?.level"
           label="level"
           style="display: inline-block; width: 150px"
         >
@@ -69,15 +69,15 @@
 
     groups:
     <v-row justify="center" class="px-2 pb-2">
-      <v-expansion-panels inset v-model="opened" multiple>
+      <v-expansion-panels variant="inset" v-model="opened" multiple>
         <v-expansion-panel
           v-for="(group, i) in service.instancesGroups"
           :key="i"
-          style="background: var(--v-background-base)"
+          style="background: rgb(var(--v-theme-background))"
         >
-          <v-expansion-panel-header>
+          <v-expansion-panel-title>
             {{ group.title }} | Type: {{ group.type }} |
-            <v-chip class="instance-group-status" small color="grey">
+            <v-chip class="instance-group-status" size="small" color="grey">
               {{ group.instances.length }}
             </v-chip>
             <v-icon
@@ -90,13 +90,13 @@
               @click.stop="openDeleteIg(i)"
               >mdi-delete</v-icon
             >
-          </v-expansion-panel-header>
-          <v-expansion-panel-content>
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
             <v-row>
               <v-col>
                 <v-text-field
                   readonly
-                  :value="provider(group)"
+                  :model-value="provider(group)"
                   label="service provider"
                   style="display: inline-block; width: 330px"
                 >
@@ -105,7 +105,7 @@
               <v-col>
                 <v-text-field
                   readonly
-                  :value="group.uuid"
+                  :model-value="group.uuid"
                   label="group uuid"
                   style="display: inline-block; width: 330px"
                   :append-icon="
@@ -118,7 +118,7 @@
               <v-col>
                 <v-text-field
                   readonly
-                  :value="hashpart(group.hash)"
+                  :model-value="hashpart(group.hash)"
                   label="group hash"
                   style="display: inline-block; width: 150px"
                   :append-icon="
@@ -132,22 +132,22 @@
             <template v-if="group.instances.length > 0">Instances:</template>
             <v-row>
               <v-col>
-                <v-expansion-panels inset v-model="openedInstances[i]" multiple>
+                <v-expansion-panels variant="inset" v-model="openedInstances[i]" multiple>
                   <v-expansion-panel
                     v-for="(instance, index) in group.instances"
                     :key="index"
-                    style="background: var(--v-background-light-base)"
+                    style="background: rgb(var(--v-theme-background-light))"
                   >
-                    <v-expansion-panel-header>
+                    <v-expansion-panel-title>
                       {{ instance.title }}
                       <v-chip
-                        x-small
+                        size="x-small"
                         class="ml-2"
                         style="max-width: 10px; max-height: 10px; padding: 0"
                         :color="stateColor(instance.state?.meta.state_str)"
                       />
-                    </v-expansion-panel-header>
-                    <v-expansion-panel-content>
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
                       <div class="mb-4">
                         <span class="mr-2">Instance uuid:</span>
                         <router-link
@@ -171,12 +171,12 @@
                         :template="instance"
                         :provider="group.sp"
                       />
-                    </v-expansion-panel-content>
+                    </v-expansion-panel-text>
                   </v-expansion-panel>
                 </v-expansion-panels>
               </v-col>
             </v-row>
-          </v-expansion-panel-content>
+          </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
     </v-row>
@@ -191,11 +191,11 @@
             {{ deleteIgWarning(pendingDeleteGroup) }}
           </v-card-text>
           <v-card-actions class="buttons">
-            <v-btn color="red darken-1" :disabled="isLoading" @click="closeDeleteIg">
+            <v-btn color="red-darken-1" :disabled="isLoading" @click="closeDeleteIg">
               Cancel
             </v-btn>
             <v-btn
-              color="primary darken-1"
+              color="primary-darken-1"
               :loading="isLoading"
               @click="confirmDeleteIg"
             >
@@ -213,7 +213,7 @@
           <v-select
             :rules="requiredRule"
             v-model="selectedService"
-            item-text="title"
+            item-title="title"
             item-value="uuid"
             label="service"
             :items="allAvailableServices"
@@ -244,6 +244,7 @@
 </template>
 
 <script>
+import { moduleComponent, moduleTypes } from "@/modules";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import ServiceDeploy from "@/components/service/service-deploy.vue";
@@ -506,36 +507,13 @@ export default {
     },
   },
   created() {
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /instanceCard\.vue$/
-    );
-
-    types.keys().forEach((key) => {
-      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCard\.vue/i);
-      if (matched && matched.length > 1) {
-        const type = matched[1];
-        this.templates[type] = () =>
-          import(`@/components/modules/${type}/instanceCard.vue`);
-      }
+    moduleTypes("instanceCard").forEach((type) => {
+      this.templates[type] = moduleComponent("instanceCard", type);
     });
   },
   mounted() {
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /serviceProviders\.vue$/
-    );
-
-    types.keys().forEach((key) => {
-      const matched = key.match(
-        /\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i
-      );
-
-      if (matched && matched.length > 1) {
-        this.types.push(matched[1]);
-      }
+    moduleTypes("serviceProviders").forEach((type) => {
+      this.types.push(type);
     });
     // Object.keys(this.service.instancesGroups).forEach((key) => {
     //   this.$set(this.openedInstances, key, [0]);
@@ -557,7 +535,7 @@ export default {
 }
 
 .confirm-card {
-  background-color: var(--v-background-base);
+  background-color: rgb(var(--v-theme-background));
   padding: 30px;
 }
 

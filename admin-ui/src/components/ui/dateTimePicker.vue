@@ -1,9 +1,9 @@
 <template>
   <v-text-field
-    :value="placeholder || value"
-    :dense="dense"
+    :model-value="placeholder || value"
+    :density="dense ? 'compact' : undefined"
     :clearable="clearable"
-    @input="emits('input', $event)"
+    @update:model-value="emits('input', $event)"
     :label="label"
     :disabled="disabled"
     :min="min"

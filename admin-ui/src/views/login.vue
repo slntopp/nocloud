@@ -1,8 +1,8 @@
 <template>
   <div class="login-view">
     <v-container fluid fill-height>
-      <v-layout align-center justify-center>
-        <v-flex xs12 sm8 md4 xl3>
+      <v-row align="center" justify="center">
+        <v-col cols="12" sm="8" md="4" xl="3">
           <v-card class="elevation-12">
             <v-toolbar dark color="primary">
               <v-toolbar-title>Login</v-toolbar-title>
@@ -45,15 +45,15 @@
               </v-btn>
             </v-card-actions>
           </v-card>
-        </v-flex>
-      </v-layout>
+        </v-col>
+      </v-row>
     </v-container>
   </div>
 </template>
 
 <script setup>
 import { computed, ref } from "vue";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import { useStore } from "../store";
 
 const loginFormRules = ref([(v) => !!v || "Required"]);

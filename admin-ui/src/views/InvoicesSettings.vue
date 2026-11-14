@@ -12,9 +12,9 @@
             v-model="newSettings.template"
             label="Template"
           />
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-bind="attrs" v-on="on">
+          <v-tooltip location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-btn icon v-bind="props">
                 <v-icon>mdi-help</v-icon>
               </v-btn>
             </template>
@@ -215,7 +215,7 @@ watch(
 
 <style scoped>
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-family: "Quicksand", sans-serif;
   line-height: 1em;

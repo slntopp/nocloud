@@ -38,7 +38,7 @@
 
       <v-card color="background-light" class="mt-6" variant="outlined">
         <v-card-title class="text-h6 bg-primary">
-          <v-icon left>mdi-translate</v-icon>
+          <v-icon start>mdi-translate</v-icon>
           Translations
         </v-card-title>
 
@@ -52,16 +52,14 @@
                 density="compact"
                 :rules="localeRules"
                 maxlength="2"
-                dense
-                @input="formatLocale"
+                @update:model-value="formatLocale"
               />
             </v-col>
             <v-col cols="9">
               <v-text-field
-                dense
+                density="compact"
                 v-model="newTranslation"
                 :label="`Translation${newLocale ? ' (' + newLocale + ')' : ''}`"
-                density="compact"
                 @keyup.enter="addTranslation"
               />
             </v-col>
@@ -97,10 +95,9 @@
                 </v-col>
                 <v-col cols="10">
                   <v-text-field
-                    dense
+                    density="compact"
                     v-model="categoryData.promo[locale]"
                     :label="`Translation (${locale})`"
-                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -136,7 +133,7 @@
             :loading="isSaveLoading"
             @click="saveCategory"
           >
-            <v-icon left>{{
+            <v-icon start>{{
               isEdit ? "mdi-pencil" : "mdi-content-save"
             }}</v-icon>
             {{ isEdit ? "Update Category" : "Create Category" }}
@@ -149,7 +146,7 @@
               variant="outlined"
               :loading="isDeleteLoading"
             >
-              <v-icon left>mdi-delete</v-icon>
+              <v-icon start>mdi-delete</v-icon>
               Delete
             </v-btn>
           </confirm-dialog>
@@ -163,7 +160,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 const props = defineProps({
@@ -393,7 +390,7 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

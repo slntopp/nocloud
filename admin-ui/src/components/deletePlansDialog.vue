@@ -13,7 +13,7 @@
       </v-btn>
     </confirm-dialog>
 
-    <v-dialog :value="isLinkedInstances" width="60vw">
+    <v-dialog :model-value="isLinkedInstances" width="60vw">
       <v-card class="confirm-card">
         <v-card-title>
           You can't delete a price model while there are instances using it!
@@ -162,9 +162,9 @@ const deletePlans = (plans) => {
 
 <style>
 .confirm-card div {
-  background-color: var(--v-background-base);
+  background-color: rgb(var(--v-theme-background));
 }
 .confirm-card {
-  background-color: var(--v-background-base) !important;
+  background-color: rgb(var(--v-theme-background)) !important;
 }
 </style>

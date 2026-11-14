@@ -35,7 +35,7 @@
       :items="licences"
       table-name="sp-licences-table"
       :footer-error="fetchError"
-      :options.sync="tableOptions"
+      v-model:options="tableOptions"
       :server-items-length="totalLicences"
     >
       <template v-slot:[`item.app_key`]="{ value, item }">
@@ -69,7 +69,7 @@
       <template v-slot:[`item.account`]="{ item }">
         <template v-if="linkedInstanceId(item)">
           <template v-if="isBrokenLink(item)">
-            <span class="error--text">Deleted</span>
+            <span class="text-error">Deleted</span>
           </template>
           <template v-else>
             <router-link
@@ -96,13 +96,13 @@
             <v-skeleton-loader type="text" v-else />
           </template>
         </template>
-        <span v-else class="grey--text">Trial</span>
+        <span v-else class="text-grey">Trial</span>
       </template>
 
       <template v-slot:[`item.instance`]="{ item }">
         <template v-if="linkedInstanceId(item)">
           <template v-if="isBrokenLink(item)">
-            <span class="error--text">Deleted</span>
+            <span class="text-error">Deleted</span>
           </template>
           <template v-else>
             <router-link
@@ -119,7 +119,7 @@
             <v-skeleton-loader type="text" v-else />
           </template>
         </template>
-        <span v-else class="grey--text">Trial</span>
+        <span v-else class="text-grey">Trial</span>
       </template>
 
       <template v-slot:[`item.due_date`]="{ item }">

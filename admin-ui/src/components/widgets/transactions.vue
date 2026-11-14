@@ -9,14 +9,14 @@
       <div class="d-flex justify-end">
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.period"
-          @change="
+          density="compact"
+          :model-value="data.period"
+          @update:model-value="
             emit('update:key', { key: 'period', value: $event || data.period })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in periods">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>
         </v-btn-toggle>
@@ -39,9 +39,8 @@
       </div>
 
       <v-divider></v-divider>
-      <v-list dense color="transparent">
+      <v-list density="compact" color="transparent">
         <v-list-item v-for="report in fiveLast" :key="report.uuid" class="px-0">
-          <v-list-item-content class="ma-0 pa-0">
             <div class="d-flex align-center justify-space-between">
               <span>{{ formatSecondsToDate(report.exec, true) }}</span>
               <router-link
@@ -67,7 +66,6 @@
                 :value="report.total.toFixed(2)"
               />
             </div>
-          </v-list-item-content>
         </v-list-item>
       </v-list>
     </v-card>

@@ -10,21 +10,21 @@
           size="16"
           width="2"
         />
-        <v-tooltip v-else bottom>
-          <template v-slot:activator="{ on, attrs }">
-            <v-chip small outlined color="primary" v-bind="attrs" v-on="on">{{
+        <v-tooltip v-else location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-chip size="small" variant="outlined" color="primary" v-bind="props">{{
               creditText
             }}</v-chip>
           </template>
           <span>{{ creditHint }}</span>
         </v-tooltip>
-        <v-tooltip bottom>
-          <template v-slot:activator="{ on, attrs }">
+        <v-tooltip location="bottom">
+          <template v-slot:activator="{ props }">
             <v-btn
               icon
               color="primary"
-              v-bind="attrs"
-              v-on="on"
+             
+              v-bind="props"
               :loading="isChatLoading"
               @click="openChat"
             >
@@ -37,9 +37,9 @@
       <v-switch
         class="ma-0 pa-0"
         hide-details
-        dense
-        :input-value="template.meta?.autoRenew"
-        @change="updateAutomaticDebit"
+        density="compact"
+        :model-value="template.meta?.autoRenew"
+        @update:model-value="updateAutomaticDebit"
         :disabled="isDeleted"
         label="Auto debit"
       />
@@ -61,13 +61,13 @@
         <instance-state :template="template" />
       </v-col>
       <v-col class="d-flex justify-end px-1">
-        <v-chip color="primary" outlined
+        <v-chip color="primary" variant="outlined"
           >Price: {{ formatPrice(price, accountCurrency) }}
           {{ accountCurrency?.code }}</v-chip
         >
       </v-col>
       <v-col class="px-1 d-flex justify-end">
-        <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
+        <v-chip variant="outlined" color="primary">Due to date: {{ dueDate }}</v-chip>
       </v-col>
     </v-row>
   </v-container>

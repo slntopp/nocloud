@@ -8,10 +8,10 @@
       <v-col cols="8">
         <v-text-field
           label="https://pve.example.com:8006"
-          :value="secrets.host"
+          :model-value="secrets.host"
           :rules="[required, isHttpsURL]"
           :error-messages="errors.host"
-          @change="(v) => changeSecret('host', v)"
+          @change="changeSecret('host', $event.target.value)"
         />
       </v-col>
     </v-row>
@@ -23,11 +23,11 @@
         </subheader-with-info>
       </v-col>
       <v-col cols="8">
-        <v-radio-group v-model="authMode" row @change="changeAuthMode">
+        <v-radio-group v-model="authMode" inline @update:model-value="changeAuthMode">
           <v-radio label="User + password" value="password" />
           <v-radio label="API token" value="token" />
         </v-radio-group>
-        <v-alert v-if="authMode === 'token'" dense text type="info">
+        <v-alert v-if="authMode === 'token'" density="compact" text type="info">
           PVE vncwebsocket does not accept API tokens: the VNC console requires
           user + password. Everything else works with a token.
         </v-alert>
@@ -42,9 +42,9 @@
         <v-col cols="8">
           <v-text-field
             label="nocloud@pve!driver"
-            :value="secrets.token_id"
+            :model-value="secrets.token_id"
             :rules="[required, isTokenID]"
-            @change="(v) => changeSecret('token_id', v)"
+            @change="changeSecret('token_id', $event.target.value)"
           />
         </v-col>
       </v-row>
@@ -56,9 +56,9 @@
           <v-text-field
             label="uuid"
             type="password"
-            :value="secrets.token_secret"
+            :model-value="secrets.token_secret"
             :rules="[required]"
-            @change="(v) => changeSecret('token_secret', v)"
+            @change="changeSecret('token_secret', $event.target.value)"
           />
         </v-col>
       </v-row>
@@ -71,9 +71,9 @@
         <v-col cols="8">
           <v-text-field
             label="nocloud@pve"
-            :value="secrets.user"
+            :model-value="secrets.user"
             :rules="[required, isRealmUser]"
-            @change="(v) => changeSecret('user', v)"
+            @change="changeSecret('user', $event.target.value)"
           />
         </v-col>
       </v-row>
@@ -85,9 +85,9 @@
           <v-text-field
             label="password"
             type="password"
-            :value="secrets.pass"
+            :model-value="secrets.pass"
             :rules="[required]"
-            @change="(v) => changeSecret('pass', v)"
+            @change="changeSecret('pass', $event.target.value)"
           />
         </v-col>
       </v-row>
@@ -100,8 +100,8 @@
       <v-col cols="8">
         <v-switch
           label="insecure (self-signed certificate)"
-          :input-value="!!secrets.insecure"
-          @change="(v) => changeSecret('insecure', !!v)"
+          :model-value="!!secrets.insecure"
+          @update:model-value="(v) => changeSecret('insecure', !!v)"
         />
       </v-col>
     </v-row>
@@ -113,8 +113,8 @@
         <v-textarea
           rows="3"
           label="-----BEGIN CERTIFICATE-----"
-          :value="secrets.ca_cert"
-          @change="(v) => changeSecret('ca_cert', v)"
+          :model-value="secrets.ca_cert"
+          @change="changeSecret('ca_cert', $event.target.value)"
         />
       </v-col>
     </v-row>
@@ -126,8 +126,8 @@
       <v-col cols="8">
         <v-text-field
           label="nocloud (optional, VMs are added to this PVE pool)"
-          :value="getDefault('pool')"
-          @change="(v) => changeDefault('pool', v)"
+          :model-value="getDefault('pool')"
+          @change="changeDefault('pool', $event.target.value)"
         />
       </v-col>
     </v-row>
@@ -149,7 +149,7 @@
           :json="getJSON('sched')"
           @changeValue="(v) => changeJSON('sched', v)"
         />
-        <div v-if="errors.sched" class="error--text">{{ errors.sched }}</div>
+        <div v-if="errors.sched" class="text-error">{{ errors.sched }}</div>
       </v-col>
     </v-row>
 
@@ -165,7 +165,7 @@
           :json="getJSON('sched_ds')"
           @changeValue="(v) => changeJSON('sched_ds', v)"
         />
-        <div v-if="errors.sched_ds" class="error--text">{{ errors.sched_ds }}</div>
+        <div v-if="errors.sched_ds" class="text-error">{{ errors.sched_ds }}</div>
       </v-col>
     </v-row>
 
@@ -185,7 +185,7 @@
           :value="getJSON('public_ip_pool').default"
           @input="(v) => changeJSON('public_ip_pool', { ...getJSON('public_ip_pool'), default: v })"
         />
-        <div v-if="errors.public_ip_pool" class="error--text">
+        <div v-if="errors.public_ip_pool" class="text-error">
           {{ errors.public_ip_pool }}
         </div>
       </v-col>
@@ -200,8 +200,8 @@
       <v-col cols="8">
         <v-switch
           label="disable private networks (private_vnet_ban)"
-          :input-value="!!getDefault('private_vnet_ban')"
-          @change="(v) => changeDefault('private_vnet_ban', !!v)"
+          :model-value="!!getDefault('private_vnet_ban')"
+          @update:model-value="(v) => changeDefault('private_vnet_ban', !!v)"
         />
       </v-col>
     </v-row>
@@ -231,8 +231,8 @@
       <v-col cols="8">
         <v-switch
           label="full clone (off = linked clone, template must stay on the same storage)"
-          :input-value="getDefault('full_clone') !== false"
-          @change="(v) => changeDefault('full_clone', !!v)"
+          :model-value="getDefault('full_clone') !== false"
+          @update:model-value="(v) => changeDefault('full_clone', !!v)"
         />
       </v-col>
     </v-row>
@@ -245,17 +245,17 @@
         <v-text-field
           type="number"
           label="min (>= 100)"
-          :value="vmidRange[0]"
+          :model-value="vmidRange[0]"
           :error-messages="errors.vmid_range"
-          @change="(v) => changeVMIDRange(0, v)"
+          @change="changeVMIDRange(0, $event.target.value)"
         />
       </v-col>
       <v-col cols="4">
         <v-text-field
           type="number"
           label="max"
-          :value="vmidRange[1]"
-          @change="(v) => changeVMIDRange(1, v)"
+          :model-value="vmidRange[1]"
+          @change="changeVMIDRange(1, $event.target.value)"
         />
       </v-col>
     </v-row>
@@ -267,8 +267,8 @@
       <v-col cols="8">
         <v-select
           :items="suspendModes"
-          :value="getDefault('suspend_mode') || 'suspend_disk'"
-          @change="(v) => changeDefault('suspend_mode', v)"
+          :model-value="getDefault('suspend_mode') || 'suspend_disk'"
+          @update:model-value="(v) => changeDefault('suspend_mode', v)"
         />
       </v-col>
     </v-row>
@@ -282,8 +282,8 @@
       <v-col cols="8">
         <v-switch
           label="required (templates without agent are hidden, extra IPs and stats need it)"
-          :input-value="!!getDefault('qemu_agent_required')"
-          @change="(v) => changeDefault('qemu_agent_required', !!v)"
+          :model-value="!!getDefault('qemu_agent_required')"
+          @update:model-value="(v) => changeDefault('qemu_agent_required', !!v)"
         />
       </v-col>
     </v-row>
@@ -305,30 +305,30 @@
             <v-text-field
               type="number"
               label="SSH port"
-              :value="guestSSH.port"
+              :model-value="guestSSH.port"
               :rules="[isSSHPort]"
               :error-messages="errors.guest_ssh"
-              @change="(v) => changeGuestSSH('port', +v)"
+              @change="changeGuestSSH('port', +$event.target.value)"
             />
           </v-col>
           <v-col cols="8" class="d-flex flex-column justify-center">
             <v-switch
-              dense
+              density="compact"
               label="PasswordAuthentication"
-              :input-value="guestSSH.password_auth !== false"
-              @change="(v) => changeGuestSSH('password_auth', !!v)"
+              :model-value="guestSSH.password_auth !== false"
+              @update:model-value="(v) => changeGuestSSH('password_auth', !!v)"
             />
             <v-switch
-              dense
+              density="compact"
               label="PermitRootLogin"
-              :input-value="guestSSH.permit_root_login !== false"
-              @change="(v) => changeGuestSSH('permit_root_login', !!v)"
+              :model-value="guestSSH.permit_root_login !== false"
+              @update:model-value="(v) => changeGuestSSH('permit_root_login', !!v)"
             />
             <v-switch
-              dense
+              density="compact"
               label="PubkeyAuthentication"
-              :input-value="guestSSH.pubkey_auth !== false"
-              @change="(v) => changeGuestSSH('pubkey_auth', !!v)"
+              :model-value="guestSSH.pubkey_auth !== false"
+              @update:model-value="(v) => changeGuestSSH('pubkey_auth', !!v)"
             />
           </v-col>
         </v-row>

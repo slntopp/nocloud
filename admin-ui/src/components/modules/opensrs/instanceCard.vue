@@ -8,7 +8,7 @@
           readonly
           style="display: inline-block; width: 200px"
           :label="dictionary[key] ?? key.replace('_', ' ')"
-          :value="item"
+          :model-value="item"
         />
       </v-col>
     </v-row>
@@ -21,7 +21,7 @@
           readonly
           style="display: inline-block; width: 200px"
           :label="dictionary[key] ?? key.replace('_', ' ')"
-          :value="item"
+          :model-value="item"
         />
       </v-col>
     </v-row>

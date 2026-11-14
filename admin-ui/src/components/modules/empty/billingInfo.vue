@@ -5,7 +5,7 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
           <template v-slot:append>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
@@ -25,7 +25,7 @@
         <v-text-field
           readonly
           label="Product name"
-          :value="billingPlan.products[template.product].title"
+          :model-value="billingPlan.products[template.product].title"
           @click:append="priceModelDialog = true"
           append-icon="mdi-pencil"
         />
@@ -81,7 +81,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="dueDate"
+          :model-value="dueDate"
           :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null"
           @click="changeDatesDialog = true"
         />
@@ -90,17 +90,17 @@
 
     <v-expansion-panels>
       <v-expansion-panel>
-        <v-expansion-panel-header color="background-light">
+        <v-expansion-panel-title color="background-light">
           <div>
-            <span style="color: var(--v-primary-base)" class="text-h6"
+            <span style="color: rgb(var(--v-theme-primary))" class="text-h6"
               >Prices
             </span>
           </div>
           <template v-slot:actions>
-            <v-icon color="primary" x-large> $expand </v-icon>
+            <v-icon color="primary" size="x-large"> $expand </v-icon>
           </template>
-        </v-expansion-panel-header>
-        <v-expansion-panel-content color="background-light">
+        </v-expansion-panel-title>
+        <v-expansion-panel-text color="background-light">
           <nocloud-table
             class="mb-5"
             :headers="billingHeaders"
@@ -111,7 +111,7 @@
           >
             <template v-slot:[`item.name`]="{ item }">
               <span v-html="item.name" />
-              <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+              <v-chip v-if="item.isAddon" size="small" class="ml-1">Addon</v-chip>
             </template>
             <template v-slot:[`item.aiModels`]="{ item }">
               <div v-if="!item.isAddon" class="d-flex align-center nowrap">
@@ -119,19 +119,19 @@
                 <v-chip
                   v-for="model in models.slice(0, 2)"
                   :key="model"
-                  x-small
-                  outlined
+                  size="x-small"
+                  variant="outlined"
                   class="mr-1"
                   >{{ modelNames[model] || model }}</v-chip
                 >
-                <v-tooltip v-if="models.length > 2" bottom>
-                  <template v-slot:activator="{ on, attrs }">
+                <v-tooltip v-if="models.length > 2" location="bottom">
+                  <template v-slot:activator="{ props }">
                     <v-chip
-                      x-small
+                      size="x-small"
                       color="primary"
-                      outlined
-                      v-bind="attrs"
-                      v-on="on"
+                      variant="outlined"
+                     
+                      v-bind="props"
                       >+{{ models.length - 2 }}</v-chip
                     >
                   </template>
@@ -154,13 +154,13 @@
                     {{ amount(usage.left) }} / {{ amount(usage.total) }}
                     {{ defaultCurrency?.code }}
                   </div>
-                  <div class="caption text--secondary">
+                  <div class="text-caption text--secondary">
                     used {{ amount(usage.total - usage.left) }}
                   </div>
                 </template>
-                <v-tooltip v-else bottom>
-                  <template v-slot:activator="{ on, attrs }">
-                    <span v-bind="attrs" v-on="on"
+                <v-tooltip v-else location="bottom">
+                  <template v-slot:activator="{ props }">
+                    <span v-bind="props"
                       >- / {{ amount(credit) }} {{ defaultCurrency?.code }}</span
                     >
                   </template>
@@ -177,15 +177,15 @@
                   class="mr-2"
                   v-model="item.price"
                   :suffix="defaultCurrency?.code"
-                  @input="updatePrice(item, false)"
+                  @update:model-value="updatePrice(item, false)"
                   append-icon="mdi-pencil"
                 />
                 <v-text-field
                   class="ml-2"
                   :suffix="accountCurrency?.code"
-                  style="color: var(--v-primary-base)"
+                  style="color: rgb(var(--v-theme-primary))"
                   v-model="item.accountPrice"
-                  @input="updatePrice(item, true)"
+                  @update:model-value="updatePrice(item, true)"
                   append-icon="mdi-pencil"
                 />
               </div>
@@ -206,20 +206,20 @@
                       v-if="isAiPackage"
                       class="mr-5"
                       color="primary"
-                      outlined
+                      variant="outlined"
                       :loading="isChatLoading"
                       @click="openChat"
                     >
-                      <v-icon small left>mdi-chat-outline</v-icon>
+                      <v-icon size="small" start>mdi-chat-outline</v-icon>
                       AI chat as client
                     </v-btn>
                     <v-dialog v-model="isAddonsDialog" max-width="60%">
-                      <template v-slot:activator="{ on, attrs }">
+                      <template v-slot:activator="{ props }">
                         <v-btn
                           class="mr-5"
                           color="primary"
-                          v-bind="attrs"
-                          v-on="on"
+                         
+                          v-bind="props"
                           >addons</v-btn
                         >
                       </template>
@@ -236,7 +236,7 @@
                       />
                     </v-dialog>
 
-                    <v-chip color="primary" outlined>
+                    <v-chip color="primary" variant="outlined">
                       {{
                         [
                           formatPrice(totalPrice, defaultCurrency),
@@ -256,7 +256,7 @@
               </tr>
             </template>
           </nocloud-table>
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
 

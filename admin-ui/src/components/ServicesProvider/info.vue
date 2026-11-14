@@ -6,7 +6,7 @@
           readonly
           label="template uuid"
           style="display: inline-block; width: 330px"
-          :value="provider.uuid"
+          :model-value="provider.uuid"
           :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
           @click:append="addToClipboard(provider.uuid, 'rootUUID')"
         />
@@ -16,7 +16,7 @@
           readonly
           label="template type"
           style="display: inline-block; width: 150px"
-          :value="provider.type"
+          :model-value="provider.type"
         />
       </v-col>
       <v-col v-if="provider.type !== 'proxmox'">
@@ -24,7 +24,7 @@
           readonly
           label="proxy"
           style="display: inline-block; width: 250px"
-          :value="provider.proxy?.socket"
+          :model-value="provider.proxy?.socket"
         />
       </v-col>
       <v-col>
@@ -80,8 +80,8 @@
       <v-row class="flex-column">
         <v-col>
           <v-dialog max-width="60%" v-model="isDialogVisible">
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn class="mr-2" v-bind="attrs" v-on="on"> Add </v-btn>
+            <template v-slot:activator="{ props }">
+              <v-btn class="mr-2" v-bind="props"> Add </v-btn>
             </template>
             <v-card
               max-width="100%"
@@ -147,6 +147,7 @@
 </template>
 
 <script setup>
+import { defineAsyncComponent } from "vue";
 import extentionsMap from "@/components/extentions/map.js";
 import nocloudTable from "@/components/table.vue";
 import plansTable from "@/components/plansTable.vue";
@@ -240,15 +241,15 @@ const plansParams = computed(() => {
 const spTypes = computed(() => {
   switch (provider.value.type) {
     case "ione":
-      return () => import("@/components/modules/ione/serviceProviderInfo.vue");
+      return defineAsyncComponent(() => import("@/components/modules/ione/serviceProviderInfo.vue"));
     case "proxmox":
-      return () =>
-        import("@/components/modules/proxmox/serviceProviderInfo.vue");
+      return defineAsyncComponent(() =>
+        import("@/components/modules/proxmox/serviceProviderInfo.vue"));
     case "ovh":
-      return () => import("@/components/modules/ovh/serviceProviderInfo.vue");
+      return defineAsyncComponent(() => import("@/components/modules/ovh/serviceProviderInfo.vue"));
     default:
-      return () =>
-        import("@/components/modules/custom/serviceProviderInfo.vue");
+      return defineAsyncComponent(() =>
+        import("@/components/modules/custom/serviceProviderInfo.vue"));
   }
 });
 const downloadedFileName = computed(() => {
@@ -348,9 +349,9 @@ export default {
   border-radius: 2px;
 }
 .occupied {
-  background: var(--v-success-base);
+  background: rgb(var(--v-theme-success));
 }
 .free {
-  background: var(--v-error-base);
+  background: rgb(var(--v-theme-error));
 }
 </style>

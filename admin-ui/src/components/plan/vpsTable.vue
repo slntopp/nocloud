@@ -31,17 +31,17 @@
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
-      background-color="background-light"
+      bg-color="background-light"
     >
       <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
     </v-tabs>
 
-    <v-tabs-items
+    <v-window
       v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       class="rounded-b-lg"
     >
-      <v-tab-item v-for="tab in tabs" :key="tab">
+      <v-window-item v-for="tab in tabs" :key="tab">
         <v-progress-linear v-if="isPlansLoading" indeterminate class="pt-1" />
 
         <nocloud-table
@@ -51,18 +51,18 @@
           :show-select="false"
           :items="filtredPlans"
           :headers="headers"
-          :expanded.sync="expanded"
+          v-model:expanded="expanded"
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
           <template v-slot:[`item.name`]="{ item }">
-            <v-text-field dense style="width: 200px" v-model="item.name" />
+            <v-text-field density="compact" style="width: 200px" v-model="item.name" />
           </template>
 
           <template v-slot:[`item.resources`]="{ item }">
-            <v-tooltip bottom>
-              <template v-slot:activator="{ on, attrs }">
-                <span color="primary" dark v-bind="attrs" v-on="on">
+            <v-tooltip location="bottom">
+              <template v-slot:activator="{ props }">
+                <span color="primary" dark v-bind="props">
                   CPU:{{ item.resources.cpu || "N/A" }}
                 </span>
               </template>
@@ -72,7 +72,7 @@
           <template v-slot:[`item.group`]="{ item }">
             <template v-if="mode === 'edit' && planId === item.id">
               <v-text-field
-                dense
+                density="compact"
                 class="d-inline-block mr-1"
                 style="width: 200px"
                 v-model="newGroupName"
@@ -83,7 +83,7 @@
 
             <template v-if="mode === 'create' && planId === item.id">
               <v-text-field
-                dense
+                density="compact"
                 class="d-inline-block mr-1"
                 style="width: 200px"
                 v-model="newGroupName"
@@ -94,7 +94,7 @@
 
             <template v-if="mode === 'none'">
               <v-select
-                dense
+                density="compact"
                 class="d-inline-block"
                 style="width: 200px"
                 v-model="item.group"
@@ -117,7 +117,7 @@
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
-              dense
+              density="compact"
               style="width: 200px"
               :suffix="defaultCurrency?.code"
               v-model="item.value"
@@ -132,7 +132,7 @@
               <div>
                 <strong>Installation fee: </strong>
                 <v-text-field
-                  dense
+                  density="compact"
                   style="width: 200px; display: inline-block"
                   :suffix="defaultCurrency?.code"
                   v-model="item.installation_fee"
@@ -164,7 +164,7 @@
           :footer-error="fetchError"
         >
           <template v-slot:[`item.name`]="{ item }">
-            <v-text-field dense style="width: 200px" v-model="item.name" />
+            <v-text-field density="compact" style="width: 200px" v-model="item.name" />
           </template>
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value) }}
@@ -174,7 +174,7 @@
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
-              dense
+              density="compact"
               style="width: 200px"
               :suffix="defaultCurrency?.code"
               v-model="item.value"
@@ -196,10 +196,10 @@
         >
           <template v-slot:[`item.name`]="{ item }">
             <v-text-field
-              dense
+              density="compact"
               style="width: 200px"
-              :value="item.name"
-              @input="(name) => setImageName(item, name)"
+              :model-value="item.name"
+              @update:model-value="(name) => setImageName(item, name)"
             />
           </template>
           <template v-slot:[`item.tariff`]="{ value }">
@@ -208,7 +208,7 @@
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
               v-if="item"
-              dense
+              density="compact"
               style="width: 200px"
               :suffix="defaultCurrency?.code"
               v-model="item.value"
@@ -225,8 +225,8 @@
             :addons="template.addons"
           />
         </div>
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
@@ -1087,13 +1087,13 @@ defineExpose({
 }
 
 .v-data-table__expanded__content {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
 }
 
 .os-tab__card {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
   padding-bottom: 16px;
 }
 

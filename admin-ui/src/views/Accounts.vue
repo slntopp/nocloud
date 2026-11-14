@@ -2,18 +2,18 @@
   <div class="accounts pa-4 flex-wrap">
     <div class="buttons__inline pb-8 pt-4">
       <v-menu
-        offset-y
+        
         transition="slide-y-transition"
-        bottom
+        location="bottom"
         :close-on-content-click="false"
         v-model="createMenuVisible"
       >
-        <template v-slot:activator="{ on, attrs }">
+        <template v-slot:activator="{ props }">
           <v-btn
             color="background-light"
             class="mr-2 mt-2"
-            v-bind="attrs"
-            v-on="on"
+           
+            v-bind="props"
           >
             create
           </v-btn>
@@ -23,7 +23,7 @@
             <v-row>
               <v-col>
                 <v-text-field
-                  dense
+                  density="compact"
                   v-model="newAccount.title"
                   placeholder="title"
                   :rules="rules.title"
@@ -34,7 +34,7 @@
             <v-row>
               <v-col>
                 <v-text-field
-                  dense
+                  density="compact"
                   v-model="newAccount.auth.data[0]"
                   placeholder="username"
                   :rules="rules.required"
@@ -45,7 +45,7 @@
             <v-row>
               <v-col>
                 <v-text-field
-                  dense
+                  density="compact"
                   v-model="newAccount.data.email"
                   placeholder="email"
                   :rules="rules.email"
@@ -56,7 +56,7 @@
             <v-row>
               <v-col>
                 <v-text-field
-                  dense
+                  density="compact"
                   v-model="newAccount.auth.data[1]"
                   placeholder="password"
                   type="password"
@@ -68,10 +68,10 @@
             <v-row>
               <v-col>
                 <v-select
-                  dense
+                  density="compact"
                   :items="accessLevels"
                   item-value="id"
-                  item-text="title"
+                  item-title="title"
                   v-model="newAccount.access"
                   label="access"
                 ></v-select>
@@ -80,12 +80,12 @@
             <v-row>
               <v-col>
                 <v-select
-                  dense
+                  density="compact"
                   :items="currencies"
                   v-model="newAccount.currency"
                   return-object
                   item-value="id"
-                  item-text="title"
+                  item-title="title"
                   label="currency"
                 ></v-select>
               </v-col>

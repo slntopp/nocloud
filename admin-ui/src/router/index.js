@@ -1,7 +1,4 @@
-import Vue from "vue";
-import VueRouter from "vue-router";
-
-Vue.use(VueRouter);
+import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
   {
@@ -142,7 +139,7 @@ const routes = [
     name: "Chats",
     redirect: {
       name: "Plugin",
-      params: { title: "Chats", url: "/cc.ui/" },
+      params: { title: "Chats" },
       query: {
         url: "/cc.ui/",
         fullscreen: window.innerWidth > 768 ? "false" : "true",
@@ -155,14 +152,10 @@ const routes = [
     redirect: (to) => {
       return {
         name: "Plugin",
-        params: {
-          title: "Chats",
-          url: "/cc.ui/",
-          params: {
-            redirect: `dashboard/${to.params.uuid}`,
-          },
-        },
-        query: { url: "/cc.ui/" },
+        params: { title: "Chats" },
+        // vue-router 4 drops params that are not in the path, so the plugin
+        // url and redirect travel in the query
+        query: { url: "/cc.ui/", redirect: `dashboard/${to.params.uuid}` },
       };
     },
   },
@@ -521,9 +514,8 @@ const routes = [
   },
 ];
 
-const router = new VueRouter({
-  mode: "history",
-  base: process.env.BASE_URL,
+const router = createRouter({
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 });
 

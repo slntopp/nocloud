@@ -9,14 +9,14 @@
       <div class="d-flex justify-end">
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.period"
-          @change="
+          density="compact"
+          :model-value="data.period"
+          @update:model-value="
             emit('update:key', { key: 'period', value: $event || data.period })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in periods">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>
         </v-btn-toggle>
@@ -38,7 +38,7 @@
 <script setup>
 import { computed, ref, toRefs, watch } from "vue";
 import widget from "@/components/widgets/widget.vue";
-import apexchart from "vue-apexcharts";
+import apexchart from "vue3-apexcharts";
 import { useStore } from "@/store";
 import { getDatesPeriod } from "@/functions";
 
@@ -124,6 +124,6 @@ watch([isStatisticLoading, () => data.value.period], () => {
 
 <style>
 span.apexcharts-legend-text {
-  color: var(--v-primary-base) !important;
+  color: rgb(var(--v-theme-primary)) !important;
 }
 </style>

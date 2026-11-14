@@ -1,37 +1,35 @@
 <template>
-  <components
-    :is="VDataTable"
+  <component
+    :is="tableComponent"
     v-sortable-table="{
       onEnd: sortTheHeadersAndUpdateTheKey,
       disabled: !tableName,
     }"
-    :item-key="itemKey"
+    :item-value="itemKey"
     class="elevation-0 background-light rounded-lg"
     :loading="loading"
     loading-text="Loading... Please wait"
-    color="background-light"
-    :items="items"
+    :items="tableItems"
+    v-bind="serverProps"
     :show-select="showSelect"
-    :value="selected"
-    @input="handleSelect"
+    :select-strategy="singleSelect ? 'single' : 'page'"
+    return-object
+    :model-value="selected"
+    @update:model-value="handleSelect"
     :hide-default-footer="hideDefaultFooter"
-    :single-select="singleSelect"
-    :headers="filtredHeaders"
-    :sort-by="tableSortBy"
-    :sort-desc="tableSortDesc"
+    :headers="tableHeaders"
+    :sort-by="tableSortByV3"
+    @update:sort-by="onSortByUpdate"
+    :custom-key-sort="customKeySort"
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
-    :page="serverSidePage"
-    @update:page="serverSidePage ? () => 1 : (page = $event)"
-    :items-per-page.sync="itemsPerPage"
-    :show-group-by="showGroupBy"
-    :group-by="groupBy"
-    :custom-sort="customSort"
+    :page="serverSidePage || page"
+    @update:page="onPageUpdate"
+    v-model:items-per-page="itemsPerPage"
+    :group-by="groupByV3"
     :key="anIncreasingNumber"
-    :server-items-length="serverItemsLength"
-    :options="options"
-    :footer-props="{ 'items-per-page-options': itemsPerPageOptions }"
+    :items-per-page-options="itemsPerPageOptions"
     @update:options="updateOptions"
     @update:items-per-page="saveItemsPerPage"
   >
@@ -43,7 +41,7 @@
         <template v-else>
           {{ props.value }}
         </template>
-        <v-btn icon @click="hideID(props.index)">
+        <v-btn icon variant="text" size="small" @click="hideID(props.index)">
           <v-icon>mdi-close-circle-outline</v-icon>
         </v-btn>
       </template>
@@ -59,13 +57,20 @@
         <v-btn
           v-if="!isIdShort(props.value) || isKeyOnlyAfterClick"
           icon
+          variant="text"
+          size="small"
           @click="showID(props.index)"
         >
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
       </template>
 
-      <v-btn icon @click="addToClipboard(props.value, props.index)">
+      <v-btn
+        icon
+        variant="text"
+        size="small"
+        @click="addToClipboard(props.value, props.index)"
+      >
         <v-icon v-if="copyed == props.index"> mdi-check </v-icon>
         <v-icon v-else> mdi-content-copy </v-icon>
       </v-btn>
@@ -79,43 +84,24 @@
       </router-link>
     </template>
 
+    <!-- pass consumer slots through; Vuetify 2 slot names/props are mapped -->
     <template
-      v-for="(_, scopedSlotName) in $scopedSlots"
-      v-slot:[scopedSlotName]="slotData"
+      v-for="(_, slotName) in passThroughSlots"
+      v-slot:[slotName]="slotData"
     >
-      <slot :name="scopedSlotName" v-bind="slotData" />
-    </template>
-    <template v-for="(_, slotName) in $slots" v-slot:[slotName]>
-      <slot :name="slotName" />
+      <slot :name="slotName" v-bind="slotData || {}" />
     </template>
 
-    <template
-      v-for="header in filtredHeaders"
-      v-slot:[`header.${header?.value}`]
-    >
-      {{ header.text }}
+    <template v-if="$slots['expanded-item']" v-slot:expanded-row="slotData">
+      <slot
+        name="expanded-item"
+        v-bind="{ ...slotData, headers: slotData.columns }"
+      />
     </template>
 
-    <template v-if="!showSelect" v-slot:[`item.data-table-select`]>
-      <div></div>
-    </template>
-
-    <template v-slot:footer>
-      <v-toolbar
-        v-if="footerError.length > 0"
-        class="mt-2"
-        color="error"
-        dark
-        flat
-      >
-        <v-toolbar-title class="subheading">
-          {{ footerError }}
-        </v-toolbar-title>
-      </v-toolbar>
-    </template>
-
-    <template v-slot:body.append v-if="isEdit">
-      <tr>
+    <template v-slot:[`body.append`] v-if="isEdit || $slots['body.append']">
+      <slot name="body.append" />
+      <tr v-if="isEdit">
         <td />
         <td
           :style="header.editable ? 'min-width: 200px;' : ''"
@@ -125,86 +111,96 @@
           <component
             v-if="header.editable"
             :is="getEditComponent(header)"
-            @input="changeEditableValue(header, $event)"
-            :value="editableValues[header.value]"
+            @update:model-value="changeEditableValue(header, $event)"
+            :model-value="editableValues[header.value]"
             v-bind="getEditComponentProps(header)"
           />
         </td>
       </tr>
     </template>
 
-    <template v-slot:[`footer.prepend`] v-if="editable">
+    <template v-slot:[`footer.prepend`]>
+      <v-toolbar
+        v-if="footerError.length > 0"
+        class="mr-2"
+        color="error"
+        density="compact"
+        flat
+      >
+        <v-toolbar-title class="text-subtitle-1">
+          {{ footerError }}
+        </v-toolbar-title>
+      </v-toolbar>
+
       <div
+        v-if="editable"
         class="d-flex justify-end align-center"
         style="min-width: calc(100% - 450px)"
       >
         <v-btn
-          :disabled="value.length < 1 && !isEdit"
+          :disabled="modelValue.length < 1 && !isEdit"
           class="mx-1"
           @click="isEdit = !isEdit"
           >{{ isEdit ? "Cancel" : "Edit" }}</v-btn
         >
         <v-btn
-          :disabled="value.length < 1"
+          :disabled="modelValue.length < 1"
           @click="saveEditableValues"
           class="mx-1"
           v-if="isEdit"
           >Save</v-btn
         >
       </div>
-    </template>
 
-    <template
-      v-slot:[`footer.page-text`]="{ pageStart, pageStop, itemsLength }"
-    >
-      <div class="d-flex align-center">
-        <div v-if="tableName">
-          <v-dialog
-            @click:outside="changeFiltres"
-            max-width="60%"
-            v-model="settingsDialog"
-            width="500"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
-                >mdi-cog-outline</v-icon
-              >
-            </template>
-            <v-card
-              color="background-light"
-              style="overflow: hidden"
-              max-width="100%"
+      <v-spacer />
+
+      <div v-if="tableName">
+        <v-dialog
+          @click:outside="changeFiltres"
+          max-width="60%"
+          v-model="settingsDialog"
+          width="500"
+        >
+          <template v-slot:activator="{ props }">
+            <v-icon v-bind="props" size="23" class="mr-1"
+              >mdi-cog-outline</v-icon
             >
-              <v-card-title>Table settings</v-card-title>
-              <v-row class="pa-5">
-                <v-col
-                  v-for="header in headers.filter((h) => h.text)"
-                  :key="header.value"
-                  cols="4"
-                >
-                  <v-checkbox
-                    @click.stop
-                    :label="header.text"
-                    v-model="filter"
-                    :value="header.value"
-                  />
-                </v-col>
-              </v-row>
-            </v-card>
-          </v-dialog>
-        </div>
-        <span class="ml-3">
-          {{ pageStart }}-{{ pageStop }} of {{ itemsLength }}
-        </span>
+          </template>
+          <v-card
+            color="background-light"
+            style="overflow: hidden"
+            max-width="100%"
+          >
+            <v-card-title>Table settings</v-card-title>
+            <v-row class="pa-5">
+              <v-col
+                v-for="header in headers.filter((h) => h.text)"
+                :key="header.value"
+                cols="4"
+              >
+                <v-checkbox
+                  @click.stop
+                  :label="header.text"
+                  v-model="filter"
+                  :value="header.value"
+                />
+              </v-col>
+            </v-row>
+          </v-card>
+        </v-dialog>
       </div>
     </template>
-  </components>
+  </component>
 </template>
 
 <script>
-import { VDataTable } from "vuetify/lib";
 import Sortable from "sortablejs";
-import { VSelect, VTextField } from "vuetify/lib";
+import {
+  VDataTable,
+  VDataTableServer,
+  VSelect,
+  VTextField,
+} from "vuetify/components";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
 
 function watchClass(targetNode, classToWatch) {
@@ -256,7 +252,7 @@ export default {
       type: String,
       default: "",
     },
-    value: {
+    modelValue: {
       type: Array,
       default: () => [],
     },
@@ -329,12 +325,17 @@ export default {
       default: () => [10, 25, 50, 100, 500, 1000],
     },
   },
+  emits: [
+    "update:modelValue",
+    "update:expanded",
+    "update:options",
+    "update:edit-values",
+  ],
   data() {
     return {
       selected: [],
       showed: [],
       copyed: -1,
-      VDataTable,
       page: 1,
       anIncreasingNumber: 0,
       itemsPerPage: 10,
@@ -348,9 +349,73 @@ export default {
       editableValues: {},
     };
   },
+  computed: {
+    // server-side pagination needs VDataTableServer in Vuetify 3
+    tableComponent() {
+      return this.serverItemsLength !== undefined &&
+        this.serverItemsLength !== null
+        ? VDataTableServer
+        : VDataTable;
+    },
+    // Vuetify 3 headers use title/key; callers still pass Vuetify 2 text/value
+    serverProps() {
+      return this.tableComponent === VDataTableServer
+        ? { itemsLength: this.serverItemsLength }
+        : {};
+    },
+    tableHeaders() {
+      return this.filtredHeaders.filter(Boolean).map((header) => ({
+        ...header,
+        title: header.title ?? header.text,
+        key: header.key ?? header.value,
+      }));
+    },
+    tableSortByV3() {
+      return this.tableSortBy
+        ? [{ key: this.tableSortBy, order: this.tableSortDesc ? "desc" : "asc" }]
+        : [];
+    },
+    groupByV3() {
+      return this.groupBy ? [{ key: this.groupBy, order: "asc" }] : [];
+    },
+    // Vuetify 3 has no whole-table custom sort: sort here and neutralise
+    // the built-in key comparison so the order is kept
+    tableItems() {
+      if (!this.customSort || this.tableComponent === VDataTableServer) {
+        return this.items;
+      }
+      return this.customSort(
+        [...this.items],
+        this.tableSortBy ? [this.tableSortBy] : [],
+        [this.tableSortDesc],
+      );
+    },
+    customKeySort() {
+      if (!this.customSort) return undefined;
+      return Object.fromEntries(
+        this.tableHeaders.map((header) => [header.key, () => 0]),
+      );
+    },
+    passThroughSlots() {
+      // expanded-item is mapped to Vuetify 3's expanded-row separately,
+      // body.append is merged with the inline edit row
+      const skip = ["expanded-item", "body.append"];
+      return Object.fromEntries(
+        Object.entries(this.$slots).filter(([name]) => !skip.includes(name)),
+      );
+    },
+  },
   methods: {
-    handleSelect(item) {
-      this.$emit("input", item);
+    handleSelect(items) {
+      this.selected = items;
+      this.$emit("update:modelValue", items);
+    },
+    onSortByUpdate(sortBy) {
+      this.tableSortBy = sortBy[0]?.key ?? "";
+      this.tableSortDesc = sortBy[0]?.order === "desc";
+    },
+    onPageUpdate(page) {
+      if (!this.serverSidePage) this.page = page;
     },
     addToClipboard(text, index) {
       if (navigator?.clipboard) {
@@ -560,7 +625,15 @@ export default {
         this.itemsPerPage = +itemsPerPage[this.tableName] || 15;
       }
     },
-    updateOptions(options) {
+    updateOptions(v3Options) {
+      const options = {
+        page: v3Options.page,
+        itemsPerPage: v3Options.itemsPerPage,
+        sortBy: v3Options.sortBy.map((s) => s.key),
+        sortDesc: v3Options.sortBy.map((s) => s.order === "desc"),
+        groupBy: v3Options.groupBy.map((g) => g.key),
+        groupDesc: v3Options.groupBy.map((g) => g.order === "desc"),
+      };
       if (this.tableName) {
         this.saveSortBy(options);
       }
@@ -603,7 +676,7 @@ export default {
       }
     },
     getEditComponentProps(header) {
-      const baseProps = { ...header.editable, dense: true };
+      const baseProps = { ...header.editable, density: "compact" };
       switch (header.editable.type) {
         case "date": {
           return {
@@ -636,7 +709,7 @@ export default {
       this.editableValues = {};
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.saveTableData();
     window.removeEventListener("beforeunload", this.saveTableData);
   },
@@ -660,13 +733,16 @@ export default {
       localStorage.setItem("page", value);
       localStorage.setItem("url", this.$route.path);
     },
-    value() {
-      this.selected = this.value;
+    modelValue: {
+      handler(value) {
+        this.selected = value;
+      },
+      immediate: true,
     },
   },
   directives: {
     "sortable-table": {
-      inserted: (el, binding) => {
+      mounted: (el, binding) => {
         if (binding.value.disabled) {
           return;
         }
@@ -689,18 +765,13 @@ export default {
 </script>
 
 <style>
-.v-data-table > .v-data-table__wrapper > table > tbody > tr > td,
-.theme--dark.v-data-table
-  > .v-data-table__wrapper
-  > table
-  > thead
-  > tr:last-child
-  > th {
+.v-data-table .v-table__wrapper > table > tbody > tr > td,
+.v-data-table .v-table__wrapper > table > thead > tr:last-child > th {
   white-space: nowrap;
 }
 
 .sortable-drag {
   color: salmon;
-  background-color: var(--v-background-light-base);
+  background-color: rgb(var(--v-theme-background-light));
 }
 </style>

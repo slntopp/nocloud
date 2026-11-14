@@ -33,9 +33,9 @@
 
     <template v-slot:[`item.number`]="{ item }">
       <router-link :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
-        <v-tooltip bottom>
-          <template v-slot:activator="{ on, attrs }">
-            <span v-bind="attrs" v-on="on">
+        <v-tooltip location="bottom">
+          <template v-slot:activator="{ props }">
+            <span v-bind="props">
               {{ item.number }}
             </span>
           </template>
@@ -45,9 +45,9 @@
     </template>
 
     <template v-slot:[`item.total`]="{ item }">
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <v-chip v-bind="attrs" v-on="on" :color="getTotalColor(item)" abs>
+      <v-tooltip location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-chip v-bind="props" :color="getTotalColor(item)" abs>
             {{
               `${formatPrice(item.total, item.currency)} ${
                 item.currency?.code || defaultCurrency.code
@@ -60,9 +60,9 @@
     </template>
 
     <template v-slot:[`item.subtotal`]="{ item }">
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <v-chip v-bind="attrs" v-on="on" :color="getTotalColor(item)" abs>
+      <v-tooltip location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-chip v-bind="props" :color="getTotalColor(item)" abs>
             {{
               `${formatPrice(item.subtotal, item.currency)} ${
                 item.currency?.code || defaultCurrency.code

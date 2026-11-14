@@ -2,30 +2,30 @@
   <div class="sp-goget">
     <v-row align="center" v-for="field in Object.keys(fields)" :key="field">
       <v-col cols="4">
-        <v-subheader>
+        <v-list-subheader>
           {{ fields[field].subheader || field }}
-        </v-subheader>
+        </v-list-subheader>
       </v-col>
 
       <v-col cols="4" v-if="fields[field].items">
         <v-select
-          item-text="text"
+          item-title="text"
           item-value="key"
-          :value="getValue(field)"
+          :model-value="getValue(field)"
           :items="fields[field].items"
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
-          @change="(data) => changeHandler(field, data)"
+          @update:model-value="(data) => changeHandler(field, data)"
         />
       </v-col>
       <v-col :cols="fields[field].items ? 4 : 8">
         <v-text-field
-          :value="getValue(field)"
+          :model-value="getValue(field)"
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
-          @change="(data) => changeHandler(field, data)"
+          @change="changeHandler(field, $event.target.value)"
         />
       </v-col>
     </v-row>

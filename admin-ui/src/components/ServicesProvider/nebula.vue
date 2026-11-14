@@ -7,7 +7,7 @@
           v-model="service"
           :items="services"
           label="Service"
-          item-text="title"
+          item-title="title"
           item-value="uuid"
         ></v-select>
       </v-col>
@@ -24,7 +24,7 @@
           v-model="plan"
           :items="plans"
           label="Plan"
-          item-text="title"
+          item-title="title"
           item-value="uuid"
         ></v-select>
       </v-col>
@@ -54,7 +54,7 @@
       table-name="nebula-accounts"
       :footer-error="fetchError"
       show-expand
-      :expanded.sync="expanded"
+      v-model:expanded="expanded"
       item-key="data.userid"
     >
       <template v-slot:expanded-item="{ item, headers }">

@@ -9,28 +9,28 @@
       <div class="d-flex justify-space-between">
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.status"
-          @change="
+          density="compact"
+          :model-value="data.status"
+          @update:model-value="
             emit('update:key', { value: $event || data.status, key: 'status' })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in statuses">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in statuses">
             {{ item }}
           </v-btn>
         </v-btn-toggle>
 
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.period"
-          @change="
+          density="compact"
+          :model-value="data.period"
+          @update:model-value="
             emit('update:key', { value: $event || data.period, key: 'period' })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in periods">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>
         </v-btn-toggle>

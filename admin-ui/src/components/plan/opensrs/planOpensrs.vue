@@ -2,35 +2,38 @@
   <v-form ref="opensrsForm" v-model="isValid">
     <v-row>
       <v-col>
-        <v-expansion-panels :value="0">
+        <v-expansion-panels :model-value="0">
           <v-expansion-panel>
-            <v-expansion-panel-header
+            <v-expansion-panel-title
               color="background"
               style="padding-left: 16px"
             >
               Ranged margin (%)
-            </v-expansion-panel-header>
-            <v-expansion-panel-content color="background">
+            </v-expansion-panel-title>
+            <v-expansion-panel-text color="background">
               <v-list v-if="currentFee.ranges.length > 0" color="background">
                 <v-list-item-group>
-                  <template v-for="(item, index) in currentFee.ranges">
-                    <v-list-item :key="generateKey(index)">
+                  <template
+                    v-for="(item, index) in currentFee.ranges"
+                    :key="generateKey(index)"
+                  >
+                    <v-list-item>
                       <template v-slot:default>
-                        <v-list-item-content>
+                        
                           <v-list-item-title>
                             Price from: {{ item.from }}
                             {{ defaultCurrency?.code }}, Price to:
                             {{ item.to }} {{ defaultCurrency?.code }}, Margin:
                             {{ item.factor }}%
                           </v-list-item-title>
-                        </v-list-item-content>
+                        
 
                         <v-list-item-action>
                           <v-list-item-action-text></v-list-item-action-text>
 
                           <v-icon
                             @click="deleteRange(index)"
-                            color="grey lighten-1"
+                            color="grey-lighten-1"
                           >
                             mdi-delete
                           </v-icon>
@@ -79,19 +82,19 @@
                   <v-btn color="secondary" @click="addRange">Add</v-btn>
                 </v-col>
               </v-form>
-            </v-expansion-panel-content>
+            </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
       </v-col>
       <v-col>
         <v-row align="center">
           <v-col cols="3">
-            <v-subheader>Fixed margin (%)</v-subheader>
+            <v-list-subheader>Fixed margin (%)</v-list-subheader>
           </v-col>
           <v-col cols="9">
             <v-text-field
               type="number"
-              @change="changeFee"
+              @change="changeFee($event.target.value)"
               :rules="generalRule"
               label="default"
               v-model="currentFee.default"
@@ -100,13 +103,13 @@
         </v-row>
         <v-row align="center">
           <v-col cols="3">
-            <v-subheader>Round</v-subheader>
+            <v-list-subheader>Round</v-list-subheader>
           </v-col>
           <v-col cols="9">
             <v-select
-              item-text="key"
+              item-title="key"
               item-value="value"
-              @change="changeFee"
+              @update:model-value="changeFee"
               v-model="currentFee.round"
               :items="availableRoundes"
             />
@@ -114,12 +117,12 @@
         </v-row>
         <v-row align="center">
           <v-col cols="3">
-            <v-subheader>Rounding precision</v-subheader>
+            <v-list-subheader>Rounding precision</v-list-subheader>
           </v-col>
           <v-col cols="9">
             <v-text-field
               type="number"
-              @change="changeFee"
+              @change="changeFee($event.target.value)"
               :rules="generalRule"
               label="precision"
               v-model="currentFee.precision"

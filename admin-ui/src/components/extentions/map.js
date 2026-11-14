@@ -1,7 +1,8 @@
+import { defineAsyncComponent } from "vue";
 export default {
 	"nocloud-tunnelmesh": {
 		title: "NoCloud Tunnelmesh",
-		component: () => import('./components/nocloud-tunnelmesh/onCreate.vue'),
-		pageComponent: () => import('./components/nocloud-tunnelmesh/onPage.vue'),
+		component: defineAsyncComponent(() => import('./components/nocloud-tunnelmesh/onCreate.vue')),
+		pageComponent: defineAsyncComponent(() => import('./components/nocloud-tunnelmesh/onPage.vue')),
 	}
 }

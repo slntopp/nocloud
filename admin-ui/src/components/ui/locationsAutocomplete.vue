@@ -1,13 +1,13 @@
 <template>
   <v-autocomplete
     item-value="id"
-    item-text="title"
+    item-title="title"
     :multiple="!solo"
     :label="label"
     :return-object="!solo"
     :items="locations"
-    :value="value"
-    @input="emits('input', $event)"
+    :model-value="value"
+    @update:model-value="emits('input', $event)"
   >
     <template v-slot:item="{ item }">
       <span

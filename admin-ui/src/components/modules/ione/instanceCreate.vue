@@ -9,9 +9,9 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('title', newVal)"
+            @change="setValue('title', $event.target.value)"
             label="Name"
-            :value="instance.title"
+            :model-value="instance.title"
             :rules="requiredRule"
           >
           </v-text-field>
@@ -37,46 +37,46 @@
             label="Product"
             :disabled="isDynamicPlan"
             :rules="!isDynamicPlan ? requiredRule : []"
-            :value="instance.product"
+            :model-value="instance.product"
             :items="products"
-            @change="setProduct"
+            @update:model-value="setProduct"
           />
         </v-col>
 
         <v-col cols="6">
           <v-autocomplete
-            @change="(newVal) => changeOS(newVal)"
+            @update:model-value="(newVal) => changeOS(newVal)"
             label="Template"
             :rules="requiredRule"
             :items="osNames"
-            :value="selectedTemplate?.name"
+            :model-value="selectedTemplate?.name"
           >
           </v-autocomplete>
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('config.password', newVal)"
+            @change="setValue('config.password', $event.target.value)"
             label="Password"
             :rules="requiredRule"
-            :value="instance.config?.password"
+            :model-value="instance.config?.password"
           >
           </v-text-field>
         </v-col>
 
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('config.username', newVal)"
+            @change="setValue('config.username', $event.target.value)"
             label="Username"
-            :value="instance.config?.username"
+            :model-value="instance.config?.username"
           >
           </v-text-field>
         </v-col>
 
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.cpu', +newVal)"
+            @change="setValue('resources.cpu', +$event.target.value)"
             label="CPU"
-            :value="instance.resources.cpu"
+            :model-value="instance.resources.cpu"
             type="number"
             :rules="requiredRule"
           >
@@ -85,9 +85,9 @@
         <v-col cols="6">
           <v-text-field
             :rules="requiredRule"
-            @change="(newVal) => setValue('resources.ram', +newVal)"
+            @change="setValue('resources.ram', +$event.target.value)"
             label="RAM"
-            :value="instance.resources.ram"
+            :model-value="instance.resources.ram"
             type="number"
           >
           </v-text-field>
@@ -96,38 +96,36 @@
           <v-select
             :items="driveTypes"
             :rules="requiredRule"
-            @change="(newVal) => setValue('resources.drive_type', newVal)"
+            @update:model-value="(newVal) => setValue('resources.drive_type', newVal)"
             label="Drive type"
-            :value="instance.resources.drive_type"
+            :model-value="instance.resources.drive_type"
           >
           </v-select>
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue('resources.drive_size', +newVal * 1024)
-            "
+            @change="setValue('resources.drive_size', +$event.target.value * 1024)"
             :label="`Drive size (minimum ${driveSizeConfig?.minDisk} GB, maximum ${driveSizeConfig?.maxDisk} GB)`"
             :rules="[driveSizeRule]"
-            :value="instance.resources.drive_size / 1024"
+            :model-value="instance.resources.drive_size / 1024"
             type="number"
           >
           </v-text-field>
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.ips_public', +newVal)"
+            @change="setValue('resources.ips_public', +$event.target.value)"
             label="IPs public"
-            :value="instance.resources.ips_public"
+            :model-value="instance.resources.ips_public"
             type="number"
           >
           </v-text-field>
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.ips_private', +newVal)"
+            @change="setValue('resources.ips_private', +$event.target.value)"
             label="IPs private"
-            :value="instance.resources.ips_private"
+            :model-value="instance.resources.ips_private"
             type="number"
           >
           </v-text-field>
@@ -135,13 +133,13 @@
 
         <v-col cols="6" v-if="tarrifAddons.length > 0">
           <v-autocomplete
-            @change="(newVal) => setValue('addons', newVal)"
+            @update:model-value="(newVal) => setValue('addons', newVal)"
             label="Addons"
-            :value="instance.addons"
+            :model-value="instance.addons"
             :items="isAddonsLoading ? [] : getAvailableAddons()"
             :loading="isAddonsLoading"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             multiple
           />
         </v-col>
@@ -154,15 +152,15 @@
           <v-col>
             <v-text-field
               label="VM name"
-              :value="instance.data?.vm_name"
-              @change="(newVal) => setValue('data.vm_name', newVal)"
+              :model-value="instance.data?.vm_name"
+              @change="setValue('data.vm_name', $event.target.value)"
             />
           </v-col>
           <v-col>
             <v-text-field
               label="VM id"
-              :value="instance.data?.vm_id"
-              @change="(newVal) => setValue('data.vm_id', newVal)"
+              :model-value="instance.data?.vm_id"
+              @change="setValue('data.vm_id', $event.target.value)"
             />
           </v-col>
         </template>

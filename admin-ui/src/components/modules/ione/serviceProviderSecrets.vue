@@ -4,7 +4,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.group"
+          :model-value="template.secrets.group"
           label="group"
           style="display: inline-block; width: 330px"
         >
@@ -13,7 +13,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.host"
+          :model-value="template.secrets.host"
           label="host"
           style="display: inline-block; width: 330px"
         >
@@ -22,7 +22,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.user"
+          :model-value="template.secrets.user"
           label="user"
           style="display: inline-block; width: 330px"
         >
@@ -31,7 +31,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.pass"
+          :model-value="template.secrets.pass"
           label="password"
           style="display: inline-block; width: 330px"
           :type="showPassword ? 'text' : 'password'"

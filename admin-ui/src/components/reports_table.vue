@@ -50,7 +50,7 @@
       <template v-slot:[`item.meta`]="{ item }">
         <v-chip
           class="mr-1"
-          small
+          size="small"
           v-for="{ value } in getItemMeta(item)"
           :key="value"
         >
@@ -92,7 +92,7 @@
             v-for="action in getReportActions(item)"
             :key="action.title"
             @click="callAction(item, action.action)"
-            small
+            size="small"
             :disabled="
               !!runningActionName &&
               (runningActionName !== action.action ||
@@ -135,7 +135,7 @@ import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import { formatPrice } from "../functions";
 import AccountGrade from "@/components/ui/accountGrade.vue";
 

@@ -8,7 +8,7 @@
         <v-chip
           class="mx-2"
           color="primary"
-          outlined
+          variant="outlined"
           v-for="price in pricesPerToken"
           :key="price.name"
           >{{ price.name }} : {{ price.price }} {{ accountCurrency?.code }}</v-chip

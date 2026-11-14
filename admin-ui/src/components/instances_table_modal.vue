@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { VDialog, VMenu } from "vuetify/lib/components";
+import { VDialog, VMenu } from "vuetify/components";
 import nocloudTable from "@/components/table.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import { createPromiseClient } from "@connectrpc/connect";

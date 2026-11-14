@@ -144,7 +144,7 @@ currentEditorValue.value = props.value;
   justify-content: space-between;
   align-items: center;
 
-  background: var(--v-background-light-base) !important;
+  background: rgb(var(--v-theme-background-light)) !important;
 
   padding: 10px 0;
   margin-bottom: 10px;

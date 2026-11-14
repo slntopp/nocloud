@@ -11,7 +11,7 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue(index + '.title', newVal)"
+            @change="setValue(index + '.title', $event.target.value)"
             label="title"
             v-model="instance.title"
           >
@@ -25,16 +25,16 @@
       <v-row>
         <v-col cols="6">
           <v-select
-            @change="(newVal) => changeOS(index, newVal)"
+            @update:model-value="(newVal) => changeOS(index, newVal)"
             label="template"
             :items="getOsNames"
-            :value="getOsTemplates[instance.config.template_id]?.name"
+            :model-value="getOsTemplates[instance.config.template_id]?.name"
           >
           </v-select>
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue(index + '.config.password', newVal)"
+            @change="setValue(index + '.config.password', $event.target.value)"
             label="password"
             v-model="instance.config.password"
           >
@@ -45,7 +45,7 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue(index + '.resources.cpu', +newVal)"
+            @change="setValue(index + '.resources.cpu', +$event.target.value)"
             label="cpu"
             v-model="instance.resources.cpu"
             type="number"
@@ -54,7 +54,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue(index + '.resources.ram', +newVal)"
+            @change="setValue(index + '.resources.ram', +$event.target.value)"
             label="ram"
             v-model="instance.resources.ram"
             type="number"
@@ -63,9 +63,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.drive_type', newVal)
-            "
+            @change="setValue(index + '.resources.drive_type', $event.target.value)"
             label="drive type"
             v-model="instance.resources.drive_type"
           >
@@ -73,9 +71,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.drive_size', +newVal)
-            "
+            @change="setValue(index + '.resources.drive_size', +$event.target.value)"
             label="drive size"
             v-model="instance.resources.drive_size"
             type="number"
@@ -84,9 +80,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.ips_public', +newVal)
-            "
+            @change="setValue(index + '.resources.ips_public', +$event.target.value)"
             label="ips public"
             v-model="instance.resources.ips_public"
             type="number"
@@ -95,9 +89,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.ips_private', +newVal)
-            "
+            @change="setValue(index + '.resources.ips_private', +$event.target.value)"
             label="ips private"
             v-model="instance.resources.ips_private"
             type="number"
@@ -107,12 +99,12 @@
         <v-col cols="6">
           <v-autocomplete
             label="price model"
-            item-text="title"
+            item-title="title"
             item-value="uuid"
             v-model="instance.plan"
             :items="plans.list"
             :rules="planRules"
-            @change="(newVal) => setValue(index + '.billing_plan', newVal)"
+            @update:model-value="(newVal) => setValue(index + '.billing_plan', newVal)"
           />
         </v-col>
         <v-col cols="6">
@@ -121,7 +113,7 @@
             v-model="instance.product"
             v-if="getPlanProducts(index).length > 0"
             :items="getPlanProducts(index)"
-            @change="(newVal) => setValue(index + '.product', newVal)"
+            @update:model-value="(newVal) => setValue(index + '.product', newVal)"
           />
         </v-col>
       </v-row>

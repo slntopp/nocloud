@@ -5,7 +5,7 @@
       :items="playbooks"
       v-model="playbookUuid"
       item-value="uuid"
-      item-text="title"
+      item-title="title"
       clearable
     />
 
@@ -17,7 +17,7 @@
     >
       <template v-slot:footer>
         <div class="d-flex justify-end pa-3">
-          <v-btn small @click="addNewVar"> Add new </v-btn>
+          <v-btn size="small" @click="addNewVar"> Add new </v-btn>
         </div>
       </template>
 

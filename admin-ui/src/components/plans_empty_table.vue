@@ -26,36 +26,36 @@
 
     <template v-slot:[`item.key`]="{ item }">
       <v-text-field
-        dense
-        :value="item.key"
+        density="compact"
+        :model-value="item.key"
         :rules="[rules.required]"
-        @change="(value) => changeResource('key', value, item.id)"
+        @change="changeResource('key', $event.target.value, item.id)"
       />
     </template>
 
     <template v-slot:[`item.value`]="{ item }">
       <v-text-field
-        dense
+        density="compact"
         :rules="[rules.required]"
-        :value="item.value"
-        @input="(value) => changeResource('value', value, item.id)"
+        :model-value="item.value"
+        @update:model-value="(value) => changeResource('value', value, item.id)"
       />
     </template>
 
     <template v-slot:[`item.title`]="{ item }">
       <v-text-field
-        dense
-        :value="item.title"
+        density="compact"
+        :model-value="item.title"
         :rules="[rules.required]"
-        @change="(value) => changeResource('title', value, item.id)"
+        @change="changeResource('title', $event.target.value, item.id)"
       />
     </template>
 
     <template v-slot:[`item.group`]="{ item }">
       <v-text-field
-        dense
-        :value="item.group"
-        @change="(value) => changeResource('group', value, item.id)"
+        density="compact"
+        :model-value="item.group"
+        @change="changeResource('group', $event.target.value, item.id)"
       />
     </template>
   </nocloud-table>

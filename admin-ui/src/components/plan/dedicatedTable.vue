@@ -3,17 +3,17 @@
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
-      background-color="background-light"
+      bg-color="background-light"
     >
       <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
     </v-tabs>
 
-    <v-tabs-items
+    <v-window
       v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       class="rounded-b-lg"
     >
-      <v-tab-item v-for="tab in tabs" :key="tab">
+      <v-window-item v-for="tab in tabs" :key="tab">
         <v-progress-linear v-if="isPlansLoading" indeterminate class="pt-1" />
 
         <div v-else-if="tab === 'Tariffs'">
@@ -52,7 +52,7 @@
             :loading="isPlansLoading"
           >
             <template v-slot:[`item.title`]="{ item }">
-              <v-text-field dense style="width: 200px" v-model="item.title" />
+              <v-text-field density="compact" style="width: 200px" v-model="item.title" />
             </template>
 
             <template v-slot:[`item.group`]="{ item }">
@@ -63,7 +63,7 @@
                 "
               >
                 <v-text-field
-                  dense
+                  density="compact"
                   class="d-inline-block mr-1"
                   style="width: 200px"
                   v-model="newplanGroup.name"
@@ -81,7 +81,7 @@
                 "
               >
                 <v-text-field
-                  dense
+                  density="compact"
                   class="d-inline-block mr-1"
                   style="width: 200px"
                   v-model="newplanGroup.name"
@@ -92,7 +92,7 @@
 
               <template v-if="newplanGroup.mode === 'none'">
                 <v-autocomplete
-                  dense
+                  density="compact"
                   class="d-inline-block"
                   style="width: 200px"
                   v-model="item.group"
@@ -123,7 +123,7 @@
                 "
               >
                 <v-text-field
-                  dense
+                  density="compact"
                   class="d-inline-block mr-1"
                   style="width: 200px"
                   v-model="newcpuGroup.name"
@@ -141,7 +141,7 @@
                 "
               >
                 <v-text-field
-                  dense
+                  density="compact"
                   class="d-inline-block mr-1"
                   style="width: 200px"
                   v-model="newcpuGroup.name"
@@ -152,7 +152,7 @@
 
               <template v-if="newcpuGroup.mode === 'none'">
                 <v-autocomplete
-                  dense
+                  density="compact"
                   class="d-inline-block"
                   style="width: 200px"
                   v-model="item.cpu"
@@ -182,7 +182,7 @@
 
             <template v-slot:[`item.price`]="{ item }">
               <v-text-field
-                dense
+                density="compact"
                 style="min-width: 200px"
                 v-model="item.price"
                 :suffix="defaultCurrency?.code"
@@ -206,7 +206,7 @@
                 </td>
                 <td>
                   <v-text-field
-                    dense
+                    density="compact"
                     style="width: 150px"
                     v-model="item.installation_fee.value"
                   />
@@ -218,8 +218,8 @@
 
             <template v-slot:[`item.addons`]="{ item }">
               <v-dialog width="90vw">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn icon v-bind="attrs" v-on="on">
+                <template v-slot:activator="{ props }">
+                  <v-btn icon v-bind="props">
                     <v-icon> mdi-menu-open </v-icon>
                   </v-btn>
                 </template>
@@ -243,7 +243,7 @@
                     <span v-if="item.virtual">{{ item.price }}</span>
                     <v-text-field
                       v-else
-                      dense
+                      density="compact"
                       style="width: 200px"
                       :suffix="defaultCurrency?.code"
                       v-model="item.price"
@@ -252,8 +252,8 @@
                   <template v-slot:[`item.public`]="{ item: addon }">
                     <v-switch
                       :key="addon.title"
-                      :input-value="addon.public"
-                      @change="changeAddonPublic(item, addon, $event)"
+                      :model-value="addon.public"
+                      @update:model-value="changeAddonPublic(item, addon, $event)"
                     />
                   </template>
                 </nocloud-table>
@@ -271,8 +271,8 @@
             :addons="template.addons"
           />
         </div>
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
@@ -760,7 +760,7 @@ export default {
       }
 
       const planIndex = this.plans.findIndex((p) => p.id === plan.id);
-      this.$set(this.plans, planIndex, plan);
+      this.plans[planIndex] = plan;
     },
   },
   mounted() {
@@ -860,6 +860,6 @@ export default {
 }
 
 .v-data-table__expanded__content {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
 }
 </style>

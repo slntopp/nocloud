@@ -4,7 +4,7 @@
       <v-col cols="2">
         <v-text-field
           readonly
-          :value="template.data.display_hostname"
+          :model-value="template.data.display_hostname"
           label="Provider API vpsName"
         />
       </v-col>
@@ -24,8 +24,8 @@
       <v-col cols="2">
         <v-text-field
           append-icon="mdi-pencil"
-          @input="emit('update', { key: 'config.username', value: $event })"
-          :value="template.config.username"
+          @update:model-value="emit('update', { key: 'config.username', value: $event })"
+          :model-value="template.config.username"
           label="Username"
         />
       </v-col>
@@ -45,32 +45,32 @@
       </v-col>
 
       <v-col cols="2">
-        <v-text-field label="OS" readonly :value="os" />
+        <v-text-field label="OS" readonly :model-value="os" />
       </v-col>
 
       <v-col cols="2">
         <v-text-field
           append-icon="mdi-pencil"
-          @input="emit('update', { key: 'config.hostname', value: $event })"
-          :value="template.config.hostname"
+          @update:model-value="emit('update', { key: 'config.hostname', value: $event })"
+          :model-value="template.config.hostname"
           label="Hostname"
         />
       </v-col>
 
       <v-col cols="2">
-        <v-text-field :value="cpu" readonly label="CPU" />
+        <v-text-field :model-value="cpu" readonly label="CPU" />
       </v-col>
 
       <v-col cols="2">
-        <v-text-field :value="ram" readonly label="RAM" />
+        <v-text-field :model-value="ram" readonly label="RAM" />
       </v-col>
 
        <v-col cols="2">
-        <v-text-field value="SSD" readonly label="Disk type" />
+        <v-text-field model-value="SSD" readonly label="Disk type" />
       </v-col>
 
       <v-col cols="2">
-        <v-text-field :value="disk" readonly label="Disk size" />
+        <v-text-field :model-value="disk" readonly label="Disk size" />
       </v-col>
     </v-row>
   </div>

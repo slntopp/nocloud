@@ -9,17 +9,17 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('title', newVal)"
+            @change="setValue('title', $event.target.value)"
             label="Name"
-            :value="instance.title"
+            :model-value="instance.title"
             :rules="requiredRule"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('config.hostname', newVal)"
+            @change="setValue('config.hostname', $event.target.value)"
             label="Hostname (PVE name)"
-            :value="instance.config?.hostname"
+            :model-value="instance.config?.hostname"
             hint="Linux DNS label, max 63. Windows NetBIOS max 15. Empty = sanitized Name."
             persistent-hint
           />
@@ -45,54 +45,54 @@
             label="Product"
             :disabled="isDynamicPlan"
             :rules="!isDynamicPlan ? requiredRule : []"
-            :value="instance.product"
+            :model-value="instance.product"
             :items="products"
-            @change="setProduct"
+            @update:model-value="setProduct"
           />
         </v-col>
 
         <v-col cols="6">
           <v-autocomplete
-            @change="(newVal) => changeOS(newVal)"
+            @update:model-value="(newVal) => changeOS(newVal)"
             label="Template"
             :rules="existing ? [] : requiredRule"
             :items="osNames"
-            :value="selectedTemplate?.name"
+            :model-value="selectedTemplate?.name"
             :hint="selectedTemplate?.warning"
             persistent-hint
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('config.password', newVal)"
+            @change="setValue('config.password', $event.target.value)"
             label="Password"
             :rules="existing ? [] : requiredRule"
-            :value="instance.config?.password"
+            :model-value="instance.config?.password"
           />
         </v-col>
 
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('config.username', newVal)"
+            @change="setValue('config.username', $event.target.value)"
             label="Username"
-            :value="instance.config?.username"
+            :model-value="instance.config?.username"
           />
         </v-col>
         <v-col cols="6">
           <v-textarea
             rows="1"
             auto-grow
-            @change="(newVal) => setValue('config.ssh_public_key', newVal)"
+            @change="setValue('config.ssh_public_key', $event.target.value)"
             label="SSH public key"
-            :value="instance.config?.ssh_public_key"
+            :model-value="instance.config?.ssh_public_key"
           />
         </v-col>
 
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.cpu', +newVal)"
+            @change="setValue('resources.cpu', +$event.target.value)"
             label="CPU"
-            :value="instance.resources.cpu"
+            :model-value="instance.resources.cpu"
             type="number"
             :rules="requiredRule"
           />
@@ -100,9 +100,9 @@
         <v-col cols="6">
           <v-text-field
             :rules="requiredRule"
-            @change="(newVal) => setValue('resources.ram', +newVal)"
+            @change="setValue('resources.ram', +$event.target.value)"
             label="RAM (MB)"
-            :value="instance.resources.ram"
+            :model-value="instance.resources.ram"
             type="number"
           />
         </v-col>
@@ -110,33 +110,33 @@
           <v-select
             :items="driveTypes"
             :rules="requiredRule"
-            @change="(newVal) => setValue('resources.drive_type', newVal)"
+            @update:model-value="(newVal) => setValue('resources.drive_type', newVal)"
             label="Drive type"
-            :value="instance.resources.drive_type"
+            :model-value="instance.resources.drive_type"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.drive_size', +newVal * 1024)"
+            @change="setValue('resources.drive_size', +$event.target.value * 1024)"
             :label="`Drive size (minimum ${driveSizeConfig?.minDisk} GB, maximum ${driveSizeConfig?.maxDisk} GB)`"
             :rules="[driveSizeRule]"
-            :value="instance.resources.drive_size / 1024"
+            :model-value="instance.resources.drive_size / 1024"
             type="number"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.ips_public', +newVal)"
+            @change="setValue('resources.ips_public', +$event.target.value)"
             label="IPs public"
-            :value="instance.resources.ips_public"
+            :model-value="instance.resources.ips_public"
             type="number"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.ips_private', +newVal)"
+            @change="setValue('resources.ips_private', +$event.target.value)"
             label="IPs private"
-            :value="instance.resources.ips_private"
+            :model-value="instance.resources.ips_private"
             type="number"
             :disabled="privateBanned"
           />
@@ -144,27 +144,27 @@
         <v-col cols="12">
           <v-combobox
             multiple
-            small-chips
-            deletable-chips
+            chips
+            closable-chips
             label="Requested public IPs (optional, like ONE NIC IP=)"
             :hint="requestHint"
             persistent-hint
             :items="freePublicIPs"
-            :value="requestedIPs"
+            :model-value="requestedIPs"
             :rules="[requestRule]"
-            @change="setRequested"
+            @update:model-value="setRequested"
           />
         </v-col>
 
         <v-col cols="6" v-if="tarrifAddons.length > 0">
           <v-autocomplete
-            @change="(newVal) => setValue('addons', newVal)"
+            @update:model-value="(newVal) => setValue('addons', newVal)"
             label="Addons"
-            :value="instance.addons"
+            :model-value="instance.addons"
             :items="isAddonsLoading ? [] : getAvailableAddons()"
             :loading="isAddonsLoading"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             multiple
           />
         </v-col>
@@ -181,20 +181,20 @@
               label="PVE guest (vmid — name @ node)"
               :items="existingVMs"
               :loading="isVMsLoading"
-              :value="instance.data?.vmid"
+              :model-value="instance.data?.vmid"
               item-value="vmid"
-              item-text="label"
+              item-title="label"
               :rules="requiredRule"
-              @change="pickExisting"
+              @update:model-value="pickExisting"
             />
           </v-col>
           <v-col cols="2">
             <v-text-field
               label="VMID"
               type="number"
-              :value="instance.data?.vmid"
+              :model-value="instance.data?.vmid"
               :rules="requiredRule"
-              @change="(v) => setValue('data.vmid', +v)"
+              @change="setValue('data.vmid', +$event.target.value)"
             />
           </v-col>
           <v-col cols="2">
@@ -203,7 +203,7 @@
             </v-btn>
           </v-col>
           <v-col cols="12" v-if="vmsError">
-            <v-alert dense text type="error">{{ vmsError }}</v-alert>
+            <v-alert density="compact" text type="error">{{ vmsError }}</v-alert>
           </v-col>
         </template>
       </v-row>

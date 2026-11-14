@@ -14,7 +14,7 @@
             label="title"
             v-model="instance.title"
             :rules="rules.req"
-            @change="setValue(index + '.title', $event)"
+            @change="setValue(index + '.title', $event.target.value)"
           />
         </v-col>
         <v-col class="d-flex justify-end">
@@ -27,7 +27,7 @@
             label="domain"
             :rules="rules.req"
             v-model="instance.config.domain"
-            @change="setValue(index + '.config.domain', $event)"
+            @change="setValue(index + '.config.domain', $event.target.value)"
           />
         </v-col>
         <v-col cols="6">
@@ -35,7 +35,7 @@
             label="mail"
             :rules="rules.req"
             v-model="instance.config.mail"
-            @change="setValue(index + '.config.mail', $event)"
+            @change="setValue(index + '.config.mail', $event.target.value)"
           />
         </v-col>
       </v-row>
@@ -45,7 +45,7 @@
             label="password"
             :rules="rules.req"
             v-model="instance.config.password"
-            @change="setValue(index + '.config.password', $event)"
+            @change="setValue(index + '.config.password', $event.target.value)"
           />
         </v-col>
         <v-col cols="6">
@@ -53,7 +53,7 @@
             label="plan"
             :rules="rules.req"
             v-model="instance.resources.plan"
-            @change="setValue(index + '.resources.plan', $event)"
+            @change="setValue(index + '.resources.plan', $event.target.value)"
           />
         </v-col>
       </v-row>

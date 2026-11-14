@@ -7,11 +7,11 @@
     >
       <v-card-title class="d-flex justify-space-between align-center pa-3">
         <span class="text-subtitle-1">
-          <v-icon small class="mr-1">mdi-pin</v-icon>
+          <v-icon size="small" class="mr-1">mdi-pin</v-icon>
           Pinned Notes ({{ pinnedNotes.length }})
         </span>
-        <v-btn icon small @click="closePinned">
-          <v-icon small>mdi-close</v-icon>
+        <v-btn icon size="small" @click="closePinned">
+          <v-icon size="small">mdi-close</v-icon>
         </v-btn>
       </v-card-title>
 
@@ -23,15 +23,15 @@
           :key="index"
           color="background"
           class="ma-2 pa-2"
-          outlined
+          border
         >
           <div class="d-flex justify-space-between align-center mb-2">
-            <v-chip x-small color="primary" v-if="!isAccountsLoading">
+            <v-chip size="x-small" color="primary" v-if="!isAccountsLoading">
               {{ getAccount(note.admin)?.title || note.admin }}
             </v-chip>
             <v-skeleton-loader type="chip" v-else />
 
-             <v-chip x-small class="mr-1 mb-1">
+             <v-chip size="x-small" class="mr-1 mb-1">
               Created: {{ formatDate(note.created) }}
             </v-chip>
           </div>
@@ -47,8 +47,7 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-// import the module directly: the package index also pulls in the 1.2 MB world map
-import EditorContainer from "nocloud-ui/modules/editorContainer.vue";
+import EditorContainer from "@/components/nocloud-ui/editorContainer.vue";
 import { formatSecondsToDate } from "@/functions";
 import api from "@/api";
 
@@ -128,17 +127,17 @@ watch(
 }
 
 .pinned-notes-content::-webkit-scrollbar-track {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
   border-radius: 4px;
 }
 
 .pinned-notes-content::-webkit-scrollbar-thumb {
-  background: var(--v-primary-base);
+  background: rgb(var(--v-theme-primary));
   border-radius: 4px;
 }
 
 .pinned-notes-content::-webkit-scrollbar-thumb:hover {
-  background: var(--v-primary-darken1);
+  background: rgb(var(--v-theme-primary));
 }
 
 .pinned-note-content {

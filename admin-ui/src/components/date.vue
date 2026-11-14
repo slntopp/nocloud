@@ -2,9 +2,9 @@
   <v-row class="ma-0 pa-0" dense align="center">
     <v-col>
       <v-select
-        dense
-        :value="date"
-        @change="changeDateValue"
+        density="compact"
+        :model-value="date"
+        @update:model-value="changeDateValue"
         :items="typesDate"
         :rules="rules.general"
       />
@@ -15,17 +15,17 @@
       style="min-width: 50px"
     >
       <v-text-field
-        dense
+        density="compact"
         type="number"
-        :value="fullDate[dateKey]"
-        @change="changeAmountValue"
+        :model-value="fullDate[dateKey]"
+        @change="changeAmountValue($event.target.value)"
         :rules="rules.number"
       />
     </v-col>
     <v-col cols="2" v-else-if="date === 'Custom'">
-      <v-menu left v-model="menuVisible" :close-on-content-click="false">
-        <template v-slot:activator="{ on, attrs }">
-          <v-icon v-bind="attrs" v-on="on"> mdi-playlist-edit </v-icon>
+      <v-menu location="left" v-model="menuVisible" :close-on-content-click="false">
+        <template v-slot:activator="{ props }">
+          <v-icon v-bind="props"> mdi-playlist-edit </v-icon>
         </template>
 
         <v-card>
@@ -34,7 +34,7 @@
               <v-list-item-title>{{ item.title }}</v-list-item-title>
               <v-list-item-action>
                 <v-text-field
-                  dense
+                  density="compact"
                   v-model="fullDate[item.model]"
                   :type="item.model === 'time' ? 'text' : 'number'"
                 />
@@ -44,8 +44,8 @@
 
           <v-card-actions>
             <v-spacer />
-            <v-btn text @click="resetDate(fullDate)">Reset</v-btn>
-            <v-btn text color="primary" @click="menuVisible = false">
+            <v-btn variant="text" @click="resetDate(fullDate)">Reset</v-btn>
+            <v-btn variant="text" color="primary" @click="menuVisible = false">
               Save
             </v-btn>
           </v-card-actions>

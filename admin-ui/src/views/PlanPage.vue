@@ -9,17 +9,17 @@
     </h1>
     <v-tabs
       class="rounded-t-lg"
-      background-color="background-light"
+      bg-color="background-light"
       v-model="tabsIndex"
     >
       <v-tab v-for="tab of tabs" :key="tab.title">{{ tab.title }}</v-tab>
     </v-tabs>
-    <v-tabs-items
+    <v-window
       class="rounded-b-lg"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       v-model="tabsIndex"
     >
-      <v-tab-item v-for="tab of tabs" :key="tab.title">
+      <v-window-item v-for="tab of tabs" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="planLoading" />
         <component
           v-else-if="plan"
@@ -28,12 +28,13 @@
           :item="plan"
           :template="plan"
         />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
 import config from "@/config.js";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 
@@ -108,7 +109,7 @@ export default {
         descriptions.forEach(({ status, value }) => {
           if (status !== "fulfilled") return;
           const { type, id, data } = value;
-          this.$set(this.plan[type][id], "description", data.text ?? "");
+          this.plan[type][id]["description"] = data.text ?? "";
         });
 
         if (descriptions.some(({ status }) => status === "rejected")) {
@@ -133,49 +134,49 @@ export default {
       return [
         {
           title: "Info",
-          component: () => import("@/views/PlansCreate.vue"),
+          component: defineAsyncComponent(() => import("@/views/PlansCreate.vue")),
         },
         ["ione", "ione-vpn"].includes(this.plan?.type) && {
           title: "Configuration",
-          component: () =>
-            import("@/components/modules/ione/planConfiguration.vue"),
+          component: defineAsyncComponent(() =>
+            import("@/components/modules/ione/planConfiguration.vue")),
         },
         this.plan?.type === "proxmox" && {
           title: "Configuration",
-          component: () =>
-            import("@/components/modules/proxmox/planConfiguration.vue"),
+          component: defineAsyncComponent(() =>
+            import("@/components/modules/proxmox/planConfiguration.vue")),
         },
         ["bitrix24"].includes(this.plan?.type) && {
           title: "Licences",
-          component: () => import("@/components/plan/licences.vue"),
+          component: defineAsyncComponent(() => import("@/components/plan/licences.vue")),
         },
         {
           title: "Instances",
-          component: () => import("@/components/plan/instances.vue"),
+          component: defineAsyncComponent(() => import("@/components/plan/instances.vue")),
         },
         {
           title: "Promocodes",
-          component: () => import("@/components/plan/promocodes.vue"),
+          component: defineAsyncComponent(() => import("@/components/plan/promocodes.vue")),
         },
         {
           title: "Event log",
-          component: () => import("@/components/plan/history.vue"),
+          component: defineAsyncComponent(() => import("@/components/plan/history.vue")),
         },
         {
           title: "Event overrides",
-          component: () => import("@/components/plan/event-overrides.vue"),
+          component: defineAsyncComponent(() => import("@/components/plan/event-overrides.vue")),
         },
         planComponents.includes(`./${type}Prices.vue`) && {
           title: "Prices",
-          component: () => import(`@/components/plan/${type}Prices.vue`),
+          component: defineAsyncComponent(() => import(`@/components/plan/${type}Prices.vue`)),
         },
         this.plan?.type === "empty" && {
           title: "AI packages",
-          component: () => import("@/components/plan/aiPackages.vue"),
+          component: defineAsyncComponent(() => import("@/components/plan/aiPackages.vue")),
         },
         {
           title: "Template",
-          component: () => import("@/components/plan/template.vue"),
+          component: defineAsyncComponent(() => import("@/components/plan/template.vue")),
         },
       ].filter((t) => t);
     },
@@ -192,7 +193,7 @@ export default {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

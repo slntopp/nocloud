@@ -1,20 +1,33 @@
-import Vue from 'vue';
-import config from '@/config';
-import Vuetify from 'vuetify/lib/framework';
+import "vuetify/styles";
+import { createVuetify } from "vuetify";
+import { aliases, mdi } from "vuetify/iconsets/mdi";
+import config from "@/config";
 
-Vue.use(Vuetify);
+// Vuetify 2 inputs were underlined by default; keep that look
+const underlined = { variant: "underlined" };
 
-
-export default new Vuetify({
-  theme: {
-    themes: {
-      dark: config.colors.dark,
-      light: config.colors.light,
-    },
-    options: {
-      customProperties: true,
-      variations: false
-    },
-    dark: config.dark ?? true, // тут поставить лайт
+export default createVuetify({
+  defaults: {
+    VTextField: underlined,
+    VTextarea: underlined,
+    VSelect: underlined,
+    VAutocomplete: underlined,
+    VCombobox: underlined,
+    VFileInput: underlined,
+    // Vuetify 3 makes buttons in card actions flat text buttons; Vuetify 2 did not
+    VCardActions: { VBtn: { variant: "elevated" } },
   },
-})
+  icons: {
+    defaultSet: "mdi",
+    aliases,
+    sets: { mdi },
+  },
+  theme: {
+    defaultTheme: config.dark ?? true ? "dark" : "light",
+    themes: {
+      dark: { dark: true, colors: config.colors?.dark ?? {} },
+      light: { dark: false, colors: config.colors?.light ?? {} },
+    },
+    variations: false,
+  },
+});

@@ -11,19 +11,19 @@
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
-      background-color="background-light"
+      bg-color="background-light"
     >
       <v-tab v-for="tab in tabs" :key="tab.title">
         {{ tab.title }}
       </v-tab>
     </v-tabs>
 
-    <v-tabs-items
+    <v-window
       v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       class="rounded-b-lg"
     >
-      <v-tab-item v-for="tab in tabs" :key="tab.title">
+      <v-window-item v-for="tab in tabs" :key="tab.title">
         <v-progress-linear v-if="loading" indeterminate class="pt-2" />
         <component v-if="!loading && sp" :is="tab.component" :template="sp">
           <v-row>
@@ -35,12 +35,13 @@
             </v-col>
           </v-row>
         </component>
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
 import config from "@/config.js";
 import JsonEditor from "../components/JsonEditor.vue";
 
@@ -69,63 +70,63 @@ export default {
       const tabs = [
         {
           title: "Info",
-          component: () => import("@/components/ServicesProvider/info.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/info.vue")),
         },
         {
           title: "Secrets",
-          component: () => import("@/components/ServicesProvider/secrets.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/secrets.vue")),
         },
         {
           title: "Vars",
-          component: () => import("@/components/ServicesProvider/vars.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/vars.vue")),
         },
         {
           title: "Hooks",
-          component: () => import("@/components/ServicesProvider/hooks.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/hooks.vue")),
         },
         {
           title: "Suspend rules",
-          component: () =>
-            import("@/components/ServicesProvider/suspend-rules.vue"),
+          component: defineAsyncComponent(() =>
+            import("@/components/ServicesProvider/suspend-rules.vue")),
         },
         {
           title: "Map",
           component:
             this.sp?.type === "ovh"
-              ? () => import("@/components/ServicesProvider/ovhMap.vue")
-              : () => import("@/components/ServicesProvider/map.vue"),
+              ? defineAsyncComponent(() => import("@/components/ServicesProvider/ovhMap.vue"))
+              : defineAsyncComponent(() => import("@/components/ServicesProvider/map.vue")),
         },
         {
           title: "Showcase",
-          component: () => import("@/components/ServicesProvider/showcase.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/showcase.vue")),
         },
         {
           title: "Event log",
-          component: () => import("@/components/ServicesProvider/history.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/history.vue")),
         },
         {
           title: "Template",
-          component: () => import("@/components/ServicesProvider/template.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/template.vue")),
         },
       ].filter((el) => el?.title);
 
       if (this.sp?.type === "ione")
         tabs.splice(3, 0, {
           title: "Nebula",
-          component: () => import("@/components/ServicesProvider/nebula.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/nebula.vue")),
         });
 
       if (this.sp?.type === "bitrix24")
         tabs.splice(3, 0, {
           title: "Licences",
-          component: () => import("@/components/ServicesProvider/licences.vue"),
+          component: defineAsyncComponent(() => import("@/components/ServicesProvider/licences.vue")),
         });
 
       // ONE-style virtual networks: address ranges, leases, hold/release
       if (this.sp?.type === "proxmox")
         tabs.splice(3, 0, {
           title: "Networks",
-          component: () => import("@/components/modules/proxmox/networks.vue"),
+          component: defineAsyncComponent(() => import("@/components/modules/proxmox/networks.vue")),
         });
 
       return tabs;
@@ -159,7 +160,7 @@ export default {
 
 <style>
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

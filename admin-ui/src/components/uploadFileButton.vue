@@ -8,7 +8,7 @@
       hide-input
       :accept="'.'+accept"
       type="file"
-      @change="$emit('file',$event)"
+      @update:model-value="$emit('file',$event)"
     />
     <slot></slot>
   </v-btn>

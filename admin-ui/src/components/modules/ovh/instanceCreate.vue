@@ -10,20 +10,20 @@
         <v-col cols="6">
           <v-text-field
             label="Name"
-            :value="instance.title"
+            :model-value="instance.title"
             :rules="rules.req"
-            @change="(value) => setValue('title', value)"
+            @change="setValue('title', $event.target.value)"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            :filter="defaultFilterObject"
+            :customFilter="defaultFilterObject"
             label="Type"
             :items="ovhTypes"
             :rules="rules.req"
             v-model="ovhType"
             item-value="value"
-            item-text="title"
+            item-title="title"
           />
         </v-col>
       </v-row>
@@ -48,32 +48,32 @@
         <v-col cols="6">
           <v-select
             :items="durationItems"
-            :value="instance.config?.duration"
+            :model-value="instance.config?.duration"
             item-value="value"
-            item-text="title"
+            item-title="title"
             label="Payment:"
-            @change="(value) => setValue('config.duration', value)"
+            @update:model-value="(value) => setValue('config.duration', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
             label="Tariff"
-            item-text="title"
+            item-title="title"
             item-value="key"
-            :value="instance.product"
+            :model-value="instance.product"
             :items="filtredTariffs"
             :rules="rules.req"
-            @change="(value) => setValue('product', value)"
+            @update:model-value="(value) => setValue('product', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
             label="Region"
-            :value="instance.config?.configuration[`${ovhType}_datacenter`]"
+            :model-value="instance.config?.configuration[`${ovhType}_datacenter`]"
             :items="datacenters"
             :rules="rules.req"
             :disabled="!datacenters.length"
-            @change="
+            @update:model-value="
               (value) =>
                 setValue(`config.configuration.${ovhType}_datacenter`, value)
             "
@@ -82,13 +82,13 @@
         <v-col cols="6">
           <v-autocomplete
             label="OS"
-            :value="instance.config?.configuration[`${ovhType}_os`]"
+            :model-value="instance.config?.configuration[`${ovhType}_os`]"
             :items="images"
-            item-text="title"
+            item-title="title"
             item-value="id"
             :rules="rules.req"
             :disabled="!images.length"
-            @change="
+            @update:model-value="
               (value) => setValue(`config.configuration.${ovhType}_os`, value)
             "
           />
@@ -96,16 +96,16 @@
         <v-col v-if="ovhType === 'cloud'" cols="6">
           <v-text-field
             label="SSH"
-            :value="instance?.config?.ssh"
-            @change="setValue('config.ssh', $event)"
+            :model-value="instance?.config?.ssh"
+            @change="setValue('config.ssh', $event.target.value)"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
           Existing:
           <v-switch
             class="d-inline-block ml-2"
-            :input-value="instance.data?.existing"
-            @change="(value) => setValue('data.existing', value)"
+            :model-value="instance.data?.existing"
+            @update:model-value="(value) => setValue('data.existing', value)"
           />
         </v-col>
         <v-col
@@ -116,9 +116,9 @@
           <v-text-field
             v-if="ovhType"
             :label="`${ovhType} name`"
-            :value="instance.data?.[`${ovhType}Name`]"
+            :model-value="instance.data?.[`${ovhType}Name`]"
             :rules="rules.req"
-            @change="(value) => setValue(`data.${ovhType}Name`, value)"
+            @change="setValue(`data.${ovhType}Name`, $event.target.value)"
           />
         </v-col>
       </v-row>
@@ -128,12 +128,12 @@
           <v-autocomplete
             :label="type.charAt(0).toUpperCase() + type.slice(1)"
             :items="addons.filter((a) => a.type === type)"
-            item-text="title"
+            item-title="title"
             item-value="uuid"
             :multiple="type === 'custom'"
             clearable
             return-object
-            @change="changeAddons($event, type)"
+            @update:model-value="changeAddons($event, type)"
           />
         </v-col>
       </v-row>

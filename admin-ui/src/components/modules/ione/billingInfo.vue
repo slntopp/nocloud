@@ -5,7 +5,7 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
           <template v-slot:append>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
@@ -25,7 +25,7 @@
         <v-text-field
           readonly
           label="Product name"
-          :value="
+          :model-value="
             !isDynamicPlan
               ? template.billingPlan.products[template.product]?.title ||
                 template.product
@@ -67,7 +67,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="!isDynamicPlan ? dueDate : 'PAYG'"
+          :model-value="!isDynamicPlan ? dueDate : 'PAYG'"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click="changeDatesDialog = true"
         />
@@ -85,10 +85,10 @@
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
           <template v-if="item.isAddon">
-            <v-chip small class="ml-1">Addon</v-chip>
+            <v-chip size="small" class="ml-1">Addon</v-chip>
             <confirm-dialog @confirm="removeAddon(item)">
-              <v-btn icon small class="ml-1">
-                <v-icon small>mdi-delete</v-icon>
+              <v-btn icon size="small" class="ml-1">
+                <v-icon size="small">mdi-delete</v-icon>
               </v-btn>
             </confirm-dialog>
           </template>
@@ -101,16 +101,16 @@
               :suffix="defaultCurrency?.code"
               v-model="item.price"
               type="number"
-              @input="updatePrice(item, false)"
+              @update:model-value="updatePrice(item, false)"
               append-icon="mdi-pencil"
             />
             <v-text-field
-              style="color: var(--v-primary-base)"
+              style="color: rgb(var(--v-theme-primary))"
               class="ml-2"
               type="number"
               :suffix="accountCurrency?.code"
               v-model="item.accountPrice"
-              @input="updatePrice(item, true)"
+              @update:model-value="updatePrice(item, true)"
               append-icon="mdi-pencil"
             />
           </div>
@@ -136,8 +136,8 @@
             <td></td>
             <td>
               <v-dialog v-model="isAddonsDialog" max-width="60%">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on"
+                <template v-slot:activator="{ props }">
+                  <v-btn class="ml-2" color="primary" v-bind="props"
                     >addons</v-btn
                   >
                 </template>
@@ -155,7 +155,7 @@
               </v-dialog>
             </td>
             <td>
-              <v-chip color="primary" outlined>
+              <v-chip color="primary" variant="outlined">
                 {{ totalPrice }}
                 {{ defaultCurrency?.code }} / {{ totalAccountPrice }}
                 {{ accountCurrency?.code }}

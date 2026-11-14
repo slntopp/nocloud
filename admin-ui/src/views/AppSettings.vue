@@ -7,7 +7,7 @@
           class="file-input"
           label="your settings.."
           accept=".json"
-          @change="onFileChange"
+          @update:model-value="onFileChange"
         />
       </div>
       <download-template-button
@@ -52,10 +52,10 @@
       </v-col>
       <v-col cols="2">
         <template>
-          <v-menu open-on-hover top offset-y>
-            <template v-slot:activator="{ on }">
+          <v-menu open-on-hover location="top" >
+            <template v-slot:activator="{ props }">
               <v-text-field
-                v-on="on"
+                v-bind="props"
                 v-model="settings.app.logo"
                 label="Logo filekey"
               />
@@ -84,12 +84,12 @@
     <v-row>
       <v-expansion-panels>
         <v-expansion-panel>
-          <v-expansion-panel-header color="background-light"
-            >Edit json</v-expansion-panel-header
+          <v-expansion-panel-title color="background-light"
+            >Edit json</v-expansion-panel-title
           >
-          <v-expansion-panel-content color="background-light">
+          <v-expansion-panel-text color="background-light">
             <json-editor :json="settings" @changeValue="edit" />
-          </v-expansion-panel-content>
+          </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
     </v-row>

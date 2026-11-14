@@ -46,7 +46,7 @@
           <div style="display: flex">
             <v-autocomplete
               style="width: 480px; margin-right: 15px"
-              item-text="label"
+              item-title="label"
               item-value="value"
               :loading="isAccountsLoading"
               label="Accounts"
@@ -59,7 +59,7 @@
 
             <v-autocomplete
               style="width: 120px; margin-right: 15px"
-              item-text="label"
+              item-title="label"
               item-value="value"
               placeholder="All"
               label="Agents"
@@ -72,15 +72,15 @@
           <div style="display: flex">
             <v-autocomplete
               style="width: 300px; margin-right: 15px"
-              item-text="label"
+              item-title="label"
               item-value="value"
               label="Models"
               clearable
               multiple
               hide-details
               chips
-              small-chips
-              deletable-chips
+              chips
+              closable-chips
               :items="
                 selectedProviders.length
                   ? currentModels
@@ -91,14 +91,14 @@
 
             <v-autocomplete
               style="width: 300px; margin-right: 15px"
-              item-text="label"
+              item-title="label"
               item-value="value"
               label="Providers"
               clearable
               multiple
               chips
-              deletable-chips
-              small-chips
+              closable-chips
+              chips
               hide-details
               :items="
                 Object.keys(modelsByProviders).map((a) => ({

@@ -16,7 +16,7 @@
             <v-text-field
               v-model="setting.key"
               label="Key"
-              outlined dense
+              variant="outlined" density="compact"
               :disabled="isEdit"
               :rules="[requiredRule]"
             />
@@ -26,7 +26,7 @@
             <v-text-field
               v-model="setting.description"
               label="Description"
-              outlined dense
+              variant="outlined" density="compact"
               :rules="[requiredRule]"
             />
           </v-col>
@@ -36,7 +36,7 @@
         <v-row>
           <v-col cols="12">
             <div class="editor-header">
-              <v-icon small class="mr-2">mdi-code-json</v-icon>
+              <v-icon size="small" class="mr-2">mdi-code-json</v-icon>
               <span>Value configuration</span>
             </div>
 
@@ -53,7 +53,7 @@
 
         <v-row justify="end" class="mt-6 mx-0">
           <confirm-dialog v-if="isEdit" @confirm="deleteSetting">
-            <v-btn text color="error" class="mr-3 action-btn-text">Delete</v-btn>
+            <v-btn variant="text" color="error" class="mr-3 action-btn-text">Delete</v-btn>
           </confirm-dialog>
 
           <confirm-dialog :disabled="!isValid" @confirm="saveSetting">
@@ -70,7 +70,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useStore } from "@/store";
-import { useRouter, useRoute } from "vue-router/composables";
+import { useRouter, useRoute } from "vue-router";
 import api from "@/api";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import JsonEditorNew from "@/components/JsonEditor-New.vue";
@@ -152,7 +152,7 @@ onMounted(init);
 .settings-card {
   padding: 24px;
   border-radius: 14px;
-  background: var(--v-background-light-base);
+  background: rgb(var(--v-theme-background-light));
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
@@ -160,7 +160,7 @@ onMounted(init);
   font-family: "Quicksand", sans-serif;
   font-size: 32px;
   font-weight: 400;
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   text-transform: none;
   a { color: inherit; text-decoration: none; border-bottom: 2px solid currentColor; padding-bottom: 2px; }
   &-separator { margin: 0 10px; }
@@ -177,7 +177,7 @@ onMounted(init);
   letter-spacing: 0.1em;
   color: rgba(0, 0, 0, 0.6);
   margin-bottom: 12px;
-  i { color: var(--v-primary-base) !important; }
+  i { color: rgb(var(--v-theme-primary)) !important; }
 }
 
 .action-btn-main { text-transform: uppercase; font-weight: 600; letter-spacing: 1px; }

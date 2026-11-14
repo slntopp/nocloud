@@ -7,20 +7,20 @@
         v-for="tag of tags"
         :key="tag.kind"
         open-on-hover
-        offset-y
+        
         max-width="420"
         :close-delay="150"
-        @input="(open) => open && load()"
+        @update:model-value="(open) => open && load()"
       >
-        <template v-slot:activator="{ on }">
+        <template v-slot:activator="{ props }">
           <v-chip
-            v-on="on"
-            x-small
+            v-bind="props"
+            size="x-small"
             :color="tag.color"
             :title="tag.hint"
             @click.stop="openJournal"
           >
-            <v-icon x-small left>{{ tag.icon }}</v-icon>
+            <v-icon size="x-small" start>{{ tag.icon }}</v-icon>
             {{ tag.count }}
           </v-chip>
         </template>
@@ -39,7 +39,7 @@
 
             <div v-for="(row, i) of rows" :key="i" class="notifications__row">
               <span class="notifications__when">{{ when(row.ts) }}</span>
-              <v-icon x-small>{{ row.source === "nocloud" ? mail : ticket }}</v-icon>
+              <v-icon size="x-small">{{ row.source === "nocloud" ? mail : ticket }}</v-icon>
               <span class="notifications__what">{{ title(row) }}</span>
             </div>
 
@@ -54,7 +54,7 @@
 <script setup>
 import { computed, onMounted, ref, toRefs } from "vue";
 import { useStore } from "@/store";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 
 // How much has gone out to this customer, or about this service, over the
 // last thirty days: letters nocloud sent and tickets the campaigns plugin
@@ -159,12 +159,11 @@ function openJournal() {
 
   router.push({
     name: "Plugin",
-    params: {
-      title: plugin.title,
+    params: { title: plugin.title },
+    query: {
       url: plugin.url,
-      params: { redirect: `dashboard/sends?account=${account.value}` },
+      redirect: `dashboard/sends?account=${account.value}`,
     },
-    query: { url: plugin.url },
   });
 }
 

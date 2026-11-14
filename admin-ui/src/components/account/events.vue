@@ -7,20 +7,20 @@
       <v-col cols="3">
         <v-btn @click="deleteEvents" class="mt-3" color="primary">delete</v-btn>
         <v-dialog v-model="addEventDialog" max-width="50%">
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn class="ml-7 mt-3" color="primary" v-on="on" v-bind="attrs"
+          <template v-slot:activator="{ props }">
+            <v-btn class="ml-7 mt-3" color="primary" v-bind="props"
               >add</v-btn
             >
           </template>
           <v-card class="pa-5 ma-auto">
             <v-card-title class="text-center">New event:</v-card-title>
             <v-autocomplete
-              @input.native="userKey = $event.target.value"
+              @update:model-value.native="userKey = $event.target.value"
               :items="keysWithNew"
               v-model="newEvent.key"
             />
             <v-autocomplete
-              @input.native="userType = $event.target.value"
+              @update:model-value.native="userType = $event.target.value"
               :items="eventsTypesWithNew"
               v-model="newEvent.type"
             />

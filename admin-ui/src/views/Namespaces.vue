@@ -2,20 +2,20 @@
   <div class="namespaces pa-4 flex-wrap">
     <div class="buttons__inline pb-8 pt-4">
       <v-menu
-        offset-y
+        
         transition="slide-y-transition"
-        bottom
+        location="bottom"
         :close-on-content-click="false"
         v-model="createMenuVisible"
       >
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn color="background-light" class="mr-2" v-bind="attrs" v-on="on">
+        <template v-slot:activator="{ props }">
+          <v-btn color="background-light" class="mr-2" v-bind="props">
             create
           </v-btn>
         </template>
         <v-card class="d-flex pa-4">
           <v-text-field
-            dense
+            density="compact"
             hide-details
             v-model="newNamespace.title"
             @keypress.enter="createNamespace"
@@ -41,13 +41,13 @@
       </confirm-dialog>
 
       <v-dialog v-model="joinAccount.modalVisible" width="80%" scrollable>
-        <template v-slot:activator="{ on, attrs }">
+        <template v-slot:activator="{ props }">
           <v-btn
             color="background-light"
             class="mr-2"
             :disabled="selected.length < 1"
-            v-bind="attrs"
-            v-on="on"
+           
+            v-bind="props"
           >
             join
           </v-btn>
@@ -70,7 +70,7 @@
               class="mx-4"
               label="access level"
               item-value="id"
-              item-text="title"
+              item-title="title"
               v-model="joinAccount.data.access"
               :items="accessLevels"
             />
@@ -87,7 +87,7 @@
             <v-spacer></v-spacer>
             <v-btn
               color="primary"
-              text
+              variant="text"
               @click="joinSelectedAcounts"
               :loading="joinAccount.loading"
             >
@@ -98,13 +98,13 @@
       </v-dialog>
 
       <v-dialog v-model="linkAccount.modalVisible" width="80%" scrollable>
-        <template v-slot:activator="{ on, attrs }">
+        <template v-slot:activator="{ props }">
           <v-btn
             color="background-light"
             class="mr-2"
             :disabled="selected.length < 1"
-            v-bind="attrs"
-            v-on="on"
+           
+            v-bind="props"
           >
             link
           </v-btn>
@@ -129,7 +129,7 @@
               class="mx-4"
               label="access level"
               item-value="id"
-              item-text="title"
+              item-title="title"
               v-model="linkAccount.data.access"
               :items="accessLevels"
             />
@@ -147,7 +147,7 @@
             <v-spacer></v-spacer>
             <v-btn
               color="primary"
-              text
+              variant="text"
               @click="linkSelectedAcounts"
               :loading="linkAccount.loading"
             >

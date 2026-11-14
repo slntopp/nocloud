@@ -5,7 +5,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="vlansKey"
+          :model-value="vlansKey"
           label="vlans key"
           style="display: inline-block; width: 330px"
         >
@@ -14,7 +14,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].start"
+          :model-value="template.secrets.vlans[vlansKey].start"
           label="start"
           style="display: inline-block; width: 330px"
         >
@@ -23,7 +23,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].size"
+          :model-value="template.secrets.vlans[vlansKey].size"
           label="size"
           style="display: inline-block; width: 330px"
         >
@@ -58,7 +58,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="
+                  :model-value="
                     Math.round(
                       ((host.total_cpu - host.free_cpu) / host.total_cpu) * 100
                     )
@@ -86,7 +86,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="
+                  :model-value="
                     Math.round(
                       ((host.total_ram - host.free_ram) / host.total_ram) * 100
                     )
@@ -142,7 +142,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="percentUsePublic"
+              :model-value="percentUsePublic"
               :color="colorUsePublic"
               height="20"
               class="mb-10"
@@ -180,7 +180,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="percentUsePrivate"
+              :model-value="percentUsePrivate"
               :color="colorUsePrivate"
               height="20"
               class="mb-10"
@@ -218,7 +218,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="Math.round((datastor.used / datastor.total) * 100)"
+              :model-value="Math.round((datastor.used / datastor.total) * 100)"
               color="green"
               height="20"
             >
@@ -253,12 +253,12 @@
       </v-col>
       <v-col ref="private">
         <p>Vlans:</p>
-        <v-tooltip bottom color="info" v-for="(vlan, i) of vlans" :key="i">
-          <template v-slot:activator="{ on, attrs }">
+        <v-tooltip location="bottom" color="info" v-for="(vlan, i) of vlans" :key="i">
+          <template v-slot:activator="{ props }">
             <span
               class="ceil"
-              v-bind="attrs"
-              v-on="on"
+             
+              v-bind="props"
               :class="vlan === 0 ? 'occupied' : 'free'"
             />
           </template>

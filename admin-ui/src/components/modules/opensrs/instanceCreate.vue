@@ -9,9 +9,9 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('title', newVal)"
+            @change="setValue('title', $event.target.value)"
             label="name"
-            :value="instance.title"
+            :model-value="instance.title"
           />
         </v-col>
 
@@ -33,16 +33,16 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.first_name', newVal)"
+            @change="setValue('resources.user.first_name', $event.target.value)"
             label="First name"
-            :value="instance.resources.user.first_name"
+            :model-value="instance.resources.user.first_name"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.last_name', newVal)"
+            @change="setValue('resources.user.last_name', $event.target.value)"
             label="Last name"
-            :value="instance.resources.user.last_name"
+            :model-value="instance.resources.user.last_name"
           />
         </v-col>
       </v-row>
@@ -50,109 +50,109 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.org_name', newVal)"
+            @change="setValue('resources.user.org_name', $event.target.value)"
             label="Organization name"
-            :value="instance.resources.user.org_name"
+            :model-value="instance.resources.user.org_name"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.address1', newVal)"
+            @change="setValue('resources.user.address1', $event.target.value)"
             label="Address 1"
-            :value="instance.resources.user.address1"
+            :model-value="instance.resources.user.address1"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.address2', newVal)"
+            @change="setValue('resources.user.address2', $event.target.value)"
             label="Address 2"
-            :value="instance.resources.user.address2"
+            :model-value="instance.resources.user.address2"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.city', newVal)"
+            @change="setValue('resources.user.city', $event.target.value)"
             label="City"
-            :value="instance.resources.user.city"
+            :model-value="instance.resources.user.city"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.country', newVal)"
+            @change="setValue('resources.user.country', $event.target.value)"
             label="Country"
-            :value="instance.resources.user.country"
+            :model-value="instance.resources.user.country"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.state', newVal)"
+            @change="setValue('resources.user.state', $event.target.value)"
             label="State"
-            :value="instance.resources.user.state"
+            :model-value="instance.resources.user.state"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.postal_code', newVal)"
+            @change="setValue('resources.user.postal_code', $event.target.value)"
             label="Postal code"
-            :value="instance.resources.user.postal_code"
+            :model-value="instance.resources.user.postal_code"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.phone', newVal)"
+            @change="setValue('resources.user.phone', $event.target.value)"
             label="Phone"
-            :value="instance.resources.user.phone"
+            :model-value="instance.resources.user.phone"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.user.email', newVal)"
+            @change="setValue('resources.user.email', $event.target.value)"
             label="Email"
-            :value="instance.resources.user.email"
+            :model-value="instance.resources.user.email"
           />
         </v-col>
       </v-row>
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.reg_username', newVal)"
+            @change="setValue('resources.reg_username', $event.target.value)"
             label="Reg username"
-            :value="instance.resources.reg_username"
+            :model-value="instance.resources.reg_username"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.reg_password', newVal)"
+            @change="setValue('resources.reg_password', $event.target.value)"
             label="Reg password"
-            :value="instance.resources.reg_password"
+            :model-value="instance.resources.reg_password"
           />
         </v-col>
       </v-row>
       <v-row>
         <v-col cols="3">
           <v-switch
-            @change="(newVal) => setValue('resources.auto_renew', newVal)"
+            @update:model-value="(newVal) => setValue('resources.auto_renew', newVal)"
             :value="instance.resources.auto_renew"
             label="Auto_renew"
           />
         </v-col>
         <v-col cols="3">
           <v-switch
-            @change="(newVal) => setValue('resources.who_is_privacy', newVal)"
+            @update:model-value="(newVal) => setValue('resources.who_is_privacy', newVal)"
             :value="instance.resources.who_is_privacy"
             label="Who_is_privacy"
           />
         </v-col>
         <v-col cols="3">
           <v-switch
-            @change="(newVal) => setValue('resources.lock_domain', newVal)"
+            @update:model-value="(newVal) => setValue('resources.lock_domain', newVal)"
             :value="instance.resources.lock_domain"
             label="Lock_domain"
           />
         </v-col>
         <v-col cols="3">
           <v-switch
-            @change="(newVal) => setValue('data.existing', newVal)"
+            @update:model-value="(newVal) => setValue('data.existing', newVal)"
             :value="instance.data.existing"
             label="Existing"
           />

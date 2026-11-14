@@ -27,7 +27,7 @@
             <input
               type="image"
               alt="Drag"
-              src="img/images/drag.svg"
+              src="/admin/img/images/drag.svg"
               id="noVNC_view_drag_button"
               class="noVNC_button noVNC_hidden"
               title="Move/Drag Viewport"
@@ -38,7 +38,7 @@
               <input
                 type="image"
                 alt="Keyboard"
-                src="img/images/keyboard.svg"
+                src="/admin/img/images/keyboard.svg"
                 id="noVNC_keyboard_button"
                 class="noVNC_button"
                 title="Show Keyboard"
@@ -49,7 +49,7 @@
             <input
               type="image"
               alt="Extra keys"
-              src="img/images/toggleextrakeys.svg"
+              src="/admin/img/images/toggleextrakeys.svg"
               id="noVNC_toggle_extra_keys_button"
               class="noVNC_button"
               title="Show Extra Keys"
@@ -59,7 +59,7 @@
                 <input
                   type="image"
                   alt="Ctrl"
-                  src="img/images/ctrl.svg"
+                  src="/admin/img/images/ctrl.svg"
                   id="noVNC_toggle_ctrl_button"
                   class="noVNC_button"
                   title="Toggle Ctrl"
@@ -67,7 +67,7 @@
                 <input
                   type="image"
                   alt="Alt"
-                  src="img/images/alt.svg"
+                  src="/admin/img/images/alt.svg"
                   id="noVNC_toggle_alt_button"
                   class="noVNC_button"
                   title="Toggle Alt"
@@ -75,7 +75,7 @@
                 <input
                   type="image"
                   alt="Windows"
-                  src="img/images/windows.svg"
+                  src="/admin/img/images/windows.svg"
                   id="noVNC_toggle_windows_button"
                   class="noVNC_button"
                   title="Toggle Windows"
@@ -83,7 +83,7 @@
                 <input
                   type="image"
                   alt="Tab"
-                  src="img/images/tab.svg"
+                  src="/admin/img/images/tab.svg"
                   id="noVNC_send_tab_button"
                   class="noVNC_button"
                   title="Send Tab"
@@ -91,7 +91,7 @@
                 <input
                   type="image"
                   alt="Esc"
-                  src="img/images/esc.svg"
+                  src="/admin/img/images/esc.svg"
                   id="noVNC_send_esc_button"
                   class="noVNC_button"
                   title="Send Escape"
@@ -99,7 +99,7 @@
                 <input
                   type="image"
                   alt="Ctrl+Alt+Del"
-                  src="img/images/ctrlaltdel.svg"
+                  src="/admin/img/images/ctrlaltdel.svg"
                   id="noVNC_send_ctrl_alt_del_button"
                   class="noVNC_button"
                   title="Send Ctrl-Alt-Del"
@@ -111,7 +111,7 @@
             <input
               type="image"
               alt="Shutdown/Reboot"
-              src="img/images/power.svg"
+              src="/admin/img/images/power.svg"
               id="noVNC_power_button"
               class="noVNC_button"
               title="Shutdown/Reboot..."
@@ -119,7 +119,7 @@
             <div class="noVNC_vcenter">
               <div id="noVNC_power" class="noVNC_panel">
                 <div class="noVNC_heading">
-                  <img alt="" src="img/images/power.svg" /> Power
+                  <img alt="" src="/admin/img/images/power.svg" /> Power
                 </div>
                 <input
                   type="button"
@@ -135,7 +135,7 @@
             <input
               type="image"
               alt="Clipboard"
-              src="img/images/clipboard.svg"
+              src="/admin/img/images/clipboard.svg"
               id="noVNC_clipboard_button"
               class="noVNC_button"
               title="Clipboard"
@@ -143,7 +143,7 @@
             <div class="noVNC_vcenter">
               <div id="noVNC_clipboard" class="noVNC_panel">
                 <div class="noVNC_heading">
-                  <img alt="" src="img/images/clipboard.svg" /> Clipboard
+                  <img alt="" src="/admin/img/images/clipboard.svg" /> Clipboard
                 </div>
                 <textarea id="noVNC_clipboard_text" rows="5"></textarea>
                 <br />
@@ -160,7 +160,7 @@
             <input
               type="image"
               alt="Fullscreen"
-              src="img/images/fullscreen.svg"
+              src="/admin/img/images/fullscreen.svg"
               id="noVNC_fullscreen_button"
               class="noVNC_button noVNC_hidden"
               title="Fullscreen"
@@ -170,7 +170,7 @@
             <input
               type="image"
               alt="Settings"
-              src="img/images/settings.svg"
+              src="/admin/img/images/settings.svg"
               id="noVNC_settings_button"
               class="noVNC_button"
               title="Settings"
@@ -179,7 +179,7 @@
               <div id="noVNC_settings" class="noVNC_panel">
                 <ul>
                   <li class="noVNC_heading">
-                    <img alt="" src="img/images/settings.svg" /> Settings
+                    <img alt="" src="/admin/img/images/settings.svg" /> Settings
                   </li>
                   <template v-if="instance && !isLoading">
                     <li>password:</li>

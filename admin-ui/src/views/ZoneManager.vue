@@ -7,14 +7,14 @@
       </div>
 
       <v-menu
-        offset-y
+        
         transition="slide-y-transition"
-        bottom
+        location="bottom"
         :close-on-content-click="false"
         v-model="newHost.modalVisible"
       >
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn color="background-light" class="mr-2" v-bind="attrs" v-on="on">
+        <template v-slot:activator="{ props }">
+          <v-btn color="background-light" class="mr-2" v-bind="props">
             create
           </v-btn>
         </template>
@@ -22,7 +22,7 @@
           <v-row>
             <v-col cols="12">
               <v-text-field
-                dense
+                density="compact"
                 hide-details
                 v-model="newHost.location"
                 label="location"
@@ -33,7 +33,7 @@
           <v-row>
             <v-col>
               <v-select
-                dense
+                density="compact"
                 v-model="newHost.type"
                 label="type"
                 :items="Object.keys(types)"
@@ -44,7 +44,7 @@
           <v-row>
             <v-col>
               <v-text-field
-                dense
+                density="compact"
                 hide-details
                 v-model="newHost.value"
                 label="value"
@@ -55,7 +55,7 @@
           <v-row>
             <v-col>
               <v-text-field
-                dense
+                density="compact"
                 hide-details
                 v-model="newHost.ttl"
                 label="ttl"
@@ -267,7 +267,7 @@ export default {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand";

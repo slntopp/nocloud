@@ -25,11 +25,11 @@
         <v-switch
           :readonly="!editable"
           :loading="updatingAddonUuid === item.uuid"
-          dense
+          density="compact"
           hide-details
           :disabled="!!updatingAddonUuid"
-          :input-value="item.public"
-          @change="updateAddon(item, { key: 'public', value: $event })"
+          :model-value="item.public"
+          @update:model-value="updateAddon(item, { key: 'public', value: $event })"
         />
       </div>
     </template>

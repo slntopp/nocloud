@@ -2,20 +2,20 @@
   <v-autocomplete
     placeholder="Start typing..."
     :items="allPlans"
-    :filter="plansFilter"
-    :value="value"
-    @input="emit('input', $event)"
-    item-text="title"
+    :customFilter="plansFilter"
+    :model-value="value"
+    @update:model-value="emit('input', $event)"
+    item-title="title"
     item-value="uuid"
     :rules="rules"
     :disabled="disabled"
     :label="label"
     :return-object="returnObject"
-    @update:search-input="onSearchInput"
+    @update:search="onSearchInput"
     :loading="isLoading || isInitLoading || loading"
     :multiple="multiple"
     :clearable="clearable"
-    :dense="dense"
+    :density="dense ? 'compact' : undefined"
   />
 </template>
 

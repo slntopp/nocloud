@@ -73,8 +73,8 @@
             {{ item.key }}
           </router-link>
 
-          <v-btn icon small @click.stop="copyKey(item.key)" class="ml-1">
-            <v-icon small>mdi-content-copy</v-icon>
+          <v-btn icon size="small" @click.stop="copyKey(item.key)" class="ml-1">
+            <v-icon size="small">mdi-content-copy</v-icon>
           </v-btn>
         </div>
       </template>
@@ -192,7 +192,7 @@ export default {
 }
 
 .setting-link {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   text-decoration: none;
   font-weight: 500;
   &:hover {

@@ -46,8 +46,8 @@
             <div class="map__popup-content--default">
               <!-- {{ marker.title }} -->
               <v-dialog :ref="`edit-dialog.${marker.id}`" width="800">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-icon v-on="on" v-bind="attrs" color="secondary">
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" color="secondary">
                     mdi-cog
                   </v-icon>
                 </template>
@@ -55,35 +55,35 @@
                   <v-select
                     v-if="regions.length"
                     class="mt-7"
-                    dense
+                    density="compact"
                     label="Region *"
                     :items="regionItems(marker)"
                     :error="!marker.extra.region"
                     v-model="marker.extra.region"
-                    @change="(region) => onRegionChange(marker, region)"
+                    @update:model-value="(region) => onRegionChange(marker, region)"
                   />
 
                   <v-text-field
                     :class="regions.length ? '' : 'mt-7'"
-                    dense
+                    density="compact"
                     label="Title"
-                    :value="marker.title"
+                    :model-value="marker.title"
                     :ref="`textField_${marker.id}`"
-                    @input="(title) => setTitle(marker.id, title)"
+                    @update:model-value="(title) => setTitle(marker.id, title)"
                     @keyup.enter="(e) => onEnterHandler(marker.id, e)"
                   />
 
                   <color-picker label="Color" v-model="marker.extra.color" />
 
                   <v-text-field
-                    dense
+                    density="compact"
                     label="Icon link"
                     v-model="marker.extra.link"
                   />
 
                   <v-card-actions class="justify-end">
-                    <v-btn text @click.stop="startMove(marker.id)">
-                      <v-icon left>mdi-cursor-move</v-icon> Move
+                    <v-btn variant="text" @click.stop="startMove(marker.id)">
+                      <v-icon start>mdi-cursor-move</v-icon> Move
                     </v-btn>
                     <v-btn
                       :disabled="regions.length > 0 && !marker.extra.region"
@@ -131,7 +131,7 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
-import NcMap from "nocloud-ui/modules/map.vue";
+import NcMap from "@/components/nocloud-ui/map.vue";
 import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {

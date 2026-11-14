@@ -88,9 +88,9 @@
     </template>
 
     <template v-slot:[`item.address`]="{ item }">
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <span v-bind="attrs" v-on="on">
+      <v-tooltip location="bottom">
+        <template v-slot:activator="{ props }">
+          <span v-bind="props">
             {{ item.data?.city || item.data?.address }}
           </span>
         </template>
@@ -111,7 +111,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 import NotificationsCell from "@/components/ui/notificationsCell.vue";

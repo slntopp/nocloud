@@ -2,10 +2,10 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-expansion-panels v-if="!isLoading">
       <v-expansion-panel>
-        <v-expansion-panel-header color="background">
+        <v-expansion-panel-title color="background">
           Margin rules:
-        </v-expansion-panel-header>
-        <v-expansion-panel-content color="background">
+        </v-expansion-panel-title>
+        <v-expansion-panel-text color="background">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
@@ -18,7 +18,7 @@
           >
             <v-btn class="mt-4" color="secondary">Set rules</v-btn>
           </confirm-dialog>
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
 
@@ -35,17 +35,17 @@
       <v-tabs
         class="rounded-t-lg"
         v-model="tabsIndex"
-        background-color="background-light"
+        bg-color="background-light"
       >
         <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
       </v-tabs>
 
-      <v-tabs-items
+      <v-window
         v-model="tabsIndex"
-        style="background: var(--v-background-light-base)"
+        style="background: rgb(var(--v-theme-background-light))"
         class="rounded-b-lg"
       >
-        <v-tab-item v-for="tab in tabs" :key="tab">
+        <v-window-item v-for="tab in tabs" :key="tab">
           <div v-if="tab === 'Tariffs'">
             <nocloud-table
               :headers="headers"
@@ -53,7 +53,7 @@
               :loading="isLoading"
               item-key="key"
               :show-select="false"
-              :expanded.sync="expanded"
+              v-model:expanded="expanded"
               show-expand
               :items="tariffs"
             >
@@ -124,8 +124,8 @@
               :addons="template.addons"
             />
           </div>
-        </v-tab-item>
-      </v-tabs-items>
+        </v-window-item>
+      </v-window>
     </div>
 
     <v-dialog max-width="70vw" v-model="isAddonsOpen">
@@ -134,11 +134,11 @@
           >Addons
           <v-btn
             class="ml-3 mr-2"
-            small
+            size="small"
             @click="setSellToSelectedTariffAddons(true)"
             >Enable all</v-btn
           >
-          <v-btn small @click="setSellToSelectedTariffAddons(false)"
+          <v-btn size="small" @click="setSellToSelectedTariffAddons(false)"
             >Disable all</v-btn
           >
         </v-card-title>

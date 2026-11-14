@@ -9,7 +9,7 @@
         style="
           max-width: 800px;
           font-size: 1rem;
-          color: var(--v-primary-base);
+          color: rgb(var(--v-theme-primary));
           text-align: center;
         "
       >
@@ -26,7 +26,7 @@
     </div>
     <v-expansion-panels v-else>
       <v-expansion-panel v-for="(hook, index) in newHooks" :key="index">
-        <v-expansion-panel-header color="background-light">
+        <v-expansion-panel-title color="background-light">
           <div>
             Key {{ hook.key }}
 
@@ -36,8 +36,8 @@
               </v-btn>
             </confirm-dialog>
           </div>
-        </v-expansion-panel-header>
-        <v-expansion-panel-content color="background-light">
+        </v-expansion-panel-title>
+        <v-expansion-panel-text color="background-light">
           <v-text-field label="key" v-model="hook.key" />
 
           <playbook-item
@@ -47,7 +47,7 @@
             @save="updateSp(hook, $event)"
             :loading="isSaveLoading"
           />
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
   </v-card>

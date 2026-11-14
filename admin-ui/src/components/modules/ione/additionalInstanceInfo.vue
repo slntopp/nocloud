@@ -10,10 +10,10 @@
       <v-col>
         <v-select
           append-icon="mdi-pencil"
-          :value="template.config.template_id"
+          :model-value="template.config.template_id"
           label="OS"
           :items="allOs"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'config.template_id',
               value: $event,
@@ -23,13 +23,13 @@
       </v-col>
       <v-col>
         <v-text-field
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'config.username',
               value: $event,
             })
           "
-          :value="template.config.username"
+          :model-value="template.config.username"
           label="Username"
           append-icon="mdi-pencil"
         />
@@ -53,38 +53,38 @@
         <v-text-field
           readonly
           label="OpenNebula State"
-          :value="template.state.meta?.state_str || template.state.state"
+          :model-value="template.state.meta?.state_str || template.state.state"
         />
       </v-col>
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'resources.cpu',
               value: +$event,
             })
           "
-          :value="template.resources.cpu"
+          :model-value="template.resources.cpu"
           label="CPU"
         />
       </v-col>
       <v-col>
         <v-text-field
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'resources.ram',
               value: toGB($event),
             })
           "
           append-icon="mdi-pencil"
-          :value="getGB(template.resources.ram)"
+          :model-value="getGB(template.resources.ram)"
           label="RAM (GB)"
         />
       </v-col>
       <v-col>
         <v-select
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'resources.drive_type',
               value: $event,
@@ -92,20 +92,20 @@
           "
           append-icon="mdi-pencil"
           :items="driveTypes"
-          :value="template.resources.drive_type"
+          :model-value="template.resources.drive_type"
           label="Disk type"
         />
       </v-col>
       <v-col>
         <v-text-field
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'resources.drive_size',
               value: toGB($event),
             })
           "
           append-icon="mdi-pencil"
-          :value="getGB(template.resources.drive_size)"
+          :model-value="getGB(template.resources.drive_size)"
           label="Disk size (GB)"
         />
       </v-col>

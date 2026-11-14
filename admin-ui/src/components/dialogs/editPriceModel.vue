@@ -1,8 +1,8 @@
 <template>
   <v-dialog
     persistent
-    :value="value"
-    @input="emit('input', value)"
+    :model-value="value"
+    @update:model-value="emit('input', value)"
     max-width="80%"
   >
     <v-card class="pa-5">
@@ -33,7 +33,7 @@
           <v-select
             v-model="product"
             label="tariff"
-            item-text="title"
+            item-title="title"
             item-value="key"
             :items="filteredTariffs"
           />
@@ -42,7 +42,7 @@
           <v-text-field
             :suffix="accountCurrency?.code"
             readonly
-            :value="isSelectedPlanAvailable ? accountPrice : null"
+            :model-value="isSelectedPlanAvailable ? accountPrice : null"
             label="account price"
           />
         </v-col>
@@ -50,7 +50,7 @@
           <v-text-field
             :suffix="defaultCurrency?.code"
             readonly
-            :value="isSelectedPlanAvailable ? fullProduct?.price : null"
+            :model-value="isSelectedPlanAvailable ? fullProduct?.price : null"
             label="price"
           />
         </v-col>
@@ -59,14 +59,14 @@
       <v-row align="center">
         <v-col cols="2">
           <v-text-field
-            :value="fullProduct?.resources?.cpu"
+            :model-value="fullProduct?.resources?.cpu"
             readonly
             label="CPU"
           />
         </v-col>
         <v-col cols="4">
           <v-text-field
-            :value="fullProduct?.resources?.ram"
+            :model-value="fullProduct?.resources?.ram"
             readonly
             label="RAM"
           />
@@ -74,7 +74,7 @@
 
         <v-col>
           <v-text-field
-            :value="fullProduct?.resources?.drive_type"
+            :model-value="fullProduct?.resources?.drive_type"
             readonly
             label="Drive type"
           />
@@ -82,7 +82,7 @@
 
         <v-col>
           <v-text-field
-            :value="fullProduct?.resources?.drive_size"
+            :model-value="fullProduct?.resources?.drive_size"
             readonly
             label="Drive size"
           />

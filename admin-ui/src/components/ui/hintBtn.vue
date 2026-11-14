@@ -1,7 +1,7 @@
 <template>
-  <v-tooltip :bottom="!top" :top="top">
-    <template v-slot:activator="{ on, attrs }">
-      <div class="d-inline-block" v-bind="attrs" v-on="on">
+  <v-tooltip :location="!top ? 'bottom' : undefined" :top="top">
+    <template v-slot:activator="{ props }">
+      <div class="d-inline-block" v-bind="props">
         <slot></slot>
       </div>
     </template>

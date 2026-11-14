@@ -9,35 +9,35 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('title', newVal)"
+            @change="setValue('title', $event.target.value)"
             label="Name"
             :rules="rules.req"
-            :value="instance.title"
+            :model-value="instance.title"
           >
           </v-text-field>
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('config.username', newVal)"
+            @change="setValue('config.username', $event.target.value)"
             label="Username"
             :rules="rules.req"
-            :value="instance.config?.username"
+            :model-value="instance.config?.username"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('config.password', newVal)"
+            @change="setValue('config.password', $event.target.value)"
             label="Password"
             :rules="rules.req"
-            :value="instance.config?.password"
+            :model-value="instance.config?.password"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
             :rules="rules.req"
-            @change="(newVal) => setValue('config.hostname', newVal)"
+            @change="setValue('config.hostname', $event.target.value)"
             label="Hostname"
-            :value="instance.hostname?.password"
+            :model-value="instance.hostname?.password"
           />
         </v-col>
         <v-col cols="6">
@@ -63,18 +63,18 @@
         <v-col cols="6">
           <v-autocomplete
             label="Product"
-            :value="instance.product"
+            :model-value="instance.product"
             :rules="rules.req"
             :items="products"
-            @change="setValue('product', $event)"
-            item-text="title"
+            @update:model-value="setValue('product', $event)"
+            item-title="title"
             item-value="key"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
             label="OS"
-            item-text="title"
+            item-title="title"
             return-object
             v-model="selectedOs"
             :items="os"
@@ -88,7 +88,7 @@
             :items="configurationAddons.filter((a) => a?.meta?.type === type)"
             :loading="isAddonsLoading"
             multiple
-            item-text="title"
+            item-title="title"
             return-object
             :rules="planRules"
           />
@@ -98,8 +98,8 @@
           Existing:
           <v-switch
             class="d-inline-block ml-2"
-            :input-value="instance.data?.existing"
-            @change="setValue('data.existing', $event)"
+            :model-value="instance.data?.existing"
+            @update:model-value="setValue('data.existing', $event)"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
@@ -107,9 +107,9 @@
             v-if="instance.data?.existing"
             label="Service id"
             type="number"
-            :value="instance.data?.serviceId"
+            :model-value="instance.data?.serviceId"
             :rules="rules.req"
-            @change="setValue(`data.serviceId`, +$event)"
+            @change="setValue(`data.serviceId`, +$event.target.value)"
           />
         </v-col>
       </v-row>
@@ -190,7 +190,7 @@ onMounted(() => {
 const setValue = (key, value) => {
   emits("set-value", { key, value });
 
-  /* eslint-disable */
+   
   switch (key) {
     case "product": {
       product.value = value;
@@ -204,7 +204,7 @@ const setValue = (key, value) => {
       setValue("data.serviceId", undefined);
     }
   }
-  /* eslint-enable */
+   
 };
 
 const setAddons = () => {

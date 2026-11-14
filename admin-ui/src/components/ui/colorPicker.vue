@@ -4,16 +4,16 @@
     :close-on-content-click="false"
     @click:outside="isMenuOpen = false"
   >
-    <template v-slot:activator="{ on }">
+    <template v-slot:activator="{ props }">
       <div class="d-flex justify-center align-center" :v-ripple="false">
         <v-text-field
           :label="label"
-          :value="value"
+          :model-value="value"
           clearable
-          @input="emit('input', $event)"
+          @update:model-value="emit('input', $event)"
           @click:clear="emit('input', '')"
         />
-        <v-icon class="ml-3" style="height: 25px" v-on="on">
+        <v-icon class="ml-3" style="height: 25px" v-bind="props">
           mdi-palette
         </v-icon>
       </div>
@@ -21,12 +21,12 @@
     <v-card v-if="isMenuOpen" class="pa-0">
       <v-color-picker
         mode="hexa"
-        :value="value || '#FFFFFFFF'"
-        @input="emit('input', $event.hex || $event)"
+        :model-value="value || '#FFFFFFFF'"
+        @update:model-value="emit('input', $event.hex || $event)"
         hide-mode-switch
       ></v-color-picker>
       <v-card-actions class="justify-end pt-0">
-        <v-btn small text @click="isMenuOpen = false">Close</v-btn>
+        <v-btn size="small" variant="text" @click="isMenuOpen = false">Close</v-btn>
       </v-card-actions>
     </v-card>
   </v-menu>

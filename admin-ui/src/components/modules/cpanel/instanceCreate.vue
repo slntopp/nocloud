@@ -10,9 +10,9 @@
         <v-col cols="6">
           <v-text-field
             label="Name"
-            :value="instance.title"
+            :model-value="instance.title"
             :rules="rules.req"
-            @change="setValue('title', $event)"
+            @change="setValue('title', $event.target.value)"
           />
         </v-col>
         <v-col cols="6">
@@ -32,27 +32,27 @@
           <v-autocomplete
             label="Product"
             :items="products"
-            item-text="title"
+            item-title="title"
             item-value="key"
             :rules="rules.req"
-            :value="instance.resources.plan"
-            @change="setValue('resources.plan', $event)"
+            :model-value="instance.resources.plan"
+            @update:model-value="setValue('resources.plan', $event)"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
             label="Domain"
             :rules="rules.req"
-            :value="instance.config.domain"
-            @change="setValue('config.domain', $event)"
+            :model-value="instance.config.domain"
+            @change="setValue('config.domain', $event.target.value)"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
             label="Email"
             :rules="rules.req"
-            :value="instance.config.email"
-            @change="setValue('config.email', $event)"
+            :model-value="instance.config.email"
+            @change="setValue('config.email', $event.target.value)"
           />
         </v-col>
         <v-col cols="6">
@@ -60,19 +60,19 @@
             v-if="!existing"
             label="Password"
             :rules="rules.req"
-            :value="instance.config.password"
-            @change="setValue('config.password', $event)"
+            :model-value="instance.config.password"
+            @change="setValue('config.password', $event.target.value)"
           />
         </v-col>
         <v-col cols="6" v-if="tarrifAddons.length > 0">
           <v-autocomplete
-            @change="(newVal) => setValue('addons', newVal)"
+            @update:model-value="(newVal) => setValue('addons', newVal)"
             label="Addons"
-            :value="instance.addons"
+            :model-value="instance.addons"
             :items="isAddonsLoading ? [] : getAvailableAddons()"
             :loading="isAddonsLoading"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             multiple
           />
         </v-col>
@@ -86,15 +86,15 @@
           <v-col>
             <v-text-field
               label="Username"
-              :value="instance.data?.username"
-              @change="(newVal) => setValue('data.username', newVal)"
+              :model-value="instance.data?.username"
+              @change="setValue('data.username', $event.target.value)"
             />
           </v-col>
           <v-col>
             <v-text-field
               label="Password"
-              :value="instance.data?.password"
-              @change="changePassword"
+              :model-value="instance.data?.password"
+              @change="changePassword($event.target.value)"
             />
           </v-col>
         </template>

@@ -5,7 +5,7 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
           <template v-slot:append>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
@@ -25,7 +25,7 @@
         <v-text-field
           readonly
           label="Product name"
-          :value="
+          :model-value="
             template.billingPlan.products[template.resources.plan]?.title ||
             template.resources.plan
           "
@@ -68,7 +68,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="dueDate"
+          :model-value="dueDate"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click="changeDatesDialog = true"
         />
@@ -85,7 +85,7 @@
       >
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
-          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+          <v-chip v-if="item.isAddon" size="small" class="ml-1">Addon</v-chip>
         </template>
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
@@ -93,15 +93,15 @@
               class="mr-2"
               v-model="item.price"
               :suffix="defaultCurrency?.code"
-              @input="updatePrice(item, false)"
+              @update:model-value="updatePrice(item, false)"
               append-icon="mdi-pencil"
             />
             <v-text-field
               class="ml-2"
               :suffix="accountCurrency?.code"
-              style="color: var(--v-primary-base)"
+              style="color: rgb(var(--v-theme-primary))"
               v-model="item.accountPrice"
-              @input="updatePrice(item, true)"
+              @update:model-value="updatePrice(item, true)"
               append-icon="mdi-pencil"
             />
           </div>
@@ -118,8 +118,8 @@
             <td>
               <div class="d-flex justify-end mr-4">
                 <v-dialog v-model="isAddonsDialog" max-width="60%">
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn class="mr-5" color="primary" v-bind="attrs" v-on="on"
+                  <template v-slot:activator="{ props }">
+                    <v-btn class="mr-5" color="primary" v-bind="props"
                       >addons</v-btn
                     >
                   </template>
@@ -136,7 +136,7 @@
                   />
                 </v-dialog>
 
-                <v-chip color="primary" outlined>
+                <v-chip color="primary" variant="outlined">
                   {{
                     [
                       formatPrice(totalPrice, defaultCurrency),

@@ -63,7 +63,7 @@ import {
   UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import { computed, ref, toRefs } from "vue";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import { useStore } from "@/store";
 
 const props = defineProps({

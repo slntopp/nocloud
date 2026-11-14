@@ -6,13 +6,13 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Type</v-subheader>
+              <v-list-subheader>Type</v-list-subheader>
             </v-col>
             <v-col cols="9">
               <v-select
                 :disabled="isEdit"
                 item-value="id"
-                item-text="title"
+                item-title="title"
                 label="Type"
                 v-model="typeId"
                 :items="types"
@@ -33,7 +33,7 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Account</v-subheader>
+              <v-list-subheader>Account</v-list-subheader>
             </v-col>
             <v-col cols="9">
               <div class="d-flex align-center">
@@ -59,14 +59,14 @@
 
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Service</v-subheader>
+              <v-list-subheader>Service</v-list-subheader>
             </v-col>
             <v-col cols="9">
               <v-autocomplete
-                :filter="defaultFilterObject"
+                :customFilter="defaultFilterObject"
                 label="Service"
                 item-value="uuid"
-                item-text="title"
+                item-title="title"
                 clearable
                 return-object
                 v-model="transaction.service"
@@ -78,15 +78,15 @@
 
           <v-row v-if="transaction.service && instances?.length" align="center">
             <v-col cols="3">
-              <v-subheader>Instances</v-subheader>
+              <v-list-subheader>Instances</v-list-subheader>
             </v-col>
             <v-col cols="9">
               <v-autocomplete
-                :filter="defaultFilterObject"
+                :customFilter="defaultFilterObject"
                 multiple
                 label="Instances"
                 item-value="uuid"
-                item-text="title"
+                item-title="title"
                 v-model="transaction.meta.instances"
                 :items="instances"
               />
@@ -95,7 +95,7 @@
 
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Amount</v-subheader>
+              <v-list-subheader>Amount</v-list-subheader>
             </v-col>
             <v-col cols="9">
               <v-text-field
@@ -110,24 +110,24 @@
 
           <v-row align="center" v-if="isTransaction">
             <v-col cols="3">
-              <v-subheader>Date</v-subheader>
+              <v-list-subheader>Date</v-list-subheader>
             </v-col>
             <v-col cols="4" v-for="type of [date, time]" :key="type.title">
               <v-menu
-                offset-y
+                
                 min-width="auto"
                 transition="scale-transition"
                 v-model="type.visible"
                 :ref="`menu${type.title}`"
                 :close-on-content-click="false"
-                :return-value.sync="type.value"
+                v-model:return-value="type.value"
               >
-                <template v-slot:activator="{ on, attrs }">
+                <template v-slot:activator="{ props }">
                   <v-text-field
                     readonly
                     v-model="type.value"
-                    v-bind="attrs"
-                    v-on="on"
+                   
+                    v-bind="props"
                     :label="type.title"
                   />
                 </template>
@@ -138,11 +138,11 @@
                   v-if="date.visible"
                 >
                   <v-spacer />
-                  <v-btn text color="primary" @click="type.visible = false">
+                  <v-btn variant="text" color="primary" @click="type.visible = false">
                     Cancel
                   </v-btn>
                   <v-btn
-                    text
+                    variant="text"
                     color="primary"
                     @click="$refs.menuDate[0].save(type.value)"
                   >
@@ -177,13 +177,13 @@
           </v-row>
           <v-expansion-panels v-if="history.length" class="mt-4">
             <v-expansion-panel>
-              <v-expansion-panel-header color="background-light">
+              <v-expansion-panel-title color="background-light">
                 <span class="text-h6">History</span>
                 <template v-slot:actions>
-                  <v-icon x-large> $expand </v-icon>
+                  <v-icon size="x-large"> $expand </v-icon>
                 </template>
-              </v-expansion-panel-header>
-              <v-expansion-panel-content color="background-light">
+              </v-expansion-panel-title>
+              <v-expansion-panel-text color="background-light">
                 <invoice-items-table
                   sort-by="date"
                   :account="transaction.account"
@@ -191,23 +191,23 @@
                   readonly
                   show-date
                 />
-              </v-expansion-panel-content>
+              </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
           <v-expansion-panels class="mt-4">
             <v-expansion-panel>
-              <v-expansion-panel-header color="background-light">
+              <v-expansion-panel-title color="background-light">
                 <span class="text-h6">Meta</span>
                 <template v-slot:actions>
-                  <v-icon x-large> $expand </v-icon>
+                  <v-icon size="x-large"> $expand </v-icon>
                 </template>
-              </v-expansion-panel-header>
-              <v-expansion-panel-content color="background-light">
+              </v-expansion-panel-title>
+              <v-expansion-panel-text color="background-light">
                 <json-editor
                   :json="transaction.meta"
                   @changeValue="(data) => (transaction.meta = data)"
                 />
-              </v-expansion-panel-content>
+              </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
         </v-col>
@@ -542,7 +542,7 @@ export default {
 
 <style scoped>
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

@@ -1,9 +1,9 @@
 <template>
   <v-dialog
     :persistent="isMoveLoading"
-    @input="emit('input', $event)"
+    @update:model-value="emit('input', $event)"
     width="50%"
-    :value="value"
+    :model-value="value"
   >
     <v-card class="pa-5">
       <v-card-title>Move instance</v-card-title>

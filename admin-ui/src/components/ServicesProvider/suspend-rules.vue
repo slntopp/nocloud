@@ -12,15 +12,15 @@
 
           <v-switch
             class="ml-3"
-            @change="suspendRules[day].enabled = $event"
-            :input-value="suspendRules[day]?.enabled"
+            @update:model-value="suspendRules[day].enabled = $event"
+            :model-value="suspendRules[day]?.enabled"
             label="Rules enabled"
           />
 
           <v-switch
             class="ml-3"
-            @change="changeEnableAll(day)"
-            :input-value="suspendRules[day]?.rules?.length === 0"
+            @update:model-value="changeEnableAll(day)"
+            :model-value="suspendRules[day]?.rules?.length === 0"
             label="Enable all day"
           />
           <v-btn @click="addNewIn(day)" class="ml-2" icon>
@@ -42,7 +42,7 @@
             <v-text-field
               disabled
               readonly
-              :value="formatTimeFromUtc(rule.startTime)"
+              :model-value="formatTimeFromUtc(rule.startTime)"
             />
           </div>
           <div class="field">
@@ -54,7 +54,7 @@
             <v-text-field
               disabled
               readonly
-              :value="formatTimeFromUtc(rule.endTime)"
+              :model-value="formatTimeFromUtc(rule.endTime)"
             />
           </div>
 

@@ -11,9 +11,9 @@
       <v-col v-for="key in Object.keys(template.resources || {})" :key="key">
         <v-text-field
           append-icon="mdi-pencil"
-          @input="emit('update', { key: `resources.${key}`, value: $event })"
+          @update:model-value="emit('update', { key: `resources.${key}`, value: $event })"
           :label="key"
-          :value="template.resources[key]"
+          :model-value="template.resources[key]"
         />
       </v-col>
     </v-row>

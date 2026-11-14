@@ -6,16 +6,16 @@
       :align="!fields[field].isJSON ? 'center' : null"
     >
       <v-col cols="4">
-        <v-subheader>
+        <v-list-subheader>
           {{ fields[field].subheader || field }}
 
           <v-tooltip
             v-if="field == 'host' && hostWarning"
-            bottom
+            location="bottom"
             color="warning"
           >
-            <template v-slot:activator="{ on, attrs }">
-              <v-icon class="ml-2" color="warning" v-bind="attrs" v-on="on">
+            <template v-slot:activator="{ props }">
+              <v-icon class="ml-2" color="warning" v-bind="props">
                 mdi-alert-outline
               </v-icon>
             </template>
@@ -25,13 +25,13 @@
               "/RPC2"</span
             >
           </v-tooltip>
-        </v-subheader>
+        </v-list-subheader>
       </v-col>
 
       <v-col cols="8">
         <v-text-field
-          @change="(data) => changeHandler(field, data)"
-          :value="getValue(field)"
+          @change="changeHandler(field, $event.target.value)"
+          :model-value="getValue(field)"
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"

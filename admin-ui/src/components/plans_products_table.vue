@@ -3,17 +3,17 @@
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
-      background-color="background-light"
+      bg-color="background-light"
     >
       <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
     </v-tabs>
 
-    <v-tabs-items
+    <v-window
       v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       class="rounded-b-lg"
     >
-      <v-tab-item v-for="tab in tabs" :key="tab">
+      <v-window-item v-for="tab in tabs" :key="tab">
         <nocloud-table
           table-name="plans-products"
           item-key="id"
@@ -24,7 +24,7 @@
           :show-expand="true"
           :items="productsArray"
           :headers="headers"
-          :expanded.sync="expanded"
+          v-model:expanded="expanded"
         >
           <template v-slot:top>
             <v-toolbar flat color="background">
@@ -33,11 +33,11 @@
               <v-spacer />
 
               <v-dialog width="90vw" v-model="isEditOpen">
-                <template v-slot:activator="{ on, attrs }">
+                <template v-slot:activator="{ props }">
                   <v-btn
                     :disabled="selected.length < 1"
-                    v-bind="attrs"
-                    v-on="on"
+                   
+                    v-bind="props"
                     class="mr-2"
                     color="background-light"
                   >
@@ -46,7 +46,7 @@
                 </template>
 
                 <v-card class="pa-4">
-                  <v-subheader class="px-0"> Description: </v-subheader>
+                  <v-list-subheader class="px-0"> Description: </v-list-subheader>
                   <rich-editor v-model="newMeta.description" />
 
                   <v-row class="mt-5" justify="end">
@@ -80,28 +80,28 @@
 
           <template v-slot:[`item.key`]="{ item }">
             <v-text-field
-              dense
-              :value="item.key"
+              density="compact"
+              :model-value="item.key"
               :rules="[rules.required]"
-              @change="(value) => changeProduct('key', value, item.id)"
+              @change="changeProduct('key', $event.target.value, item.id)"
             />
           </template>
           <template v-slot:[`item.title`]="{ item }">
             <v-text-field
-              dense
-              :value="item.title"
+              density="compact"
+              :model-value="item.title"
               :rules="[rules.required]"
-              @change="(value) => changeProduct('title', value, item.id)"
+              @change="changeProduct('title', $event.target.value, item.id)"
             />
           </template>
           <template v-slot:[`item.price`]="{ item }">
             <v-text-field
-              dense
+              density="compact"
               type="number"
               :suffix="defaultCurrency?.code"
-              :value="item.price"
+              :model-value="item.price"
               :rules="[rules.price]"
-              @change="(value) => changeProduct('price', value, item.id)"
+              @change="changeProduct('price', $event.target.value, item.id)"
             />
           </template>
           <template v-slot:[`item.period`]="{ item }">
@@ -115,14 +115,14 @@
           </template>
           <template v-slot:[`item.public`]="{ item }">
             <v-switch
-              :input-value="item.public"
-              @change="(value) => changeProduct('public', value, item.id)"
+              :model-value="item.public"
+              @update:model-value="(value) => changeProduct('public', value, item.id)"
             />
           </template>
           <template v-slot:[`item.meta.ai_site`]="{ item }">
             <v-switch
-              :input-value="item.meta?.ai_site"
-              @change="
+              :model-value="item.meta?.ai_site"
+              @update:model-value="
                 (value) =>
                   changeProduct(
                     'meta',
@@ -135,8 +135,8 @@
           <template v-slot:[`item.sorter`]="{ item }">
             <v-text-field
               type="number"
-              :value="item.sorter"
-              @change="(value) => changeProduct('sorter', value, item.id)"
+              :model-value="item.sorter"
+              @change="changeProduct('sorter', $event.target.value, item.id)"
             />
           </template>
           <template v-slot:[`item.group`]="{ item }">
@@ -144,8 +144,8 @@
               <v-select
                 v-if="productId !== item.id"
                 :items="[...groups.values()]"
-                :value="products[item.key]?.group"
-                @change="setGroup($event, item.id)"
+                :model-value="products[item.key]?.group"
+                @update:model-value="setGroup($event, item.id)"
               />
               <v-text-field v-else v-model="groupActionPayload" />
               <template v-if="productId !== item.id">
@@ -169,10 +169,10 @@
           <template v-slot:[`item.kind`]="{ item }">
             <v-radio-group
               :disabled="isOneTime(item)"
-              row
+              inline
               mandatory
-              :value="item.kind"
-              @change="(value) => changeProduct('kind', value, item.id)"
+              :model-value="item.kind"
+              @update:model-value="(value) => changeProduct('kind', value, item.id)"
             >
               <v-radio
                 v-for="(kind, i) of kinds"
@@ -186,15 +186,15 @@
 
           <template v-slot:[`item.meta.oneTime`]="{ item }">
             <v-switch
-              :input-value="item.meta?.oneTime"
-              @change="changeOneTime(item, $event)"
+              :model-value="item.meta?.oneTime"
+              @update:model-value="changeOneTime(item, $event)"
             />
           </template>
 
           <template v-slot:[`item.meta.highCPU`]="{ item }">
             <v-switch
-              :input-value="item.meta?.highCPU"
-              @change="changeHighCPU(item, $event)"
+              :model-value="item.meta?.highCPU"
+              @update:model-value="changeHighCPU(item, $event)"
             />
           </template>
 
@@ -209,15 +209,15 @@
             <td />
             <td :colspan="headers.length - 1">
               <v-text-field
-                dense
+                density="compact"
                 class="pt-4"
                 label="Image link"
                 v-if="type === 'empty' || type == 'bitrix24'"
-                :value="item.meta.image"
-                @input="changeImageLink($event, item.id)"
+                :model-value="item.meta.image"
+                @update:model-value="changeImageLink($event, item.id)"
               />
 
-              <v-subheader class="px-0"> Description: </v-subheader>
+              <v-list-subheader class="px-0"> Description: </v-list-subheader>
               <rich-editor
                 class="html-editor"
                 @input="changeProduct('description', $event, item.id)"
@@ -235,7 +235,7 @@
               </template>
 
               <template v-else>
-                <v-subheader class="px-0"> Amount of resources </v-subheader>
+                <v-list-subheader class="px-0"> Amount of resources </v-list-subheader>
                 <json-editor
                   :json="item.resources"
                   @changeValue="changeProduct('amount', $event, item.id)"
@@ -243,29 +243,29 @@
               </template>
               <v-row>
                 <v-col>
-                  <v-subheader class="px-0 pt-4"
-                    >Installation price:</v-subheader
+                  <v-list-subheader class="px-0 pt-4"
+                    >Installation price:</v-list-subheader
                   >
                   <v-text-field
-                    dense
+                    density="compact"
                     type="number"
                     style="width: 150px"
-                    :value="item.installationFee"
+                    :model-value="item.installationFee"
                     :suffix="defaultCurrency"
-                    @input="
+                    @update:model-value="
                       (value) =>
                         changeProduct('installationFee', +value, item.id)
                     "
                   />
                 </v-col>
                 <v-col>
-                  <v-subheader class="px-0 pt-4">Min disk size:</v-subheader>
+                  <v-list-subheader class="px-0 pt-4">Min disk size:</v-list-subheader>
                   <v-text-field
-                    dense
+                    density="compact"
                     type="number"
                     style="width: 150px"
-                    :value="item.meta.minDiskSize"
-                    @input="
+                    :model-value="item.meta.minDiskSize"
+                    @update:model-value="
                       (value) =>
                         changeProduct(
                           'meta',
@@ -276,13 +276,13 @@
                   />
                 </v-col>
                 <v-col>
-                  <v-subheader class="px-0 pt-4">Max disk size:</v-subheader>
+                  <v-list-subheader class="px-0 pt-4">Max disk size:</v-list-subheader>
                   <v-text-field
-                    dense
+                    density="compact"
                     type="number"
                     style="width: 150px"
-                    :value="item.meta.maxDiskSize"
-                    @input="
+                    :model-value="item.meta.maxDiskSize"
+                    @update:model-value="
                       (value) =>
                         changeProduct(
                           'meta',
@@ -311,8 +311,8 @@
           v-else-if="tab === 'Addons'"
           :addons="addons"
         />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 

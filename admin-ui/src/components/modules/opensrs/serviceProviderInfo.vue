@@ -28,7 +28,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="
+                  :model-value="
                     Math.round(
                       ((host.total_cpu - host.free_cpu) / host.total_cpu) * 100
                     )
@@ -56,7 +56,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="
+                  :model-value="
                     Math.round(
                       ((host.total_ram - host.free_ram) / host.total_ram) * 100
                     )
@@ -112,7 +112,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="
+              :model-value="
                 Math.round(
                   (template.state.meta.networking.public_vnet.used /
                     template.state.meta.networking.public_vnet.total) *
@@ -156,7 +156,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="
+              :model-value="
                 Math.round(
                   (template.state.meta.networking.private_vnet.used /
                     template.state.meta.networking.private_vnet.total) *
@@ -200,7 +200,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="Math.round((datastor.used / datastor.total) * 100)"
+              :model-value="Math.round((datastor.used / datastor.total) * 100)"
               color="green"
               height="20"
             >
@@ -242,12 +242,12 @@
       </v-col>
       <v-col cols="12">
         <p>Vlans:</p>
-        <v-tooltip bottom color="info" v-for="(vlan, i) of vlans" :key="i">
-          <template v-slot:activator="{ on, attrs }">
+        <v-tooltip location="bottom" color="info" v-for="(vlan, i) of vlans" :key="i">
+          <template v-slot:activator="{ props }">
             <span
               class="ceil"
-              v-bind="attrs"
-              v-on="on"
+             
+              v-bind="props"
               :class="vlan === 0 ? 'occupied' : 'free'"
             />
           </template>

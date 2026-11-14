@@ -3,15 +3,15 @@
     <div class="d-flex align-center mb-2">
       <span class="text-h6">Virtual networks</span>
       <v-spacer />
-      <v-btn small text :loading="isLoading" @click="load">
-        <v-icon small left>mdi-refresh</v-icon>refresh leases
+      <v-btn size="small" variant="text" :loading="isLoading" @click="load">
+        <v-icon size="small" start>mdi-refresh</v-icon>refresh leases
       </v-btn>
     </div>
-    <v-alert v-if="error" dense text type="error">{{ error }}</v-alert>
+    <v-alert v-if="error" density="compact" text type="error">{{ error }}</v-alert>
 
     <v-expansion-panels v-model="opened" multiple flat>
       <v-expansion-panel v-for="(net, kind) in networks" :key="kind" class="mb-2">
-        <v-expansion-panel-header color="background">
+        <v-expansion-panel-title color="background">
           <div class="d-flex align-center" style="gap: 16px; flex-wrap: wrap">
             <strong class="text-capitalize">{{ kind }}</strong>
             <span class="text--secondary">
@@ -20,25 +20,25 @@
               <span v-if="(net.dns || []).length"> · dns {{ net.dns.join(", ") }}</span>
             </span>
             <v-spacer />
-            <v-chip x-small color="success" outlined>free {{ net.free }}</v-chip>
-            <v-chip x-small color="info" outlined>used {{ net.used }}</v-chip>
-            <v-chip x-small color="warning" outlined>hold {{ net.hold }}</v-chip>
-            <v-chip v-if="conflicts(kind)" x-small color="error">conflict {{ conflicts(kind) }}</v-chip>
-            <v-chip v-if="outside(kind)" x-small color="error" outlined>outside {{ outside(kind) }}</v-chip>
-            <v-chip x-small outlined>total {{ net.total }}</v-chip>
+            <v-chip size="x-small" color="success" variant="outlined">free {{ net.free }}</v-chip>
+            <v-chip size="x-small" color="info" variant="outlined">used {{ net.used }}</v-chip>
+            <v-chip size="x-small" color="warning" variant="outlined">hold {{ net.hold }}</v-chip>
+            <v-chip v-if="conflicts(kind)" size="x-small" color="error">conflict {{ conflicts(kind) }}</v-chip>
+            <v-chip v-if="outside(kind)" size="x-small" color="error" variant="outlined">outside {{ outside(kind) }}</v-chip>
+            <v-chip size="x-small" variant="outlined">total {{ net.total }}</v-chip>
           </div>
-        </v-expansion-panel-header>
+        </v-expansion-panel-title>
 
-        <v-expansion-panel-content color="background">
+        <v-expansion-panel-text color="background">
           <!-- Address ranges -->
           <div class="d-flex align-center mt-2 mb-1">
-            <span class="subtitle-2">Address ranges</span>
+            <span class="text-subtitle-2">Address ranges</span>
             <v-spacer />
-            <v-btn x-small text @click="openAddAR(kind)">
-              <v-icon small left>mdi-plus</v-icon>add range
+            <v-btn size="x-small" variant="text" @click="openAddAR(kind)">
+              <v-icon size="small" start>mdi-plus</v-icon>add range
             </v-btn>
           </div>
-          <v-simple-table dense>
+          <v-table density="compact">
             <thead>
               <tr>
                 <th>AR</th>
@@ -57,11 +57,11 @@
                 <td>{{ ar.id }}</td>
                 <template v-if="isEditingAR(kind, ar.id)">
                   <td>
-                    <v-text-field v-model="editAR.ip" dense hide-details placeholder="First IP" />
+                    <v-text-field v-model="editAR.ip" density="compact" hide-details placeholder="First IP" />
                   </td>
                   <td class="text--secondary">{{ editLast }}</td>
                   <td>
-                    <v-text-field v-model.number="editAR.size" dense hide-details type="number" min="1" style="max-width: 80px" />
+                    <v-text-field v-model.number="editAR.size" density="compact" hide-details type="number" min="1" style="max-width: 80px" />
                   </td>
                   <td>{{ ar.used }}</td>
                   <td>{{ ar.hold }}</td>
@@ -69,25 +69,25 @@
                   <td>
                     <v-row dense>
                       <v-col cols="6">
-                        <v-text-field v-model="editAR.gateway" dense hide-details placeholder="gateway" />
+                        <v-text-field v-model="editAR.gateway" density="compact" hide-details placeholder="gateway" />
                       </v-col>
                       <v-col cols="6">
-                        <v-text-field v-model.number="editAR.prefix" dense hide-details type="number" placeholder="prefix" />
+                        <v-text-field v-model.number="editAR.prefix" density="compact" hide-details type="number" placeholder="prefix" />
                       </v-col>
                       <v-col cols="6">
-                        <v-text-field v-model="editAR.bridge" dense hide-details placeholder="bridge" />
+                        <v-text-field v-model="editAR.bridge" density="compact" hide-details placeholder="bridge" />
                       </v-col>
                       <v-col cols="6">
-                        <v-text-field v-model.number="editAR.vlan_tag" dense hide-details type="number" placeholder="vlan" />
+                        <v-text-field v-model.number="editAR.vlan_tag" density="compact" hide-details type="number" placeholder="vlan" />
                       </v-col>
                     </v-row>
                   </td>
                   <td class="text-no-wrap">
-                    <v-btn icon x-small color="success" :loading="isSaving" :disabled="!editAR.ip || !(editAR.size > 0)" @click="saveAR(kind, ar.id)">
-                      <v-icon small>mdi-check</v-icon>
+                    <v-btn icon size="x-small" color="success" :loading="isSaving" :disabled="!editAR.ip || !(editAR.size > 0)" @click="saveAR(kind, ar.id)">
+                      <v-icon size="small">mdi-check</v-icon>
                     </v-btn>
-                    <v-btn icon x-small @click="cancelEditAR">
-                      <v-icon small>mdi-close</v-icon>
+                    <v-btn icon size="x-small" @click="cancelEditAR">
+                      <v-icon size="small">mdi-close</v-icon>
                     </v-btn>
                   </td>
                 </template>
@@ -106,14 +106,14 @@
                     <span v-if="!ar.gateway && !ar.prefix && !ar.bridge && !ar.vlan_tag">—</span>
                   </td>
                   <td class="text-no-wrap">
-                    <v-btn icon x-small :disabled="isSaving" title="edit range" @click="startEditAR(kind, ar)">
-                      <v-icon small>mdi-pencil</v-icon>
+                    <v-btn icon size="x-small" :disabled="isSaving" title="edit range" @click="startEditAR(kind, ar)">
+                      <v-icon size="small">mdi-pencil</v-icon>
                     </v-btn>
-                    <v-tooltip bottom>
-                      <template v-slot:activator="{ on }">
-                        <span v-on="on">
-                          <v-btn icon x-small :disabled="ar.used > 0 || isSaving" @click="removeAR(kind, ar.id)">
-                            <v-icon small>mdi-delete</v-icon>
+                    <v-tooltip location="bottom">
+                      <template v-slot:activator="{ props }">
+                        <span v-bind="props">
+                          <v-btn icon size="x-small" :disabled="ar.used > 0 || isSaving" @click="removeAR(kind, ar.id)">
+                            <v-icon size="small">mdi-delete</v-icon>
                           </v-btn>
                         </span>
                       </template>
@@ -123,22 +123,22 @@
                 </template>
               </tr>
             </tbody>
-          </v-simple-table>
+          </v-table>
 
           <!-- Leases -->
           <div class="d-flex align-center mt-4 mb-1" style="gap: 12px">
-            <span class="subtitle-2">Leases</span>
-            <v-btn-toggle v-model="stateFilter[kind]" dense mandatory>
-              <v-btn x-small value="">all</v-btn>
-              <v-btn x-small value="free">free</v-btn>
-              <v-btn x-small value="used">used</v-btn>
-              <v-btn x-small value="hold">hold</v-btn>
-              <v-btn x-small value="conflict" :disabled="!conflicts(kind)">conflict{{ conflicts(kind) ? ` (${conflicts(kind)})` : "" }}</v-btn>
-              <v-btn x-small value="outside" :disabled="!outside(kind)">outside{{ outside(kind) ? ` (${outside(kind)})` : "" }}</v-btn>
+            <span class="text-subtitle-2">Leases</span>
+            <v-btn-toggle v-model="stateFilter[kind]" density="compact" mandatory>
+              <v-btn size="x-small" value="">all</v-btn>
+              <v-btn size="x-small" value="free">free</v-btn>
+              <v-btn size="x-small" value="used">used</v-btn>
+              <v-btn size="x-small" value="hold">hold</v-btn>
+              <v-btn size="x-small" value="conflict" :disabled="!conflicts(kind)">conflict{{ conflicts(kind) ? ` (${conflicts(kind)})` : "" }}</v-btn>
+              <v-btn size="x-small" value="outside" :disabled="!outside(kind)">outside{{ outside(kind) ? ` (${outside(kind)})` : "" }}</v-btn>
             </v-btn-toggle>
             <v-text-field
               v-model="search[kind]"
-              dense
+              density="compact"
               hide-details
               clearable
               prepend-inner-icon="mdi-magnify"
@@ -148,16 +148,16 @@
             <v-spacer />
             <v-text-field
               v-model="holdInput[kind]"
-              dense
+              density="compact"
               hide-details
               placeholder="hold IP…"
               style="max-width: 160px"
               @keyup.enter="hold(kind, holdInput[kind])"
             />
-            <v-btn x-small :disabled="!holdInput[kind]" :loading="isSaving" @click="hold(kind, holdInput[kind])">hold</v-btn>
+            <v-btn size="x-small" :disabled="!holdInput[kind]" :loading="isSaving" @click="hold(kind, holdInput[kind])">hold</v-btn>
           </div>
           <v-data-table
-            dense
+            density="compact"
             :headers="leaseHeaders"
             :items="filteredLeases(kind)"
             :items-per-page="25"
@@ -171,22 +171,22 @@
             <template v-slot:[`item.state`]="{ item }">
               <v-select
                 v-if="item.state === 'free' || item.state === 'hold'"
-                :value="item.state"
+                :model-value="item.state"
                 :items="[
                   { text: 'free', value: 'free' },
                   { text: 'hold', value: 'hold' },
                 ]"
-                dense
+                density="compact"
                 hide-details
                 :disabled="isSaving"
                 style="max-width: 110px"
-                @change="setLeaseState(kind, item, $event)"
+                @update:model-value="setLeaseState(kind, item, $event)"
               />
-              <v-chip v-else x-small :color="stateColor(item.state)" outlined>{{ item.state }}</v-chip>
+              <v-chip v-else size="x-small" :color="stateColor(item.state)" variant="outlined">{{ item.state }}</v-chip>
             </template>
             <template v-slot:[`item.vm`]="{ item }">
               <template v-if="item.owners">
-                <div v-for="o in item.owners" :key="o.vmid" class="error--text">
+                <div v-for="o in item.owners" :key="o.vmid" class="text-error">
                   {{ o.vmid }} · {{ o.vm || "-" }} @ {{ o.node }}
                 </div>
               </template>
@@ -201,11 +201,11 @@
               <span v-else class="text--disabled">-</span>
             </template>
             <template v-slot:[`item.actions`]="{ item }">
-              <v-btn v-if="item.state === 'free'" x-small text :loading="isSaving" @click="hold(kind, item.ip)">hold</v-btn>
-              <v-btn v-else-if="item.state === 'hold'" x-small text color="warning" :loading="isSaving" @click="release(kind, item.ip)">release</v-btn>
+              <v-btn v-if="item.state === 'free'" size="x-small" variant="text" :loading="isSaving" @click="hold(kind, item.ip)">hold</v-btn>
+              <v-btn v-else-if="item.state === 'hold'" size="x-small" variant="text" color="warning" :loading="isSaving" @click="release(kind, item.ip)">release</v-btn>
             </template>
           </v-data-table>
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
 
@@ -219,23 +219,23 @@
             <v-col cols="5"><v-text-field label="Size" type="number" min="1" v-model.number="newAR.size" /></v-col>
           </v-row>
           <div class="text-caption mb-2">or a range / CIDR:</div>
-          <v-text-field dense label="Range" v-model="newAR.range" placeholder="185.66.69.151-185.66.69.160 or 10.0.5.0/24" />
+          <v-text-field density="compact" label="Range" v-model="newAR.range" placeholder="185.66.69.151-185.66.69.160 or 10.0.5.0/24" />
           <v-expansion-panels flat>
             <v-expansion-panel>
-              <v-expansion-panel-header class="px-0">Overrides (optional)</v-expansion-panel-header>
-              <v-expansion-panel-content>
+              <v-expansion-panel-title class="px-0">Overrides (optional)</v-expansion-panel-title>
+              <v-expansion-panel-text>
                 <v-row dense>
-                  <v-col cols="6"><v-text-field dense label="Gateway" v-model="newAR.gateway" /></v-col>
-                  <v-col cols="6"><v-text-field dense type="number" label="Prefix" v-model.number="newAR.prefix" /></v-col>
-                  <v-col cols="6"><v-text-field dense label="Bridge" v-model="newAR.bridge" /></v-col>
-                  <v-col cols="6"><v-text-field dense type="number" label="VLAN tag" v-model.number="newAR.vlan_tag" /></v-col>
+                  <v-col cols="6"><v-text-field density="compact" label="Gateway" v-model="newAR.gateway" /></v-col>
+                  <v-col cols="6"><v-text-field density="compact" type="number" label="Prefix" v-model.number="newAR.prefix" /></v-col>
+                  <v-col cols="6"><v-text-field density="compact" label="Bridge" v-model="newAR.bridge" /></v-col>
+                  <v-col cols="6"><v-text-field density="compact" type="number" label="VLAN tag" v-model.number="newAR.vlan_tag" /></v-col>
                 </v-row>
-              </v-expansion-panel-content>
+              </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
         </v-card-text>
         <v-card-actions class="justify-end">
-          <v-btn text @click="addDialog = false">Cancel</v-btn>
+          <v-btn variant="text" @click="addDialog = false">Cancel</v-btn>
           <v-btn :loading="isSaving" :disabled="!newAR.range && !(newAR.ip && newAR.size > 0)" @click="addAR">Add</v-btn>
         </v-card-actions>
       </v-card>

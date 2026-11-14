@@ -7,10 +7,10 @@
   >
     <v-expansion-panels v-if="!isPlansLoading || !isSpLoading">
       <v-expansion-panel>
-        <v-expansion-panel-header color="background">
+        <v-expansion-panel-title color="background">
           Margin rules:
-        </v-expansion-panel-header>
-        <v-expansion-panel-content color="background">
+        </v-expansion-panel-title>
+        <v-expansion-panel-text color="background">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
@@ -23,7 +23,7 @@
           >
             <v-btn class="mt-4" color="secondary">Set rules</v-btn>
           </confirm-dialog>
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
 
@@ -73,6 +73,7 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
@@ -180,10 +181,10 @@ export default {
   },
   computed: {
     tableComponent() {
-      return () =>
+      return defineAsyncComponent(() =>
         import(
           `@/components/plan/${this.template.type.split(" ")[1]}Table.vue`
-        );
+        ));
     },
     sp() {
       return this.$store.getters["servicesProviders/all"].find(
@@ -205,6 +206,6 @@ export default {
 }
 
 .v-data-table__expanded__content {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
 }
 </style>

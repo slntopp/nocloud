@@ -19,6 +19,7 @@
 
 <script setup>
 import AntIcon from "@/components/ui/antIcon.vue";
+import { loadNocloudIcon } from "@/components/ui/nocloudIcons";
 import { computed, toRefs, watch, ref, onMounted } from "vue";
 
 const props = defineProps({
@@ -44,7 +45,7 @@ const isNocloud = computed(() => type.value === "nocloud");
 
 const iconName = computed(() => {
   if (isNocloud.value) {
-    return loadedIcon.value?.default;
+    return loadedIcon.value;
   }
 
   return icon.value;
@@ -53,7 +54,7 @@ const iconName = computed(() => {
 const tryLoad = async () => {
   loadedError.value = false;
   try {
-    const loaded = await import(`nocloud-ui/assets/icons/${icon.value}.svg`);
+    const loaded = await loadNocloudIcon(icon.value);
 
     loadedIcon.value = loaded;
   } catch {

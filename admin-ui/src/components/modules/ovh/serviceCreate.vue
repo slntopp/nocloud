@@ -14,7 +14,7 @@
             label="title"
             v-model="instance.title"
             :rules="rules.req"
-            @change="(value) => setValue(index + '.title', value)"
+            @change="setValue(index + '.title', $event.target.value)"
           />
         </v-col>
         <v-col class="d-flex justify-end">
@@ -26,12 +26,12 @@
         <v-col cols="6">
           <v-autocomplete
             label="price model"
-            item-text="title"
+            item-title="title"
             item-value="uuid"
             v-model="instance.plan"
             :items="plans.list"
             :rules="planRules"
-            @change="(value) => setValue(index + '.billing_plan', value)"
+            @update:model-value="(value) => setValue(index + '.billing_plan', value)"
           />
         </v-col>
         <v-col cols="6" v-if="instance.products?.length > 0">
@@ -39,19 +39,19 @@
             label="product"
             v-model="instance.productTitle"
             :items="instance.products"
-            @change="(value) => setValue(index + '.product', value)"
+            @update:model-value="(value) => setValue(index + '.product', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-select
             label="tariff"
-            item-text="title"
+            item-title="title"
             item-value="code"
             v-model="instance.config.planCode"
             :items="flavors[instance.billing_plan.uuid]"
             :rules="rules.req"
             :loading="isFlavorsLoading"
-            @change="(value) => setValue(index + '.config.planCode', value)"
+            @update:model-value="(value) => setValue(index + '.config.planCode', value)"
           />
         </v-col>
         <v-col cols="6">
@@ -61,7 +61,7 @@
             :items="regions[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
-            @change="
+            @update:model-value="
               (value) =>
                 setValue(index + '.config.configuration.vps_datacenter', value)
             "
@@ -74,7 +74,7 @@
             :items="images[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
-            @change="
+            @update:model-value="
               (value) => setValue(index + '.config.configuration.vps_os', value)
             "
           />
@@ -87,7 +87,7 @@
             false-value="P1M"
             v-model="instance.config.duration"
             :label="instance.config.duration === 'P1Y' ? 'yearly' : 'monthly'"
-            @change="(value) => setValue(index + '.config.duration', value)"
+            @update:model-value="(value) => setValue(index + '.config.duration', value)"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
@@ -95,7 +95,7 @@
           <v-switch
             class="d-inline-block ml-2"
             v-model="instance.data.existing"
-            @change="(value) => setValue(index + '.data.existing', value)"
+            @update:model-value="(value) => setValue(index + '.data.existing', value)"
           />
         </v-col>
         <v-col
@@ -107,7 +107,7 @@
             label="VPS name"
             v-model="instance.data.vpsName"
             :rules="rules.req"
-            @change="(value) => setValue(index + '.data.vpsName', value)"
+            @change="setValue(index + '.data.vpsName', $event.target.value)"
           />
         </v-col>
       </v-row>
@@ -125,7 +125,7 @@
             <v-select
               :label="key"
               :items="addon"
-              @change="(value) => setValue(index + '.config.addons', value)"
+              @update:model-value="(value) => setValue(index + '.config.addons', value)"
             />
           </v-col>
         </v-row>
@@ -238,10 +238,10 @@ export default {
           plan?.configurations.forEach((el) => {
             el.values.sort();
             if (el.name.includes("os")) {
-              this.$set(this.images, key, el.values);
+              this.images[key] = el.values;
             }
             if (el.name.includes("datacenter")) {
-              this.$set(this.regions, key, el.values);
+              this.regions[key] = el.values;
             }
           });
 
@@ -307,10 +307,10 @@ export default {
         plan.configurations.forEach((el) => {
           el.values.sort();
           if (el.name.includes("os")) {
-            this.$set(this.images, val, el.values);
+            this.images[val] = el.values;
           }
           if (el.name.includes("datacenter")) {
-            this.$set(this.regions, val, el.values);
+            this.regions[val] = el.values;
           }
         });
 

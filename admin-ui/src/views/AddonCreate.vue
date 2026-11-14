@@ -6,7 +6,7 @@
     <v-form v-model="isValid" ref="addonCreateForm">
       <v-row>
         <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Title</v-subheader>
+          <v-list-subheader>Title</v-list-subheader>
         </v-col>
         <v-col cols="3" class="align-center d-flex">
           <v-text-field
@@ -16,13 +16,13 @@
           />
         </v-col>
         <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Group</v-subheader>
+          <v-list-subheader>Group</v-list-subheader>
         </v-col>
         <v-col cols="2" class="align-center d-flex">
           <v-text-field label="Group" v-model="newAddon.group" />
         </v-col>
           <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Tag</v-subheader>
+          <v-list-subheader>Tag</v-list-subheader>
         </v-col>
         <v-col cols="2" class="align-center d-flex">
           <v-text-field label="Tag" v-model="newAddon.meta.tag" />
@@ -36,7 +36,7 @@
       </nocloud-expansion-panels>
       <v-divider />
       <v-row class="my-3 d-flex align-center">
-        <v-subheader>Prices</v-subheader>
+        <v-list-subheader>Prices</v-list-subheader>
         <v-btn @click="addPeriod" class="mx-1">Add</v-btn>
         <v-btn
           @click="deleteSelectedPeriods"
@@ -63,8 +63,8 @@
         </template>
         <template v-slot:[`item.oneTime`]="{ item }">
           <v-switch
-            :input-value="item.period === 0"
-            @change="changeOneTime(item, $event)"
+            :model-value="item.period === 0"
+            @update:model-value="changeOneTime(item, $event)"
           />
         </template>
 
@@ -94,7 +94,7 @@ import { computed, onMounted, ref, toRefs, watch } from "vue";
 import NocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import { useStore } from "@/store";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import { Addon } from "nocloud-proto/proto/es/billing/addons/addons_pb";
@@ -235,7 +235,7 @@ watch(addon, (val) => {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

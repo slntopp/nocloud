@@ -1,18 +1,18 @@
 <template>
   <div>
-    <v-alert v-if="meta.error" type="error" dense>{{ meta.error }}</v-alert>
+    <v-alert v-if="meta.error" type="error" density="compact">{{ meta.error }}</v-alert>
     <v-row class="mb-2">
       <v-col cols="12" md="3">
-        <v-text-field readonly label="PVE version" :value="publicData.pve_version || meta.pve_version" />
+        <v-text-field readonly label="PVE version" :model-value="publicData.pve_version || meta.pve_version" />
       </v-col>
       <v-col cols="12" md="3">
-        <v-text-field readonly label="Cluster" :value="clusterLabel" />
+        <v-text-field readonly label="Cluster" :model-value="clusterLabel" />
       </v-col>
       <v-col cols="12" md="3">
-        <v-text-field readonly label="Nodes" :value="nodes.length" />
+        <v-text-field readonly label="Nodes" :model-value="nodes.length" />
       </v-col>
       <v-col cols="12" md="3">
-        <v-text-field readonly label="Templates" :value="templates.length" />
+        <v-text-field readonly label="Templates" :model-value="templates.length" />
       </v-col>
     </v-row>
     <slot></slot>
@@ -29,7 +29,7 @@
                 <span>{{ node.used_ram }}</span> / <span>{{ node.total_ram }}</span>
               </div>
             </div>
-            <v-progress-linear :value="percent(node.used_ram, node.total_ram)" color="green" height="20">
+            <v-progress-linear :model-value="percent(node.used_ram, node.total_ram)" color="green" height="20">
               <template v-slot:default="{ value }"><strong>{{ value }}%</strong></template>
             </v-progress-linear>
             <div class="title_progress mt-3">
@@ -38,7 +38,7 @@
                 <span>{{ (+node.used_cpu || 0).toFixed(1) }}</span> / <span>{{ node.total_cpu }}</span>
               </div>
             </div>
-            <v-progress-linear :value="percent(node.used_cpu, node.total_cpu)" color="green" height="20">
+            <v-progress-linear :model-value="percent(node.used_cpu, node.total_cpu)" color="green" height="20">
               <template v-slot:default="{ value }"><strong>{{ value }}%</strong></template>
             </v-progress-linear>
           </v-col>
@@ -46,7 +46,7 @@
             <p>name: {{ node.name }}</p>
             <p>
               state:
-              <v-chip x-small :color="node.state === 'ONLINE' ? 'success' : 'error'">{{ node.state }}</v-chip>
+              <v-chip size="x-small" :color="node.state === 'ONLINE' ? 'success' : 'error'">{{ node.state }}</v-chip>
             </p>
             <p>uptime: {{ uptime(node.uptime) }}</p>
             <p>bridges: {{ (node.bridges || []).join(", ") || "-" }}</p>
@@ -65,7 +65,7 @@
             <span>{{ net.used }}</span> / <span>{{ net.total }}</span>
           </div>
         </div>
-        <v-progress-linear :value="percent(net.used, net.total)" :color="poolColor(net)" height="20">
+        <v-progress-linear :model-value="percent(net.used, net.total)" :color="poolColor(net)" height="20">
           <template v-slot:default="{ value }"><strong>{{ value }}%</strong></template>
         </v-progress-linear>
         <div class="text-caption mt-1">
@@ -87,7 +87,7 @@
                 <span>{{ (st.total / 1024).toFixed(2) }} GiB</span>
               </div>
             </div>
-            <v-progress-linear :value="percent(st.used, st.total)" color="green" height="20">
+            <v-progress-linear :model-value="percent(st.used, st.total)" color="green" height="20">
               <template v-slot:default="{ value }"><strong>{{ value }}%</strong></template>
             </v-progress-linear>
           </v-col>
@@ -102,7 +102,7 @@
 
     <!-- Templates -->
     <v-card-title class="px-0 mb-3">Templates:</v-card-title>
-    <v-simple-table class="mb-7">
+    <v-table class="mb-7">
       <thead>
         <tr>
           <th>VMID</th>
@@ -123,19 +123,19 @@
           <td>{{ t.node }}</td>
           <td>{{ t.windows ? "windows" : t.ostype }}</td>
           <td>{{ ((t.min_size || 0) / 1024).toFixed(0) }}</td>
-          <td><v-icon small :color="t.ci ? 'success' : 'error'">{{ t.ci ? "mdi-check" : "mdi-close" }}</v-icon></td>
-          <td><v-icon small :color="t.agent ? 'success' : 'warning'">{{ t.agent ? "mdi-check" : "mdi-close" }}</v-icon></td>
-          <td><v-icon small :color="t.is_public ? 'success' : 'grey'">{{ t.is_public ? "mdi-eye" : "mdi-eye-off" }}</v-icon></td>
-          <td class="warning--text">{{ t.warning }}</td>
+          <td><v-icon size="small" :color="t.ci ? 'success' : 'error'">{{ t.ci ? "mdi-check" : "mdi-close" }}</v-icon></td>
+          <td><v-icon size="small" :color="t.agent ? 'success' : 'warning'">{{ t.agent ? "mdi-check" : "mdi-close" }}</v-icon></td>
+          <td><v-icon size="small" :color="t.is_public ? 'success' : 'grey'">{{ t.is_public ? "mdi-eye" : "mdi-eye-off" }}</v-icon></td>
+          <td class="text-warning">{{ t.warning }}</td>
         </tr>
       </tbody>
-    </v-simple-table>
+    </v-table>
 
     <!-- Orphans -->
     <v-card-title class="px-0 mb-3">
       Orphan VMs (tag nocloud, no instance): {{ orphans.length }}
     </v-card-title>
-    <v-simple-table v-if="orphans.length">
+    <v-table v-if="orphans.length">
       <thead>
         <tr>
           <th>VMID</th>
@@ -152,7 +152,7 @@
           <td>{{ o.status }}</td>
         </tr>
       </tbody>
-    </v-simple-table>
+    </v-table>
   </div>
 </template>
 

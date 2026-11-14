@@ -19,8 +19,8 @@
             label="Code"
           >
             <template v-slot:append>
-              <v-btn small @click="newPromocode.code = generateCode()" icon
-                ><v-icon small>mdi-pound</v-icon></v-btn
+              <v-btn size="small" @click="newPromocode.code = generateCode()" icon
+                ><v-icon size="small">mdi-pound</v-icon></v-btn
               >
             </template>
           </v-text-field>
@@ -63,7 +63,7 @@
             label="Promocode type"
             :items="promocodeTypes"
             item-key="value"
-            item-text="text"
+            item-title="text"
           />
         </v-col>
         <v-col cols="1">
@@ -114,23 +114,23 @@
       </v-row>
 
       <v-textarea
-        outlined
+        variant="outlined"
         no-resize
         label="Description"
         v-model="newPromocode.description"
       ></v-textarea>
 
-      <v-tabs v-model="currentTab" background-color="background-light">
+      <v-tabs v-model="currentTab" bg-color="background-light">
         <v-tab key="Plans"> Plans </v-tab>
 
         <v-tab key="Showcases"> Showcases </v-tab>
       </v-tabs>
 
-      <v-tabs-items
-        style="background: var(--v-background-light-base)"
+      <v-window
+        style="background: rgb(var(--v-theme-background-light))"
         v-model="currentTab"
       >
-        <v-tab-item key="Plans">
+        <v-window-item key="Plans">
           <div>
             <div class="d-flex justify-end">
               <v-btn
@@ -141,8 +141,8 @@
               >
 
               <v-dialog v-model="isAddPlansOpen" width="50%">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn v-bind="attrs" v-on="on" class="mr-2">Add</v-btn>
+                <template v-slot:activator="{ props }">
+                  <v-btn v-bind="props" class="mr-2">Add</v-btn>
                 </template>
 
                 <v-card color="background-light" class="pa-4">
@@ -191,19 +191,19 @@
             >
               <template v-slot:[`item.product`]="{ item }">
                 <v-select
-                  dense
+                  density="compact"
                   hide-details
                   style="min-width: 180px"
-                  :value="planProducts[item.uuid] || ''"
+                  :model-value="planProducts[item.uuid] || ''"
                   :items="productItems(item)"
-                  @change="setPlanProduct(item.uuid, $event)"
+                  @update:model-value="setPlanProduct(item.uuid, $event)"
                 />
               </template>
             </nocloud-table>
           </div>
-        </v-tab-item>
+        </v-window-item>
 
-        <v-tab-item key="Showcases">
+        <v-window-item key="Showcases">
           <div>
             <div class="d-flex justify-end">
               <v-btn
@@ -214,8 +214,8 @@
               >
 
               <v-dialog v-model="isAddShowcasesOpen" width="50%">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn v-bind="attrs" v-on="on" class="mr-2">Add</v-btn>
+                <template v-slot:activator="{ props }">
+                  <v-btn v-bind="props" class="mr-2">Add</v-btn>
                 </template>
 
                 <v-card color="background-light" class="pa-4">
@@ -249,8 +249,8 @@
               v-model="selectedBindedShowcases"
             />
           </div>
-        </v-tab-item>
-      </v-tabs-items>
+        </v-window-item>
+      </v-window>
 
       <v-row justify="space-between" class="mt-4 mb-4">
         <div class="mt-2 ml-1">
@@ -286,7 +286,7 @@ import { useStore } from "@/store";
 import plansTable from "@/components/plansTable.vue";
 import { ListRequest } from "nocloud-proto/proto/es/billing/billing_pb";
 import { Promocode } from "nocloud-proto/proto/es/billing/promocodes/promocodes_pb";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import promocodeConditionChip from "@/components/promocode/ui/promocodeConditionChip.vue";
 import promocodeStatusChip from "@/components/promocode/ui/promocodeStatusChip.vue";
 import promocodeStatusBtns from "@/components/promocode/ui/promocodeStatusBtns.vue";
@@ -644,7 +644,7 @@ watch(
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

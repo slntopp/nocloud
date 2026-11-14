@@ -11,7 +11,7 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue(index + '.title', newVal)"
+            @change="setValue(index + '.title', $event.target.value)"
             label="title"
             v-model="instance.title"
           >
@@ -46,12 +46,12 @@
         <v-col lg="6" cols="12">
           <v-autocomplete
             label="price model"
-            item-text="title"
+            item-title="title"
             item-value="uuid"
             v-model="instance.plan"
             :items="plans.list"
             :rules="planRules"
-            @change="(newVal) => setValue(index + '.billing_plan', newVal)"
+            @update:model-value="(newVal) => setValue(index + '.billing_plan', newVal)"
           />
         </v-col>
       </v-row>

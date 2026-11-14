@@ -1,5 +1,5 @@
 <template>
-  <v-btn icon small>
+  <v-btn icon size="small">
     <v-icon @click="goToWhmcs"> mdi-alpha-w-box </v-icon>
   </v-btn>
 </template>

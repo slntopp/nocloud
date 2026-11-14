@@ -19,10 +19,10 @@
         <v-spacer />
 
         <v-dialog v-model="isAddDialog" width="80vw">
-          <template v-slot:activator="{ on, attrs }">
+          <template v-slot:activator="{ props }">
             <v-btn
-              v-bind="attrs"
-              v-on="on"
+             
+              v-bind="props"
               class="mr-2"
               color="background-light"
             >

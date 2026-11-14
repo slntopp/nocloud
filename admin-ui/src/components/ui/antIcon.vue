@@ -1,30 +1,24 @@
 <template>
-  <antd-icon style="font-size: 24px" :type="icon" />
+  <component :is="icon" v-if="icon" style="font-size: 24px" />
 </template>
 
-<script>
-import antdIcon from "@ant-design/icons-vue";
+<script setup>
+import { shallowRef, watch } from "vue";
+import { loadAntIcons } from "@/components/ui/nocloudIcons";
 
-export default {
-  name: "ant-icon",
-  props: ["name"],
-  components: { antdIcon },
-  data: () => ({ icon: {} }),
-  async mounted() {
-    const iconsRes = await import("@ant-design/icons");
-    let displayName = this.name;
+const props = defineProps({ name: { type: String, default: "" } });
+const icon = shallowRef(null);
 
-    if (displayName.endsWith("Outlined")) {
-      displayName = displayName.replace("Outlined", "Outline");
-    } else if (displayName.endsWith("Filled")) {
-      displayName = displayName.replace("Filled", "Fill");
+watch(
+  () => props.name,
+  async (name) => {
+    if (!name) {
+      icon.value = null;
+      return;
     }
-    const [name, icon] = Object.entries(iconsRes)?.find(
-      ([name]) => name === displayName
-    );
-    this.icon = { name, ...icon };
+    const icons = await loadAntIcons();
+    icon.value = icons[name] ?? null;
   },
-};
+  { immediate: true },
+);
 </script>
-
-<style scoped></style>

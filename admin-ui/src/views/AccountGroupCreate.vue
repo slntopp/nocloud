@@ -10,7 +10,7 @@
       <!-- Basic Info -->
       <v-row>
         <v-col cols="2" class="align-center d-flex">
-          <v-subheader>Title</v-subheader>
+          <v-list-subheader>Title</v-list-subheader>
         </v-col>
         <v-col cols="6" class="align-center d-flex">
           <v-text-field
@@ -36,8 +36,8 @@
       <!-- Invoice Order Settings -->
       <div class="d-flex align-center mb-5">
         <v-expansion-panels>
-          <v-expansion-panel style="background: var(--v-background-light-base)">
-            <v-expansion-panel-header
+          <v-expansion-panel style="background: rgb(var(--v-theme-background-light))">
+            <v-expansion-panel-title
               style="padding: 5px 20px"
               disable-icon-rotate
             >
@@ -48,15 +48,15 @@
                 v-model="newGroup.has_own_invoice_order"
                 @click.stop
               />
-            </v-expansion-panel-header>
-            <v-expansion-panel-content>
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Template</v-subheader>
+                  <v-list-subheader>Template</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-text-field
-                    dense
+                    density="compact"
                     hide-details
                     label="Template"
                     v-model="newGroup.invoice_order_settings.template"
@@ -64,11 +64,11 @@
                   />
                 </v-col>
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>New Template</v-subheader>
+                  <v-list-subheader>New Template</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-text-field
-                    dense
+                    density="compact"
                     hide-details
                     label="New Template"
                     v-model="newGroup.invoice_order_settings.new_template"
@@ -79,7 +79,7 @@
 
               <v-row class="px-5 pt-0">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Start With Number</v-subheader>
+                  <v-list-subheader>Start With Number</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-text-field
@@ -89,26 +89,26 @@
                     "
                     type="number"
                     min="0"
-                    dense
+                    density="compact"
                     hide-details
                     :disabled="!newGroup.has_own_invoice_order"
                   />
                 </v-col>
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Reset Counter Mode</v-subheader>
+                  <v-list-subheader>Reset Counter Mode</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-select
                     label="Reset Counter Mode"
                     v-model="newGroup.invoice_order_settings.reset_counter_mode"
                     :items="resetCounterModes"
-                    dense
+                    density="compact"
                     hide-details
                     :disabled="!newGroup.has_own_invoice_order"
                   />
                 </v-col>
               </v-row>
-            </v-expansion-panel-content> </v-expansion-panel
+            </v-expansion-panel-text> </v-expansion-panel
         ></v-expansion-panels>
       </div>
 
@@ -117,8 +117,8 @@
       <!-- Invoice Parameters Custom -->
       <div class="d-flex align-center mb-5">
         <v-expansion-panels>
-          <v-expansion-panel style="background: var(--v-background-light-base)">
-            <v-expansion-panel-header
+          <v-expansion-panel style="background: rgb(var(--v-theme-background-light))">
+            <v-expansion-panel-title
               style="padding: 5px 20px"
               disable-icon-rotate
             >
@@ -129,11 +129,11 @@
                 v-model="newGroup.has_own_invoice_base"
                 @click.stop
               />
-            </v-expansion-panel-header>
-            <v-expansion-panel-content>
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Name</v-subheader>
+                  <v-list-subheader>Invoice From Name</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -142,7 +142,7 @@
                       newGroup.invoice_parameters_custom.invoiceFromFields.name
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     rows="1"
                     hide-details
                   />
@@ -151,7 +151,7 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Company name</v-subheader>
+                  <v-list-subheader>Invoice From Company name</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -162,7 +162,7 @@
                         .companyName
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -170,7 +170,7 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Company domain</v-subheader>
+                  <v-list-subheader>Invoice From Company domain</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -181,7 +181,7 @@
                         .companyDomain
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -189,7 +189,7 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Address</v-subheader>
+                  <v-list-subheader>Invoice From Address</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -200,7 +200,7 @@
                         .address
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -208,7 +208,7 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From City</v-subheader>
+                  <v-list-subheader>Invoice From City</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -218,7 +218,7 @@
                       newGroup.invoice_parameters_custom.invoiceFromFields.city
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -226,7 +226,7 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Postal Code</v-subheader>
+                  <v-list-subheader>Invoice From Postal Code</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -237,7 +237,7 @@
                         .postalCode
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -245,7 +245,7 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Country</v-subheader>
+                  <v-list-subheader>Invoice From Country</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -256,7 +256,7 @@
                         .country
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -264,7 +264,7 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Invoice From Tax ID</v-subheader>
+                  <v-list-subheader>Invoice From Tax ID</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-textarea
@@ -274,7 +274,7 @@
                       newGroup.invoice_parameters_custom.invoiceFromFields.taxId
                     "
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -282,19 +282,19 @@
 
               <v-row class="px-5">
                 <v-col cols="3" class="align-center d-flex">
-                  <v-subheader>Logo URL</v-subheader>
+                  <v-list-subheader>Logo URL</v-list-subheader>
                 </v-col>
                 <v-col cols="9" class="align-center d-flex">
                   <v-text-field
                     label="Logo URL"
                     v-model="newGroup.invoice_parameters_custom.logo_url"
                     :disabled="!newGroup.has_own_invoice_base"
-                    dense
+                    density="compact"
                     hide-details
                   />
                 </v-col>
               </v-row>
-            </v-expansion-panel-content> </v-expansion-panel
+            </v-expansion-panel-text> </v-expansion-panel
         ></v-expansion-panels>
       </div>
 
@@ -310,7 +310,7 @@
           >
             Save
           </v-btn>
-          <v-btn @click="$router.back()" text> Cancel </v-btn>
+          <v-btn @click="$router.back()" variant="text"> Cancel </v-btn>
         </v-col>
       </v-row>
     </v-form>
@@ -320,7 +320,7 @@
 <script setup>
 import { onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import ColorPicker from "@/components/ui/colorPicker.vue";
 
 const props = defineProps({
@@ -439,7 +439,7 @@ watch(accountGroup, (val) => {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

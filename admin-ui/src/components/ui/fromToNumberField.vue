@@ -42,23 +42,23 @@ const onInput = (key, e) => {
   <div class="d-flex" style="width: 100%">
     <v-text-field
       class="mr-1"
-      @input="onInput('from', $event)"
+      @update:model-value="onInput('from', $event)"
       type="number"
       :disabled="disabled"
-      :dense="dense"
+      :density="dense ? 'compact' : undefined"
       :label="`${label} from`"
-      :value="value?.from"
+      :model-value="value?.from"
       :rules="fromRules"
     ></v-text-field>
     <v-text-field
       class="ml-1"
-      @input="onInput('to', $event)"
+      @update:model-value="onInput('to', $event)"
       type="number"
       :disabled="disabled"
       :rules="toRules"
-      :dense="dense"
+      :density="dense ? 'compact' : undefined"
       :label="`${label} to`"
-      :value="value?.to"
+      :model-value="value?.to"
     ></v-text-field>
   </div>
 </template>

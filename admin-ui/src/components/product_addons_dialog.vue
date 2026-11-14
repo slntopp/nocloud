@@ -1,7 +1,7 @@
 <template>
   <v-dialog width="90vw">
-    <template v-slot:activator="{ on, attrs }">
-      <v-btn icon v-bind="attrs" v-on="on">
+    <template v-slot:activator="{ props }">
+      <v-btn icon v-bind="props">
         <v-icon> mdi-menu-open </v-icon>
       </v-btn>
     </template>

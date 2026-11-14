@@ -8,11 +8,11 @@
         <v-btn
           @click="searchDomains"
           :disabled="!searchDomainString"
-          small
-          dark
+          size="small"
+          
           :loading="isDomainsLoading"
         >
-          <v-icon dark> mdi-magnify </v-icon>
+          <v-icon > mdi-magnify </v-icon>
           Search
         </v-btn>
       </v-col>
@@ -25,7 +25,7 @@
       </v-col>
       <v-col cols="2">
         <v-select
-          @change="(newVal) => $emit('input:period', +newVal)"
+          @update:model-value="(newVal) => $emit('input:period', +newVal)"
           v-model="selectedPeriodIndex"
           :items="domainPeriods"
         >

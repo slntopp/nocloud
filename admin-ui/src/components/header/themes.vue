@@ -17,11 +17,11 @@ export default {
     }
 
     this.$store.commit("app/setTheme", savedTheme || undefined);
-    this.$vuetify.theme.dark = this.theme === "dark";
+    this.$vuetify.theme.global.name = this.theme === "dark" ? "dark" : "light";
   },
   watch: {
     theme() {
-      this.$vuetify.theme.dark = this.theme === "dark";
+      this.$vuetify.theme.global.name = this.theme === "dark" ? "dark" : "light";
     },
   },
 };
@@ -74,10 +74,10 @@ watch(theme, (newValue) => {
 </script>
 
 <template>
-  <v-menu offset-y transition="slide-y-transition">
-    <template v-slot:activator="{ on, attrs }">
-      <v-btn class="mx-2" fab color="background-light" v-bind="attrs" v-on="on">
-        <v-icon dark> {{ currentTheme.icon }} </v-icon>
+  <v-menu transition="slide-y-transition">
+    <template v-slot:activator="{ props }">
+      <v-btn class="mx-2" icon color="background-light" v-bind="props">
+        <v-icon > {{ currentTheme.icon }} </v-icon>
       </v-btn>
     </template>
     <v-list flat>

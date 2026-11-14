@@ -5,9 +5,9 @@
     </v-row>
     <v-card-title>Map widget script:</v-card-title>
     <v-text-field
-      filled
+      variant="filled"
       color="background-light"
-      :value="script"
+      :model-value="script"
       readonly
       append-icon="mdi-content-copy"
       @click:append="copyScript"
@@ -35,7 +35,7 @@ export default {
     this.$refs.script.appendChild(script);
     script.onload = () => {
       const apiURL = api.axios.defaults.baseURL;
-      // eslint-disable-next-line
+       
       const previewWidget = new SupportMap({
         container: document.getElementById("preview-widget"),
         apiPort: 8624,

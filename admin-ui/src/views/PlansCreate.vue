@@ -8,7 +8,7 @@
     <v-form v-model="isValid" ref="form">
       <v-row>
         <v-col cols="3" class="align-center d-flex">
-          <v-subheader>Price model type</v-subheader>
+          <v-list-subheader>Price model type</v-list-subheader>
           <div>
             <v-autocomplete
               label="Type"
@@ -25,7 +25,7 @@
           </div>
         </v-col>
         <v-col cols="3" class="align-center d-flex">
-          <v-subheader>Price model title</v-subheader>
+          <v-list-subheader>Price model title</v-list-subheader>
           <v-text-field
             label="Title"
             v-model="plan.title"
@@ -33,10 +33,10 @@
           />
         </v-col>
         <v-col cols="3" class="align-center d-flex">
-          <v-subheader>Price model kind</v-subheader>
+          <v-list-subheader>Price model kind</v-list-subheader>
           <v-radio-group
             :disabled="allowedKinds.length === 1"
-            row
+            inline
             mandatory
             v-model="selectedKind"
           >
@@ -54,7 +54,7 @@
         </v-col>
         <template v-if="plan.kind === 'STATIC'">
           <v-col cols="3" class="align-center d-flex">
-            <v-subheader>Default tariff</v-subheader>
+            <v-list-subheader>Default tariff</v-list-subheader>
             <v-autocomplete
               label="Tariff"
               v-model="plan.meta.product"
@@ -65,7 +65,7 @@
 
         <template v-else>
           <v-col cols="3" class="align-center d-flex">
-            <v-subheader>Linked price model</v-subheader>
+            <v-list-subheader>Linked price model</v-list-subheader>
             <plans-auto-complete
               label="Price model"
               clearable
@@ -82,17 +82,17 @@
         </template>
 
         <v-col cols="3" class="align-center d-flex">
-          <v-subheader>Invoice prefix</v-subheader>
+          <v-list-subheader>Invoice prefix</v-list-subheader>
           <v-text-field label="Invoice prefix" v-model="plan.meta.prefix" />
         </v-col>
 
         <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Public</v-subheader>
+          <v-list-subheader>Public</v-list-subheader>
           <v-switch style="width: fit-content" v-model="plan.public" />
         </v-col>
 
         <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Individual</v-subheader>
+          <v-list-subheader>Individual</v-list-subheader>
           <v-switch
             style="width: fit-content"
             v-model="plan.meta.isIndividual"
@@ -100,7 +100,7 @@
         </v-col>
 
         <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Automatic debit</v-subheader>
+          <v-list-subheader>Automatic debit</v-list-subheader>
           <v-switch
             style="width: fit-content"
             v-model="plan.properties.autoRenew"
@@ -108,11 +108,11 @@
         </v-col>
 
         <v-col cols="1" class="align-center d-flex">
-          <v-subheader
+          <v-list-subheader
             >Auto start
             <v-tooltip>
-              <template v-slot:activator="{ on, attrs }">
-                <div class="d-inline-block" v-bind="attrs" v-on="on">
+              <template v-slot:activator="{ props }">
+                <div class="d-inline-block" v-bind="props">
                   <v-icon class="ml-2"> mdi-help-circle-outline </v-icon>
                 </div>
               </template>
@@ -121,11 +121,11 @@
                 order</v-list-item-title
               >
             </v-tooltip>
-          </v-subheader>
+          </v-list-subheader>
           <v-switch style="width: fit-content" v-model="plan.meta.auto_start" />
         </v-col>
         <v-col cols="2" class="align-center d-flex">
-          <v-subheader> After payment setup </v-subheader>
+          <v-list-subheader> After payment setup </v-list-subheader>
           <v-switch
             style="width: fit-content"
             v-model="plan.meta.after_payment_setup"
@@ -133,7 +133,7 @@
         </v-col>
 
         <v-col cols="2" class="align-center d-flex">
-          <v-subheader> Require verified phone </v-subheader>
+          <v-list-subheader> Require verified phone </v-list-subheader>
           <v-switch
             style="width: fit-content"
             v-model="plan.properties.phoneVerificationRequired"
@@ -145,7 +145,7 @@
           cols="1"
           class="align-center d-flex"
         >
-          <v-subheader> High CPU </v-subheader>
+          <v-list-subheader> High CPU </v-list-subheader>
           <v-switch style="width: fit-content" v-model="plan.meta.highCPU" />
         </v-col>
       </v-row>
@@ -170,7 +170,7 @@
         />
 
         <template v-else-if="plan.type === 'openai'">
-          <v-subheader class="px-0">Description:</v-subheader>
+          <v-list-subheader class="px-0">Description:</v-list-subheader>
           <rich-editor class="html-editor" v-model="plan.meta.description" />
         </template>
       </v-col>
@@ -187,8 +187,8 @@
           </v-btn>
 
           <v-dialog persistent v-else :max-width="600" v-model="isSetSpDialog">
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn v-bind="attrs" v-on="on" class="mr-2" :loading="isLoading">
+            <template v-slot:activator="{ props }">
+              <v-btn v-bind="props" class="mr-2" :loading="isLoading">
                 Create
               </v-btn>
             </template>
@@ -269,6 +269,8 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
+import { moduleTypes } from "@/modules";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
@@ -378,8 +380,8 @@ export default {
         case "amount":
           key = "resources";
       }
-      if (product) this.$set(product, key, value);
-      else if (type === "resource") this.$set(id, key, value);
+      if (product) product[key] = value;
+      else if (type === "resource") id[key] = value;
     },
     changeMetaConfig({ key, value, id }) {
       try {
@@ -393,10 +395,10 @@ export default {
       );
 
       if (!product.meta) {
-        this.$set(product, "meta", {});
+        product["meta"] = {};
       }
 
-      this.$set(product.meta, key, value);
+      product.meta[key] = value;
       this.plan.meta = Object.assign({}, this.plan.meta);
     },
     changeAddons(val) {
@@ -576,29 +578,19 @@ export default {
     if (this.isEdit) {
       this.plan.resources = this.resources;
     }
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /serviceProviders\.vue$/
-    );
-    types.keys().forEach((key) => {
-      const matched = key.match(
-        /\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i
-      );
-      if (matched && matched.length > 1) {
-        if (matched[1] === "ovh") {
-          this.types.push("ovh vps", "ovh dedicated", "ovh cloud");
-        }
+    moduleTypes("serviceProviders").forEach((type) => {
+      if (type === "ovh") {
+        this.types.push("ovh vps", "ovh dedicated", "ovh cloud");
+      }
 
-        if (matched[1] === "ione") {
-          this.types.push("ione", "ione-vpn");
-        }
+      if (type === "ione") {
+        this.types.push("ione", "ione-vpn");
+      }
 
-        if (matched[1] === "empty") {
-          this.types.push("empty", "vpn", "bitrix24");
-        } else {
-          this.types.push(matched[1]);
-        }
+      if (type === "empty") {
+        this.types.push("empty", "vpn", "bitrix24");
+      } else {
+        this.types.push(type);
       }
     });
 
@@ -608,7 +600,7 @@ export default {
     template() {
       const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
 
-      return () => import(`@/components/plans_${type}_table.vue`);
+      return defineAsyncComponent(() => import(`@/components/plans_${type}_table.vue`));
     },
     viewport() {
       return document.documentElement.clientWidth;
@@ -718,7 +710,7 @@ export default {
 
 <style scoped>
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;
@@ -727,7 +719,7 @@ export default {
 }
 
 .theme--dark.v-tabs-items {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
 }
 
 .mw-20 {

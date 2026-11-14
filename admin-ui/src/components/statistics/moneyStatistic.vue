@@ -23,7 +23,7 @@
     <template v-slot:options>
       <v-select
         style="width: 260px"
-        item-text="label"
+        item-title="label"
         item-value="value"
         :items="moneyTypes"
         v-model="moneyType"
@@ -31,7 +31,7 @@
       />
       <v-select
         style="width: 180px"
-        item-text="label"
+        item-title="label"
         item-value="value"
         :items="serviceItems"
         v-model="serviceType"

@@ -2,8 +2,8 @@
   <div class="pa-4">
     <div class="buttons__inline pb-2 mt-4">
       <v-dialog v-model="isCreateCurrencyOpen" max-width="400">
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn class="mr-2" color="background-light" v-bind="attrs" v-on="on">
+        <template v-slot:activator="{ props }">
+          <v-btn class="mr-2" color="background-light" v-bind="props">
             Create
           </v-btn>
         </template>
@@ -11,7 +11,7 @@
           <v-row dense>
             <v-col cols="12">
               <v-text-field
-                dense
+                density="compact"
                 label="Title"
                 v-model="newCurrency.title"
                 :rules="rules.required"
@@ -20,7 +20,7 @@
 
             <v-col cols="12">
               <v-text-field
-                dense
+                density="compact"
                 label="Title"
                 v-model="newCurrency.code"
                 :rules="rules.required"
@@ -40,12 +40,12 @@
       </v-dialog>
 
       <v-select
-        dense
+        density="compact"
         label="Default currency"
         class="d-inline-block"
         style="width: 200px"
         :items="currencies"
-        item-text="code"
+        item-title="code"
         item-value="id"
         v-model="newDefaultCurrency"
       />
@@ -77,7 +77,7 @@
         <div>
           <v-text-field
             :loading="updatingCurrencyId === item.id"
-            dense
+            density="compact"
             hide-details
             :disabled="!!updatingCurrencyId"
             v-model="item.code"
@@ -88,7 +88,7 @@
       <template v-slot:[`item.title`]="{ item }">
         <v-text-field
           :loading="updatingCurrencyId === item.id"
-          dense
+          density="compact"
           hide-details
           :disabled="!!updatingCurrencyId"
           v-model="item.title"
@@ -98,7 +98,7 @@
       <template v-slot:[`item.public`]="{ item }">
         <v-switch
           :loading="updatingCurrencyId === item.id"
-          dense
+          density="compact"
           hide-details
           :disabled="!!updatingCurrencyId"
           v-model="item.public"
@@ -110,7 +110,7 @@
           type="number"
           step="any"
           :loading="updatingCurrencyId === item.id"
-          dense
+          density="compact"
           hide-details
           :disabled="!!updatingCurrencyId || item.default"
           v-model.number="item.rate.value"
@@ -122,7 +122,7 @@
           type="number"
           step="any"
           :loading="updatingCurrencyId === item.id"
-          dense
+          density="compact"
           hide-details
           :disabled="!!updatingCurrencyId"
           v-model.number="item.precision"
@@ -132,11 +132,11 @@
       <template v-slot:[`item.rounding`]="{ item }">
         <v-select
           :loading="updatingCurrencyId === item.id"
-          dense
+          density="compact"
           hide-details
           :disabled="!!updatingCurrencyId"
           v-model="item.rounding"
-          item-text="text"
+          item-title="text"
           item-value="value"
           :items="roundingItems"
         />

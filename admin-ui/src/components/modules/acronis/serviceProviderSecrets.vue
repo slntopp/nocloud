@@ -5,7 +5,7 @@
         <v-card-title>Client id</v-card-title>
       </v-col>
       <v-col>
-        <v-text-field readonly :value="template.secrets.clientId" />
+        <v-text-field readonly :model-value="template.secrets.clientId" />
       </v-col>
     </v-row>
     <v-row>
@@ -13,7 +13,7 @@
         <v-card-title>Client secret</v-card-title>
       </v-col>
       <v-col>
-        <v-text-field readonly :value="template.secrets.clientSecret" />
+        <v-text-field readonly :model-value="template.secrets.clientSecret" />
       </v-col>
     </v-row>
     <v-row>
@@ -21,7 +21,7 @@
         <v-card-title>Host</v-card-title>
       </v-col>
       <v-col>
-        <v-text-field readonly :value="template.secrets.datacenterUrl" />
+        <v-text-field readonly :model-value="template.secrets.datacenterUrl" />
       </v-col>
     </v-row>
     <v-card-title>Offering items</v-card-title>

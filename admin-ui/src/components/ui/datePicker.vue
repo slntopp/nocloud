@@ -4,16 +4,16 @@
     transition="scale-transition"
     min-width="auto"
   >
-    <template v-slot:activator="{ on, attrs }">
+    <template v-slot:activator="{ props }">
       <v-text-field
-        v-bind="attrs"
-        v-on="on"
+       
+        v-bind="props"
         :prepend-inner-icon="!editIcon ? 'mdi-calendar' : undefined"
-        :value="placeholder || value"
+        :model-value="placeholder || value"
         readonly
-        :dense="dense"
+        :density="dense ? 'compact' : undefined"
         :clearable="clearable"
-        @input="updateInput"
+        @update:model-value="updateInput"
         :label="label"
         :disabled="disabled"
         :append-icon="editIcon ? 'mdi-pencil' : undefined"

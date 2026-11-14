@@ -42,13 +42,13 @@
       <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
       <v-text-field
         v-else
-        dense
+        density="compact"
         hide-details
         style="max-width: 50px"
         type="number"
         :disabled="!!updatedShowcase"
-        :value="item.sorter"
-        @change="updateShowcase(item, { key: 'sorter', value: +$event })"
+        :model-value="item.sorter"
+        @change="updateShowcase(item, { key: 'sorter', value: +$event.target.value })"
       />
     </template>
 
@@ -57,11 +57,11 @@
         <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
         <v-switch
           v-else
-          dense
+          density="compact"
           hide-details
           :readonly="!!updatedShowcase"
-          :input-value="item.public"
-          @change="updateShowcase(item, { key: 'public', value: $event })"
+          :model-value="item.public"
+          @update:model-value="updateShowcase(item, { key: 'public', value: $event })"
         />
       </div>
     </template>

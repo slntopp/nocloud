@@ -13,7 +13,7 @@
     item-key="id"
     @update:options="setOptions"
     show-expand
-    :expanded.sync="expanded"
+    v-model:expanded="expanded"
     no-hide-uuid
   >
     <template v-slot:[`item.ts`]="{ value }">

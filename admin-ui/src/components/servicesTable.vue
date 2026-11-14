@@ -7,7 +7,7 @@
     :items="services"
     :headers="headers"
     :loading="isLoading"
-    :expanded.sync="expanded"
+    v-model:expanded="expanded"
     :footer-error="fetchError"
     :server-items-length="total"
     :server-side-page="options.page"
@@ -28,7 +28,7 @@
     </template>
 
     <template v-slot:[`item.status`]="{ value }">
-      <v-chip small :color="chipColor(value)">
+      <v-chip size="small" :color="chipColor(value)">
         {{ value }}
       </v-chip>
     </template>
@@ -48,37 +48,37 @@
       <td :colspan="headers.length" style="padding: 0">
         <div v-for="(itemService, index) in services" :key="index">
           <v-expansion-panels
-            inset
+            variant="inset"
             multiple
             v-model="opened[index]"
             v-if="item.uuid == itemService.uuid"
           >
             <v-expansion-panel
-              style="background: var(--v-background-light-base)"
+              style="background: rgb(var(--v-theme-background-light))"
               v-for="(group, i) in itemService.instancesGroups"
               :key="i"
               :disabled="!group.instances.length"
             >
-              <v-expansion-panel-header>
+              <v-expansion-panel-title>
                 {{ group.title }} | Type: {{ group.type }} -
                 {{ titleSP(group) }}
                 <v-chip
-                  small
+                  size="small"
                   class="instance-group-status"
                   :color="instanceCountColor(group)"
                 >
                   {{ group.instances.length }}
                 </v-chip>
-              </v-expansion-panel-header>
-              <v-expansion-panel-content
-                style="background: var(--v-background-base)"
+              </v-expansion-panel-title>
+              <v-expansion-panel-text
+                style="background: rgb(var(--v-theme-background))"
               >
                 <service-instances-item
                   :instances="group.instances"
                   :spId="group.sp"
                   :type="group.type"
                 />
-              </v-expansion-panel-content>
+              </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
         </div>

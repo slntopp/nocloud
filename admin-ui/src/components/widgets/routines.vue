@@ -4,9 +4,9 @@
       {{ err.name }}: {{ err.message }}
     </v-alert>
 
-    <v-list dense class="mb-4" color="transparent">
+    <v-list density="compact" class="mb-4" color="transparent">
       <v-list-item v-for="item in state" :key="item.service" class="px-0">
-        <v-list-item-content>
+        
           <v-list-item-title>
             {{ item.status.service
             }}{{ item.routine ? ": " + item.routine : "" }}
@@ -15,13 +15,13 @@
           <v-list-item-subtitle v-if="lastExecution(item.lastExecution)">
             Last execution: {{ ts2str(item.lastExecution) }}
           </v-list-item-subtitle>
-        </v-list-item-content>
+        
 
-        <v-list-item-icon>
-          <v-chip small :color="chipsColor(item.status.status)">
+        <template #prepend>
+          <v-chip size="small" :color="chipsColor(item.status.status)">
             {{ item.status.status }}
           </v-chip>
-        </v-list-item-icon>
+        </template>
       </v-list-item>
     </v-list>
 

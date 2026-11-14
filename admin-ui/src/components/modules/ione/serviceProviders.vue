@@ -16,11 +16,11 @@
           v-if="fields[field]?.type === 'bool'"
           v-model="fields[field].bind"
           :label="fields[field].label"
-          @change="(data) => changeHandler(field, data)"
+          @update:model-value="(data) => changeHandler(field, data)"
         ></v-switch>
         <v-text-field
-          @change="(data) => changeHandler(field, data)"
-          :value="getValue(field)"
+          @change="changeHandler(field, $event.target.value)"
+          :model-value="getValue(field)"
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
@@ -42,15 +42,15 @@
           v-if="fields[field].type === 'select'"
           :items="vlansKeysItems"
           v-bind="fields[field].bind || {}"
-          :value="getValue(field)"
+          :model-value="getValue(field)"
           :placeholder="fields[field].label"
-          @change="(data) => changeHandler(field, data)"
+          @update:model-value="(data) => changeHandler(field, data)"
         />
         <v-text-field
           v-else
           :placeholder="fields[field].label"
-          @change="(data) => changeHandler(field, data)"
-          :value="getValue(field)"
+          @change="changeHandler(field, $event.target.value)"
+          :model-value="getValue(field)"
           :label="fields[field].subheader"
           :rules="fields[field].rules"
           :error-messages="errors[field]"

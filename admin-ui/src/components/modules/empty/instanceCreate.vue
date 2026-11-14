@@ -9,9 +9,9 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('title', newVal)"
+            @change="setValue('title', $event.target.value)"
             label="Name"
-            :value="instance.title"
+            :model-value="instance.title"
           >
           </v-text-field>
         </v-col>
@@ -34,12 +34,12 @@
           <v-autocomplete
             label="Product"
             :rules="requiredRule"
-            :value="instance.product"
+            :model-value="instance.product"
             v-if="products.length > 0"
             :items="products"
-            item-text="key"
+            item-title="key"
             item-value="key"
-            @change="changeProduct"
+            @update:model-value="changeProduct"
           >
             <template v-slot:item="{ item }">
               <div
@@ -55,13 +55,13 @@
 
         <v-col cols="6" v-if="tarrifAddons.length > 0">
           <v-autocomplete
-            @change="(newVal) => setValue('addons', newVal)"
+            @update:model-value="(newVal) => setValue('addons', newVal)"
             label="Addons"
-            :value="instance.addons"
+            :model-value="instance.addons"
             :items="isAddonsLoading ? [] : getAvailableAddons()"
             :loading="isAddonsLoading"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             multiple
           />
         </v-col>

@@ -51,13 +51,13 @@
         <v-skeleton-loader v-if="updatedCategory === item.uuid" type="text" />
         <v-text-field
           v-else
-          dense
+          density="compact"
           hide-details
           style="max-width: 50px"
           type="number"
           :disabled="!!updatedCategory"
-          :value="item.sorter"
-          @change="updateCategory(item, { key: 'sorter', value: +$event })"
+          :model-value="item.sorter"
+          @change="updateCategory(item, { key: 'sorter', value: +$event.target.value })"
         />
       </template>
     </nocloud-table>

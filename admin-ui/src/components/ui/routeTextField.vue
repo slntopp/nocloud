@@ -4,13 +4,13 @@
     readonly
     append-icon="mdi-login"
     :label="props.label"
-    :value="props.value"
+    :model-value="props.value"
   />
 </template>
 
 <script setup>
 import { defineProps } from "vue";
-import {useRouter} from "vue-router/composables";
+import {useRouter} from "vue-router";
 
 
 const props = defineProps({

@@ -14,14 +14,14 @@
         <v-btn class="ml-1" @click="setEnabledToTab(false)">Disable all</v-btn>
       </template>
     </v-row>
-    <v-tabs background-color="background-light" v-model="tab">
+    <v-tabs bg-color="background-light" v-model="tab">
       <v-tab v-for="tabKey in tabItems" :key="tabKey">
         {{ tabKey[0].toUpperCase() + tabKey.slice(1) }}</v-tab
       >
     </v-tabs>
 
-    <v-tabs-items v-model="tab">
-      <v-tab-item key="flavors">
+    <v-window v-model="tab">
+      <v-window-item key="flavors">
         <nocloud-table
           sort-by="enabled"
           sort-desc
@@ -31,7 +31,7 @@
           :headers="pricesHeaders"
           :items="flavors[selectedRegion]"
           show-expand
-          :expanded.sync="expanded"
+          v-model:expanded="expanded"
         >
           <template v-slot:[`item.name`]="{ item }">
             <v-text-field style="min-width: 200px" v-model="item.name" />
@@ -57,8 +57,8 @@
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
               :key="item.id"
-              :input-value="item.enabled"
-              @change="item.enabled = $event"
+              :model-value="item.enabled"
+              @update:model-value="item.enabled = $event"
             />
           </template>
           <template v-slot:expanded-item="{ headers, item }">
@@ -77,8 +77,8 @@
             </td>
           </template>
         </nocloud-table>
-      </v-tab-item>
-      <v-tab-item key="images">
+      </v-window-item>
+      <v-window-item key="images">
         <nocloud-table
           item-key="id"
           :loading="isImagesLoading"
@@ -95,19 +95,19 @@
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
               :key="item.apiName"
-              :input-value="item.enabled"
-              @change="item.enabled = $event"
+              :model-value="item.enabled"
+              @update:model-value="item.enabled = $event"
             />
           </template>
         </nocloud-table>
-      </v-tab-item>
-      <v-tab-item key="addons">
+      </v-window-item>
+      <v-window-item key="addons">
         <plan-addons-table
           @change:addons="planAddons = $event"
           :addons="template.addons"
         />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 

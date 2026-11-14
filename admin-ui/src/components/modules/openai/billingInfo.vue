@@ -5,7 +5,7 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
           <template v-slot:append>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
@@ -62,22 +62,22 @@
           <v-text-field
             :suffix="defaultCurrency?.code"
             v-model="item.price"
-            @input="updatePrice(item, false)"
+            @update:model-value="updatePrice(item, false)"
             append-icon="mdi-pencil"
           />
         </template>
         <template v-slot:[`item.accountPrice`]="{ item }">
           <v-text-field
             :suffix="accountCurrency?.code"
-            style="color: var(--v-primary-base)"
+            style="color: rgb(var(--v-theme-primary))"
             v-model="item.accountPrice"
-            @input="updatePrice(item, true)"
+            @update:model-value="updatePrice(item, true)"
             append-icon="mdi-pencil"
           />
         </template>
       </nocloud-table>
     </instances-panels>
-    <v-dialog persistent :value="priceModelDialog" max-width="60%">
+    <v-dialog persistent :model-value="priceModelDialog" max-width="60%">
       <v-card class="pa-5">
         <v-card-title class="text-center">Change price model</v-card-title>
         <v-row align="center">

@@ -1,16 +1,16 @@
 export default {
 	languages: ['en', 'ru'],
-	colors: global.colors,
-	dark: global.dark,
-	logoSrc: global.logoSrc ?? "",
+	colors: globalThis.colors,
+	dark: globalThis.dark,
+	logoSrc: globalThis.logoSrc ?? "",
 	dye: {
 		aside: {
-			background: global?.dye?.aside?.background,
-			links: global?.dye?.aside?.links,
-			whiteText: global?.dye?.aside?.whiteText,
+			background: globalThis?.dye?.aside?.background,
+			links: globalThis?.dye?.aside?.links,
+			whiteText: globalThis?.dye?.aside?.whiteText,
 		}
 	},
-	navTitles: global.navTitles ?? {},
+	navTitles: globalThis.navTitles ?? {},
 	// ponytail: support.by's chat as the default, set aiChatUrl in public/js/config.js for another installation
-	aiChatUrl: global.aiChatUrl ?? "https://ai.support.by",
+	aiChatUrl: globalThis.aiChatUrl ?? "https://ai.support.by",
 }

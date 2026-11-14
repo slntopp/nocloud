@@ -12,7 +12,7 @@
       show-expand
       item-key="id"
       :show-select="false"
-      :expanded.sync="expanded"
+      v-model:expanded="expanded"
       :footer-error="fetchError"
       @update:options="setOptions"
       :server-items-length="total"
@@ -22,11 +22,11 @@
         <v-skeleton-loader v-if="updatingId === item.id" type="text" />
         <v-switch
           v-else
-          dense
+          density="compact"
           hide-details
           :disabled="!!updatingId"
-          :input-value="item.enabled"
-          @change="changePlanAddons(item, $event)"
+          :model-value="item.enabled"
+          @update:model-value="changePlanAddons(item, $event)"
         />
       </template>
       <template v-slot:expanded-item="{ headers, item: plan }">
@@ -42,11 +42,11 @@
               <v-skeleton-loader v-if="updatingId === item.id" type="text" />
               <v-switch
                 v-else
-                dense
+                density="compact"
                 hide-details
                 :disabled="!!updatingId || plan.enabled"
-                :input-value="item.enabled"
-                @change="changeProductAddons(item, $event)"
+                :model-value="item.enabled"
+                @update:model-value="changeProductAddons(item, $event)"
               />
             </template>
           </nocloud-table>

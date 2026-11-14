@@ -5,7 +5,7 @@
         <v-text-field
           readonly
           :label="`Provider API ${ovhType}Name`"
-          :value="template.data?.[ovhType + 'Name']"
+          :model-value="template.data?.[ovhType + 'Name']"
           @click:append="addToClipboard(template.data?.[ovhType + 'Name'])"
           append-icon="mdi-content-copy"
         />
@@ -21,13 +21,13 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'config.username',
               value: $event,
             })
           "
-          :value="template.config.username"
+          :model-value="template.config.username"
           label="Login"
         />
       </v-col>
@@ -49,13 +49,13 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: `config.configuration.${ovhType}_os`,
               value: $event,
             })
           "
-          :value="os"
+          :model-value="os"
           label="OS"
         />
       </v-col>
@@ -64,13 +64,13 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: `config.configuration.${ovhType}_datacenter`,
               value: $event,
             })
           "
-          :value="template.config.configuration?.[`${ovhType}_datacenter`]"
+          :model-value="template.config.configuration?.[`${ovhType}_datacenter`]"
           label="Datacenter"
         />
       </v-col>
@@ -78,13 +78,13 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: `resources.cpu`,
               value: $event,
             })
           "
-          :value="cpu"
+          :model-value="cpu"
           label="CPU"
         />
       </v-col>
@@ -92,13 +92,13 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: `resources.ram`,
               value: $event,
             })
           "
-          :value="template.resources.ram"
+          :model-value="template.resources.ram"
           label="RAM"
         />
       </v-col>
@@ -106,13 +106,13 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: `resources.drive_type`,
               value: $event,
             })
           "
-          :value="template.resources.drive_type"
+          :model-value="template.resources.drive_type"
           label="Disk type"
         />
       </v-col>
@@ -120,13 +120,13 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', {
               key: `resources.drive_size`,
               value: $event,
             })
           "
-          :value="template.resources.drive_size"
+          :model-value="template.resources.drive_size"
           label="Disk size"
         />
       </v-col>

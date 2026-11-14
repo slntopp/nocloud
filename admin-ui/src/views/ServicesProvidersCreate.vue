@@ -8,7 +8,7 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader> Provider type </v-subheader>
+              <v-list-subheader> Provider type </v-list-subheader>
             </v-col>
 
             <v-col cols="9">
@@ -29,7 +29,7 @@
 
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader> Provider title </v-subheader>
+              <v-list-subheader> Provider title </v-list-subheader>
             </v-col>
 
             <v-col cols="9">
@@ -45,7 +45,7 @@
             :align="provider.vars.console?.value ? null : 'center'"
           >
             <v-col cols="3">
-              <v-subheader> Proxy </v-subheader>
+              <v-list-subheader> Proxy </v-list-subheader>
             </v-col>
 
             <v-col cols="9">
@@ -61,24 +61,24 @@
 
           <v-expansion-panels>
             <v-expansion-panel>
-              <v-expansion-panel-header color="background-light">
+              <v-expansion-panel-title color="background-light">
                 <span class="text-h6">Meta</span>
                 <template v-slot:actions>
-                  <v-icon x-large> $expand </v-icon>
+                  <v-icon size="x-large"> $expand </v-icon>
                 </template>
-              </v-expansion-panel-header>
-              <v-expansion-panel-content color="background-light">
+              </v-expansion-panel-title>
+              <v-expansion-panel-text color="background-light">
                 <json-editor
                   :json="provider.meta"
                   @changeValue="(data) => (provider.meta = data)"
                 />
-              </v-expansion-panel-content>
+              </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
 
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader> Public </v-subheader>
+              <v-list-subheader> Public </v-list-subheader>
             </v-col>
 
             <v-col cols="9">
@@ -102,14 +102,14 @@
         <v-col lg="6" cols="12">
           <v-tabs
             v-model="tabs"
-            background-color="background-light"
+            bg-color="background-light"
             class="mb-2"
           >
             <v-tab>Extentions</v-tab>
           </v-tabs>
 
-          <v-tabs-items v-model="tabs" color="primary">
-            <v-tab-item>
+          <v-window v-model="tabs" color="primary">
+            <v-window-item>
               <v-card color="background">
                 <v-row>
                   <v-col>
@@ -154,8 +154,8 @@
                   @remove="() => removeExtention(extention)"
                 />
               </v-card>
-            </v-tab-item>
-          </v-tabs-items>
+            </v-window-item>
+          </v-window>
         </v-col>
       </v-row>
 
@@ -183,7 +183,7 @@
               class="file-input"
               :label="`upload ${isJson ? 'json' : 'yaml'} sp...`"
               :accept="isJson ? '.json' : '.yaml'"
-              @change="onJsonInputChange"
+              @update:model-value="onJsonInputChange"
             />
           </div>
         </v-col>
@@ -193,6 +193,8 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
+import { moduleComponent, moduleTypes } from "@/modules";
 import api from "@/api.js";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
@@ -205,13 +207,12 @@ import {
   toKebabCase,
   toPascalCase,
 } from "@/functions.js";
-import AntIcon from "@/components/ui/antIcon.vue";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "servicesProviders-create",
-  components: { DownloadTemplateButton, IconTitlePreview, AntIcon, JsonEditor },
+  components: { DownloadTemplateButton, IconTitlePreview, JsonEditor },
   mixins: [snackbar],
   data: () => ({
     types: [],
@@ -251,21 +252,9 @@ export default {
   }),
   created() {
     const id = this.$route.params.uuid;
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /serviceProviders\.vue$/
-    );
-    types.keys().forEach((key) => {
-      const matched = key.match(
-        /\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i
-      );
-      if (matched && matched.length > 1) {
-        const type = matched[1];
-        this.types.push(type);
-        this.templates[type] = () =>
-          import(`@/components/modules/${type}/serviceProviders.vue`);
-      }
+    moduleTypes("serviceProviders").forEach((type) => {
+      this.types.push(type);
+      this.templates[type] = moduleComponent("serviceProviders", type);
     });
     this.types.push("bitrix24");
 
@@ -286,35 +275,8 @@ export default {
   },
   computed: {
     template() {
-      return () =>
-        import(`@/components/modules/${this.type}/serviceProviders.vue`);
-    },
-    icons() {
-      const illustrations = require.context(
-        "@ant-design/icons-vue/",
-        true,
-        /^.*\.js$/
-      );
-      const removedKeys = ["./", ".js", "Outlined"];
-
-      return illustrations
-        .keys()
-        .map((icon) => {
-          if (icon.includes("Filled") || icon.includes("TwoTone")) {
-            return undefined;
-          }
-
-          removedKeys.forEach((key) => {
-            icon = icon.replace(key, "");
-          });
-
-          if (icon.includes("/")) {
-            return undefined;
-          }
-
-          return icon;
-        })
-        .filter((icon) => !!icon);
+      return defineAsyncComponent(() =>
+        import(`@/components/modules/${this.type}/serviceProviders.vue`));
     },
     extentionsMap() {
       return extentionsMap;
@@ -454,11 +416,11 @@ export default {
       this.showSnackbarError(opts);
     },
     addExtention() {
-      this.$set(this.extentions.data, this.extentions.selected, {});
+      this.extentions.data[this.extentions.selected] = {};
       this.extentions.selected = "";
     },
     removeExtention(extention) {
-      this.$delete(this.extentions.data, extention);
+      delete this.extentions.data[extention];
     },
     mergeDeep(target, ...sources) {
       return mergeDeep(target, ...sources);
@@ -505,7 +467,7 @@ export default {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

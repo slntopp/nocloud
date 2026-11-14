@@ -8,7 +8,7 @@
     <template v-slot:action="{ attrs }">
       <v-btn
         :color="buttonColor"
-        text
+        variant="text"
         v-bind="attrs"
         @click="visibility = false"
       >

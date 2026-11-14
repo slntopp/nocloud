@@ -11,7 +11,7 @@
 
           <div class="current_duration">
             <v-btn
-              x-small
+              size="x-small"
               @click="emit('input:period-offset', periodOffset - 1)"
             >
               <v-icon>mdi-minus</v-icon>
@@ -20,7 +20,7 @@
               >{{ formatDate(period[0]) }} - {{ formatDate(period[1]) }}</span
             >
             <v-btn
-              x-small
+              size="x-small"
               @click="emit('input:period-offset', periodOffset + 1)"
             >
               <v-icon>mdi-plus</v-icon>
@@ -37,7 +37,7 @@
             </span>
             <div class="current_duration">
               <v-btn
-                x-small
+                size="x-small"
                 @click="emit('input:period-offset', periodOffset - 1)"
               >
                 <v-icon>mdi-minus</v-icon>
@@ -47,7 +47,7 @@
                 {{ formatDate(periods.first[1]) }}</span
               >
               <v-btn
-                x-small
+                size="x-small"
                 @click="emit('input:period-offset', periodOffset + 1)"
               >
                 <v-icon>mdi-plus</v-icon>
@@ -79,34 +79,34 @@
           class="control_field control_field--fields"
           label="Fields"
           :multiple="fieldsMultiple"
-          :value="fields"
-          @input="emit('input:fields', $event)"
+          :model-value="fields"
+          @update:model-value="emit('input:fields', $event)"
           :items="allFields"
-          item-text="label"
+          item-title="label"
           item-value="value"
         >
           <template v-slot:selection="{ item, index }">
             <span v-if="index === 0">{{ item.label }}</span>
-            <span v-if="index === 1" class="grey--text text-caption">
+            <span v-if="index === 1" class="text-grey text-caption">
               (+{{ fields?.length - 1 }} others)
             </span>
           </template>
         </v-select>
         <v-select
           class="control_field control_field--period-type"
-          :value="periodType"
-          @input="emit('input:period-type', $event)"
+          :model-value="periodType"
+          @update:model-value="emit('input:period-type', $event)"
           :items="durationOptions"
-          item-text="label"
+          item-title="label"
           hide-details
           item-value="value"
         />
         <v-select
           class="control_field control_field--chart-type"
-          :value="type"
-          @input="emit('input:type', $event)"
+          :model-value="type"
+          @update:model-value="emit('input:type', $event)"
           :items="typeOptions"
-          item-text="label"
+          item-title="label"
           hide-details
           item-value="value"
         />
@@ -115,8 +115,8 @@
           class="control_field control_field--comparison"
           label="Comparison"
           hide-details
-          :input-value="comparable"
-          @change="emit('input:comparable', $event)"
+          :model-value="comparable"
+          @update:model-value="emit('input:comparable', $event)"
         />
       </div>
     </div>

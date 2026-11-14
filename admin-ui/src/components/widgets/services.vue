@@ -4,22 +4,22 @@
       {{ err.name }}: {{ err.message }}
     </v-alert>
 
-    <v-list dense class="mb-4" color="transparent">
+    <v-list density="compact" class="mb-4" color="transparent">
       <v-list-item v-for="item in state" :key="item.service" class="px-0">
-        <v-list-item-content>
+        
           <v-list-item-title>
             {{ item.service || item.routine }}
           </v-list-item-title>
           <v-list-item-subtitle class="text-truncate text-wrap" v-if="item.status.error || item.error">
             Error: {{ item.status.error || item.error }}
           </v-list-item-subtitle>
-        </v-list-item-content>
+        
 
-        <v-list-item-icon>
-          <v-chip small :color="item.status == 'SERVING' ? 'success' : 'error'">
+        <template #prepend>
+          <v-chip size="small" :color="item.status == 'SERVING' ? 'success' : 'error'">
             {{ item.status.status || item.status }}
           </v-chip>
-        </v-list-item-icon>
+        </template>
       </v-list-item>
     </v-list>
     <v-btn @click="checkHealth"> retry </v-btn>

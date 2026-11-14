@@ -12,23 +12,23 @@
     <template v-if="language && Object.keys(currentLocation).length">
       <v-tabs
         class="rounded-t-lg"
-        background-color="background-light"
+        bg-color="background-light"
         v-model="tabsIndex"
       >
         <v-tab>App</v-tab>
         <v-tab>Widget</v-tab>
       </v-tabs>
-      <v-tabs-items
+      <v-window
         class="rounded-b-lg"
-        style="background: var(--v-background-light-base)"
+        style="background: rgb(var(--v-theme-background-light))"
         v-model="tabsIndex"
       >
-        <v-tab-item>
+        <v-window-item>
           <v-text-field
             class="mt-3"
             hide-details
             v-model.trim="currentLocation.title"
-            outlined
+            variant="outlined"
             label="Title"
           />
           <v-card-title class="d-flex align-center"
@@ -36,7 +36,7 @@
             <v-switch
               class="ml-4"
               v-model.trim="currentLocation.previewEnable"
-              outlined
+              variant="outlined"
             />
           </v-card-title>
           <rich-editor v-model="currentLocation.preview" />
@@ -44,20 +44,20 @@
             <v-card-title>AI packages</v-card-title>
             <v-expansion-panels>
               <v-expansion-panel v-for="product in aiProducts" :key="product.id">
-                <v-expansion-panel-header color="background-light">
+                <v-expansion-panel-title color="background-light">
                   {{ product.title }}
-                </v-expansion-panel-header>
-                <v-expansion-panel-content color="background-light">
+                </v-expansion-panel-title>
+                <v-expansion-panel-text color="background-light">
                   <v-card-subtitle>Description:</v-card-subtitle>
                   <rich-editor
                     v-model="currentLocation.products[product.id].description"
                   />
-                </v-expansion-panel-content>
+                </v-expansion-panel-text>
               </v-expansion-panel>
             </v-expansion-panels>
           </template>
-        </v-tab-item>
-        <v-tab-item>
+        </v-window-item>
+        <v-window-item>
           <div class="d-flex">
             <div class="widget__template">
               <div class="main">
@@ -107,9 +107,9 @@
                   active: activeWidgetPlace === item.value,
                 }"
               >
-                <v-list-item-content>
+                
                   <v-list-item-title>{{ item.title }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
             </v-list>
           </div>
@@ -117,12 +117,12 @@
             <v-card-title class="text-center">Service settings</v-card-title>
             <v-text-field
               v-model.trim="currentLocation.service.title"
-              outlined
+              variant="outlined"
               label="Title"
             />
             <v-text-field
               v-model.trim="currentLocation.service.btn"
-              outlined
+              variant="outlined"
               label="Btn title"
             />
             <v-card-subtitle>Description:</v-card-subtitle>
@@ -134,7 +134,7 @@
             >
             <v-text-field
               label="Title"
-              outlined
+              variant="outlined"
               v-model="currentLocation.location.title"
             />
             <v-card-subtitle>Description:</v-card-subtitle>
@@ -145,10 +145,10 @@
                 v-for="location in template?.locations"
                 :key="getLocationKey(location)"
               >
-                <v-expansion-panel-header color="background-light"
+                <v-expansion-panel-title color="background-light"
                   >{{ location.title }}
-                </v-expansion-panel-header>
-                <v-expansion-panel-content color="background-light">
+                </v-expansion-panel-title>
+                <v-expansion-panel-text color="background-light">
                   <v-card-subtitle>Description:</v-card-subtitle>
                   <rich-editor
                     v-model="
@@ -156,7 +156,7 @@
                         .description
                     "
                   />
-                </v-expansion-panel-content>
+                </v-expansion-panel-text>
               </v-expansion-panel>
             </v-expansion-panels>
           </template>
@@ -164,12 +164,12 @@
             <v-card-title class="text-center">Offer settings</v-card-title>
             <v-text-field
               class="mt-5"
-              outlined
+              variant="outlined"
               label="Media src"
               v-model="currentLocation.offer.src"
             ></v-text-field>
             <v-text-field
-              outlined
+              variant="outlined"
               label="Media src link"
               v-model="currentLocation.offer.link"
             />
@@ -180,7 +180,7 @@
             <v-card-title class="text-center">Rewards settings</v-card-title>
             <v-text-field
               label="Title"
-              outlined
+              variant="outlined"
               v-model.trim="currentLocation.rewards.title"
             />
             <v-card-subtitle>Description:</v-card-subtitle>
@@ -208,10 +208,10 @@
               </v-col>
               <v-col class="d-flex justify-center align-center" cols="1">
                 <v-dialog max-width="600" v-model="addIconDialog" persistent>
-                  <template v-slot:activator="{ on, attrs }">
+                  <template v-slot:activator="{ props }">
                     <v-btn
-                      v-on="on"
-                      v-bind="attrs"
+                      v-bind="props"
+                     
                       block
                       width="50"
                       height="50"
@@ -240,8 +240,8 @@
               </v-col>
             </v-row>
           </template>
-        </v-tab-item>
-      </v-tabs-items>
+        </v-window-item>
+      </v-window>
       <v-row class="mt-3 justify-end">
         <v-btn :loading="isSaveLoading" @click="save" color="primary"
           >Save</v-btn
@@ -260,7 +260,7 @@ export default {
 <script setup>
 import api from "@/api";
 import RichEditor from "@/components/ui/richEditor.vue";
-import { onBeforeMount, toRefs, watch, ref, set } from "vue";
+import { onBeforeMount, toRefs, watch, ref } from "vue";
 import { isAiPackage } from "@/components/plan/aiPackages.js";
 import { useStore } from "@/store";
 
@@ -321,11 +321,11 @@ function describeAiProducts() {
     return;
   }
   if (!currentLocation.value.products) {
-    set(currentLocation.value, "products", {});
+    currentLocation.value["products"] = {};
   }
   aiProducts.value.forEach(({ id }) => {
     if (!currentLocation.value.products[id]) {
-      set(currentLocation.value.products, id, { description: "" });
+      currentLocation.value.products[id] = { description: "" };
     }
   });
 }
@@ -438,14 +438,14 @@ const getLocationKey = (location) => {
       display: flex;
       flex-direction: column;
       .service {
-        background-color: var(--v-background-dark-base);
+        background-color: rgb(var(--v-theme-background-dark));
         margin: 2px;
         border-radius: 5px;
         height: 50%;
         cursor: pointer;
       }
       .location {
-        background-color: var(--v-background-dark-base);
+        background-color: rgb(var(--v-theme-background-dark));
         margin: 2px;
         border-radius: 5px;
         height: 50%;
@@ -458,14 +458,14 @@ const getLocationKey = (location) => {
     height: 30%;
     min-height: 75px;
     .rewards {
-      background-color: var(--v-background-dark-base);
+      background-color: rgb(var(--v-theme-background-dark));
       margin: 2px;
       border-radius: 5px;
       width: 70%;
       cursor: pointer;
     }
     .offer {
-      background-color: var(--v-background-dark-base);
+      background-color: rgb(var(--v-theme-background-dark));
       margin: 2px 2px 2px 6px;
       border-radius: 5px;
       width: 30%;
@@ -474,6 +474,6 @@ const getLocationKey = (location) => {
   }
 }
 .active {
-  background-color: var(--v-primary-base) !important;
+  background-color: rgb(var(--v-theme-primary)) !important;
 }
 </style>

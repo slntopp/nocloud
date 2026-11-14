@@ -1,8 +1,8 @@
 <template>
   <v-dialog
     persistent
-    :value="value"
-    @input="emit('input', value)"
+    :model-value="value"
+    @update:model-value="emit('input', value)"
     max-width="60%"
   >
     <v-card class="pa-5">

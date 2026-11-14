@@ -4,10 +4,10 @@
       <v-col cols="2">
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', { key: 'resources.reg_username', value: $event })
           "
-          :value="template.resources.reg_username"
+          :model-value="template.resources.reg_username"
           label="Username"
         />
       </v-col>
@@ -29,8 +29,8 @@
       <v-col cols="2">
         <v-text-field
           append-icon="mdi-pencil"
-          @input="emit('update', { key: 'resources.domain', value: $event })"
-          :value="template.resources.domain"
+          @update:model-value="emit('update', { key: 'resources.domain', value: $event })"
+          :model-value="template.resources.domain"
           label="Domain"
         />
       </v-col>
@@ -38,10 +38,10 @@
       <v-col cols="2">
         <v-text-field
           append-icon="mdi-pencil"
-          @input="
+          @update:model-value="
             emit('update', { key: 'resources.user.email', value: $event })
           "
-          :value="template.resources.user?.email"
+          :model-value="template.resources.user?.email"
           label="Email"
         />
       </v-col>

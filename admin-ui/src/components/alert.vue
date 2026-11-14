@@ -1,6 +1,6 @@
 <template>
 	<v-snackbar
-		:value="snackbar.visibility || false"
+		:model-value="snackbar.visibility || false"
 		@change="(state) => $emit('change', state)"
 		:timeout="snackbar.timeout || 3000"
 		:color="snackbar.color || 'background'"
@@ -16,7 +16,7 @@
 		<template v-if="!hideClose" v-slot:action="{ attrs }">
 			<v-btn
 				:color="snackbar.buttonColor"
-				text
+				variant="text"
 				v-bind="attrs"
 				@click="$emit('change', false)"
 			>

@@ -2,10 +2,10 @@
   <div class="pa-5">
     <v-expansion-panels>
       <v-expansion-panel>
-        <v-expansion-panel-header color="background">
+        <v-expansion-panel-title color="background">
           Margin rules:
-        </v-expansion-panel-header>
-        <v-expansion-panel-content color="background">
+        </v-expansion-panel-title>
+        <v-expansion-panel-text color="background">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
@@ -18,23 +18,23 @@
           >
             <v-btn class="mt-4" color="secondary">Set rules</v-btn>
           </confirm-dialog>
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
-      background-color="background-light"
+      bg-color="background-light"
     >
       <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
     </v-tabs>
 
-    <v-tabs-items
+    <v-window
       v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       class="rounded-b-lg"
     >
-      <v-tab-item v-for="tab in tabs" :key="tab">
+      <v-window-item v-for="tab in tabs" :key="tab">
         <nocloud-table
           v-if="tab === 'Old prices'"
           :headers="oldPricesHeaders"
@@ -42,10 +42,10 @@
           :show-select="false"
         >
           <template v-slot:[`item.header`]="{ item }">
-            <v-text-field type="number" dense v-model.number="item.price" />
+            <v-text-field type="number" density="compact" v-model.number="item.price" />
           </template>
           <template v-slot:[`item.price`]="{ item }">
-            <v-text-field type="number" dense v-model.number="item.price" />
+            <v-text-field type="number" density="compact" v-model.number="item.price" />
           </template>
         </nocloud-table>
 
@@ -53,7 +53,7 @@
           <div class="d-flex flex-wrap align-center prices-toolbar">
             <v-text-field
               class="toolbar-search"
-              dense
+              density="compact"
               hide-details
               clearable
               prepend-inner-icon="mdi-magnify"
@@ -63,7 +63,7 @@
 
             <v-select
               class="toolbar-filter"
-              dense
+              density="compact"
               hide-details
               clearable
               label="Provider"
@@ -73,7 +73,7 @@
 
             <v-select
               class="toolbar-filter"
-              dense
+              density="compact"
               hide-details
               clearable
               multiple
@@ -84,12 +84,12 @@
               <template v-slot:selection="{ item, index }">
                 <v-chip
                   v-if="index < 1"
-                  x-small
+                  size="x-small"
                   style="color: white"
                   :color="typesColorMap[item]"
                   >{{ item }}</v-chip
                 >
-                <span v-else-if="index === 1" class="caption ml-1"
+                <span v-else-if="index === 1" class="text-caption ml-1"
                   >+{{ filterTypes.length - 1 }}</span
                 >
               </template>
@@ -97,7 +97,7 @@
 
             <v-select
               class="toolbar-filter"
-              dense
+              density="compact"
               hide-details
               clearable
               label="State"
@@ -110,26 +110,26 @@
             <v-menu
               v-model="isGroupMenu"
               :close-on-content-click="false"
-              offset-y
-              left
+              
+              location="left"
             >
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn outlined v-bind="attrs" v-on="on">
-                  <v-icon small left>mdi-folder-cog-outline</v-icon>
+              <template v-slot:activator="{ props }">
+                <v-btn variant="outlined" v-bind="props">
+                  <v-icon size="small" start>mdi-folder-cog-outline</v-icon>
                   Set group
                 </v-btn>
               </template>
               <v-card class="pa-4" color="background-light" width="320">
-                <div class="subtitle-2 mb-2">Set group for provider</div>
+                <div class="text-subtitle-2 mb-2">Set group for provider</div>
                 <v-select
-                  dense
+                  density="compact"
                   label="Provider"
                   :items="providers"
                   v-model="bulkGroupProvider"
                 />
-                <v-text-field dense label="Group" v-model="bulkGroup" />
+                <v-text-field density="compact" label="Group" v-model="bulkGroup" />
                 <div class="d-flex justify-end">
-                  <v-btn text class="mr-2" @click="isGroupMenu = false"
+                  <v-btn variant="text" class="mr-2" @click="isGroupMenu = false"
                     >Cancel</v-btn
                   >
                   <v-btn
@@ -142,13 +142,13 @@
               </v-card>
             </v-menu>
 
-            <v-btn outlined :loading="isFillLoading" @click="fillConfig">
-              <v-icon small left>mdi-cog-sync-outline</v-icon>
+            <v-btn variant="outlined" :loading="isFillLoading" @click="fillConfig">
+              <v-icon size="small" start>mdi-cog-sync-outline</v-icon>
               Fill config
             </v-btn>
 
-            <v-btn outlined :loading="isExportLoading" @click="exportToXlsx">
-              <v-icon small left>mdi-file-excel-outline</v-icon>
+            <v-btn variant="outlined" :loading="isExportLoading" @click="exportToXlsx">
+              <v-icon size="small" start>mdi-file-excel-outline</v-icon>
               Export to XLSX
             </v-btn>
           </div>
@@ -158,32 +158,32 @@
             :show-select="false"
           >
             <template v-slot:[`item.name`]="{ item }">
-              <v-text-field dense v-model="item.name" />
+              <v-text-field density="compact" v-model="item.name" />
             </template>
 
             <template v-slot:[`item.meta.group`]="{ item }">
-              <v-text-field dense v-model="item.meta.group" />
+              <v-text-field density="compact" v-model="item.meta.group" />
             </template>
 
             <template v-slot:[`item.meta.sorter`]="{ item }">
-              <v-text-field dense type="number" v-model.number="item.meta.sorter" />
+              <v-text-field density="compact" type="number" v-model.number="item.meta.sorter" />
             </template>
 
             <template v-slot:[`item.disabled`]="{ item }">
               <v-switch
                 :key="item.key"
-                dense
-                :input-value="!item.disabled"
-                @change="changeDisabled(item, $event)"
+                density="compact"
+                :model-value="!item.disabled"
+                @update:model-value="changeDisabled(item, $event)"
               />
             </template>
 
             <template v-slot:[`item.sitebuilder`]="{ item }">
               <v-switch
                 :key="`${item.key}-sitebuilder`"
-                dense
-                :input-value="!!item.sitebuilder"
-                @change="changeSitebuilder(item, $event)"
+                density="compact"
+                :model-value="!!item.sitebuilder"
+                @update:model-value="changeSitebuilder(item, $event)"
               />
             </template>
 
@@ -192,7 +192,7 @@
             <template v-slot:[`item.bots`]="{ item }">
               <v-chip
                 v-if="item.bots?.enabled"
-                small
+                size="small"
                 :color="item.bots.default ? 'success' : 'primary'"
               >
                 {{ item.bots.default ? "default" : "bots" }}
@@ -200,9 +200,9 @@
             </template>
 
             <template v-slot:[`item.key`]="{ item }">
-              <v-tooltip bottom>
-                <template v-slot:activator="{ on, attrs }">
-                  <span v-bind="attrs" v-on="on">{{
+              <v-tooltip location="bottom">
+                <template v-slot:activator="{ props }">
+                  <span v-bind="props">{{
                     getShortName(item.key)
                   }}</span>
                 </template>
@@ -212,7 +212,7 @@
 
             <template v-slot:[`item.visibility`]="{ item }">
               <v-select
-                dense
+                density="compact"
                 :items="['api_only', 'public', 'private']"
                 v-model="item.visibility"
               />
@@ -231,7 +231,7 @@
                   :key="type"
                   class="ml-1"
                   style="color: white"
-                  small
+                  size="small"
                   dense
                   :color="typesColorMap[type]"
                   >{{ type }}</v-chip
@@ -241,12 +241,12 @@
             </template>
 
             <template v-slot:[`item.state.state`]="{ item }">
-              <v-tooltip left>
-                <template v-slot:activator="{ on, attrs }">
+              <v-tooltip location="left">
+                <template v-slot:activator="{ props }">
                   <v-chip
                     dense
-                    v-bind="attrs"
-                    v-on="on"
+                   
+                    v-bind="props"
                     style="color: white"
                     y
                     :color="item.state?.state === 'broken' ? 'red' : 'green'"
@@ -277,7 +277,7 @@
                 >{{ currentBillingSettings.name }}
               </v-card-title>
               <v-select
-                outlined
+                variant="outlined"
                 chips
                 label="Types"
                 :items="availableTypes"
@@ -290,7 +290,7 @@
                   Capabilities
                 </v-card-title>
                 <v-switch
-                  dense
+                  density="compact"
                   hide-details
                   class="mb-2"
                   v-model="capsEnabled"
@@ -314,12 +314,12 @@
                   </v-col>
                   <v-col cols="12">
                     <v-combobox
-                      dense
-                      outlined
+                      density="compact"
+                      variant="outlined"
                       hide-details
                       multiple
                       chips
-                      small-chips
+                      chips
                       label="Reasoning efforts (empty: not a reasoning model)"
                       :items="reasoningEffortItems"
                       v-model="capsForm.reasoning"
@@ -332,15 +332,15 @@
                 </v-card-title>
                 <v-row dense align="center" class="mb-2">
                   <v-col cols="auto">
-                    <v-switch dense hide-details v-model="botsForm.enabled" label="Available for bots" />
+                    <v-switch density="compact" hide-details v-model="botsForm.enabled" label="Available for bots" />
                   </v-col>
                   <v-col cols="auto">
-                    <v-switch dense hide-details v-model="botsForm.default" label="Default (recommended)" />
+                    <v-switch density="compact" hide-details v-model="botsForm.default" label="Default (recommended)" />
                   </v-col>
                   <v-col cols="4">
                     <v-select
-                      dense
-                      outlined
+                      density="compact"
+                      variant="outlined"
                       hide-details
                       clearable
                       label="Default reasoning effort"
@@ -360,8 +360,8 @@
                 <v-row dense class="mb-4">
                   <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
                     <v-textarea
-                      dense
-                      outlined
+                      density="compact"
+                      variant="outlined"
                       hide-details
                       rows="2"
                       auto-grow
@@ -399,16 +399,16 @@
                       >
                         <v-text-field
                           hide-details
-                          dense
-                          outlined
+                          density="compact"
+                          variant="outlined"
                           type="number"
                           :label="priceLabel"
-                          :value="
+                          :model-value="
                             currentBillingSettings.billing[field.key][
                               [field.subkey]
                             ].price[priceKey]
                           "
-                          @input="
+                          @update:model-value="
                             currentBillingSettings.billing[field.key][
                               [field.subkey]
                             ].price[priceKey] = +$event
@@ -441,9 +441,9 @@
                                   <span>{{ resolution }}</span>
                                   <v-btn
                                     icon
-                                    x-small
+                                    size="x-small"
                                     @click="removeResolution(field, resolution)"
-                                    ><v-icon small>mdi-close</v-icon></v-btn
+                                    ><v-icon size="small">mdi-close</v-icon></v-btn
                                   >
                                 </th>
                               </tr>
@@ -472,18 +472,18 @@
                                   >
                                     <v-text-field
                                       hide-details
-                                      dense
-                                      outlined
+                                      density="compact"
+                                      variant="outlined"
                                       type="number"
                                       :label="priceLabel"
-                                      :value="
+                                      :model-value="
                                         audioCell(
                                           field,
                                           resolution,
                                           row.key
                                         )[priceKey]
                                       "
-                                      @input="
+                                      @update:model-value="
                                         audioCell(field, resolution, row.key)[
                                           priceKey
                                         ] = +$event
@@ -498,8 +498,8 @@
                         <v-row justify="end" class="mt-2">
                           <v-col cols="3">
                             <v-text-field
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               hide-details
                               label="New resolution"
                               v-model="newResolution"
@@ -540,16 +540,16 @@
                           >
                             <v-text-field
                               hide-details
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               type="number"
                               :label="priceLabel"
-                              :value="
+                              :model-value="
                                 currentBillingSettings.billing[field.key][
                                   field.subkey
                                 ][resolution][priceKey]
                               "
-                              @input="
+                              @update:model-value="
                                 currentBillingSettings.billing[field.key][
                                   field.subkey
                                 ][resolution][priceKey] = +$event
@@ -599,17 +599,17 @@
                               :key="`${field.subkey}-${priceKey}`"
                             >
                               <v-text-field
-                                dense
-                                outlined
+                                density="compact"
+                                variant="outlined"
                                 type="number"
                                 :label="priceLabel"
-                                :value="
+                                :model-value="
                                   currentBillingSettings.billing[field.key][
                                     [field.subkey]
                                   ][key][subkey][priceKey]
                                 "
                                 hide-details
-                                @input="
+                                @update:model-value="
                                   currentBillingSettings.billing[field.key][
                                     [field.subkey]
                                   ][key][subkey][priceKey] = +$event
@@ -622,8 +622,8 @@
                         <v-row justify="end">
                           <v-col cols="3">
                             <v-text-field
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               hide-details
                               label="New key"
                               v-model="newKeysForMaps[field.subkey]"
@@ -631,8 +631,8 @@
                           </v-col>
                           <v-col cols="3">
                             <v-text-field
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               hide-details
                               label="New subkey"
                               v-model="newSubkeysForMaps[field.subkey]"
@@ -687,8 +687,8 @@
             :addons="template.addons"
           />
         </div>
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
     <div class="d-flex justify-end">
       <v-btn :loading="isSaveLoading" @click="save">Save</v-btn>
     </div>

@@ -3,8 +3,8 @@
     :readonly="readonly"
     :label="label"
     :type="isVisible ? 'text' : 'password'"
-    :value="value"
-    @input="$emit('input', $event)"
+    :model-value="value"
+    @update:model-value="$emit('input', $event)"
   >
     <template v-slot:append>
       <v-icon @click="isVisible = !isVisible">{{

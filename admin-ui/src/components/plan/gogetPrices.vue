@@ -3,10 +3,10 @@
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
     <v-expansion-panels v-if="!isPlansLoading">
       <v-expansion-panel>
-        <v-expansion-panel-header color="background">
+        <v-expansion-panel-title color="background">
           Margin rules:
-        </v-expansion-panel-header>
-        <v-expansion-panel-content color="background">
+        </v-expansion-panel-title>
+        <v-expansion-panel-text color="background">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
@@ -19,7 +19,7 @@
           >
             <v-btn class="mt-4">Set rules</v-btn>
           </confirm-dialog>
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
 
@@ -31,7 +31,7 @@
       :show-expand="true"
       :items="plans"
       :headers="headers"
-      :expanded.sync="expanded"
+      v-model:expanded="expanded"
       :loading="isPlansLoading"
       :footer-error="fetchError"
     >
@@ -39,7 +39,7 @@
         <td :colspan="headers.length" style="padding: 0">
           <nocloud-table
             class="mx-8"
-            style="background: var(--v-background-base) !important"
+            style="background: rgb(var(--v-theme-background)) !important"
             :show-select="false"
             :items="item.prices"
             table-name="goget-prices"
@@ -52,7 +52,7 @@
               {{ value }} {{ defaultCurrency?.code }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
-              <v-text-field dense style="width: 150px" v-model="item.value" />
+              <v-text-field density="compact" style="width: 150px" v-model="item.value" />
             </template>
             <template v-slot:[`item.sell`]="{ item }">
               <v-switch v-model="item.sell" />
@@ -298,6 +298,6 @@ export default {
 }
 
 .v-data-table__expanded__content {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
 }
 </style>

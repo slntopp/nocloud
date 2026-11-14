@@ -10,16 +10,16 @@
       <v-col>
         <v-select
           append-icon="mdi-pencil"
-          :value="template.config.template_id"
+          :model-value="template.config.template_id"
           label="OS (template)"
           :items="allOs"
-          @input="emit('update', { key: 'config.template_id', value: $event })"
+          @update:model-value="emit('update', { key: 'config.template_id', value: $event })"
         />
       </v-col>
       <v-col>
         <v-text-field
-          @input="emit('update', { key: 'config.username', value: $event })"
-          :value="template.config.username"
+          @update:model-value="emit('update', { key: 'config.username', value: $event })"
+          :model-value="template.config.username"
           label="Username"
           append-icon="mdi-pencil"
         />
@@ -35,8 +35,8 @@
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="emit('update', { key: 'config.hostname', value: $event })"
-          :value="template.config?.hostname"
+          @update:model-value="emit('update', { key: 'config.hostname', value: $event })"
+          :model-value="template.config?.hostname"
           label="Hostname"
           hint="PVE name + guest hostname. Empty = sanitized title."
           persistent-hint
@@ -46,8 +46,8 @@
         <v-text-field
           append-icon="mdi-pencil"
           type="number"
-          @input="emit('update', { key: 'config.ssh_port', value: +$event || $event })"
-          :value="template.config?.ssh_port || template.data?.ssh_port"
+          @update:model-value="emit('update', { key: 'config.ssh_port', value: +$event || $event })"
+          :model-value="template.config?.ssh_port || template.data?.ssh_port"
           label="SSH port"
           hint="Override SP guest_ssh.port. Applied via qemu-agent."
           persistent-hint
@@ -56,62 +56,62 @@
     </v-row>
     <v-row>
       <v-col>
-        <v-text-field readonly label="PVE state" :value="pveState" />
+        <v-text-field readonly label="PVE state" :model-value="pveState" />
       </v-col>
       <v-col>
         <v-text-field
           readonly
           label="VMID"
-          :value="template.data?.vmid || template.data?.vm_id"
+          :model-value="template.data?.vmid || template.data?.vm_id"
         />
       </v-col>
       <v-col>
         <v-text-field
           readonly
           label="Node"
-          :value="template.data?.node || template.state?.meta?.node"
+          :model-value="template.data?.node || template.state?.meta?.node"
         />
       </v-col>
       <v-col>
         <v-text-field
           append-icon="mdi-pencil"
-          @input="emit('update', { key: 'resources.cpu', value: +$event })"
-          :value="template.resources.cpu"
+          @update:model-value="emit('update', { key: 'resources.cpu', value: +$event })"
+          :model-value="template.resources.cpu"
           label="CPU"
         />
       </v-col>
       <v-col>
         <v-text-field
-          @input="emit('update', { key: 'resources.ram', value: toGB($event) })"
+          @update:model-value="emit('update', { key: 'resources.ram', value: toGB($event) })"
           append-icon="mdi-pencil"
-          :value="getGB(template.resources.ram)"
+          :model-value="getGB(template.resources.ram)"
           label="RAM (GB)"
         />
       </v-col>
       <v-col>
         <v-select
-          @input="emit('update', { key: 'resources.drive_type', value: $event })"
+          @update:model-value="emit('update', { key: 'resources.drive_type', value: $event })"
           append-icon="mdi-pencil"
           :items="driveTypes"
-          :value="template.resources.drive_type"
+          :model-value="template.resources.drive_type"
           label="Disk type"
         />
       </v-col>
       <v-col>
         <v-text-field
-          @input="emit('update', { key: 'resources.drive_size', value: toGB($event) })"
+          @update:model-value="emit('update', { key: 'resources.drive_size', value: toGB($event) })"
           append-icon="mdi-pencil"
-          :value="getGB(template.resources.drive_size)"
+          :model-value="getGB(template.resources.drive_size)"
           label="Disk size (GB)"
         />
       </v-col>
     </v-row>
     <v-row v-if="template.data?.error || template.data?.last_task">
       <v-col v-if="template.data?.error" cols="12">
-        <v-alert dense text type="error">{{ template.data.error }}</v-alert>
+        <v-alert density="compact" text type="error">{{ template.data.error }}</v-alert>
       </v-col>
       <v-col v-if="template.data?.last_task" cols="12">
-        <v-text-field readonly label="Running PVE task" :value="template.data.last_task" />
+        <v-text-field readonly label="Running PVE task" :model-value="template.data.last_task" />
       </v-col>
     </v-row>
   </div>

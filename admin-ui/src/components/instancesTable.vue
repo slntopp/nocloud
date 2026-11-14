@@ -35,10 +35,10 @@
     <template v-slot:[`item.meta.autoRenew`]="{ item }">
       <div class="d-flex justify-center align-center table-switch">
         <v-switch
-          dense
+          density="compact"
           hide-details
           readonly
-          :input-value="item.meta?.autoRenew"
+          :model-value="item.meta?.autoRenew"
         />
       </div>
     </template>
@@ -58,11 +58,11 @@
     <template v-slot:[`item.meta.autoRenew`]="{ item }">
       <div class="d-flex justify-center align-center table-switch">
         <v-switch
-          dense
+          density="compact"
           hide-details
           :disabled="isUpdateActionLoading"
-          :input-value="item.meta?.autoRenew"
-          @change="changeAutoRenew(item, $event)"
+          :model-value="item.meta?.autoRenew"
+          @update:model-value="changeAutoRenew(item, $event)"
         />
       </div>
     </template>
@@ -210,6 +210,7 @@
 </template>
 
 <script setup>
+import { moduleTypes } from "@/modules";
 import nocloudTable from "@/components/table.vue";
 import {
   convertDateToTimeZone,
@@ -291,17 +292,8 @@ onMounted(() => {
     },
   });
 
-  const types = require.context(
-    "@/components/modules/",
-    true,
-    /instanceCreate\.vue$/
-  );
-  types.keys().forEach((key) => {
-    const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i);
-    if (matched && matched.length > 1) {
-      const type = matched[1];
-      instancesTypes.value.push(type);
-    }
+  moduleTypes("instanceCreate").forEach((type) => {
+    instancesTypes.value.push(type);
   });
 
   if (!instancesTypes.value.includes("bots")) {
