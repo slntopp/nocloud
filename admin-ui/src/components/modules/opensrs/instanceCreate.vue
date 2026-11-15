@@ -132,28 +132,28 @@
         <v-col cols="3">
           <v-switch
             @update:model-value="(newVal) => setValue('resources.auto_renew', newVal)"
-            :value="instance.resources.auto_renew"
+            :model-value="!!instance.resources.auto_renew"
             label="Auto_renew"
           />
         </v-col>
         <v-col cols="3">
           <v-switch
             @update:model-value="(newVal) => setValue('resources.who_is_privacy', newVal)"
-            :value="instance.resources.who_is_privacy"
+            :model-value="!!instance.resources.who_is_privacy"
             label="Who_is_privacy"
           />
         </v-col>
         <v-col cols="3">
           <v-switch
             @update:model-value="(newVal) => setValue('resources.lock_domain', newVal)"
-            :value="instance.resources.lock_domain"
+            :model-value="!!instance.resources.lock_domain"
             label="Lock_domain"
           />
         </v-col>
         <v-col cols="3">
           <v-switch
             @update:model-value="(newVal) => setValue('data.existing', newVal)"
-            :value="instance.data.existing"
+            :model-value="!!instance.data.existing"
             label="Existing"
           />
         </v-col>

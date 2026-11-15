@@ -136,7 +136,7 @@
           <v-switch
             label="Except"
             class="d-inline-block"
-            :value="item.except"
+            :model-value="!!item.except"
             @update:model-value="changeResource('except', $event, item.id)"
           />
 

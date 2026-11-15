@@ -270,9 +270,7 @@
                   >
                     <v-checkbox
                       density="compact"
-                      :model-value="
-                        currentFieldsKeys.find((key) => key === field.key)
-                      "
+                      :model-value="currentFieldsKeys.includes(field.key)"
                       @update:model-value="changeFields(field, $event)"
                       :label="field.title"
                     />
@@ -558,7 +556,7 @@ const setCurrentFieldsKeys = () => {
 };
 const changeFields = ({ key }, value) => {
   if (value) {
-    currentFieldsKeys.value.push(key);
+    if (!currentFieldsKeys.value.includes(key)) currentFieldsKeys.value.push(key);
   } else {
     currentFieldsKeys.value = currentFieldsKeys.value.filter((f) => f !== key);
     const newFilter = { ...localFilter.value };

@@ -285,3 +285,14 @@
     flex: 1 1 auto;
   }
 }
+
+/* An inline input (class d-inline-block) next to buttons: Vuetify 3+ inputs
+   are grids with the messages row last, and an inline-block takes its
+   baseline from that last row, so the field floated above its neighbours.
+   inline-grid keeps the grid and takes the baseline from the field row,
+   which lines it up with the buttons like in Vuetify 2. */
+@layer vuetify-overrides {
+  .v-input.d-inline-block {
+    display: inline-grid !important;
+  }
+}
