@@ -289,7 +289,7 @@ const {
 const isUpdateActionLoading = ref(false);
 
 onMounted(() => {
-  store.dispatch("accountGroups/fetch");
+  store.dispatch("accountGroups/ensure");
   store.commit("reloadBtn/setCallback", {
     event: () => {
       resetAccounts();

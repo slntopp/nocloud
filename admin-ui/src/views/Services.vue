@@ -68,7 +68,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
+    this.$store.dispatch("servicesProviders/ensure", { anonymously: true });
   },
   methods: {
     deleteSelectedServices() {

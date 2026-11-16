@@ -52,7 +52,7 @@ const categorie = ref(null);
 const tabs = ref(0);
 
 onMounted(() => {
-  store.dispatch("showcases/fetch");
+  store.dispatch("showcases/ensure");
 });
 
 const isFetchLoading = computed(() => store.getters["showcases/isLoading"]);

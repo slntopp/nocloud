@@ -67,7 +67,7 @@ onMounted(() => {
 
 const fetchShowcases = async () => {
   try {
-    await store.dispatch("showcases/fetch", { anonymously: false });
+    await store.dispatch("showcases/ensure", { anonymously: false });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch info",

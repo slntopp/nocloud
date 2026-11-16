@@ -17,7 +17,7 @@
             v-bind="props"
             size="x-small"
             :color="tag.color"
-            :title="tag.hint"
+            :aria-label="tag.hint"
             @click.stop="openJournal"
           >
             <v-icon size="x-small" start>{{ tag.icon }}</v-icon>

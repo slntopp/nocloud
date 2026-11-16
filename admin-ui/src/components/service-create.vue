@@ -498,7 +498,7 @@ export default {
     });
 
     this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+    this.$store.dispatch("servicesProviders/ensure", { anonymously: false });
 
     moduleTypes("serviceCreate").forEach((type) => {
       this.types.push(type);

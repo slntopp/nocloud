@@ -307,7 +307,7 @@ export default {
     },
   },
   mounted() {
-    this.$store.dispatch("currencies/fetch");
+    this.$store.dispatch("currencies/ensure");
   },
   watch: {
     defaultCurrency(newVal) {

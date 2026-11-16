@@ -97,7 +97,7 @@ export default {
   async mounted() {
     this.isSpLoading = true;
     try {
-      await this.$store.dispatch("servicesProviders/fetch", {
+      await this.$store.dispatch("servicesProviders/ensure", {
         anonymously: true,
       });
     } finally {

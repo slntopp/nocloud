@@ -184,7 +184,7 @@ onMounted(() => {
     event: fetchAccounts,
   });
 
-  store.dispatch("accountGroups/fetch");
+  store.dispatch("accountGroups/ensure");
 });
 
 const searchParam = computed(() => store.getters["appSearch/param"]);

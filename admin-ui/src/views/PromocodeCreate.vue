@@ -381,7 +381,7 @@ const availablePlans = ref([]);
 const availablePlansTotal = ref(0);
 
 onMounted(() => {
-  store.dispatch("showcases/fetch", { anonymously: false });
+  store.dispatch("showcases/ensure", { anonymously: false });
 
   setPromocde();
 });

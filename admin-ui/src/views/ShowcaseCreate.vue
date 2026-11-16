@@ -308,7 +308,7 @@ onMounted(async () => {
   try {
     isLoading.value = true;
     await Promise.all([
-      store.dispatch("servicesProviders/fetch", { anonymously: true }),
+      store.dispatch("servicesProviders/ensure", { anonymously: true }),
     ]);
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {

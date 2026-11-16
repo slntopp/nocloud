@@ -94,7 +94,7 @@ const isLoading = computed(() => {
 
 const fetchAccountGroups = async () => {
   try {
-    await store.dispatch("accountGroups/fetch");
+    await store.dispatch("accountGroups/ensure");
   } catch (e) {
     fetchError.value = e.message;
   }

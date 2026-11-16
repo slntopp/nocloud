@@ -91,7 +91,7 @@ const headers = ref([
 const categories = computed(() => store.getters["showcases/categories"]);
 
 onMounted(() => {
-  store.dispatch("showcases/fetch");
+  store.dispatch("showcases/ensure");
 });
 
 const updateCategory = async (category, { key, value }) => {

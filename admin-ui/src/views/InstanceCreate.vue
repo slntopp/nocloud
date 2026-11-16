@@ -191,7 +191,7 @@ onMounted(async () => {
     isLoading.value = true;
     await Promise.all([
       store.dispatch("services/fetch"),
-      store.dispatch("servicesProviders/fetch", { anonymously: false }),
+      store.dispatch("servicesProviders/ensure", { anonymously: false }),
     ]);
     const instanceId = route.query.instanceId;
     if (instanceId) {

@@ -178,7 +178,7 @@ export default {
   created() {
     this.loading = true;
     this.$store
-      .dispatch("servicesProviders/fetch", {
+      .dispatch("servicesProviders/ensure", {
         anonymously: false,
         showDeleted: true,
       })

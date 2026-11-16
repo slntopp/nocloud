@@ -572,7 +572,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/ensure");
 
     if (this.isEdit) {
       this.plan.resources = this.resources;
