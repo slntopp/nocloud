@@ -1,4 +1,19 @@
 import api from "@/api.js";
+import { createListCache } from "@/store/cache.js";
+
+const spCache = createListCache({ invalidateOn: /^\/?sp(\/|\?|$)/ });
+
+const load = async (commit, params) => {
+  commit("setServicesProviders", []);
+  commit("setLoading", true);
+  try {
+    const response = await api.servicesProviders.list(params);
+    commit("setServicesProviders", response.pool);
+    return response;
+  } finally {
+    commit("setLoading", false);
+  }
+};
 
 export default {
   namespaced: true,
@@ -35,23 +50,13 @@ export default {
     },
   },
   actions: {
+    // Always goes to the server (reload button, after changes)
     fetch({ commit }, params) {
-      commit("setServicesProviders", []);
-      commit("setLoading", true);
-      return new Promise((resolve, reject) => {
-        api.servicesProviders
-          .list(params)
-          .then((response) => {
-            commit("setServicesProviders", response.pool);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      return spCache.run(params, () => load(commit, params), { force: true });
+    },
+    // Reuses the loaded list if it's fresh and was loaded with the same params
+    ensure({ commit }, params) {
+      return spCache.run(params, () => load(commit, params));
     },
     fetchById({ commit }, id) {
       commit("setLoading", true);

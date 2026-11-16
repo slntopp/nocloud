@@ -1,11 +1,16 @@
 import { ref } from "vue";
 import api from "@/api.js";
 import store from "@/store";
+import { createListCache } from "@/store/cache.js";
 import {
   GetInvoicesRequest,
   ListRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import { ListInstancesRequest } from "nocloud-proto/proto/es/instances/instances_pb";
+
+// Full SP list, shared by all components; dropped by the reload button
+// and by any change to an SP (see store/cache.js)
+const spListCache = createListCache({ invalidateOn: /^\/?sp(\/|\?|$)/ });
 
 // Max uuids per list request
 const CHUNK_SIZE = 100;
@@ -28,14 +33,14 @@ const loaders = {
     });
     return pool ?? [];
   },
-  // SP list has no filters; there are few SPs, so fetch them one by one
+  // SP list has no uuid filter, but there are few SPs: take them from one
+  // cached list request instead of a request per SP
   async servicesProviders(uuids) {
-    const results = await Promise.allSettled(
-      uuids.map((uuid) => api.servicesProviders.get(uuid)),
+    const params = { anonymously: false, showDeleted: true };
+    const { pool = [] } = await spListCache.run(params, () =>
+      api.servicesProviders.list(params),
     );
-    return results
-      .filter((r) => r.status === "fulfilled" && r.value)
-      .map((r) => r.value);
+    return pool.filter((sp) => uuids.includes(sp.uuid));
   },
   async plans(uuids) {
     const response = await store.getters["plans/plansClient"].listPlans(

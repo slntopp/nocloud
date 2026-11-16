@@ -237,7 +237,7 @@ export default {
   methods: {
     async fetchPrices() {
       this.isPricesLoading = true;
-      await this.$store.dispatch("servicesProviders/fetch", {
+      await this.$store.dispatch("servicesProviders/ensure", {
         anonymously: true,
       });
       const sp = this.sps.find(

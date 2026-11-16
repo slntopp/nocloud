@@ -1,6 +1,43 @@
 import api from "@/api.js";
 import { createPromiseClient } from "@connectrpc/connect";
 import { ShowcaseCategoriesService } from "nocloud-proto/proto/es/services_providers/services_providers_connect";
+import { createListCache } from "@/store/cache.js";
+
+// categories are loaded together with showcases, so their changes count too
+const showcasesCache = createListCache({
+  invalidateOn: /^\/?(showcases|showcase_categories)(\/|\?|$)/,
+});
+
+const load = async (commit, params) => {
+  commit("setShowcases", []);
+  commit("setCategories", []);
+  commit("setLoading", true);
+
+  params = { ...(params ?? {}), omitPromos: false };
+
+  try {
+    const [{ showcases }, { categories }] = await Promise.all([
+      api.showcases.list(params),
+      api.get("showcase_categories"),
+    ]);
+
+    showcases.forEach((showcase) => {
+      showcase.categories = categories.reduce((acc, category) => {
+        if (category.showcases?.includes(showcase.uuid)) {
+          acc.push(category);
+        }
+        return acc;
+      }, []);
+    });
+
+    commit("setShowcases", showcases);
+    commit("setCategories", categories);
+  } catch (e) {
+    throw new Error(e);
+  } finally {
+    commit("setLoading", false);
+  }
+};
 
 export default {
   namespaced: true,
@@ -43,37 +80,15 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit }, params) {
-      commit("setShowcases", []);
-      commit("setCategories", []);
-      commit("setLoading", true);
-
-      params = params ?? {};
-      params.omitPromos = false;
-
-      try {
-        const [{ showcases }, { categories }] = await Promise.all([
-          api.showcases.list(params),
-          api.get("showcase_categories"),
-        ]);
-
-        showcases.forEach((showcase) => {
-          showcase.categories = categories.reduce((acc, category) => {
-            if (category.showcases?.includes(showcase.uuid)) {
-              acc.push(category);
-            }
-            return acc;
-          }, []);
-        });
-        console.log(showcases);
-
-        commit("setShowcases", showcases);
-        commit("setCategories", categories);
-      } catch (e) {
-        throw new Error(e);
-      } finally {
-        commit("setLoading", false);
-      }
+    // Always goes to the server (reload button, after changes)
+    fetch({ commit }, params) {
+      return showcasesCache.run(params, () => load(commit, params), {
+        force: true,
+      });
+    },
+    // Reuses the loaded list if it's fresh and was loaded with the same params
+    ensure({ commit }, params) {
+      return showcasesCache.run(params, () => load(commit, params));
     },
     async fetchById({ commit }, id) {
       commit("setLoading", true);

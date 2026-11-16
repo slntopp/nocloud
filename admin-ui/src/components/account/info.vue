@@ -351,7 +351,7 @@ onMounted(() => {
   accountGroup.value = account.value.accountGroup;
   gradeOverride.value = account.value.gradeOverride || null;
   keys.value = account.value.data?.ssh_keys || [];
-  store.dispatch("accountGroups/fetch");
+  store.dispatch("accountGroups/ensure");
 
   window.addEventListener("resize", setViewport);
 

@@ -355,7 +355,7 @@ const isValid = ref(false);
 const accountGroupForm = ref(null);
 
 onMounted(() => {
-  store.dispatch("accountGroups/fetch");
+  store.dispatch("accountGroups/ensure");
 });
 
 const resetCounterModes = ref(["NONE", "YEARLY", "MONTHLY", "DAILY"]);
