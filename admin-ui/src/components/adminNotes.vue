@@ -95,7 +95,7 @@ import useEntityMap from "@/hooks/useEntityMap";
 import RichEditor from "@/components/ui/richEditor.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import EditorContainer from "@/components/nocloud-ui/editorContainer.vue";
+import { EditorContainer } from "nocloud-ui";
 import { formatSecondsToDate } from "@/functions";
 
 const props = defineProps(["template", "onUpdate", "onAdd", "onDelete"]);

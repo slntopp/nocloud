@@ -48,7 +48,7 @@
 <script setup>
 import useEntityMap from "@/hooks/useEntityMap";
 import { computed, ref, watch } from "vue";
-import EditorContainer from "@/components/nocloud-ui/editorContainer.vue";
+import { EditorContainer } from "nocloud-ui";
 import { formatSecondsToDate } from "@/functions";
 
 const props = defineProps({

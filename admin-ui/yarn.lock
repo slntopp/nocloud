@@ -1711,6 +1711,10 @@ natural-compare@^1.4.0:
     "@connectrpc/connect-web" "^1.4.0"
     uuid "^9.0.1"
 
+"nocloud-ui@https://github.com/Support-pl/nocloud-ui#8b11128428cea8e4001df5f39ce7933743550b13":
+  version "2.0.0"
+  resolved "https://github.com/Support-pl/nocloud-ui#8b11128428cea8e4001df5f39ce7933743550b13"
+
 nocloudjsrest@^1.5.17:
   version "1.5.17"
   resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.17.tgz#275228ed1ec441155624ee8ef26300cc6e53fd4e"
