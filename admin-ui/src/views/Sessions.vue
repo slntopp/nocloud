@@ -11,13 +11,13 @@
     </confirm-dialog>
 
     <v-autocomplete
-      :filter="defaultFilterObject"
+      :customFilter="defaultFilterObject"
       label="Account"
-      item-text="title"
+      item-title="title"
       item-value="uuid"
       class="d-inline-block ml-2"
       :items="accounts"
-      @change="getActivity($event)"
+      @update:model-value="getActivity($event)"
     />
 
     <nocloud-table

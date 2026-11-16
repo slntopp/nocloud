@@ -2,7 +2,7 @@
   <v-card min-height="50vh" color="background-light">
     <v-card
       class="px-5 pt-3"
-      outlined
+      border
       color="background-light"
       style="position: relative"
     >
@@ -19,16 +19,16 @@
         class="my-3 pa-3"
         style="
           border: 2px solid;
-          border-color: var(--v-primary-base) !important;
+          border-color: rgb(var(--v-theme-primary)) !important;
           border-radius: 10px;
         "
-        outlined
+        border
         v-for="(note, index) in filteredNotes"
         :key="index"
       >
         <div class="d-flex justify-space-between mb-3">
           <div class="d-flex">
-            <v-chip class="mx-1" color="primary" v-if="!isAccountsLoading">{{
+            <v-chip variant="flat" class="mx-1" color="primary" v-if="!isAccountsLoading">{{
               getAccount(note.admin)?.title || note.admin
             }}</v-chip>
             <v-skeleton-loader type="chip" v-else />
@@ -40,7 +40,7 @@
             <v-btn
               :disabled="isRemoveLoading"
               class="mx-1"
-              icon
+              icon variant="text"
               color="primary"
               @click="startEdit(index)"
             >
@@ -51,7 +51,7 @@
               :disabled="isRemoveLoading && removedNoteIndex !== index"
               @click="removeNote(index)"
               class="mx-1"
-              icon
+              icon variant="text"
               color="primary"
             >
               <v-icon>mdi-delete</v-icon>
@@ -62,7 +62,7 @@
               :disabled="isPinLoading && pinNoteIndex !== index"
               @click="pinNote(index, !note.pinned)"
               class="mx-1"
-              icon
+              icon variant="text"
               color="primary"
             >
               <v-icon v-if="!note.pinned">mdi-pin</v-icon>
@@ -72,7 +72,7 @@
         </div>
         <EditorContainer
           v-if="!isEditMode || editedNoteIndex !== index"
-          :value="note.msg"
+          :model-value="note.msg"
         ></EditorContainer>
         <div v-else style="position: relative">
           <rich-editor v-model="note.msg"> </rich-editor>
@@ -91,12 +91,12 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import RichEditor from "@/components/ui/richEditor.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { EditorContainer } from "nocloud-ui";
 import { formatSecondsToDate } from "@/functions";
-import api from "@/api";
 
 const props = defineProps(["template", "onUpdate", "onAdd", "onDelete"]);
 const { template, onAdd, onUpdate, onDelete } = toRefs(props);
@@ -113,9 +113,12 @@ const removedNoteIndex = ref("");
 const pinNoteIndex = ref("");
 const isEditMode = ref(false);
 const isEditLoading = ref(false);
-const accounts = ref([]);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 const editedNoteIndex = ref("");
-const isAccountsLoading = ref(false);
 
 onMounted(() => {
   setNotes();
@@ -258,19 +261,7 @@ watch(
 watch(
   notes,
   () => {
-    notes.value.forEach(async ({ admin: uuid }) => {
-      isAccountsLoading.value = true;
-      try {
-        if (!accounts.value[uuid]) {
-          accounts.value[uuid] = api.accounts.get(uuid);
-          accounts.value[uuid] = await accounts.value[uuid];
-        }
-      } finally {
-        isAccountsLoading.value = Object.values(accounts.value).some(
-          (acc) => acc instanceof Promise
-        );
-      }
-    });
+    loadAccounts(notes.value.map(({ admin }) => admin));
   },
   { deep: true }
 );

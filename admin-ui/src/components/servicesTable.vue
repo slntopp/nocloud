@@ -2,19 +2,19 @@
   <nocloud-table
     table-name="services"
     show-expand
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     :items="services"
     :headers="headers"
     :loading="isLoading"
-    :expanded.sync="expanded"
+    v-model:expanded="expanded"
     :footer-error="fetchError"
     :server-items-length="total"
     :server-side-page="options.page"
     @update:options="setOptions"
   >
     <template v-slot:[`item.hash`]="{ item, index }">
-      <v-btn icon @click="addToClipboard(item.hash, index)">
+      <v-btn icon variant="text" @click="addToClipboard(item.hash, index)">
         <v-icon v-if="copyed == index"> mdi-check </v-icon>
         <v-icon v-else> mdi-content-copy </v-icon>
       </v-btn>
@@ -28,12 +28,12 @@
     </template>
 
     <template v-slot:[`item.status`]="{ value }">
-      <v-chip small :color="chipColor(value)">
+      <v-chip variant="flat" size="small" :color="chipColor(value)">
         {{ value }}
       </v-chip>
     </template>
     <template v-slot:[`item.access`]="{ item }">
-      <v-chip
+      <v-chip variant="flat"
         v-if="!isNamespacesLoading"
         :color="accessColor(item.access?.level)"
       >
@@ -48,37 +48,37 @@
       <td :colspan="headers.length" style="padding: 0">
         <div v-for="(itemService, index) in services" :key="index">
           <v-expansion-panels
-            inset
+            variant="inset"
             multiple
             v-model="opened[index]"
             v-if="item.uuid == itemService.uuid"
           >
             <v-expansion-panel
-              style="background: var(--v-background-light-base)"
+              style="background: rgb(var(--v-theme-background-light))"
               v-for="(group, i) in itemService.instancesGroups"
               :key="i"
               :disabled="!group.instances.length"
             >
-              <v-expansion-panel-header>
+              <v-expansion-panel-title>
                 {{ group.title }} | Type: {{ group.type }} -
                 {{ titleSP(group) }}
-                <v-chip
-                  small
+                <v-chip variant="flat"
+                  size="small"
                   class="instance-group-status"
                   :color="instanceCountColor(group)"
                 >
                   {{ group.instances.length }}
                 </v-chip>
-              </v-expansion-panel-header>
-              <v-expansion-panel-content
-                style="background: var(--v-background-base)"
+              </v-expansion-panel-title>
+              <v-expansion-panel-text
+                style="background: rgb(var(--v-theme-background))"
               >
                 <service-instances-item
                   :instances="group.instances"
                   :spId="group.sp"
                   :type="group.type"
                 />
-              </v-expansion-panel-content>
+              </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
         </div>
@@ -93,12 +93,12 @@ import serviceInstancesItem from "@/components/service_instances_item.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce, getShortName } from "@/functions";
-import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 
-const props = defineProps(["value", "refetch"]);
-const { value, refetch } = toRefs(props);
+const props = defineProps(["modelValue", "refetch"]);
+const { modelValue: value, refetch } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 
@@ -115,8 +115,11 @@ const fetchError = ref("");
 const copyed = ref(-1);
 const options = ref({});
 
-const namespaces = ref({});
-const isNamespacesLoading = ref(false);
+const {
+  map: namespaces,
+  isLoading: isNamespacesLoading,
+  load: loadNamespaces,
+} = useEntityMap("namespaces");
 
 const isLoading = computed(() => store.getters["services/isLoading"]);
 const services = computed(() => store.getters["services/all"]);
@@ -195,7 +198,7 @@ const fetchServices = async () => {
 const fetchServicesDebounce = debounce(fetchServices);
 
 const chipColor = (state) => {
-  return stateMap[state]?.color ?? "blue-grey darken-2";
+  return stateMap[state]?.color ?? "blue-grey-darken-2";
 };
 const accessColor = (level) => {
   return accessMap[level]?.color;
@@ -231,25 +234,7 @@ const instanceCountColor = (group) => {
 watch(services, (value) => {
   fetchError.value = "";
 
-  value.forEach(async ({ access: { namespace: uuid } }) => {
-    if (!uuid) {
-      return;
-    }
-
-    isNamespacesLoading.value = true;
-    try {
-      if (!namespaces.value[uuid]) {
-        namespaces.value[uuid] = api.get("namespaces/" + uuid);
-        namespaces.value[uuid] = await namespaces.value[uuid];
-      }
-    } catch {
-      namespaces.value[uuid] = undefined;
-    } finally {
-      isNamespacesLoading.value = Object.values(namespaces.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadNamespaces(value.map(({ access }) => access.namespace));
 });
 
 watch(filter, fetchServicesDebounce, { deep: true });
@@ -262,19 +247,19 @@ watch(refetch, fetchServicesDebounce);
 import search from "@/mixins/search.js";
 
 const stateMap = {
-  INIT: { color: "orange darken-2", id: 1, title: "INIT" },
-  SUS: { color: "orange darken-2", title: "SUSPENDED", id: 7 },
-  UP: { color: "green darken-2", id: 3, title: "UP" },
-  DEL: { color: "gray darken-2", id: 5, title: "DEL" },
-  UNSPECIFIED: { color: "red darken-2", title: "UNKNOWN", id: 0 },
-  DOWN: { color: "orange darken-2", id: 4, title: "STOPPED" },
+  INIT: { color: "orange-darken-2", id: 1, title: "INIT" },
+  SUS: { color: "orange-darken-2", title: "SUSPENDED", id: 7 },
+  UP: { color: "green-darken-2", id: 3, title: "UP" },
+  DEL: { color: "neutral", id: 5, title: "DEL" },
+  UNSPECIFIED: { color: "red-darken-2", title: "UNKNOWN", id: 0 },
+  DOWN: { color: "orange-darken-2", id: 4, title: "STOPPED" },
 };
 
 const accessMap = {
   ROOT: { color: "info", id: 4, title: "ROOT" },
   ADMIN: { color: "success", id: 3, title: "ADMIN" },
   MGMT: { color: "warning", id: 2, title: "MGMT" },
-  READ: { color: "gray", id: 1, title: "READ" },
+  READ: { color: "neutral", id: 1, title: "READ" },
   NONE: { color: "error", id: 0, title: "NONE" },
 };
 

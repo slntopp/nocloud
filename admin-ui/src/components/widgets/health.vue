@@ -35,7 +35,7 @@ export default {
       if (this.loading) {
         return {
           icon: "mdi-help-circle",
-          color: "grey darken-1",
+          color: "grey-darken-1",
         };
       }
 

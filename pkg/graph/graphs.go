@@ -689,6 +689,13 @@ func listNamespaces[T Accessible](
 			account := val.GetStringValue()
 			insert += ` FILTER path.vertices[-2]._key == @account`
 			bindVars["account"] = account
+		} else if key == "uuid" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER node._key in @uuids`
+			bindVars["uuids"] = values
 		}
 	}
 

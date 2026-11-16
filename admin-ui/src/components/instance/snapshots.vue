@@ -3,20 +3,20 @@
     <v-col class="mx-4">
       <v-card-title class="mb-2 px-0">Snapshots:</v-card-title>
       <v-menu
-        bottom
-        offset-y
+        location="bottom"
+        
         transition="slide-y-transition"
         v-model="isVisible"
         :close-on-content-click="false"
       >
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn class="mr-2" v-bind="attrs" v-on="on"> Create </v-btn>
+        <template v-slot:activator="{ props }">
+          <v-btn class="mr-2" v-bind="props"> Create </v-btn>
         </template>
         <v-card class="pa-4">
           <v-row>
             <v-col>
               <v-text-field
-                dense
+                density="compact"
                 label="name"
                 v-model="snapshotName"
                 :rules="[(v) => !!v || 'Required!']"

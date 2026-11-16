@@ -7,12 +7,21 @@ RUN upx ./apiserver_web
 
 RUN adduser -SD nocloud
 
-FROM node:18 AS ui-builder
+FROM node:22 AS ui-builder
 
 ADD admin-ui /app
 WORKDIR /app
 
-RUN yarn
+# nocloud-ui is a private GitHub repo: pass a token with read access as the
+# "github_token" build secret (CI does). It is only set for this command via
+# GIT_CONFIG_* env vars, so it never ends up in an image layer.
+RUN --mount=type=secret,id=github_token \
+    if [ -s /run/secrets/github_token ]; then \
+      export GIT_CONFIG_COUNT=1 \
+        GIT_CONFIG_KEY_0="url.https://x-access-token:$(cat /run/secrets/github_token)@github.com/.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://github.com/"; \
+    fi && \
+    yarn
 RUN yarn build
 
 FROM alpine

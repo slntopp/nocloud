@@ -1171,6 +1171,13 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 			query += fmt.Sprintf(` FILTER srv in @%s`, key)
 			bindVars[key] = values
+		} else if key == "uuid" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += ` FILTER node._key in @uuids`
+			bindVars["uuids"] = values
 		} else if key == "period" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {

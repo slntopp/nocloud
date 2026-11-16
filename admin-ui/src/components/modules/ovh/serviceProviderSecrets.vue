@@ -4,7 +4,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.app_key"
+          :model-value="template.secrets.app_key"
           label="app key"
           style="display: inline-block; width: 330px"
         />
@@ -12,7 +12,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.app_secret"
+          :model-value="template.secrets.app_secret"
           label="app secret"
           style="display: inline-block; width: 330px"
         />
@@ -20,7 +20,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.consumer_key"
+          :model-value="template.secrets.consumer_key"
           label="consumer key"
           style="display: inline-block; width: 330px"
         />
@@ -28,7 +28,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.endpoint"
+          :model-value="template.secrets.endpoint"
           label="region"
           style="display: inline-block; width: 330px"
         />

@@ -9,7 +9,7 @@
         <hint-btn hint="Create transaction">
           <v-btn
             :class="viewport < 600 ? 'ma-0' : 'ma-1'"
-            :small="viewport < 600"
+            :size="viewport < 600 ? 'small' : undefined"
             :to="{
               name: 'Transactions create',
               query: {
@@ -24,7 +24,7 @@
         <hint-btn hint="Create instance">
           <v-btn
             :class="viewport < 600 ? 'ma-0' : 'ma-1'"
-            :small="viewport < 600"
+            :size="viewport < 600 ? 'small' : undefined"
             :disabled="isLocked"
             :to="{
               name: 'Instance create',
@@ -52,7 +52,7 @@
           >
             <v-btn
               :loading="button.newStatusValue === statusChangeValue"
-              :small="viewport < 600"
+              :size="viewport < 600 ? 'small' : undefined"
               class="mr-2"
             >
               <v-icon>{{ button.icon }}</v-icon>
@@ -60,7 +60,7 @@
           </confirm-dialog>
         </hint-btn>
         <hint-btn hint="Create invoice">
-          <v-chip @click="openInvoice" class="ma-1" color="primary" outlined
+          <v-chip @click="openInvoice" class="ma-1" color="primary" variant="outlined"
             >Balance: {{ account.balance?.toFixed(2) || 0 }}
             {{ account.currency?.code }}</v-chip
           >
@@ -75,7 +75,7 @@
       </v-col>
       <v-col lg="2" md="4" sm="6" cols="12">
         <v-text-field v-model="title" label="name">
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <login-in-account-icon :uuid="account.uuid" />
           </template>
         </v-text-field>
@@ -84,25 +84,30 @@
         <v-select
           :items="accountGroups"
           v-model="accountGroup"
-          item-text="title"
+          item-title="title"
           item-value="uuid"
           label="Account Group"
           clearable
         >
-          <template v-slot:item="{ item }">
-            <div
-              :style="{ backgroundColor: item.color }"
-              class="box-color"
-            ></div>
-            {{ item.title }}
+          <template v-slot:item="{ internalItem: item, props: itemProps }">
+            <v-list-item v-bind="itemProps">
+              <template v-slot:prepend>
+                <div
+                  :style="{ backgroundColor: item.raw.color }"
+                  class="box-color"
+                ></div>
+              </template>
+            </v-list-item>
           </template>
 
-          <template v-slot:selection="{ item }">
-            <div
-              :style="{ backgroundColor: item.color }"
-              class="box-color"
-            ></div>
-            {{ item.title }}
+          <template v-slot:selection="{ internalItem: item }">
+            <template v-if="item.raw && typeof item.raw === 'object'">
+              <div
+                :style="{ backgroundColor: item.raw.color }"
+                class="box-color"
+              ></div>
+              {{ item.title }}
+            </template>
           </template>
         </v-select>
       </v-col>
@@ -122,7 +127,7 @@
           :readonly="isCurrencyReadonly"
           :items="currencies"
           v-model="currency"
-          item-text="title"
+          item-title="title"
           return-object
           item-value="id"
           label="currency"
@@ -144,24 +149,24 @@
         <v-switch
           v-model="phoneVerified"
           :label="phoneVerified ? 'Verified' : 'Not verified'"
-          @change="onPhoneVerifiedChange"
+          @update:model-value="onPhoneVerifiedChange"
         />
       </v-col>
     </v-row>
 
     <v-row>
       <v-col lg="2" md="3" sm="4" cols="1">
-        <v-text-field readonly :value="account.data?.email" label="Email" />
+        <v-text-field readonly :model-value="account.data?.email" label="Email" />
       </v-col>
 
       <v-col lg="2" md="3" sm="4" cols="1">
-        <v-text-field readonly :value="account.data?.company" label="Company" />
+        <v-text-field readonly :model-value="account.data?.company" label="Company" />
       </v-col>
 
       <v-col lg="1" md="2" sm="3" cols="4">
         <v-text-field
           readonly
-          :value="
+          :model-value="
             account.data?.phone_new?.phone_cc
               ? `${account.data?.phone_new?.phone_cc} ${account.data?.phone_new?.phone_number}`
               : account.data?.phone || ''
@@ -173,26 +178,26 @@
       <v-col lg="1" md="2" sm="3" cols="4">
         <v-text-field
           readonly
-          :value="formatSecondsToDate(account.data?.date_create || 0)"
+          :model-value="formatSecondsToDate(account.data?.date_create || 0)"
           label="Date of create"
         />
       </v-col>
 
       <v-col lg="1" md="2" sm="3" cols="4">
-        <v-text-field readonly :value="account.data?.country" label="Country" />
+        <v-text-field readonly :model-value="account.data?.country" label="Country" />
       </v-col>
 
       <v-col lg="1" md="2" sm="3" cols="4">
-        <v-text-field readonly :value="account.data?.city" label="City" />
+        <v-text-field readonly :model-value="account.data?.city" label="City" />
       </v-col>
 
       <v-col lg="2" md="3" sm="4" cols="1">
-        <v-text-field readonly :value="account.data?.address" label="Address" />
+        <v-text-field readonly :model-value="account.data?.address" label="Address" />
       </v-col>
 
       <v-col lg="1" md="2" sm="3" cols="4">
-        <v-text-field readonly :value="account.data?.whmcs_id" label="WHMCS id">
-          <template v-slot:append>
+        <v-text-field readonly :model-value="account.data?.whmcs_id" label="WHMCS id">
+          <template v-slot:append-inner>
             <whmcs-btn :account="account" />
           </template>
         </v-text-field>
@@ -203,7 +208,7 @@
       <v-card-title class="px-0 instances-panel">Instances:</v-card-title>
       <v-switch
         class="ml-3 mt-5"
-        dense
+        density="compact"
         label="Show deleted"
         v-model="showDeletedInstances"
       />
@@ -222,20 +227,19 @@
 
     <div class="pt-4">
       <v-menu
-        bottom
-        offset-y
+        location="bottom"
         transition="slide-y-transition"
         v-model="isVisible"
         :close-on-content-click="false"
       >
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn class="mr-2" v-bind="attrs" v-on="on"> Create </v-btn>
+        <template v-slot:activator="{ props }">
+          <v-btn class="mr-2" v-bind="props"> Create </v-btn>
         </template>
         <v-card class="pa-4">
           <v-row>
             <v-col>
               <v-text-field
-                dense
+                density="compact"
                 label="title"
                 v-model="newKey.title"
                 :rules="generalRule"
@@ -245,7 +249,7 @@
           <v-row>
             <v-col>
               <v-textarea
-                dense
+                density="compact"
                 label="key"
                 v-model="newKey.value"
                 :rules="generalRule"
@@ -288,9 +292,9 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import hintBtn from "@/components/ui/hintBtn.vue";
 import { formatSecondsToDate, notDeletedStatuses } from "@/functions";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
-import { computed, onMounted, onUnmounted, ref, set, toRefs, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import AdminNotesPinned from "@/components/adminNotesPinned.vue";
 import AccountGrade from "@/components/ui/accountGrade.vue";
 
@@ -307,7 +311,6 @@ const headers = ref([
 ]);
 
 const generalRule = ref([(v) => !!v || "Required field"]);
-const accountNamespace = ref(null);
 const uuid = ref("");
 const currency = ref("");
 const title = ref("");
@@ -348,10 +351,7 @@ onMounted(() => {
   accountGroup.value = account.value.accountGroup;
   gradeOverride.value = account.value.gradeOverride || null;
   keys.value = account.value.data?.ssh_keys || [];
-  store.dispatch("services/fetch", { showDeleted: true });
-  store.dispatch("accountGroups/fetch");
-  store.dispatch("servicesProviders/fetch", { anonymously: true });
-  fetchNamespace();
+  store.dispatch("accountGroups/ensure");
 
   window.addEventListener("resize", setViewport);
 
@@ -362,7 +362,6 @@ onUnmounted(() => {
   window.removeEventListener("resize", setViewport);
 });
 
-const services = computed(() => store.getters["services/all"]);
 const currencies = computed(() =>
   store.getters["currencies/all"].filter((c) => c.title !== "NCU")
 );
@@ -459,7 +458,7 @@ const editAccount = async () => {
   try {
     const promises = [
       updateAccount(newAccount).then((res) => {
-        if (res) set(account.value, "gradeOverride", newAccount.gradeOverride);
+        if (res) account.value["gradeOverride"] = newAccount.gradeOverride;
       }),
       updateAccountGroup(),
     ];
@@ -496,9 +495,9 @@ const permanentLock = async () => {
   const newStatus = "PERMANENT_LOCK";
   statusChangeValue.value = newStatus;
   try {
-    const accountServices = services.value.filter(
-      (s) => s.access.namespace === accountNamespace.value?.uuid
-    );
+    const { pool: accountServices = [] } = await api.post("services", {
+      filters: { account: account.value.uuid },
+    });
 
     const servicesForDown = accountServices.filter((s) => s.status !== "INIT");
     await Promise.all(servicesForDown.map((s) => api.services.down(s.uuid)));
@@ -518,16 +517,6 @@ const openInvoice = async () => {
     name: "Invoice create",
     query: { account: account.value.uuid },
   });
-};
-const fetchNamespace = async () => {
-  try {
-    const { pool } = await store.dispatch("namespaces/fetch", {
-      filters: { account: account.value.uuid },
-    });
-    accountNamespace.value = pool[0];
-  } catch (e) {
-    console.log(e);
-  }
 };
 const setViewport = () => {
   viewport.value = window.innerWidth;
@@ -552,7 +541,7 @@ export default {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

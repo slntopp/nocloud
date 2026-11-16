@@ -30,7 +30,7 @@ export default {
     this.isVariantsLoading = true;
     await Promise.all([
       this.$store.dispatch("services/fetch", { showDeleted: true }),
-      this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
+      this.$store.dispatch("servicesProviders/ensure", { anonymously: false }),
     ]);
     this.isVariantsLoading = false;
 

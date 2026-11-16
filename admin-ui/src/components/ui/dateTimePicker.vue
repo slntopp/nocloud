@@ -1,14 +1,14 @@
 <template>
   <v-text-field
-    :value="placeholder || value"
-    :dense="dense"
+    :model-value="placeholder || value"
+    :density="dense ? 'compact' : undefined"
     :clearable="clearable"
-    @input="emits('input', $event)"
+    @update:model-value="emits('update:modelValue', $event)"
     :label="label"
     :disabled="disabled"
     :min="min"
     type="datetime-local"
-    :append-icon="editIcon ? 'mdi-pencil' : undefined"
+    :append-inner-icon="editIcon ? 'mdi-pencil' : undefined"
   />
 </template>
 
@@ -16,7 +16,7 @@
 import { toRefs } from "vue";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   min: {},
   label: {},
   time: { type: Boolean, default: false },
@@ -27,8 +27,8 @@ const props = defineProps({
   editIcon: { type: Boolean, default: false },
   placeholder: {},
 });
-const { value, min, label, dense } = toRefs(props);
-const emits = defineEmits(["input"]);
+const { modelValue: value, min, label, dense } = toRefs(props);
+const emits = defineEmits(["update:modelValue"]);
 </script>
 
 <style>

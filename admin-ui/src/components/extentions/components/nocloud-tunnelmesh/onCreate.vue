@@ -1,44 +1,44 @@
 <template>
   <v-card color="background-light">
     <v-card-title>
-      <v-row justify="space-between">
+      <v-row class="justify-space-between">
         <v-col> NoCloud Tunnelmesh </v-col>
         <v-col cols="1">
-          <v-icon large color="primary" @click="$emit('remove')">
+          <v-icon size="large" color="primary" @click="$emit('remove')">
             mdi-close
           </v-icon>
         </v-col>
       </v-row>
     </v-card-title>
     <v-card-text>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
-          <v-subheader> hostname </v-subheader>
+          <v-list-subheader> hostname </v-list-subheader>
         </v-col>
 
         <v-col cols="10">
           <v-text-field
             readonly
-            @change="(data) => emitNewHostname(data)"
-            :value="hostname"
+            @change="emitNewHostname($event.target.value)"
+            :model-value="hostname"
             label="enter at main form"
             :rules="rules"
             :error-messages="errors"
           ></v-text-field>
         </v-col>
       </v-row>
-      <v-row align="center">
+      <v-row class="align-center">
 				<v-col cols="2">
-					<v-subheader>hash</v-subheader>
+					<v-list-subheader>hash</v-list-subheader>
 				</v-col>
 
 				<v-col cols="10">
 					<v-text-field label="your certificate hash" v-model="fingerprint" />
 				</v-col>
 			</v-row>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
-          <v-subheader> cerificate </v-subheader>
+          <v-list-subheader> cerificate </v-list-subheader>
         </v-col>
 
         <v-col cols="10" class="d-flex">
@@ -48,7 +48,7 @@
             accept=".crt"
             label="File input"
             truncate-length="15"
-            @change="certInput"
+            @update:model-value="certInput"
             :hide-input="!!fingerprint"
           ></v-file-input>
           <v-text-field
@@ -57,7 +57,7 @@
             readonly
             :error-messages="errors"
             label="your certificate hash"
-            :value="fingerprint"
+            :model-value="fingerprint"
           >
           </v-text-field>
         </v-col>
@@ -73,6 +73,7 @@ import { Buffer } from "buffer";
 
 export default {
   name: "tunnelmesh-extention-create",
+  emits: ["change:data", "change:provider", "remove"],
   data() {
     return {
       rules: [(value) => !!value || "Field is required"],

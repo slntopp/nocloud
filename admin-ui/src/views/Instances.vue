@@ -1,8 +1,8 @@
 <template>
   <div class="pa-4">
-    <v-menu offset-y :close-on-content-click="false">
-      <template v-slot:activator="{ on, attrs }">
-        <v-btn class="mr-2" color="background-light" v-bind="attrs" v-on="on">
+    <v-menu :close-on-content-click="false">
+      <template v-slot:activator="{ props }">
+        <v-btn class="mr-2" color="background-light" v-bind="props">
           Create
         </v-btn>
       </template>
@@ -17,7 +17,7 @@
             :rules="rules.req"
           />
           <v-autocomplete
-            dense
+            density="compact"
             label="type"
             style="width: 300px"
             v-model="newInstance.type"
@@ -25,7 +25,7 @@
             :rules="rules.req"
           />
           <v-text-field
-            dense
+            density="compact"
             label="type name"
             v-if="newInstance.type === 'custom'"
             style="width: 300px"
@@ -99,6 +99,7 @@
 </template>
 
 <script setup>
+import { moduleTypes } from "@/modules";
 import api from "@/api.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import instancesTable from "@/components/instancesTable.vue";
@@ -264,17 +265,8 @@ const unsuspendSelectedInstances = async () => {
   }
 };
 
-const types = require.context(
-  "@/components/modules/",
-  true,
-  /instanceCreate\.vue$/
-);
-
-types.keys().forEach((key) => {
-  const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i);
-  if (matched && matched.length > 1) {
-    allTypes.value.push(matched[1]);
-  }
+moduleTypes("instanceCreate").forEach((type) => {
+  allTypes.value.push(type);
 });
 </script>
 

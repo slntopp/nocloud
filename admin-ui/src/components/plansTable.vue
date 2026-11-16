@@ -4,8 +4,8 @@
     class="mt-4"
     :items="plans"
     :headers="headers"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     :loading="isLoading"
     :footer-error="fetchError"
     @update:options="setOptions"
@@ -22,12 +22,12 @@
       <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
       <v-switch
         v-else
-        dense
+        density="compact"
         hide-details
         :readonly="!!updatedPlanUuid"
-        :input-value="item.meta?.auto_start"
+        :model-value="item.meta?.auto_start"
         :disabled="isDeleted(item)"
-        @change="
+        @update:model-value="
           updatePlan(item, {
             key: 'meta',
             value: { ...(item.meta || {}), auto_start: $event },
@@ -40,12 +40,12 @@
       <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
       <v-switch
         v-else
-        dense
+        density="compact"
         hide-details
         :readonly="!!updatedPlanUuid"
-        :input-value="item.properties?.autoRenew"
+        :model-value="item.properties?.autoRenew"
         :disabled="isDeleted(item)"
-        @change="
+        @update:model-value="
           updatePlan(item, {
             key: 'properties.autoRenew',
             value: $event,
@@ -58,12 +58,12 @@
       <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
       <v-switch
         v-else
-        dense
+        density="compact"
         hide-details
         :readonly="!!updatedPlanUuid"
-        :input-value="item.public"
+        :model-value="item.public"
         :disabled="isDeleted(item)"
-        @change="
+        @update:model-value="
           updatePlan(item, {
             key: 'public',
             value: $event,
@@ -85,7 +85,7 @@
       </template>
     </template>
     <template v-slot:[`item.status`]="{ item }">
-      <v-chip small :color="getStatus(item).color">
+      <v-chip variant="flat" size="small" :color="getStatus(item).color">
         {{ getStatus(item).title }}
       </v-chip>
     </template>
@@ -112,7 +112,7 @@
           class="file-input mx-1 mt-4"
           :label="`upload ${selectedFileType} price models...`"
           :accept="`.${selectedFileType}`"
-          @change="onJsonInputChange"
+          @update:model-value="onJsonInputChange"
         />
         <confirm-dialog
           @confirm="uploadPlans"
@@ -122,7 +122,7 @@
           <v-btn
             :disabled="!uploadedPlans.length"
             :loading="isPlansUploadLoading"
-            small
+            size="small"
             >Upload</v-btn
           >
         </confirm-dialog>
@@ -149,12 +149,12 @@ import { Plan, PlanKind } from "nocloud-proto/proto/es/billing/billing_pb";
 import useSearch from "@/hooks/useSearch";
 
 const statusMap = {
-  DEL: { title: "DELETED", color: "blue-grey darken-2" },
+  DEL: { title: "DELETED", color: "blue-grey-darken-2" },
   UNSPECIFIED: { title: "ACTIVE", color: "success" },
 };
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   tableName: { type: String, default: "plans-table" },
   showSelect: { type: Boolean, default: false },
   customParams: { type: Object, default: () => ({}) },
@@ -166,7 +166,7 @@ const props = defineProps({
   isLoading: { type: Boolean, default: false },
 });
 const {
-  value,
+  modelValue: value,
   refetch,
   customParams,
   noSearch,
@@ -176,7 +176,7 @@ const {
   customHeaders,
 } = toRefs(props);
 
-const emit = defineEmits(["input", "update:options", "fetch:plans"]);
+const emit = defineEmits(["update:modelValue", "update:options", "fetch:plans"]);
 
 const store = useStore();
 useSearch({

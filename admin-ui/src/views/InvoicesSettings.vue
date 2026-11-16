@@ -12,9 +12,9 @@
             v-model="newSettings.template"
             label="Template"
           />
-          <v-tooltip bottom>
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-bind="attrs" v-on="on">
+          <v-tooltip location="bottom">
+            <template v-slot:activator="{ props }">
+              <v-btn icon variant="text" v-bind="props">
                 <v-icon>mdi-help</v-icon>
               </v-btn>
             </template>
@@ -69,7 +69,7 @@
           v-model="newSettings.whmcs_paid_on_balance_payment"
           label="Mark WHMCS invoice as paid on balance payment"
         />
-        <div class="text-caption text--secondary mb-4">
+        <div class="text-caption text-medium-emphasis mb-4">
           Off: NoCloud Paid, WHMCS stays Unpaid (proforma). On: both NoCloud and WHMCS Paid.
         </div>
       </v-col>
@@ -101,7 +101,7 @@
       </v-col>
     </v-row>
 
-    <v-row justify="end" class="mx-5">
+    <v-row class="mx-5 justify-end">
       <v-btn
         @click="resetSettings"
         :disabled="isSettingsLoading"
@@ -215,7 +215,7 @@ watch(
 
 <style scoped>
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-family: "Quicksand", sans-serif;
   line-height: 1em;

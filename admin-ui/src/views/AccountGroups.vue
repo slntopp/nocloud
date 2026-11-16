@@ -57,7 +57,7 @@ import { ref, computed, onMounted } from "vue";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import { getShortName } from "../functions";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 const store = useStore();
@@ -94,7 +94,7 @@ const isLoading = computed(() => {
 
 const fetchAccountGroups = async () => {
   try {
-    await store.dispatch("accountGroups/fetch");
+    await store.dispatch("accountGroups/ensure");
   } catch (e) {
     fetchError.value = e.message;
   }

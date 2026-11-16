@@ -14,6 +14,7 @@
 import yaml from 'yaml';
 
 export default {
+  emits: ["getTree"],
   props: {
     json: { type: Object, required: true },
     disabled: { type: Boolean }

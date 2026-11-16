@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <v-row class="mt-0" align="start" justify="end">
+    <v-row class="mt-0 align-start justify-end">
       <v-col class="d-flex justify-end px-1 py-1">
         <instance-state :template="template" />
       </v-col>
@@ -8,7 +8,7 @@
         <v-chip
           class="mx-2"
           color="primary"
-          outlined
+          variant="outlined"
           v-for="price in pricesPerToken"
           :key="price.name"
           >{{ price.name }} : {{ price.price }} {{ accountCurrency?.code }}</v-chip

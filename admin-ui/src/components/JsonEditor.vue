@@ -7,7 +7,7 @@
     </v-row>
     <json-actions
       :json="json"
-      :isValid="isValid"
+      :isValid="!!isValid"
       :disabled="disabledDelete"
       :changeField="changeField"
       :deleteField="deleteField"
@@ -34,6 +34,7 @@ import JsonTextarea from "@/components/JsonTextarea";
 
 export default {
   name: "JsonEditor",
+  emits: ["changeValue"],
   components: { JsonForm, JsonTextarea, JsonActions },
   props: {
     json: { type: Object, required: true },

@@ -6,13 +6,13 @@
       }}</router-link>
       /
       {{ serviceTitle }}
-      <v-chip x-small :color="chipColor"> </v-chip>
+      <v-chip variant="flat" size="x-small" :color="chipColor"> </v-chip>
     </div>
 
     <v-tabs
       class="rounded-t-lg"
       v-model="tabs"
-      background-color="background-light"
+      bg-color="background-light"
     >
       <v-tab>Info</v-tab>
       <v-tab>Reports</v-tab>
@@ -21,12 +21,12 @@
       <v-tab>Template</v-tab>
     </v-tabs>
 
-    <v-tabs-items
+    <v-window
       v-model="tabs"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       class="rounded-b-lg"
     >
-      <v-tab-item>
+      <v-window-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-info
           @refresh="fetchService"
@@ -34,31 +34,31 @@
           :service="service"
           :chipColor="chipColor"
         />
-      </v-tab-item>
+      </v-window-item>
 
-      <v-tab-item>
+      <v-window-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-reports v-if="service" :service="service" />
-      </v-tab-item>
+      </v-window-item>
 
-      <!-- <v-tab-item>
+      <!-- <v-window-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-control
           v-if="service"
           :service="service"
           :chip-color="chipColor"
         />
-      </v-tab-item> -->
+      </v-window-item> -->
 
-      <v-tab-item>
+      <v-window-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-history v-if="service" :template="service" />
-      </v-tab-item>
-      <v-tab-item>
+      </v-window-item>
+      <v-window-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-template v-if="service" :template="service" />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
@@ -90,7 +90,7 @@ export default {
       return title;
     },
     fetchService() {
-      this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
+      this.$store.dispatch("servicesProviders/ensure",{anonymously:true});
       this.$store.dispatch("services/fetchById", this.serviceId).then(() => {
         this.found = !!this.service;
         document.title = `${this.serviceTitle} | NoCloud`;
@@ -111,11 +111,11 @@ export default {
     },
     chipColor() {
       const dict = {
-        init: "orange darken-2",
-        up: "green darken-2",
-        del: "gray darken-2",
+        init: "orange-darken-2",
+        up: "green-darken-2",
+        del: "neutral",
       };
-      return dict?.[this?.service?.status] ?? "blue-grey darken-2";
+      return dict?.[this?.service?.status] ?? "blue-grey-darken-2";
     },
     serviceTitle() {
       return this?.service?.title ?? "not found";
@@ -158,7 +158,7 @@ export default {
       }
     };
   },
-  destroyed() {
+  unmounted() {
     socket.close(1000, "job is done");
   },
 };
@@ -166,7 +166,7 @@ export default {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

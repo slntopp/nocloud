@@ -5,7 +5,7 @@
         <route-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
           :to="{ name: 'Plan', params: { planId: template.billingPlan.uuid } }"
         />
       </v-col>
@@ -14,16 +14,16 @@
         <v-text-field
           readonly
           label="Product name"
-          :value="template.resources.domain"
+          :model-value="template.resources.domain"
         />
       </v-col>
 
       <v-col>
         <date-picker
           label="Date (create)"
-          :value="timestampToDateTimeLocal(template?.created)"
+          :model-value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
@@ -35,9 +35,9 @@
       <v-col>
         <date-picker
           label="Deleted date"
-          :value="timestampToDateTimeLocal(template?.deleted)"
+          :model-value="timestampToDateTimeLocal(template?.deleted)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'deleted',
               value: formatDateToTimestamp($event),
@@ -50,7 +50,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="formatSecondsToDate(template.data?.next_payment_date, true)"
+          :model-value="formatSecondsToDate(template.data?.next_payment_date, true)"
         />
       </v-col>
     </v-row>
@@ -66,7 +66,7 @@
       >
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
-          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+          <v-chip v-if="item.isAddon" size="small" class="ml-1">Addon</v-chip>
         </template>
 
         <template v-slot:[`item.price`]="{ item }">
@@ -76,17 +76,17 @@
               :suffix="defaultCurrency?.code"
               v-model="item.price"
               type="number"
-              @input="updatePrice(item, false)"
-              append-icon="mdi-pencil"
+              @update:model-value="updatePrice(item, false)"
+              append-inner-icon="mdi-pencil"
             />
             <v-text-field
-              style="color: var(--v-primary-base)"
+              style="color: rgb(var(--v-theme-primary))"
               class="ml-2"
               type="number"
               :suffix="accountCurrency?.code"
               v-model="item.accountPrice"
-              @input="updatePrice(item, true)"
-              append-icon="mdi-pencil"
+              @update:model-value="updatePrice(item, true)"
+              append-inner-icon="mdi-pencil"
             />
           </div>
         </template>
@@ -107,7 +107,7 @@
             <td></td>
             <td>
               <div class="d-flex justify-end">
-                <v-chip color="primary" outlined>
+                <v-chip color="primary" variant="outlined">
                   {{ formatPrice(totalPrice, defaultCurrency) }}
                   {{ defaultCurrency?.code }} /
                   {{ formatPrice(totalAccountPrice, accountCurrency) }}

@@ -5,9 +5,9 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
             <v-icon
               @click="
@@ -24,9 +24,9 @@
       <v-col cols="3">
         <date-picker
           label="Date (create)"
-          :value="timestampToDateTimeLocal(template?.created)"
+          :model-value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
@@ -38,9 +38,9 @@
       <v-col cols="3">
         <date-picker
           label="Deleted date"
-          :value="timestampToDateTimeLocal(template?.deleted)"
+          :model-value="timestampToDateTimeLocal(template?.deleted)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'deleted',
               value: formatDateToTimestamp($event),
@@ -62,25 +62,25 @@
           <v-text-field
             :suffix="defaultCurrency?.code"
             v-model="item.price"
-            @input="updatePrice(item, false)"
-            append-icon="mdi-pencil"
+            @update:model-value="updatePrice(item, false)"
+            append-inner-icon="mdi-pencil"
           />
         </template>
         <template v-slot:[`item.accountPrice`]="{ item }">
           <v-text-field
             :suffix="accountCurrency?.code"
-            style="color: var(--v-primary-base)"
+            style="color: rgb(var(--v-theme-primary))"
             v-model="item.accountPrice"
-            @input="updatePrice(item, true)"
-            append-icon="mdi-pencil"
+            @update:model-value="updatePrice(item, true)"
+            append-inner-icon="mdi-pencil"
           />
         </template>
       </nocloud-table>
     </instances-panels>
-    <v-dialog persistent :value="priceModelDialog" max-width="60%">
+    <v-dialog persistent :model-value="priceModelDialog" max-width="60%">
       <v-card class="pa-5">
         <v-card-title class="text-center">Change price model</v-card-title>
-        <v-row align="center">
+        <v-row class="align-center">
           <v-col cols="12">
             <plans-autocomplete
               v-model="newPlan"
@@ -94,7 +94,7 @@
           </v-col>
         </v-row>
 
-        <v-row justify="end">
+        <v-row class="justify-end">
           <v-btn class="mx-3" @click="priceModelDialog = false">Close</v-btn>
           <v-btn
             class="mx-3"
@@ -110,15 +110,7 @@
 </template>
 
 <script setup>
-import {
-  defineProps,
-  ref,
-  defineEmits,
-  toRefs,
-  computed,
-  onMounted,
-  watch,
-} from "vue";
+import { ref, toRefs, computed, onMounted, watch } from "vue";
 import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
@@ -130,7 +122,7 @@ import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 import { timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
-const emit = defineEmits(["refresh", "update"]);
+const emit = defineEmits(["refresh", "update", "input"]);
 
 const { template, service, account, addons } = toRefs(props);
 
@@ -249,7 +241,7 @@ watch(accountRate, () => {
 
 <style lang="scss">
 .openai-billing {
-  .v-expansion-panel-content__wrap {
+  .v-expansion-panel-text__wrapper {
     padding: 0px !important;
   }
 }

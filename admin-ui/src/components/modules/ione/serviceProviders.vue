@@ -3,7 +3,7 @@
     <v-row
       v-for="field in fieldKeys"
       :key="field"
-      :align="!fields[field].isJSON ? 'center' : null"
+      :class="{ 'align-center': !fields[field].isJSON }"
     >
       <v-col cols="4">
         <subheader-with-info :infoText="`SPInfo.ione.${field}`">
@@ -16,11 +16,11 @@
           v-if="fields[field]?.type === 'bool'"
           v-model="fields[field].bind"
           :label="fields[field].label"
-          @change="(data) => changeHandler(field, data)"
+          @update:model-value="(data) => changeHandler(field, data)"
         ></v-switch>
         <v-text-field
-          @change="(data) => changeHandler(field, data)"
-          :value="getValue(field)"
+          @change="changeHandler(field, $event.target.value)"
+          :model-value="getValue(field)"
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
@@ -42,15 +42,15 @@
           v-if="fields[field].type === 'select'"
           :items="vlansKeysItems"
           v-bind="fields[field].bind || {}"
-          :value="getValue(field)"
+          :model-value="getValue(field)"
           :placeholder="fields[field].label"
-          @change="(data) => changeHandler(field, data)"
+          @update:model-value="(data) => changeHandler(field, data)"
         />
         <v-text-field
           v-else
           :placeholder="fields[field].label"
-          @change="(data) => changeHandler(field, data)"
-          :value="getValue(field)"
+          @change="changeHandler(field, $event.target.value)"
+          :model-value="getValue(field)"
           :label="fields[field].subheader"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
@@ -78,6 +78,7 @@ function isJSON(str) {
 // const domainRegex = /^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/;
 // const domainRegex = /^(https?):\/\/(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$/
 export default {
+  emits: ["change:vars"],
   components: { JsonEditor, subheaderWithInfo },
   name: "servicesProviders-create-ione",
   props: {
