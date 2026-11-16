@@ -149,6 +149,7 @@
         <v-switch
           v-model="phoneVerified"
           :label="phoneVerified ? 'Verified' : 'Not verified'"
+          hide-details
           @update:model-value="onPhoneVerifiedChange"
         />
       </v-col>
@@ -196,7 +197,12 @@
       </v-col>
 
       <v-col lg="1" md="2" sm="3" cols="4">
-        <v-text-field readonly :model-value="account.data?.whmcs_id" label="WHMCS id">
+        <v-text-field
+          class="whmcs-field"
+          readonly
+          :model-value="account.data?.whmcs_id"
+          label="WHMCS id"
+        >
           <template v-slot:append-inner>
             <whmcs-btn :account="account" />
           </template>
@@ -540,6 +546,13 @@ export default {
 </script>
 
 <style scoped lang="scss">
+/* the 36px WHMCS button is taller than the input line: center it in the
+   field instead of aligning it with the text (it went below the underline) */
+.whmcs-field :deep(.v-field__append-inner) {
+  padding-top: 0;
+  align-items: center;
+}
+
 .page__title {
   color: rgb(var(--v-theme-primary));
   font-weight: 400;

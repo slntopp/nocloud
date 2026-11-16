@@ -1,10 +1,17 @@
 <template>
-  <v-chart
-    class="default-chart"
-    :option="chartOption"
-    autoresize
-    @click="handleClick"
-  />
+  <!--
+    The height lives on our own element: vue-echarts 7 renders its root with
+    inheritAttrs: false, and a scoped class on it did not apply, so the chart
+    fell back to the 320px min-height of the container.
+  -->
+  <div class="default-chart">
+    <v-chart
+      :option="chartOption"
+      autoresize
+      style="width: 100%; height: 100%"
+      @click="handleClick"
+    />
+  </div>
 </template>
 
 <script setup>
