@@ -135,7 +135,7 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
-import NcMap from "@/components/nocloud-ui/map.vue";
+import { NcMap } from "nocloud-ui";
 import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {

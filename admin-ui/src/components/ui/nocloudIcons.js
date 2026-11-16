@@ -1,5 +1,5 @@
-// SVG icons that used to come from the nocloud-ui package, loaded as URLs on demand
-const icons = import.meta.glob("@/assets/nocloud-icons/*.svg", {
+// SVG icons of the nocloud-ui package, loaded as URLs on demand
+const icons = import.meta.glob("/node_modules/nocloud-ui/assets/icons/*.svg", {
   query: "?url",
   import: "default",
 });
