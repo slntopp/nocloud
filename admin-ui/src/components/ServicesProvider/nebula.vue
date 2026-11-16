@@ -144,7 +144,7 @@ onMounted(async () => {
   try {
     await Promise.all([
       store.dispatch("services/fetch",{showDeleted:true}),
-      store.dispatch("plans/fetch"),
+      store.dispatch("plans/fetch", { filters: { type: ["ione"] } }),
     ]);
 
     const res = await api.servicesProviders.action({

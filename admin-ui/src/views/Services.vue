@@ -80,7 +80,7 @@ export default {
           .then((res) => {
             if (res.every((el) => el.result)) {
               console.log("all ok");
-              this.$store.dispatch("services/fetch", { showDeleted: true });
+              this.refetchServices();
 
               const ending = deletePromices.length == 1 ? "" : "s";
               this.showSnackbar({

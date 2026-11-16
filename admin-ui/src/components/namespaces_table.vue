@@ -33,7 +33,7 @@
 import nocloudTable from "@/components/table.vue";
 import { useStore } from "@/store/";
 import { debounce, getShortName } from "@/functions";
-import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 
 const props = defineProps({
   modelValue: {
@@ -63,8 +63,11 @@ const headers = ref([
 const fetchError = ref("");
 const total = ref(0);
 const options = ref({});
-const accounts = ref({});
-const isAccountsLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 
 onMounted(() => {
   store.commit("appSearch/setFields", searchFields.value);
@@ -133,25 +136,7 @@ const fetchNamespaces = async () => {
 const fetchNamespacesDebounce = debounce(fetchNamespaces);
 
 const fetchAccounts = () => {
-  namespaces.value.forEach(async ({ access: { namespace: uuid } }) => {
-    if (!uuid) {
-      return;
-    }
-
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadAccounts(namespaces.value.map(({ access }) => access.namespace));
 };
 
 watch(filter, fetchNamespacesDebounce, { deep: true });

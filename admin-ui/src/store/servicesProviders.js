@@ -19,11 +19,16 @@ export default {
       state.servicesProviders = servicesProviders;
     },
     updateService(state, service) {
-      if (!state.servicesProviders.length)
-        state.servicesProviders.push(service);
-      state.servicesProviders = state.servicesProviders.map((serv) =>
-        serv.uuid === service.uuid ? service : serv
+      const index = state.servicesProviders.findIndex(
+        (serv) => serv.uuid === service.uuid
       );
+      if (index === -1) {
+        state.servicesProviders = [...state.servicesProviders, service];
+      } else {
+        state.servicesProviders = state.servicesProviders.map((serv) =>
+          serv.uuid === service.uuid ? service : serv
+        );
+      }
     },
     setLoading(state, data) {
       state.loading = data;

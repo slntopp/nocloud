@@ -46,10 +46,10 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import { computed, ref, watch } from "vue";
 import EditorContainer from "@/components/nocloud-ui/editorContainer.vue";
 import { formatSecondsToDate } from "@/functions";
-import api from "@/api";
 
 const props = defineProps({
   notes: {
@@ -59,8 +59,11 @@ const props = defineProps({
 });
 
 const showPinned = ref(true);
-const accounts = ref({});
-const isAccountsLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 
 const pinnedNotes = computed(() => {
   return props.notes.filter((note) => note.pinned);
@@ -81,19 +84,7 @@ const formatDate = (timestamp) => {
 watch(
   pinnedNotes,
   () => {
-    pinnedNotes.value.forEach(async ({ admin: uuid }) => {
-      isAccountsLoading.value = true;
-      try {
-        if (!accounts.value[uuid]) {
-          accounts.value[uuid] = api.accounts.get(uuid);
-          accounts.value[uuid] = await accounts.value[uuid];
-        }
-      } finally {
-        isAccountsLoading.value = Object.values(accounts.value).some(
-          (acc) => acc instanceof Promise
-        );
-      }
-    });
+    loadAccounts(pinnedNotes.value.map(({ admin }) => admin));
   },
   { deep: true, immediate: true }
 );

@@ -91,12 +91,12 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import RichEditor from "@/components/ui/richEditor.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import EditorContainer from "@/components/nocloud-ui/editorContainer.vue";
 import { formatSecondsToDate } from "@/functions";
-import api from "@/api";
 
 const props = defineProps(["template", "onUpdate", "onAdd", "onDelete"]);
 const { template, onAdd, onUpdate, onDelete } = toRefs(props);
@@ -113,9 +113,12 @@ const removedNoteIndex = ref("");
 const pinNoteIndex = ref("");
 const isEditMode = ref(false);
 const isEditLoading = ref(false);
-const accounts = ref([]);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 const editedNoteIndex = ref("");
-const isAccountsLoading = ref(false);
 
 onMounted(() => {
   setNotes();
@@ -258,19 +261,7 @@ watch(
 watch(
   notes,
   () => {
-    notes.value.forEach(async ({ admin: uuid }) => {
-      isAccountsLoading.value = true;
-      try {
-        if (!accounts.value[uuid]) {
-          accounts.value[uuid] = api.accounts.get(uuid);
-          accounts.value[uuid] = await accounts.value[uuid];
-        }
-      } finally {
-        isAccountsLoading.value = Object.values(accounts.value).some(
-          (acc) => acc instanceof Promise
-        );
-      }
-    });
+    loadAccounts(notes.value.map(({ admin }) => admin));
   },
   { deep: true }
 );

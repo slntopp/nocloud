@@ -441,10 +441,15 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("services/fetch").then(({ pool }) => {
-      const service = pool.find(
-        (el) => el.uuid === this.$route.params.serviceId
-      );
+    const { serviceId } = this.$route.params;
+    const servicesRequest = serviceId
+      ? this.$store.dispatch("services/fetch", {
+          filters: { uuid: [serviceId] },
+        })
+      : Promise.resolve({ pool: [] });
+
+    servicesRequest.then(({ pool }) => {
+      const service = pool.find((el) => el.uuid === serviceId);
       const group = this.$route.params.type;
       const i = service?.instancesGroups.findIndex(
         ({ type }) => type === group

@@ -40,7 +40,7 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 import apexchart from "vue3-apexcharts";
 import { getDatesPeriod } from "@/functions";
 
@@ -52,8 +52,11 @@ const emit = defineEmits(["update", "update:key"]);
 const store = useStore();
 
 const periods = ref(["day", "week", "month"]);
-const accounts = ref({});
-const isAccountsLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 const statisticParams = ref({});
 const statisticForPeriod = ref({});
 const chatsResponsibleStatistic = ref(new Map());
@@ -91,21 +94,7 @@ const setDefaultData = () => {
 };
 
 const fetchAccounts = () => {
-  [...chatsResponsibleStatistic.value.keys()].forEach(async (uuid) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value || []).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadAccounts([...chatsResponsibleStatistic.value.keys()]);
 };
 
 watch(chatsResponsibleStatistic, fetchAccounts, { deep: true });

@@ -113,7 +113,7 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 import { formatSecondsToDate, getShortName, getDatesPeriod } from "@/functions";
 import AccountGrade from "@/components/ui/accountGrade.vue";
 
@@ -126,8 +126,11 @@ const store = useStore();
 
 const periods = ref(["day", "week", "month"]);
 const statuses = ref(["total", "closed", "created"]);
-const accounts = ref({});
-const isAccountsLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 const statisticForPeriod = ref();
 const statisticParams = ref({});
 
@@ -165,21 +168,7 @@ const setDefaultData = () => {
 };
 
 const fetchAccounts = () => {
-  lastActivityChats.value.forEach(async ({ owner: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadAccounts(lastActivityChats.value.map(({ owner }) => owner));
 };
 
 watch(lastActivityChats, fetchAccounts);

@@ -213,9 +213,6 @@ export default {
     async changeAccountsStatus(newStatus) {
       this.changeAccountStatusAction = newStatus;
       try {
-        const servicesForDown = [];
-        const accountServices = [];
-
         const accountPromises = await Promise.all(
           this.selected.map(async (account) => {
             if (account.status === newStatus) {
@@ -224,17 +221,6 @@ export default {
 
             switch (newStatus) {
               case "PERMANENT_LOCK": {
-                const { pool: services } = await this.$store.dispatch(
-                  "services/fetch",
-                  {
-                    filters: { account: account.uuid },
-                  }
-                );
-                accountServices.push(...services);
-
-                servicesForDown.push(
-                  ...accountServices.filter((s) => s.status !== "INIT")
-                );
                 return account;
               }
               case "LOCK": {
@@ -250,6 +236,17 @@ export default {
         );
 
         const accounts = accountPromises.filter((m) => !!m);
+
+        let accountServices = [];
+        if (newStatus === "PERMANENT_LOCK" && accounts.length) {
+          const { pool = [] } = await api.post("services", {
+            filters: { accounts: accounts.map(({ uuid }) => uuid) },
+          });
+          accountServices = pool;
+        }
+        const servicesForDown = accountServices.filter(
+          (s) => s.status !== "INIT"
+        );
 
         if (accountServices.length) {
           await Promise.all(

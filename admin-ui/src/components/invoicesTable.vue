@@ -125,11 +125,11 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import nocloudTable from "@/components/table.vue";
 import { debounce, formatPrice, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
-import api from "@/api";
 import useInvoices from "../hooks/useInvoices";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import invoicePreview from "@/components/ui/invoicePreview.vue";
@@ -166,8 +166,12 @@ const isCountLoading = ref(true);
 const options = ref({});
 const fetchError = ref("");
 
-const isAccountsLoading = ref(false);
-const accounts = ref({});
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+  reset: resetAccounts,
+} = useEntityMap("accounts");
 
 const headers = ref([
   { text: "UUID", value: "uuid" },
@@ -191,7 +195,7 @@ onMounted(() => {
   store.dispatch("accountGroups/fetch");
   store.commit("reloadBtn/setCallback", {
     event: () => {
-      accounts.value = [];
+      resetAccounts();
       fetchInvoices();
     },
   });
@@ -435,21 +439,7 @@ watch(options, fetchInvoicesDebounce);
 watch(refetch, fetchInvoicesDebounce);
 
 watch(invoices, () => {
-  invoices.value.forEach(async ({ account: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch (e) {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise,
-      );
-    }
-  });
+  loadAccounts(invoices.value.map(({ account }) => account));
 });
 
 watch([searchFields, noSearch], () => {

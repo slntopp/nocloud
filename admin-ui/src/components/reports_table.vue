@@ -128,6 +128,7 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import { toRefs, ref, computed, watch } from "vue";
 import api from "@/api";
 import NocloudTable from "@/components/table.vue";
@@ -166,9 +167,16 @@ const runningActionName = ref("");
 const runningActionReportUuid = ref("");
 const fetchError = ref("");
 const options = ref({});
-const accounts = ref({});
-const isAccountsLoading = ref(false);
-const isInstancesLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
+const {
+  map: instances,
+  isLoading: isInstancesLoading,
+  load: loadInstances,
+} = useEntityMap("instances");
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -343,7 +351,7 @@ const init = async () => {
 };
 
 const getAccount = (value) => accounts.value[value];
-const getInstance = (value) => store.getters["instances/cached"].get(value);
+const getInstance = (value) => instances.value[value];
 
 const getStatus = (item) => {
   if (item.meta?.status) {
@@ -438,32 +446,9 @@ watch(rates, () => {
 watch(filters, fetchReportsDebounced, { deep: true });
 watch(options, fetchReportsDebounced);
 
-watch(reports, async () => {
-  reports.value.forEach(async ({ account: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch (err) {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+watch(reports, () => {
+  loadAccounts(reports.value.map(({ account }) => account));
 
-  isInstancesLoading.value = true;
-  try {
-    await Promise.all(
-      reports.value.map(({ instance: uuid }) =>
-        store.dispatch("instances/fetchToCached", uuid)
-      )
-    );
-  } finally {
-    isInstancesLoading.value = false;
-  }
+  loadInstances(reports.value.map(({ instance }) => instance));
 });
 </script>

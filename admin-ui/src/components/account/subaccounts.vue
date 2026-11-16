@@ -118,7 +118,19 @@ const customFilter = computed(() => ({
   uuid: account.value.subaccounts || [],
 }));
 
-const namespace = computed(() => store.getters["namespaces/all"][0]);
+const namespace = ref(null);
+
+const fetchNamespace = async () => {
+  try {
+    const { pool } = await api.post("namespaces", {
+      filters: { account: account.value.uuid },
+    });
+    namespace.value = pool?.[0] ?? null;
+    newAccount.value.namespace = namespace.value?.uuid;
+  } catch (e) {
+    console.error(e);
+  }
+};
 
 const setDefaultAccount = () => {
   newAccount.value = {
@@ -157,6 +169,7 @@ const createAccount = async () => {
 };
 
 setDefaultAccount();
+fetchNamespace();
 </script>
 
 <script>

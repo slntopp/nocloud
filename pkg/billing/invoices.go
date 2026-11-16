@@ -494,6 +494,13 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "uuid" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` FILTER t._key in @invoiceUuids`
+				vars["invoiceUuids"] = values
 			} else if key == "no_group" {
 				noGroup = value.GetBoolValue()
 			} else if key == "account_groups" {
@@ -1575,6 +1582,13 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "uuid" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` FILTER t._key in @invoiceUuids`
+				vars["invoiceUuids"] = values
 			} else if key == "no_group" {
 				noGroup = value.GetBoolValue()
 			} else if key == "account_groups" {

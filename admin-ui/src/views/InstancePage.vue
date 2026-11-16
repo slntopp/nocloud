@@ -126,7 +126,7 @@ export default {
           this.$store.dispatch("instances/get", this.$route.params?.instanceId),
         ]);
 
-        this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+        this.$store.dispatch("servicesProviders/fetchById", this.instance.sp);
         this.$store.dispatch("services/fetch", {
           filters: { uuid: [this.instance.service] },
         });

@@ -76,6 +76,7 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 import {
   formatSecondsToDate,
   getShortName,
@@ -93,13 +94,16 @@ const emit = defineEmits(["update", "update:key"]);
 const store = useStore();
 
 const isLoading = ref(false);
-const isAccountsLoading = ref(false);
 const periods = ref(["day", "week", "month"]);
 
 const fiveLast = ref([]);
 const totalCount = ref();
 const periodCount = ref();
-const accounts = ref({});
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 const statisticForPeriod = ref();
 const statisticParams = ref({});
 
@@ -135,21 +139,7 @@ const setDefaultData = () => {
 setDefaultData();
 
 watch(fiveLast, () => {
-  fiveLast.value.forEach(async ({ account: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadAccounts(fiveLast.value.map(({ account }) => account));
 });
 
 watch(statisticForPeriod, (summary) => {

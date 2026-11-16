@@ -30,6 +30,7 @@
 <script setup>
 import { toRefs, ref, onMounted, watch, computed } from "vue";
 import api from "@/api";
+import { loadEntities, loadEntity } from "@/hooks/useEntityMap";
 import { debounce } from "@/functions";
 
 const props = defineProps({
@@ -140,15 +141,18 @@ const fetchAccount = async () => {
     isInitLoading.value = true;
     try {
       if (Array.isArray(value.value)) {
-        allAccounts.value = await Promise.all([
-          ...value.value.map((uuid) => api.accounts.get(uuid)),
-        ]);
+        const accounts = await loadEntities("accounts", value.value);
+        allAccounts.value = Object.values(accounts).filter(Boolean);
       } else {
-        allAccounts.value = [
-          await api.accounts.get(value.value?.uuid || value.value),
-        ];
-        if (returnObject.value) {
-          emit("update:modelValue", allAccounts.value[0]);
+        const account = await loadEntity(
+          "accounts",
+          value.value?.uuid || value.value
+        );
+        if (account) {
+          allAccounts.value = [account];
+          if (returnObject.value) {
+            emit("update:modelValue", account);
+          }
         }
       }
     } finally {

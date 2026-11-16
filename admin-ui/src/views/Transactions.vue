@@ -34,6 +34,7 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import XlsxService from "@/services/XlsxService";
 import api from "@/api";
+import { loadEntities } from "@/hooks/useEntityMap";
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
@@ -89,16 +90,15 @@ export default {
           resultData[transaction.account] = data;
         });
 
-        const accounts = await Promise.allSettled(
-          Object.keys(resultData).map((key) => api.accounts.get(key))
+        const accounts = await loadEntities(
+          "accounts",
+          Object.keys(resultData)
         );
 
         return XlsxService.downloadXlsx(
           "transactions_report_" + getTodayFullDate(),
           Object.entries(resultData).map(([key, value]) => {
-            const account = accounts.find(
-              (account) => account.value?.uuid == key
-            ).value;
+            const account = accounts[key] || {};
 
             Object.keys(value).forEach((key) => {
               value[key] = `${value[key].toFixed(2)} ${

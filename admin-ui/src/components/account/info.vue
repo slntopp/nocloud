@@ -311,7 +311,6 @@ const headers = ref([
 ]);
 
 const generalRule = ref([(v) => !!v || "Required field"]);
-const accountNamespace = ref(null);
 const uuid = ref("");
 const currency = ref("");
 const title = ref("");
@@ -352,10 +351,7 @@ onMounted(() => {
   accountGroup.value = account.value.accountGroup;
   gradeOverride.value = account.value.gradeOverride || null;
   keys.value = account.value.data?.ssh_keys || [];
-  store.dispatch("services/fetch", { showDeleted: true });
   store.dispatch("accountGroups/fetch");
-  store.dispatch("servicesProviders/fetch", { anonymously: true });
-  fetchNamespace();
 
   window.addEventListener("resize", setViewport);
 
@@ -366,7 +362,6 @@ onUnmounted(() => {
   window.removeEventListener("resize", setViewport);
 });
 
-const services = computed(() => store.getters["services/all"]);
 const currencies = computed(() =>
   store.getters["currencies/all"].filter((c) => c.title !== "NCU")
 );
@@ -500,9 +495,9 @@ const permanentLock = async () => {
   const newStatus = "PERMANENT_LOCK";
   statusChangeValue.value = newStatus;
   try {
-    const accountServices = services.value.filter(
-      (s) => s.access.namespace === accountNamespace.value?.uuid
-    );
+    const { pool: accountServices = [] } = await api.post("services", {
+      filters: { account: account.value.uuid },
+    });
 
     const servicesForDown = accountServices.filter((s) => s.status !== "INIT");
     await Promise.all(servicesForDown.map((s) => api.services.down(s.uuid)));
@@ -522,16 +517,6 @@ const openInvoice = async () => {
     name: "Invoice create",
     query: { account: account.value.uuid },
   });
-};
-const fetchNamespace = async () => {
-  try {
-    const { pool } = await store.dispatch("namespaces/fetch", {
-      filters: { account: account.value.uuid },
-    });
-    accountNamespace.value = pool[0];
-  } catch (e) {
-    console.log(e);
-  }
 };
 const setViewport = () => {
   viewport.value = window.innerWidth;

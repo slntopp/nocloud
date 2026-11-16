@@ -257,6 +257,7 @@ export default {
 
 <script setup>
 import api from "@/api";
+import { loadEntities } from "@/hooks/useEntityMap";
 import RichEditor from "@/components/ui/richEditor.vue";
 import { onBeforeMount, toRefs, watch, ref } from "vue";
 import { isAiPackage } from "@/components/plan/aiPackages.js";
@@ -295,8 +296,8 @@ async function fetchAiProducts() {
     return;
   }
   const uuids = [...new Set((template.value.items ?? []).map((i) => i.plan))];
-  const plans = await Promise.all(
-    uuids.filter(Boolean).map((uuid) => api.plans.get(uuid).catch(() => null))
+  const plans = Object.values(
+    await loadEntities("plans", uuids).catch(() => ({}))
   );
   aiProducts.value = plans
     .filter(Boolean)

@@ -210,6 +210,7 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import { moduleTypes } from "@/modules";
 import nocloudTable from "@/components/table.vue";
 import {
@@ -278,8 +279,12 @@ const uniqueSp = ref([]);
 
 const instancesTypes = ref([]);
 
-const isAccountsLoading = ref(false);
-const accounts = ref({});
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+  reset: resetAccounts,
+} = useEntityMap("accounts");
 
 const isUpdateActionLoading = ref(false);
 
@@ -287,7 +292,7 @@ onMounted(() => {
   store.dispatch("accountGroups/fetch");
   store.commit("reloadBtn/setCallback", {
     event: () => {
-      accounts.value = [];
+      resetAccounts();
       fetchInstances();
     },
   });
@@ -363,9 +368,8 @@ const isLoading = computed(() => store.getters["instances/isLoading"]);
 const total = computed(() => store.getters["instances/total"]);
 const accountGroups = computed(() => store.getters["accountGroups/all"]);
 
-const servicesProviders = computed(
-  () => store.getters["servicesProviders/all"]
-);
+const { map: servicesProviders, load: loadServicesProviders } =
+  useEntityMap("servicesProviders");
 const filter = computed(() => store.getters["appSearch/filter"]);
 const searchParam = computed(() => store.getters["appSearch/param"]);
 
@@ -658,12 +662,12 @@ const getOSName = (instance) => {
   const id = instance.config?.template_id;
 
   if (!id && id !== 0) return;
-  return servicesProviders.value.find(({ uuid }) => uuid === instance.sp)
-    ?.publicData?.templates?.[id]?.name;
+  return servicesProviders.value[instance.sp]?.publicData?.templates?.[id]
+    ?.name;
 };
 
 const getServiceProvider = (uuid) => {
-  return servicesProviders.value.find((sp) => sp.uuid === uuid);
+  return servicesProviders.value[uuid];
 };
 
 const changeAutoRenew = async (instance, value) => {
@@ -744,19 +748,8 @@ if (!props.noSearch) {
 }
 
 watch(instances, () => {
-  instances.value.forEach(async ({ account: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadAccounts(instances.value.map(({ account }) => account));
+  loadServicesProviders(instances.value.map(({ sp }) => sp));
 });
 
 watch(

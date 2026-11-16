@@ -93,7 +93,7 @@ import serviceInstancesItem from "@/components/service_instances_item.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { debounce, getShortName } from "@/functions";
-import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 
 const props = defineProps(["modelValue", "refetch"]);
 const { modelValue: value, refetch } = toRefs(props);
@@ -115,8 +115,11 @@ const fetchError = ref("");
 const copyed = ref(-1);
 const options = ref({});
 
-const namespaces = ref({});
-const isNamespacesLoading = ref(false);
+const {
+  map: namespaces,
+  isLoading: isNamespacesLoading,
+  load: loadNamespaces,
+} = useEntityMap("namespaces");
 
 const isLoading = computed(() => store.getters["services/isLoading"]);
 const services = computed(() => store.getters["services/all"]);
@@ -231,25 +234,7 @@ const instanceCountColor = (group) => {
 watch(services, (value) => {
   fetchError.value = "";
 
-  value.forEach(async ({ access: { namespace: uuid } }) => {
-    if (!uuid) {
-      return;
-    }
-
-    isNamespacesLoading.value = true;
-    try {
-      if (!namespaces.value[uuid]) {
-        namespaces.value[uuid] = api.get("namespaces/" + uuid);
-        namespaces.value[uuid] = await namespaces.value[uuid];
-      }
-    } catch {
-      namespaces.value[uuid] = undefined;
-    } finally {
-      isNamespacesLoading.value = Object.values(namespaces.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadNamespaces(value.map(({ access }) => access.namespace));
 });
 
 watch(filter, fetchServicesDebounce, { deep: true });
