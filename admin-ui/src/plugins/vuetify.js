@@ -56,6 +56,11 @@ export default createVuetify({
     VTabs: { color: "primary" },
     // Vuetify 2 skeletons had no background of their own
     VSkeletonLoader: { color: "transparent" },
+    // Vuetify 2 table footer: "Rows per page:" and an underlined page size
+    // select (Vuetify 3+ says "Items per page:" and uses an outlined one)
+    VDataTable: { itemsPerPageText: "Rows per page:" },
+    VDataTableServer: { itemsPerPageText: "Rows per page:" },
+    VDataTableFooter: { VSelect: { variant: "underlined" } },
   },
   icons: {
     defaultSet: "mdi",
