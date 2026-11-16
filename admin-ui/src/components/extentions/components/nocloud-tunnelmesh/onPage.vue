@@ -10,7 +10,7 @@
 			<v-col>
 				<v-text-field
 					readonly
-					:value="data.fingerprint"
+					:model-value="data.fingerprint"
 					label="fingerprint"
 				>
 				</v-text-field>
@@ -18,7 +18,7 @@
 			<v-col>
 				<v-text-field
 					readonly
-					:value="data.hostname"
+					:model-value="data.hostname"
 					label="hostname"
 				>
 				</v-text-field>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="2048px" height="2048px" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 2048 2048"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil6 {fill:none}
+    .fil2 {fill:#202020}
+    .fil3 {fill:#414141}
+    .fil0 {fill:#474747}
+    .fil4 {fill:#7E7E7E}
+    .fil5 {fill:#BCBCBC}
+    .fil1 {fill:white}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_415215560">
+   <polygon id="_415215848" class="fil0" points="1563.78,1789.39 484.218,1789.39 484.218,379.138 1563.78,379.138 "/>
+   <polygon id="_415215584" class="fil1" points="1513.82,1727.75 534.18,1727.75 534.18,440.775 1513.82,440.775 "/>
+   <path id="_415215464" class="fil2" d="M1119.49 345.424c-4.9063,-48.6756 -45.5303,-86.8146 -95.4969,-86.8146 -49.9536,0 -90.5776,38.139 -95.4839,86.8182l190.981 -0.00354331z"/>
+   <polygon id="_415215272" class="fil3" points="1274.81,456.358 773.194,456.358 773.194,327.339 1274.81,327.339 "/>
+  </g>
+  <polygon class="fil4" points="931.246,1171.46 863.555,1239.15 931.247,1306.84 884.394,1353.69 816.702,1286 749.011,1353.69 702.158,1306.84 769.849,1239.15 702.159,1171.46 749.012,1124.6 816.702,1192.29 884.392,1124.6 "/>
+  <polygon class="fil5" points="1214.31,778.577 1214.31,1295 1209.77,1311.43 1053.58,1581.97 996.374,1549.1 1148.04,1286.41 1148.04,780.546 1065.32,863.259 1018.47,816.406 1158.73,676.147 1182.16,652.721 1205.58,676.147 1345.84,816.406 1298.99,863.259 "/>
+  <path class="fil4" d="M816.702 797.992c45.7477,0 82.8343,37.0855 82.8343,82.8343 0,45.7477 -37.0866,82.8331 -82.8343,82.8331 -45.7477,0 -82.8331,-37.0855 -82.8331,-82.8331 0,-45.7489 37.0855,-82.8343 82.8331,-82.8343z"/>
+ </g>
+ <rect class="fil6" width="2048" height="2048"/>
+</svg>

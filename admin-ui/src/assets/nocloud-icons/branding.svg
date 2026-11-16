@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="2048px" height="2048px" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 2048 2048"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil4 {fill:none}
+    .fil2 {fill:#616161}
+    .fil0 {fill:#797979}
+    .fil1 {fill:#EDEDEE}
+    .fil3 {fill:#6B6B6B;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_415217912">
+   <polygon id="_415219472" class="fil0" points="864.001,351.999 1792,351.999 1792,1696 864.001,1696 "/>
+   <polygon id="_415219328" class="fil1" points="931.37,496 1155.37,496 1155.37,528 931.37,528 "/>
+   <polygon id="_415218920" class="fil1" points="931.37,431.999 1155.37,431.999 1155.37,464 931.37,464 "/>
+   <polygon id="_415219184" class="fil1" points="1472,463.999 1696,463.999 1696,496 1472,496 "/>
+   <polygon id="_415218008" class="fil1" points="899.136,597.512 1756.87,597.512 1756.87,625.513 899.136,625.513 "/>
+   <g>
+    <polygon id="_415218464" class="fil0" points="288,1307.93 768.001,1307.93 768.001,1563.93 288,1563.93 "/>
+    <path id="_415218344" class="fil2" d="M719.877 911.931c-3.46299,102.997 -88.0359,185.434 -191.876,185.434 -103.84,0 -188.413,-82.4375 -191.876,-185.434l160.553 0c3.02835,14.5228 15.9012,25.4327 31.3229,25.4327 15.4217,0 28.2945,-10.9099 31.3229,-25.4327l160.553 0z"/>
+    <polygon id="_415218320" class="fil1" points="352.001,1355.93 430.824,1355.93 430.824,1387.93 352.001,1387.93 "/>
+    <polygon id="_415218224" class="fil1" points="343.531,1508.38 712.469,1508.38 712.469,1528.38 343.531,1528.38 "/>
+    <polygon id="_415218200" class="fil3" points="288.001,484.07 768.002,484.07 800.003,484.07 800.003,515.723 800.003,868.419 800.003,900.072 768.002,900.072 288.001,900.072 256.001,900.072 256.001,868.419 256.001,515.723 256.001,484.07 "/>
+   </g>
+  </g>
+ </g>
+ <rect class="fil4" width="2048" height="2048"/>
+</svg>

@@ -8,7 +8,7 @@ export default {
 import { Buffer } from "buffer";
 import { useStore } from "@/store";
 import { computed, toRefs } from "vue";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 
 const props = defineProps(["url", "params"]);
 const { url, params } = toRefs(props);

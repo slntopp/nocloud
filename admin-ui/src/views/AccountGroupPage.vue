@@ -8,17 +8,17 @@
     </h1>
     <v-tabs
       class="rounded-t-lg"
-      background-color="background-light"
+      bg-color="background-light"
       v-model="selectedTab"
     >
       <v-tab v-for="tab in tabItems" :key="tab.title">{{ tab.title }} </v-tab>
     </v-tabs>
-    <v-tabs-items
+    <v-window
       class="rounded-b-lg"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       v-model="selectedTab"
     >
-      <v-tab-item v-for="(tab, index) in tabItems" :key="tab.title">
+      <v-window-item v-for="(tab, index) in tabItems" :key="tab.title">
         <v-progress-linear
           indeterminate
           class="pt-2"
@@ -30,14 +30,14 @@
           :account-group="accountGroup"
           is-edit
         />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 import { useStore } from "@/store";
 import config from "@/config.js";
 
@@ -100,7 +100,7 @@ export default { name: "account-group-page" };
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

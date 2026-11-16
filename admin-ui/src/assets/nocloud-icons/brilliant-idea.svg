@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="2048px" height="2048px" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 2048 2048"
+ xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .fil7 {fill:none}
+    .fil6 {fill:#888888}
+    .fil5 {fill:#CFCFD0}
+    .fil0 {fill:#DCDDDD}
+    .fil3 {fill:#202020;fill-rule:nonzero}
+    .fil2 {fill:#414141;fill-rule:nonzero}
+    .fil1 {fill:#616161;fill-rule:nonzero}
+    .fil4 {fill:#676767;fill-rule:nonzero}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <g id="_419083624">
+   <g>
+    <path id="_419084536" class="fil0" d="M1024 282.578c255.555,0 462.724,207.169 462.724,462.724 0,331.196 -285.24,213.612 -285.24,821.913 -116.669,0 -233.047,0 -354.968,0 0,-608.304 -285.241,-490.711 -285.241,-821.913 0,-255.555 207.169,-462.724 462.724,-462.724z"/>
+    <polygon id="_419084896" class="fil1" points="814.675,1562.58 1233.33,1562.58 1233.33,1630.19 814.675,1630.19 "/>
+    <polygon id="_419084416" class="fil2" points="838.896,1697.81 1209.1,1697.81 1209.1,1630.19 838.896,1630.19 "/>
+    <polygon id="_419084272" class="fil3" points="875.555,1697.81 1172.45,1697.81 1172.45,1765.42 875.555,1765.42 "/>
+   </g>
+   <polygon id="_419084656" class="fil4" points="944.55,854.018 944.55,1562.58 929.55,1562.58 929.55,854.018 "/>
+   <polygon id="_419084704" class="fil4" points="1135,854.018 1135,1562.58 1120,1562.58 1120,854.018 "/>
+   <g>
+    <polygon id="_419083480" class="fil5" points="1025.2,1003.67 1027.24,1007.95 1024.32,1005.1 1024.02,1005.72 1023.73,1005.1 1020.81,1007.94 1022.84,1003.67 769.999,757.554 768.563,757.554 769.152,756.729 768.068,755.675 769.905,755.675 861.78,627.004 1186.22,627.004 1278.06,755.675 1280,755.675 1278.86,756.786 1279.41,757.554 1278.07,757.554 "/>
+    <path id="_419084080" class="fil6" d="M1178.26 642.453l-105.686 0 75.7524 99.652 101.068 0 -71.1343 -99.652zm-141.965 0l-37.4717 0 -75.7536 99.652 188.978 0 -75.7524 -99.652zm-73.7505 0l-92.8158 0 -71.1567 99.652 88.2201 0 75.7524 -99.652zm13.8579 294.458l-78.7146 -165.788 -91.604 0 170.319 165.788zm-46.6642 -165.788l94.2816 198.577 94.2827 -198.577 -188.564 0zm220.615 0l-78.7182 165.795 170.341 -165.795 -91.6229 0z"/>
+   </g>
+  </g>
+ </g>
+ <rect class="fil7" width="2048" height="2048"/>
+</svg>

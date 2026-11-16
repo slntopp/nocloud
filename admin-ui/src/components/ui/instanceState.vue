@@ -1,13 +1,14 @@
 <template>
-  <v-chip v-if="!onlyColor" :small="small" :color="chipColor">
+  <v-chip variant="flat" v-if="!onlyColor" :size="small ? 'small' : undefined" :color="chipColor">
     {{ state }} {{ isDetached ? "(Hided)" : "" }}
     {{ isFreezed ? "(Freezed)" : "" }}
   </v-chip>
   <v-btn
     v-else
-    fab
+    icon
+    variant="flat"
     :color="chipColor"
-    x-small
+    size="x-small"
     style="width: 15px; height: 15px"
   >
   </v-btn>
@@ -50,11 +51,11 @@ const chipColor = computed(() => {
     case "ERROR":
       return "error";
     case "OPERATION":
-      return "yellow darken-2";
+      return "yellow-darken-2";
     case "PENDING":
       return "blue";
     default:
-      return "blue-grey darken-2";
+      return "blue-grey-darken-2";
   }
 });
 </script>

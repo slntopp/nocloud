@@ -14,5 +14,7 @@ export default {
   name: "proxmox-billing-info",
   components: { IoneBillingInfo },
   inheritAttrs: false,
+  // declared so these listeners are not also forwarded through $attrs (Vue 3)
+  emits: ["refresh", "update"],
 };
 </script>

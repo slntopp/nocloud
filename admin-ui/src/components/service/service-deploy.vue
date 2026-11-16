@@ -16,7 +16,7 @@
                 label="instance group"
                 :items="instancesGroups"
                 item-value="uuid"
-                item-text="title"
+                item-title="title"
                 :rules="[(v) => !!v || 'required']"
                 v-model="deployInstancesGroup"
               >
@@ -29,7 +29,7 @@
                 label="services provider"
                 :items="servicesProviders"
                 item-value="uuid"
-                item-text="title"
+                item-title="title"
                 :rules="[(v) => !!v || 'required']"
                 v-model="deployServiceProvider"
               >

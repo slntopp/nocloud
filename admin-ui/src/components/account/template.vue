@@ -5,7 +5,7 @@
 		class="pa-4"
 	>
 		<template-json-editor
-			:value="account"
+			:model-value="account"
 			title="Template JSON"
 			@save="editAccount"
 		/>

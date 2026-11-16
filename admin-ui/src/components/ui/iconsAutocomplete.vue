@@ -1,25 +1,26 @@
 <template>
   <v-autocomplete
-    item-text="icon"
+    item-title="icon"
     item-value="icon"
     :label="label"
     :loading="isIconsLoading"
     :items="icons"
-    :value="value"
-    @input="emits('input:value', $event)"
+    :model-value="value"
+    @update:model-value="emits('update:modelValue', $event)"
   >
     <template v-slot:prepend>
       <nocloud-icon :type="currentIcon?.type" :icon="currentIcon?.icon" />
     </template>
-    <template v-slot:item="{ item }">
-      <div class="d-flex justify-space-between" style="width: 100%">
-        <span>{{ toKebabCase(item.icon) }}</span>
-        <nocloud-icon
-          :type="item.type"
-          :icon="item.icon"
-          style="font-size: 24px"
-        />
-      </div>
+    <template v-slot:item="{ internalItem: item, props: itemProps }">
+      <v-list-item v-bind="itemProps" :title="toKebabCase(item.raw.icon)">
+        <template v-slot:append>
+          <nocloud-icon
+            :type="item.raw.type"
+            :icon="item.raw.icon"
+            style="font-size: 24px"
+          />
+        </template>
+      </v-list-item>
     </template>
   </v-autocomplete>
 </template>
@@ -28,14 +29,19 @@
 import { computed, onMounted, ref, toRefs } from "vue";
 import { toKebabCase } from "@/functions";
 import NocloudIcon from "@/components/ui/nocloudIcon.vue";
+import {
+  isAntIconName,
+  loadAntIcons,
+  nocloudIconNames,
+} from "@/components/ui/nocloudIcons";
 
 const props = defineProps({
-  value: { type: String, default: "CloudOutlined" },
+  modelValue: { type: String, default: "CloudOutlined" },
   label: { type: String, default: "" },
 });
-const emits = defineEmits(["input:value"]);
+const emits = defineEmits(["update:modelValue"]);
 
-const { value } = toRefs(props);
+const { modelValue: value } = toRefs(props);
 const icons = ref([]);
 const currentIcon = computed(() =>
   icons.value.find((icon) => icon.icon === value.value)
@@ -46,34 +52,14 @@ onMounted(fetchIcons);
 
 async function fetchIcons() {
   isIconsLoading.value = true;
-  const iconsRes = await import("@ant-design/icons");
+  const antIcons = await loadAntIcons();
 
-  icons.value = Object.entries(iconsRes).map(([name, icon]) => {
-    let displayName = name;
-
-    if (name.endsWith("Outline")) {
-      displayName = name.replace("Outline", "$&d");
-    } else if (name.endsWith("Fill")) {
-      displayName = name.replace("Fill", "$&ed");
-    }
-
-    return { ...icon, icon: displayName, type: "ant" };
-  });
-
-  const nocloudUiIcons = require.context(
-    "nocloud-ui/assets/icons",
-    true,
-    /\.svg/
-  );
-
-  nocloudUiIcons.keys().forEach((key) => {
-    if (key.startsWith("nocloud-ui/assets/icons")) {
-      icons.value.push({
-        type: "nocloud",
-        icon: key.split("/").slice(-1)[0].replace(".svg", ""),
-      });
-    }
-  });
+  icons.value = [
+    ...Object.keys(antIcons)
+      .filter(isAntIconName)
+      .map((icon) => ({ icon, type: "ant" })),
+    ...nocloudIconNames.map((icon) => ({ icon, type: "nocloud" })),
+  ];
 
   isIconsLoading.value = false;
 }

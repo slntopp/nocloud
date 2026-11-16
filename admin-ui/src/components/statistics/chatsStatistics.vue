@@ -26,7 +26,7 @@
     <template v-slot:options>
       <v-select
         style="width: 200px"
-        item-text="label"
+        item-title="label"
         item-value="value"
         :items="seriesTypes"
         v-model="seriesType"

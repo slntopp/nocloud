@@ -2,8 +2,8 @@
   <nocloud-table
     :table-name="tableName"
     class="mt-4"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     sort-by="created"
     sort-desc
     :items="instances"
@@ -35,10 +35,10 @@
     <template v-slot:[`item.meta.autoRenew`]="{ item }">
       <div class="d-flex justify-center align-center table-switch">
         <v-switch
-          dense
+          density="compact"
           hide-details
           readonly
-          :input-value="item.meta?.autoRenew"
+          :model-value="item.meta?.autoRenew"
         />
       </div>
     </template>
@@ -58,11 +58,11 @@
     <template v-slot:[`item.meta.autoRenew`]="{ item }">
       <div class="d-flex justify-center align-center table-switch">
         <v-switch
-          dense
+          density="compact"
           hide-details
           :disabled="isUpdateActionLoading"
-          :input-value="item.meta?.autoRenew"
-          @change="changeAutoRenew(item, $event)"
+          :model-value="item.meta?.autoRenew"
+          @update:model-value="changeAutoRenew(item, $event)"
         />
       </div>
     </template>
@@ -210,6 +210,8 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
+import { moduleTypes } from "@/modules";
 import nocloudTable from "@/components/table.vue";
 import {
   convertDateToTimeZone,
@@ -240,7 +242,7 @@ import { NoCloudState } from "nocloud-proto/proto/es/states/states_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "instances-table" },
-  value: { type: Array, required: false },
+  modelValue: { type: Array, required: false },
   refetch: { type: Boolean, default: false },
   headers: {},
   showSelect: { type: Boolean, default: true },
@@ -248,10 +250,10 @@ const props = defineProps({
   noSearch: { type: Boolean, default: false },
   customFilter: { type: Object, default: () => {} },
 });
-const { value, refetch, showSelect, openInNewTab, customFilter } =
+const { modelValue: value, refetch, showSelect, openInNewTab, customFilter } =
   toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 const { defaultCurrency, convertTo } = useCurrency();
@@ -277,8 +279,12 @@ const uniqueSp = ref([]);
 
 const instancesTypes = ref([]);
 
-const isAccountsLoading = ref(false);
-const accounts = ref({});
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+  reset: resetAccounts,
+} = useEntityMap("accounts");
 
 const isUpdateActionLoading = ref(false);
 
@@ -286,22 +292,13 @@ onMounted(() => {
   store.dispatch("accountGroups/fetch");
   store.commit("reloadBtn/setCallback", {
     event: () => {
-      accounts.value = [];
+      resetAccounts();
       fetchInstances();
     },
   });
 
-  const types = require.context(
-    "@/components/modules/",
-    true,
-    /instanceCreate\.vue$/
-  );
-  types.keys().forEach((key) => {
-    const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i);
-    if (matched && matched.length > 1) {
-      const type = matched[1];
-      instancesTypes.value.push(type);
-    }
+  moduleTypes("instanceCreate").forEach((type) => {
+    instancesTypes.value.push(type);
   });
 
   if (!instancesTypes.value.includes("bots")) {
@@ -371,9 +368,8 @@ const isLoading = computed(() => store.getters["instances/isLoading"]);
 const total = computed(() => store.getters["instances/total"]);
 const accountGroups = computed(() => store.getters["accountGroups/all"]);
 
-const servicesProviders = computed(
-  () => store.getters["servicesProviders/all"]
-);
+const { map: servicesProviders, load: loadServicesProviders } =
+  useEntityMap("servicesProviders");
 const filter = computed(() => store.getters["appSearch/filter"]);
 const searchParam = computed(() => store.getters["appSearch/param"]);
 
@@ -666,12 +662,12 @@ const getOSName = (instance) => {
   const id = instance.config?.template_id;
 
   if (!id && id !== 0) return;
-  return servicesProviders.value.find(({ uuid }) => uuid === instance.sp)
-    ?.publicData?.templates?.[id]?.name;
+  return servicesProviders.value[instance.sp]?.publicData?.templates?.[id]
+    ?.name;
 };
 
 const getServiceProvider = (uuid) => {
-  return servicesProviders.value.find((sp) => sp.uuid === uuid);
+  return servicesProviders.value[uuid];
 };
 
 const changeAutoRenew = async (instance, value) => {
@@ -752,19 +748,8 @@ if (!props.noSearch) {
 }
 
 watch(instances, () => {
-  instances.value.forEach(async ({ account: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadAccounts(instances.value.map(({ account }) => account));
+  loadServicesProviders(instances.value.map(({ sp }) => sp));
 });
 
 watch(

@@ -3,11 +3,11 @@
     :table-name="tableName"
     :headers="headers"
     :items="accounts"
-    :value="selected"
+    :model-value="selected"
     :loading="loading || isAccountsLoading"
     :single-select="singleSelect"
     :footer-error="fetchError"
-    @input="handleSelect"
+    @update:model-value="handleSelect"
     :server-items-length="total"
     :server-side-page="options.page"
     @update:options="setOptions"
@@ -88,9 +88,9 @@
     </template>
 
     <template v-slot:[`item.address`]="{ item }">
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <span v-bind="attrs" v-on="on">
+      <v-tooltip location="bottom">
+        <template v-slot:activator="{ props }">
+          <span v-bind="props">
             {{ item.data?.city || item.data?.address }}
           </span>
         </template>
@@ -98,7 +98,7 @@
       </v-tooltip>
     </template>
     <template v-slot:[`item.access.level`]="{ item }">
-      <v-chip :color="item.access.color">
+      <v-chip variant="flat" :color="item.access.color">
         {{ item.access.level }}
       </v-chip>
     </template>
@@ -111,7 +111,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 import NotificationsCell from "@/components/ui/notificationsCell.vue";
@@ -120,7 +120,7 @@ import { gradeFilterConditions } from "@/accountGrades.js";
 import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
-  value: {
+  modelValue: {
     type: Array,
     default: () => [],
   },
@@ -133,10 +133,10 @@ const props = defineProps({
   customFilter: { type: Object },
   tableName: { type: String, default: "accounts" },
 });
-const { value, singleSelect, customSearchParam, noSearch, customFilter } =
+const { modelValue: value, singleSelect, customSearchParam, noSearch, customFilter } =
   toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 const router = useRouter();
@@ -174,7 +174,7 @@ const levelColorMap = ref({
   ROOT: "info",
   ADMIN: "success",
   MGMT: "warning",
-  READ: "gray",
+  READ: "neutral",
   NONE: "error",
 });
 
@@ -380,7 +380,7 @@ const fetchAccountsDebounce = debounce(() => {
 }, 300);
 
 const handleSelect = (item) => {
-  emit("input", item);
+  emit("update:modelValue", item);
 };
 const colorChip = (level) => {
   return levelColorMap.value[level];

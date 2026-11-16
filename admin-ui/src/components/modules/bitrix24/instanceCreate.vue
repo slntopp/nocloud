@@ -9,9 +9,9 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('title', newVal)"
+            @change="setValue('title', $event.target.value)"
             label="Name"
-            :value="instance.title"
+            :model-value="instance.title"
           >
           </v-text-field>
         </v-col>
@@ -19,12 +19,12 @@
       <v-row>
         <v-col cols="6">
           <plans-autocomplete
-            :value="bilingPlan"
+            :model-value="bilingPlan"
             :custom-params="{
               filters: { type: ['empty'], 'meta.isIndividual': [false] },
               anonymously: false,
             }"
-            @input="setValue('billing_plan', $event)"
+            @update:model-value="setValue('billing_plan', $event)"
             return-object
             label="Price model"
             :rules="planRules"
@@ -34,34 +34,36 @@
           <v-autocomplete
             label="Product"
             :rules="requiredRule"
-            :value="instance.product"
+            :model-value="instance.product"
             v-if="products.length > 0"
             :items="products"
-            item-text="key"
+            item-title="key"
             item-value="key"
-            @change="changeProduct"
+            @update:model-value="changeProduct"
           >
-            <template v-slot:item="{ item }">
-              <div
-                style="width: 100%"
-                class="d-flex justify-space-between align-center"
-              >
-                <span>{{ item.key }}</span>
-                <span class="ml-4">{{ item.title }}</span>
-              </div>
+            <template v-slot:item="{ internalItem: item, props: itemProps }">
+              <v-list-item v-bind="itemProps" title="">
+                <div
+                  style="width: 100%"
+                  class="d-flex justify-space-between align-center"
+                >
+                  <span>{{ item.raw.key }}</span>
+                  <span class="ml-4">{{ item.raw.title }}</span>
+                </div>
+              </v-list-item>
             </template>
           </v-autocomplete>
         </v-col>
 
         <v-col cols="6" v-if="tarrifAddons.length > 0">
           <v-autocomplete
-            @change="(newVal) => setValue('addons', newVal)"
+            @update:model-value="(newVal) => setValue('addons', newVal)"
             label="Addons"
-            :value="instance.addons"
+            :model-value="instance.addons"
             :items="isAddonsLoading ? [] : getAvailableAddons()"
             :loading="isAddonsLoading"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             multiple
           />
         </v-col>

@@ -2,9 +2,9 @@
 	<div class="te">
 		<v-row>
 			<v-col cols="3">
-				<v-subheader>
+				<v-list-subheader>
 					secrets
-				</v-subheader>
+				</v-list-subheader>
 			</v-col>
 			<v-col cols="9">
 				<json-editor
@@ -15,9 +15,9 @@
 		</v-row>
 		<v-row>
 			<v-col cols="3">
-				<v-subheader>
+				<v-list-subheader>
 					vars
-				</v-subheader>
+				</v-list-subheader>
 			</v-col>
 			<v-col cols="9">
 				<json-editor

@@ -5,9 +5,9 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
             <v-icon
               @click="
@@ -25,7 +25,7 @@
         <v-text-field
           readonly
           label="Product name"
-          :value="
+          :model-value="
             template.billingPlan.products[template.resources.plan]?.title ||
             template.resources.plan
           "
@@ -34,9 +34,9 @@
       <v-col>
         <date-picker
           label="Date (create)"
-          :value="timestampToDateTimeLocal(template?.created)"
+          :model-value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
@@ -48,9 +48,9 @@
       <v-col>
         <date-picker
           label="Deleted date"
-          :value="timestampToDateTimeLocal(template?.deleted)"
+          :model-value="timestampToDateTimeLocal(template?.deleted)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'deleted',
               value: formatDateToTimestamp($event),
@@ -68,8 +68,8 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="dueDate"
-          :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
+          :model-value="dueDate"
+          :append-inner-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click="changeDatesDialog = true"
         />
       </v-col>
@@ -85,7 +85,7 @@
       >
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
-          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+          <v-chip v-if="item.isAddon" size="small" class="ml-1">Addon</v-chip>
         </template>
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
@@ -93,16 +93,16 @@
               class="mr-2"
               v-model="item.price"
               :suffix="defaultCurrency?.code"
-              @input="updatePrice(item, false)"
-              append-icon="mdi-pencil"
+              @update:model-value="updatePrice(item, false)"
+              append-inner-icon="mdi-pencil"
             />
             <v-text-field
               class="ml-2"
               :suffix="accountCurrency?.code"
-              style="color: var(--v-primary-base)"
+              style="color: rgb(var(--v-theme-primary))"
               v-model="item.accountPrice"
-              @input="updatePrice(item, true)"
-              append-icon="mdi-pencil"
+              @update:model-value="updatePrice(item, true)"
+              append-inner-icon="mdi-pencil"
             />
           </div>
         </template>
@@ -118,8 +118,8 @@
             <td>
               <div class="d-flex justify-end mr-4">
                 <v-dialog v-model="isAddonsDialog" max-width="60%">
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn class="mr-5" color="primary" v-bind="attrs" v-on="on"
+                  <template v-slot:activator="{ props }">
+                    <v-btn class="mr-5" color="primary" v-bind="props"
                       >addons</v-btn
                     >
                   </template>
@@ -136,7 +136,7 @@
                   />
                 </v-dialog>
 
-                <v-chip color="primary" outlined>
+                <v-chip color="primary" variant="outlined">
                   {{
                     [
                       formatPrice(totalPrice, defaultCurrency),
@@ -196,7 +196,7 @@ import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 import { formatPrice, timestampToDateTimeLocal } from "../../../functions";
 
 const props = defineProps(["template", "service", "sp", "account", "addons"]);
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits(["refresh", "update"]);
 
 const { template, addons, account } = toRefs(props);
 

@@ -1,14 +1,13 @@
 <template>
-  <v-tooltip v-if="grade" bottom>
-    <template v-slot:activator="{ on, attrs }">
+  <v-tooltip v-if="grade" location="bottom">
+    <template v-slot:activator="{ props }">
       <v-chip
-        v-bind="attrs"
-        v-on="on"
+        v-bind="props"
         :color="grade.color || 'grey'"
-        :outlined="grade.manual"
-        :text-color="grade.manual ? grade.color : 'white'"
+        :variant="grade.manual ? 'outlined' : 'flat'"
+        :class="{ 'text-white': !grade.manual }"
         class="account-grade font-weight-bold"
-        x-small
+        size="x-small"
         label
       >
         {{ grade.title }}

@@ -4,14 +4,14 @@
       <v-col cols="6">
         <v-text-field
           readonly
-          :value="template.config.domain"
+          :model-value="template.config.domain"
           label="domain"
         ></v-text-field>
       </v-col>
       <v-col cols="6">
         <v-text-field
           readonly
-          :value="template.config.mail"
+          :model-value="template.config.mail"
           label="mail"
         ></v-text-field>
       </v-col>
@@ -20,14 +20,14 @@
       <v-col cols="6">
         <v-text-field
           readonly
-          :value="template.resources.plan"
+          :model-value="template.resources.plan"
           label="plan"
         ></v-text-field>
       </v-col>
       <v-col>
         <v-text-field
           readonly
-          :value="template.config.password"
+          :model-value="template.config.password"
           label="password"
         ></v-text-field>
       </v-col>

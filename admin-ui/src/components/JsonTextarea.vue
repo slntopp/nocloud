@@ -13,6 +13,7 @@
 
 <script>
 export default {
+  emits: ["getTree"],
   props: {
     json: { type: Object, required: true },
     label: { type: String, default: "JSON" },

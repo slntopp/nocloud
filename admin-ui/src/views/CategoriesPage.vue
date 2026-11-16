@@ -8,38 +8,38 @@
     </h1>
     <v-tabs
       class="rounded-t-lg"
-      background-color="background-light"
+      bg-color="background-light"
       v-model="tabs"
     >
       <v-tab>Info</v-tab>
       <v-tab>Showcases</v-tab>
     </v-tabs>
-    <v-tabs-items
+    <v-window
       class="rounded-b-lg"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       v-model="tabs"
     >
-      <v-tab-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <categories-create
           v-if="categorie && categorieTitle"
           :category="categorie"
           is-edit
         />
-      </v-tab-item>
+      </v-window-item>
 
-      <v-tab-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <categories-showcases :category="categorie" />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
 <script setup>
 import config from "@/config.js";
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 import { useStore } from "@/store";
 import CategoriesCreate from "@/views/CategoriesCreate.vue";
 import CategoriesShowcases from "../components/categories/showcases.vue";
@@ -93,7 +93,7 @@ watch(categories, () => {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

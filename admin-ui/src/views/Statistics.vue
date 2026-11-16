@@ -1,13 +1,13 @@
 <template>
   <div class="statistics pa-5">
-    <v-tabs v-model="tab" background-color="background-light">
+    <v-tabs v-model="tab" bg-color="background-light">
       <v-tab v-for="{ title, key } of widgets" :key="key">
         {{ title }}
       </v-tab>
     </v-tabs>
 
-    <v-tabs-items v-model="tab">
-      <v-tab-item v-for="({ key, component }, index) of widgets" :key="key">
+    <v-window v-model="tab">
+      <v-window-item v-for="({ key, component }, index) of widgets" :key="key">
         <v-card color="background-light">
           <component
             v-if="tab === index"
@@ -29,8 +29,8 @@
             @update:periods-second-offset="periodsSecondOffset = $event"
           />
         </v-card>
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
@@ -43,7 +43,7 @@ import MoneyStatistic from "@/components/statistics/moneyStatistic.vue";
 import aiStatistic from "../components/statistics/aiStatistic.vue";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useStore } from "@/store/";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 import router from "../router";
 
 const store = useStore();

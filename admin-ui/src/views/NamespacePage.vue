@@ -8,18 +8,18 @@
     </h1>
     <v-tabs
       class="rounded-t-lg"
-      background-color="background-light"
+      bg-color="background-light"
       v-model="tabs"
     >
       <v-tab>Info</v-tab>
       <v-tab>Accounts</v-tab>
     </v-tabs>
-    <v-tabs-items
+    <v-window
       class="rounded-b-lg"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       v-model="tabs"
     >
-      <v-tab-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
         <namespace-info
           :loading="isLoading"
@@ -27,15 +27,15 @@
           :namespace="namespace"
           @input:title="namespace.title = $event"
         />
-      </v-tab-item>
-      <v-tab-item>
+      </v-window-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
         <namespace-accounts
           v-if="namespace && namespaceTitle"
           :namespace="namespace"
         />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
@@ -93,7 +93,7 @@ export default {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

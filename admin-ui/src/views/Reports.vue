@@ -54,12 +54,18 @@ import { ref, computed, watch, onMounted } from "vue";
 import api from "@/api";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
+import useEntityMap from "@/hooks/useEntityMap";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
 import { getShortName } from "@/functions";
 import { formatPrice } from "../functions";
 
 const store = useStore();
+const {
+  map: instances,
+  isLoading: isInstancesLoading,
+  load: loadInstances,
+} = useEntityMap("instances");
 const { convertTo, defaultCurrency } = useCurrency();
 
 const reports = ref([]);
@@ -67,7 +73,6 @@ const count = ref(10);
 const page = ref(1);
 const isFetchLoading = ref(false);
 const isCountLoading = ref(false);
-const isInstancesLoading = ref(false);
 const fetchError = ref("");
 const options = ref({});
 const durationFilter = ref({ to: "", from: "" });
@@ -148,7 +153,7 @@ const init = async () => {
 };
 
 const getInstance = (uuid) => {
-  return store.getters["instances/cached"].get(uuid) || uuid;
+  return instances.value[uuid] || uuid;
 };
 
 watch(
@@ -159,17 +164,8 @@ watch(
   { deep: true }
 );
 
-watch(reports, async () => {
-  isInstancesLoading.value = true;
-  try {
-    await Promise.all(
-      reports.value.map(({ uuid }) =>
-        store.dispatch("instances/fetchToCached", uuid)
-      )
-    );
-  } finally {
-    isInstancesLoading.value = false;
-  }
+watch(reports, () => {
+  loadInstances(reports.value.map(({ uuid }) => uuid));
 });
 </script>
 

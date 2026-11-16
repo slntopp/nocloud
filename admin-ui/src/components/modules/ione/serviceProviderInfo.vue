@@ -5,7 +5,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="vlansKey"
+          :model-value="vlansKey"
           label="vlans key"
           style="display: inline-block; width: 330px"
         >
@@ -14,7 +14,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].start"
+          :model-value="template.secrets.vlans[vlansKey].start"
           label="start"
           style="display: inline-block; width: 330px"
         >
@@ -23,7 +23,7 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].size"
+          :model-value="template.secrets.vlans[vlansKey].size"
           label="size"
           style="display: inline-block; width: 330px"
         >
@@ -58,7 +58,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="Math.ceil((host.ram_usage / host.max_ram) * 100)"
+                  :model-value="Math.ceil((host.ram_usage / host.max_ram) * 100)"
                   color="green"
                   height="20"
                 >
@@ -77,7 +77,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="Math.ceil((host.cpu_usage / host.max_cpu) * 100)"
+                  :model-value="Math.ceil((host.cpu_usage / host.max_cpu) * 100)"
                   color="green"
                   height="20"
                 >
@@ -96,7 +96,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="Math.ceil((host.used_ram / host.total_ram) * 100)"
+                  :model-value="Math.ceil((host.used_ram / host.total_ram) * 100)"
                   color="green"
                   height="20"
                 >
@@ -115,7 +115,7 @@
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="Math.ceil((host.used_cpu / host.total_cpu) * 100)"
+                  :model-value="Math.ceil((host.used_cpu / host.total_cpu) * 100)"
                   color="green"
                   height="20"
                 >
@@ -167,7 +167,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="percentUsePublic"
+              :model-value="percentUsePublic"
               :color="colorUsePublic"
               height="20"
               class="mb-10"
@@ -205,7 +205,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="percentUsePrivate"
+              :model-value="percentUsePrivate"
               :color="colorUsePrivate"
               height="20"
               class="mb-10"
@@ -234,7 +234,7 @@
         cols="12"
       >
         <v-row>
-          <v-col class="order-2 order-lg-1" cols="12" lg="6" order-2>
+          <v-col class="order-2 order-lg-1" cols="12" lg="6">
             <div class="title_progress">
               <span>{{ datastor.drive_type }}</span>
               <div>
@@ -243,7 +243,7 @@
               </div>
             </div>
             <v-progress-linear
-              :value="Math.round((datastor.used / datastor.total) * 100)"
+              :model-value="Math.round((datastor.used / datastor.total) * 100)"
               color="green"
               height="20"
             >
@@ -252,7 +252,7 @@
               </template>
             </v-progress-linear>
           </v-col>
-          <v-col class="order-1 order-lg-2" cols="12" lg="6" order-1>
+          <v-col class="order-1 order-lg-2" cols="12" lg="6">
             <p>name: {{ datastor.name }}</p>
             <p>tm_mad: {{ datastor.tm_mad }}</p>
             <p>ds_mad: {{ datastor.tm_mad }}</p>
@@ -278,12 +278,12 @@
       </v-col>
       <v-col ref="private">
         <p>Vlans:</p>
-        <v-tooltip bottom color="info" v-for="(vlan, i) of vlans" :key="i">
-          <template v-slot:activator="{ on, attrs }">
+        <v-tooltip location="bottom" color="info" v-for="(vlan, i) of vlans" :key="i">
+          <template v-slot:activator="{ props }">
             <span
               class="ceil"
-              v-bind="attrs"
-              v-on="on"
+             
+              v-bind="props"
               :class="vlan === 0 ? 'occupied' : 'free'"
             />
           </template>
