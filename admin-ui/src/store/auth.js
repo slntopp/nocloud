@@ -35,7 +35,10 @@ export default {
             root_claim: true
           })
           .then((response) => {
-            api.applyToken(response.token);
+            // not api.applyToken(): it replaces api.axios with a new instance,
+            // dropping the interceptors set up in api.js and store/cache.js
+            api.axios.defaults.headers.common["Authorization"] =
+              "Bearer " + response.token;
             commit("setToken", response.token);
             resolve(response);
           })

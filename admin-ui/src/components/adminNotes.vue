@@ -7,8 +7,17 @@
       style="position: relative"
     >
       <rich-editor v-model="newNote.msg" />
-      <div style="position: absolute; bottom: 30px; right: 25px">
-        <v-btn class="mx-1" @click="saveNewNote" :loading="isAddLoading"
+      <div class="d-flex align-start justify-space-between pb-3">
+        <note-attachments
+          v-model="newNote.attachments"
+          editable
+          @uploading="isUploading = $event"
+        />
+        <v-btn
+          class="mx-1 mt-2"
+          @click="saveNewNote"
+          :loading="isAddLoading"
+          :disabled="isUploading"
           >Add</v-btn
         >
       </div>
@@ -70,19 +79,30 @@
             </v-btn>
           </div>
         </div>
-        <EditorContainer
-          v-if="!isEditMode || editedNoteIndex !== index"
-          :model-value="note.msg"
-        ></EditorContainer>
-        <div v-else style="position: relative">
+        <template v-if="!isEditMode || editedNoteIndex !== index">
+          <EditorContainer :model-value="note.msg"></EditorContainer>
+          <note-attachments :model-value="note.attachments" />
+        </template>
+        <div v-else>
           <rich-editor v-model="note.msg"> </rich-editor>
-          <div style="position: absolute; bottom: 30px; right: 25px">
-            <v-btn class="mx-1" @click="cancelEdit" :disabled="isEditLoading"
-              >Close</v-btn
-            >
-            <v-btn class="mx-1" @click="saveEditedNote" :loading="isEditLoading"
-              >Save</v-btn
-            >
+          <div class="d-flex align-start justify-space-between">
+            <note-attachments
+              v-model="note.attachments"
+              editable
+              @uploading="isUploading = $event"
+            />
+            <div class="d-flex mt-2">
+              <v-btn class="mx-1" @click="cancelEdit" :disabled="isEditLoading"
+                >Close</v-btn
+              >
+              <v-btn
+                class="mx-1"
+                @click="saveEditedNote"
+                :loading="isEditLoading"
+                :disabled="isUploading"
+                >Save</v-btn
+              >
+            </div>
           </div>
         </div>
       </v-card>
@@ -93,6 +113,7 @@
 <script setup>
 import useEntityMap from "@/hooks/useEntityMap";
 import RichEditor from "@/components/ui/richEditor.vue";
+import NoteAttachments from "@/components/noteAttachments.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { EditorContainer } from "nocloud-ui";
@@ -104,7 +125,8 @@ const { template, onAdd, onUpdate, onDelete } = toRefs(props);
 const store = useStore();
 
 const notes = ref([]);
-const newNote = ref({ msg: "" });
+const newNote = ref({ msg: "", attachments: [] });
+const isUploading = ref(false);
 
 const isAddLoading = ref(false);
 const isRemoveLoading = ref(false);
@@ -159,7 +181,7 @@ const saveNewNote = async () => {
       newNote.value
     );
     setNotes(adminNotes);
-    newNote.value = { msg: "" };
+    newNote.value = { msg: "", attachments: [] };
   } catch (err) {
     store.commit("snackbar/showSnackbarError", {
       message: "Error during create note",
@@ -199,6 +221,8 @@ const pinNote = async (index, value = true) => {
     const { adminNotes } = await onUpdate.value(template.value.uuid, {
       msg: note.msg,
       pinned: note.pinned,
+      // the backend replaces the whole note: keep its files
+      attachments: note.attachments ?? [],
       index: index,
     });
 
@@ -237,6 +261,7 @@ const saveEditedNote = async () => {
     const { adminNotes } = await onUpdate.value(template.value.uuid, {
       msg: note.msg,
       pinned: note.pinned,
+      attachments: note.attachments ?? [],
       index: editedNoteIndex.value,
     });
     setNotes(adminNotes);
