@@ -140,14 +140,14 @@ const routes = [
   {
     path: "/chats",
     name: "Chats",
-    redirect: {
+    redirect: () => ({
       name: "Plugin",
       params: { title: "Chats", url: "/cc.ui/" },
       query: {
         url: "/cc.ui/",
-        fullscreen: window.innerWidth > 768 ? "false" : "true",
+        fullscreen: "false",
       },
-    },
+    }),
   },
   {
     path: "/chat/:uuid",

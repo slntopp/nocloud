@@ -2,7 +2,8 @@
   <v-menu v-model="isOpen" offset-y transition="slide-y-transition">
     <template v-slot:activator="{ on, attrs }">
       <v-btn
-        class="mx-2"
+        :class="compact ? 'mx-1' : 'mx-2'"
+        :small="compact"
         :loading="isFetchLoading"
         fab
         color="background-light"
@@ -14,8 +15,15 @@
         </v-icon>
       </v-btn>
     </template>
-    <v-card color="background-light" style="max-height: 30vh">
-      <v-list color="background-light" dence min-width="250px">
+      <v-card
+        color="background-light"
+        style="max-height: 70vh; max-width: calc(100vw - 16px)"
+      >
+      <v-list
+        color="background-light"
+        dence
+        :style="{ minWidth: 'min(250px, calc(100vw - 16px))' }"
+      >
         <v-list-item>
           <v-list-item-content>
             <v-list-item-title class="text-h6">
@@ -44,6 +52,10 @@
 import { computed, onMounted, ref, watch } from "vue";
 import api from "@/api";
 import { formatSecondsToDate } from "@/functions";
+
+defineProps({
+  compact: Boolean,
+});
 
 const isOpen = ref(false);
 const notifications = ref([]);

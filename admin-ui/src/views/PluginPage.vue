@@ -1,6 +1,7 @@
 <template>
   <div
-    class="pa-4 h-100 w-100"
+    class="plugin-page h-100 w-100"
+    :class="{ 'pa-4': viewport > 900 }"
     :style="isMaximized ? { width: '100vw', height: '100vh' } : {}"
   >
     <plugin-iframe
@@ -14,7 +15,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import PluginIframe from "@/components/plugin/iframe.vue";
@@ -25,7 +26,15 @@ const store = useStore();
 const plugin = ref();
 
 const url = computed(() => route.params.url || route.query.url);
-const isMaximized = computed(() => route.query.fullscreen === "true");
+const viewport = ref(window.innerWidth);
+const onResize = () => (viewport.value = window.innerWidth);
+onMounted(() => window.addEventListener("resize", onResize));
+onUnmounted(() => window.removeEventListener("resize", onResize));
+const isMaximized = computed(() => {
+  const isChats = String(url.value || "").includes("cc.ui");
+  if (isChats && viewport.value <= 900) return false;
+  return route.query.fullscreen === "true";
+});
 const params = computed(() => {
   const result = {
     ...route.params.params,
@@ -53,6 +62,20 @@ export default { name: "plugin-view" };
 
 <style>
 .h-100 {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.plugin-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.plugin-page > * {
+  flex: 1 1 auto;
+  min-height: 0;
   height: 100%;
 }
 

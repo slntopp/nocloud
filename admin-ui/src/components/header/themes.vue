@@ -31,6 +31,10 @@ export default {
 import { computed, watch, ref, onMounted } from "vue";
 import { useStore } from "@/store";
 
+const props = defineProps({
+  compact: Boolean,
+});
+
 const store = useStore();
 const systemTheme = ref("");
 
@@ -76,7 +80,14 @@ watch(theme, (newValue) => {
 <template>
   <v-menu offset-y transition="slide-y-transition">
     <template v-slot:activator="{ on, attrs }">
-      <v-btn class="mx-2" fab color="background-light" v-bind="attrs" v-on="on">
+      <v-btn
+        :class="props.compact ? 'mx-1' : 'mx-2'"
+        :small="props.compact"
+        fab
+        color="background-light"
+        v-bind="attrs"
+        v-on="on"
+      >
         <v-icon dark> {{ currentTheme.icon }} </v-icon>
       </v-btn>
     </template>
