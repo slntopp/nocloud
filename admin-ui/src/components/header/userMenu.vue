@@ -2,14 +2,14 @@
   <v-menu transition="slide-y-transition">
     <template v-slot:activator="{ props }">
       <v-btn
-        class="mx-2"
+        :class="compact ? 'mx-1' : 'mx-2'"
         icon
         variant="elevated"
-        size="large"
+        :size="compact ? 'small' : 'large'"
         color="background-light"
         v-bind="props"
       >
-        <v-icon > mdi-account </v-icon>
+        <v-icon> mdi-account </v-icon>
       </v-btn>
     </template>
     <v-list dence min-width="250px">
@@ -36,6 +36,10 @@
 import balance from "@/components/balance.vue";
 import { useStore } from "@/store";
 import { computed } from "vue";
+
+defineProps({
+  compact: Boolean,
+});
 
 const store = useStore();
 

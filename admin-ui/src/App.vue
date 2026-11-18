@@ -18,9 +18,12 @@
 
       <template v-if="!isFullscreen">
         <v-navigation-drawer
-          permanent
+          :model-value="isNarrow ? drawerOpen : true"
+          :permanent="!isNarrow"
+          :temporary="isNarrow"
           :color="asideColor"
-          :rail="isMenuMinimize"
+          :rail="isMenuMinimize && !isNarrow"
+          @update:model-value="drawerOpen = $event"
         >
           <router-link to="/">
             <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
@@ -73,7 +76,20 @@
               }"
             >
               <v-list-subheader>MAIN</v-list-subheader>
-              <v-btn @click="isMenuMinimize = !isMenuMinimize" icon variant="text">
+              <v-btn
+                v-if="isNarrow"
+                icon
+                variant="text"
+                @click="drawerOpen = false"
+              >
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+              <v-btn
+                v-else
+                icon
+                variant="text"
+                @click="isMenuMinimize = !isMenuMinimize"
+              >
                 <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
                 <v-icon v-else>mdi-arrow-left</v-icon>
               </v-btn>
@@ -382,18 +398,40 @@
           </v-list>
         </v-navigation-drawer>
 
-        <v-app-bar color="background" elevation="0">
+        <v-app-bar
+          color="background"
+          elevation="0"
+          :density="isNarrow ? 'compact' : 'default'"
+        >
+          <v-btn
+            v-if="isNarrow"
+            icon
+            variant="text"
+            class="flex-shrink-0"
+            @click="drawerOpen = true"
+          >
+            <v-icon>mdi-menu</v-icon>
+          </v-btn>
           <v-row
-            style="width: 100%"
-            class="flex-nowrap justify-center align-center"
+            align="center"
+            class="flex-nowrap flex-grow-1"
+            style="min-width: 0; width: auto; margin: 0"
           >
             <template v-if="isLoggedIn">
-              <v-col :style="viewport < 600 ? 'padding: 6px' : null">
+              <v-col
+                class="flex-grow-1"
+                :style="
+                  isNarrow
+                    ? 'min-width: 0; padding: 0 4px'
+                    : 'min-width: 0'
+                "
+              >
                 <app-search />
               </v-col>
               <v-col
-                class="d-flex justify-start"
-                :style="viewport < 600 ? 'padding: 6px' : null"
+                cols="auto"
+                class="d-flex justify-start flex-shrink-0"
+                :style="isNarrow ? 'padding: 0 2px' : null"
               >
                 <v-btn
                   v-if="btnStates.visible"
@@ -421,16 +459,16 @@
               </v-col>
             </template>
             <v-col
-              class="d-flex justify-end align-center"
-              :style="viewport < 600 ? 'padding: 6px' : null"
+              cols="auto"
+              class="d-flex justify-end align-center flex-shrink-0"
+              :style="isNarrow ? 'padding: 0 6px 0 0' : null"
             >
               <languages v-if="false" />
-              <themes />
-              <notifications />
-              <user-menu v-if="isLoggedIn" />
+              <themes :compact="isNarrow" />
+              <notifications :compact="isNarrow" />
+              <user-menu v-if="isLoggedIn" :compact="isNarrow" />
             </v-col>
           </v-row>
-          <v-spacer></v-spacer>
         </v-app-bar>
 
         <v-main>
@@ -509,6 +547,7 @@ export default {
 
     return {
       viewport: ref(window.innerWidth),
+      drawerOpen: ref(false),
       isMenuMinimize: ref(true),
       isMouseOnMenu: ref(false),
       easterEgg: ref(false),
@@ -533,7 +572,9 @@ export default {
       document.title = `${value} | NoCloud`;
     },
     onResize(e) {
+      const wasNarrow = this.viewport <= 900;
       this.viewport = window.innerWidth;
+      if (wasNarrow !== (this.viewport <= 900)) this.drawerOpen = false;
       if (!(e instanceof UIEvent)) {
         this.isMenuMinimize = window.innerWidth <= 768;
       }
@@ -609,6 +650,9 @@ export default {
   },
   computed: {
     ...mapGetters("app", ["theme"]),
+    isNarrow() {
+      return this.viewport <= 900;
+    },
     isLoggedIn() {
       const result = this.$store.getters["auth/isLoggedIn"];
       return result;
@@ -640,6 +684,10 @@ export default {
       else return {};
     },
     isFullscreen() {
+      const pluginUrl = String(
+        this.$route.query.url || this.$route.params.url || ""
+      );
+      if (pluginUrl.includes("cc.ui") && this.isNarrow) return false;
       return (
         this.$route.path.includes("vnc") ||
         this.$route.query["fullscreen"] === "true"
@@ -738,6 +786,7 @@ export default {
     this.$router.afterEach((to) => {
       this.overlay.uuid = "";
       this.overlay.buttonTitle = "";
+      if (this.viewport <= 900) this.drawerOpen = false;
       this.setTitle(to.name);
     });
 
@@ -799,5 +848,27 @@ export default {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgb(var(--v-theme-primary));
+}
+
+@media (max-width: 900px) {
+  .v-app-bar .v-toolbar__content {
+    padding: 0 4px;
+  }
+
+  .v-application--wrap {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .v-main,
+  .v-main__wrap {
+    min-height: 0 !important;
+    overflow: hidden;
+  }
+
+  .v-main__wrap {
+    height: 100%;
+  }
 }
 </style>

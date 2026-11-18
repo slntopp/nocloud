@@ -31,6 +31,10 @@ export default {
 import { computed, watch, ref, onMounted } from "vue";
 import { useStore } from "@/store";
 
+const props = defineProps({
+  compact: Boolean,
+});
+
 const store = useStore();
 const systemTheme = ref("");
 
@@ -75,14 +79,14 @@ watch(theme, (newValue) => {
 
 <template>
   <v-menu transition="slide-y-transition">
-    <template v-slot:activator="{ props }">
+    <template v-slot:activator="{ props: menuProps }">
       <v-btn
-        class="mx-2"
+        :class="props.compact ? 'mx-1' : 'mx-2'"
         icon
         variant="elevated"
-        size="large"
+        :size="props.compact ? 'small' : 'large'"
         color="background-light"
-        v-bind="props"
+        v-bind="menuProps"
       >
         <v-icon> {{ currentTheme.icon }} </v-icon>
       </v-btn>

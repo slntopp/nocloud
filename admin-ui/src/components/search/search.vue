@@ -790,7 +790,8 @@ export default {
   }
 
   @media (max-width: 900px) {
-    width: 30vw;
+    width: 100%;
+    min-width: 0;
   }
 }
 </style>
