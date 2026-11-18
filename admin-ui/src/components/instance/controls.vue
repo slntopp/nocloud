@@ -838,6 +838,20 @@ export default {
             icon: "mdi-console",
             method: () => this.startCpanelSession(),
           },
+          {
+            action: "suspend",
+            title: "suspend",
+            icon: "mdi-power-sleep",
+            disabled: this.isSuspended,
+          },
+          // a plain button: cPanel billing doesn't use the immune date that
+          // the unsuspend dialog of other types asks for
+          {
+            action: "unsuspend",
+            title: "unsuspend",
+            icon: "mdi-play",
+            disabled: !this.isSuspended,
+          },
           ...this.baseVmControls,
         ],
       };
@@ -1042,6 +1056,9 @@ export default {
     },
     isFreezed() {
       return this.template.data?.freeze;
+    },
+    isSuspended() {
+      return this.template.state?.state === "SUSPENDED";
     },
     product() {
       switch (this.template.type) {
