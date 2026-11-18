@@ -40,7 +40,7 @@
     "vuetify": "^4.3.3",
     "vuex": "^4.1.0",
     "xlsx": "^0.18.5",
-    "yaml": "^2.3.4"
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^9",
