@@ -39,6 +39,7 @@
             :model-value="note.msg"
             class="pinned-note-content"
           ></EditorContainer>
+          <note-attachments :model-value="note.attachments" />
         </v-card>
       </div>
     </v-card>
@@ -49,6 +50,7 @@
 import useEntityMap from "@/hooks/useEntityMap";
 import { computed, ref, watch } from "vue";
 import { EditorContainer } from "nocloud-ui";
+import NoteAttachments from "@/components/noteAttachments.vue";
 import { formatSecondsToDate } from "@/functions";
 
 const props = defineProps({
