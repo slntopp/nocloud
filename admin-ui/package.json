@@ -25,7 +25,7 @@
     "jodit-vue": "^3.1.0",
     "js-cookie": "^3.0.5",
     "json-schema": "^0.4.0",
-    "nocloud-proto": "https://github.com/slntopp/nocloud-proto#703807c5866494654eae8d44896c4a401eec3598",
+    "nocloud-proto": "https://github.com/slntopp/nocloud-proto#ef1373da376919e1462e0765b4ccb7943278e419",
     "nocloud-ui": "https://github.com/Support-pl/nocloud-ui#8b11128428cea8e4001df5f39ce7933743550b13",
     "nocloudjsrest": "^1.5.17",
     "sha256-uint8array": "^0.10.7",
