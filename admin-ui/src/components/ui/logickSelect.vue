@@ -2,14 +2,14 @@
 import { ref, toRefs } from "vue";
 
 const props = defineProps({
-  value: {},
+  modelValue: {},
   label: {},
   disabled: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
 });
-const { disabled, dense, value, label } = toRefs(props);
+const { disabled, dense, modelValue: value, label } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const items = ref([
   { value: true, title: "Enabled" },
@@ -20,12 +20,12 @@ const items = ref([
 <template>
   <v-select
     :label="label"
-    :value="value"
+    :model-value="value"
     :items="items"
     :disabled="disabled"
-    :dense="dense"
-    @input="emit('input', $event)"
-    item-text="title"
+    :density="dense ? 'compact' : undefined"
+    @update:model-value="emit('update:modelValue', $event)"
+    item-title="title"
     item-value="value"
     clearable
   />

@@ -2,8 +2,8 @@
   <nocloud-table
     :loading="loading"
     :items="filtredZones"
-    :value="selected"
-    @input="handleSelect"
+    :model-value="selected"
+    @update:model-value="handleSelect"
     :single-select="singleSelect"
     :headers="Headers"
     item-key="original"
@@ -24,8 +24,9 @@ export default {
   components: {
     "nocloud-table": noCloudTable,
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    modelValue: {
       type: Array,
       default: () => [],
     },
@@ -40,7 +41,7 @@ export default {
   },
   data() {
     return {
-      selected: this.value,
+      selected: this.modelValue,
       loading: false,
       Headers,
       fetchError: "",
@@ -48,7 +49,7 @@ export default {
   },
   methods: {
     handleSelect(item) {
-      this.$emit("input", item);
+      this.$emit("update:modelValue", item);
     },
   },
   computed: {

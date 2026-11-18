@@ -1,0 +1,10 @@
+/*
+ * Cascade layer order for Vuetify 4. Must load before any bundled CSS
+ * (linked from index.html, not imported), otherwise the order depends on
+ * chunk order and e.g. the reset layer can override component styles.
+ * "app" holds the admin UI's own CSS (wrapped by vite.config.js): it beats
+ * Vuetify component styles but not utility classes, as in Vuetify 2/3.
+ * "external" holds third-party CSS (bundled or injected at runtime by
+ * widgets, see src/services/containExternalStyles.js).
+ */
+@layer vuetify-core, external, vuetify-components, vuetify-overrides, app, vuetify-utilities, vuetify-final;

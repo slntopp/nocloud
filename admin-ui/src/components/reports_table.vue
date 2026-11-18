@@ -4,21 +4,21 @@
       <div style="max-width: 300px" class="mx-3">
         <date-picker
           label="from"
-          :value="duration.from"
-          @input="emit('input:duration', { ...duration, from: $event })"
+          :model-value="duration.from"
+          @update:model-value="emit('input:duration', { ...duration, from: $event })"
         />
       </div>
       <div style="max-width: 300px" class="mx-3">
         <date-picker
           label="to"
-          :value="duration.to"
-          @input="emit('input:duration', { ...duration, to: $event })"
+          :model-value="duration.to"
+          @update:model-value="emit('input:duration', { ...duration, to: $event })"
         />
       </div>
     </v-row>
     <nocloud-table
       :table-name="tableName"
-      @input="selectRecord"
+      @update:model-value="selectRecord"
       :headers="reportsHeaders"
       :items="reports"
       :loading="isLoading"
@@ -50,7 +50,7 @@
       <template v-slot:[`item.meta`]="{ item }">
         <v-chip
           class="mr-1"
-          small
+          size="small"
           v-for="{ value } in getItemMeta(item)"
           :key="value"
         >
@@ -68,7 +68,7 @@
       </template>
       <template v-slot:[`item.status`]="{ item }">
         <div class="d-flex justify-center">
-          <v-chip :color="getStatusColor(item)">
+          <v-chip variant="flat" :color="getStatusColor(item)">
             {{ getStatus(item) }}
           </v-chip>
         </div>
@@ -92,7 +92,7 @@
             v-for="action in getReportActions(item)"
             :key="action.title"
             @click="callAction(item, action.action)"
-            small
+            size="small"
             :disabled="
               !!runningActionName &&
               (runningActionName !== action.action ||
@@ -104,7 +104,7 @@
               runningActionReportUuid === item.uuid
             "
             class="mx-1"
-            :icon="!!action.icon"
+            :icon="!!action.icon" variant="text"
           >
             <span v-if="!action.icon">
               {{ action.title }}
@@ -120,6 +120,7 @@
         >
           {{ getShortName(getAccount(value)?.title || value) }}
         </router-link>
+        <account-grade v-if="!isAccountsLoading" :account="getAccount(value)" />
         <v-skeleton-loader type="text" v-else />
       </template>
     </nocloud-table>
@@ -127,6 +128,7 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import { toRefs, ref, computed, watch } from "vue";
 import api from "@/api";
 import NocloudTable from "@/components/table.vue";
@@ -134,8 +136,9 @@ import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import { formatPrice } from "../functions";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps({
   filters: { type: Object },
@@ -164,9 +167,16 @@ const runningActionName = ref("");
 const runningActionReportUuid = ref("");
 const fetchError = ref("");
 const options = ref({});
-const accounts = ref({});
-const isAccountsLoading = ref(false);
-const isInstancesLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
+const {
+  map: instances,
+  isLoading: isInstancesLoading,
+  load: loadInstances,
+} = useEntityMap("instances");
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -341,7 +351,7 @@ const init = async () => {
 };
 
 const getAccount = (value) => accounts.value[value];
-const getInstance = (value) => store.getters["instances/cached"].get(value);
+const getInstance = (value) => instances.value[value];
 
 const getStatus = (item) => {
   if (item.meta?.status) {
@@ -354,7 +364,7 @@ const getStatusColor = (item) => {
   return {
     Paid: "success",
     Unpaid: "error",
-    Terminate: "blue-grey darken-2",
+    Terminate: "blue-grey-darken-2",
     Draft: "blue",
     Cancelled: "warning",
   }[getStatus(item)];
@@ -436,32 +446,9 @@ watch(rates, () => {
 watch(filters, fetchReportsDebounced, { deep: true });
 watch(options, fetchReportsDebounced);
 
-watch(reports, async () => {
-  reports.value.forEach(async ({ account: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch (err) {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+watch(reports, () => {
+  loadAccounts(reports.value.map(({ account }) => account));
 
-  isInstancesLoading.value = true;
-  try {
-    await Promise.all(
-      reports.value.map(({ instance: uuid }) =>
-        store.dispatch("instances/fetchToCached", uuid)
-      )
-    );
-  } finally {
-    isInstancesLoading.value = false;
-  }
+  loadInstances(reports.value.map(({ instance }) => instance));
 });
 </script>

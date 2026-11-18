@@ -1,6 +1,6 @@
 <template>
   <v-form v-model="formValid" ref="form">
-    <v-row justify="start">
+    <v-row class="justify-start">
       <v-col cols="6" md="4" lg="3">
         <v-text-field
           label="service title"
@@ -10,12 +10,12 @@
       </v-col>
       <v-col cols="6" md="4" lg="3">
         <v-autocomplete
-          :filter="defaultFilterObject"
+          :customFilter="defaultFilterObject"
           label="namespace"
           :rules="rules.req"
           :items="namespaces"
           :loading="namespacesLoading"
-          item-text="title"
+          item-title="title"
           item-value="uuid"
           v-model="namespace"
         />
@@ -33,7 +33,7 @@
     <v-row>
       <v-col cols="4" md="4" lg="4">
         <v-list color="background-light">
-          <v-subheader>instances groups</v-subheader>
+          <v-list-subheader>instances groups</v-list-subheader>
 
           <v-list-item
             v-for="(instance, index) in instances"
@@ -43,29 +43,29 @@
               'v-list-item--active': index == currentInstancesGroupsIndex,
             }"
           >
-            <v-list-item-icon>
+            <template #prepend>
               <v-icon>mdi-playlist-star</v-icon>
-            </v-list-item-icon>
-            <v-list-item-content>
+            </template>
+            
               <v-list-item-title>{{
                 instance.title || "(Enter title)"
               }}</v-list-item-title>
-            </v-list-item-content>
+            
           </v-list-item>
 
           <v-list-item @click="() => addInstancesGroup()">
-            <v-list-item-icon>
+            <template #prepend>
               <v-icon>mdi-plus-circle-outline</v-icon>
-            </v-list-item-icon>
-            <v-list-item-content>
+            </template>
+            
               <v-list-item-title>add instances group</v-list-item-title>
-            </v-list-item-content>
+            
           </v-list-item>
         </v-list>
         <div class="btns__wrapper d-flex justify-space-around mt-4">
           <v-select
             class="mr-5"
-            dense
+            density="compact"
             :items="fileTypes"
             v-model="selectedFileType"
           />
@@ -103,14 +103,14 @@
             >Remove</v-btn
           >
           <v-menu
-            bottom
-            offset-y
+            location="bottom"
+            
             transition="slide-y-transition"
             v-model="isVisible"
             :close-on-content-click="false"
           >
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn class="mx-4 mb-4" v-on="on" v-bind="attrs">
+            <template v-slot:activator="{ props }">
+              <v-btn class="mx-4 mb-4" v-bind="props">
                 apply price model
               </v-btn>
             </template>
@@ -118,17 +118,17 @@
               <v-card-title>Apply price model to group</v-card-title>
               <v-card-actions class="d-flex flex-column align-end">
                 <v-autocomplete
-                  dense
+                  density="compact"
                   label="price model"
                   style="width: 200px"
-                  item-text="title"
+                  item-title="title"
                   item-value="uuid"
                   v-model="currentInstancesGroups.plan"
                   :items="filteredPlans"
-                  @change="setProducts"
+                  @update:model-value="setProducts"
                 />
                 <v-select
-                  dense
+                  density="compact"
                   label="product"
                   style="width: 200px"
                   v-model="currentInstancesGroups.product"
@@ -144,7 +144,7 @@
             label="instances group title"
             v-model="instances[currentInstancesGroupsIndex].title"
             :rules="rules.req"
-            @change="(value) => (currentInstancesGroups.title = value)"
+            @change="(currentInstancesGroups.title = $event.target.value)"
           />
 
           <v-autocomplete
@@ -160,10 +160,10 @@
           />
 
           <v-autocomplete
-            :filter="defaultFilterObject"
+            :customFilter="defaultFilterObject"
             label="service provider"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             v-model="currentInstancesGroups.sp"
             :items="servicesProviders"
             :rules="rules.req"
@@ -191,6 +191,7 @@
 </template>
 
 <script>
+import { moduleComponent, moduleTypes } from "@/modules";
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 
@@ -350,10 +351,9 @@ export default {
       const action = this.$route.params.serviceId ? "edit" : "create";
       const data = this.getService();
 
-      if (!this.formValid) {
-        this.$refs.form.validate();
-        return;
-      }
+      // v3 form model stays null until validated, so check the validate() result
+      const { valid } = await this.$refs.form.validate();
+      if (!valid) return;
 
       this.isLoading = true;
       try {
@@ -441,10 +441,15 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("services/fetch").then(({ pool }) => {
-      const service = pool.find(
-        (el) => el.uuid === this.$route.params.serviceId
-      );
+    const { serviceId } = this.$route.params;
+    const servicesRequest = serviceId
+      ? this.$store.dispatch("services/fetch", {
+          filters: { uuid: [serviceId] },
+        })
+      : Promise.resolve({ pool: [] });
+
+    servicesRequest.then(({ pool }) => {
+      const service = pool.find((el) => el.uuid === serviceId);
       const group = this.$route.params.type;
       const i = service?.instancesGroups.findIndex(
         ({ type }) => type === group
@@ -493,21 +498,11 @@ export default {
     });
 
     this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+    this.$store.dispatch("servicesProviders/ensure", { anonymously: false });
 
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /serviceCreate\.vue$/
-    );
-    types.keys().forEach((key) => {
-      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
-      if (matched && matched.length > 1) {
-        const type = matched[1];
-        this.types.push(type);
-        this.templates[type] = () =>
-          import(`@/components/modules/${type}/serviceCreate.vue`);
-      }
+    moduleTypes("serviceCreate").forEach((type) => {
+      this.types.push(type);
+      this.templates[type] = moduleComponent("serviceCreate", type);
     });
 
     api.settings.get(["instance-billing-plan-settings"]).then((res) => {

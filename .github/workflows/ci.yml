@@ -133,6 +133,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: IMAGE_TAG=${{env.IMAGE_TAG}}
+          # read access to private deps (Support-pl/nocloud-ui) for the admin UI build
+          secrets: |
+            github_token=${{ secrets.NOCLOUD_UI_TOKEN || secrets.PACKAGES_PAT }}
 
       - name: Summary
         run: |

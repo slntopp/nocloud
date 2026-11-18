@@ -3,20 +3,20 @@
     table-name="service-providers-table"
     :loading="loading"
     :items="filteredSp"
-    :value="selected"
-    @input="handleSelect"
+    :model-value="selected"
+    @update:model-value="handleSelect"
     :single-select="singleSelect"
     :headers="Headers"
     item-key="uuid"
     :footer-error="fetchError"
   >
     <template v-slot:[`item.state`]="{ value }">
-      <v-chip small :color="getStateChipColor(value)">
+      <v-chip variant="flat" size="small" :color="getStateChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
     <template v-slot:[`item.status`]="{ value }">
-      <v-chip small :color="getStatusChipColor(value)">
+      <v-chip variant="flat" size="small" :color="getStatusChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
@@ -24,6 +24,7 @@
 </template>
 
 <script>
+import { moduleTypes } from "@/modules";
 import noCloudTable from "@/components/table.vue";
 import {
   compareSearchValue,
@@ -48,11 +49,11 @@ const Headers = [
 ];
 
 const statusMap = {
-  DEL: { title: "DELETED", color: "blue-grey darken-2" },
+  DEL: { title: "DELETED", color: "blue-grey-darken-2" },
   UNSPECIFIED: { title: "ACTIVE", color: "success" },
   UNKNOWN: {
     title: "UNKNOWN",
-    color: "red darken-2",
+    color: "red-darken-2",
   },
 };
 
@@ -67,8 +68,9 @@ export default {
   components: {
     "nocloud-table": noCloudTable,
   },
+  emits: ["update:modelValue"],
   props: {
-    value: {
+    modelValue: {
       type: Array,
       default: () => [],
     },
@@ -79,7 +81,7 @@ export default {
   },
   data() {
     return {
-      selected: this.value,
+      selected: this.modelValue,
       loading: false,
       Headers,
       fetchError: "",
@@ -96,11 +98,11 @@ export default {
   },
   methods: {
     handleSelect(item) {
-      this.$emit("input", item);
+      this.$emit("update:modelValue", item);
     },
     getStateChipColor(state) {
       if (!state) {
-        return "gray";
+        return "neutral";
       }
       return this.stateColorMap[state.toLowerCase()] || "";
     },
@@ -111,19 +113,8 @@ export default {
       return this.statusMap[statusKey]?.color;
     },
     getInstanceTypes() {
-      const types = require.context(
-        "@/components/modules/",
-        true,
-        /instanceCreate\.vue$/
-      );
-
-      types.keys().forEach((key) => {
-        const matched = key.match(
-          /\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i
-        );
-        if (matched && matched.length > 1) {
-          this.allTypes.push(matched[1]);
-        }
+      moduleTypes("instanceCreate").forEach((type) => {
+        this.allTypes.push(type);
       });
     },
   },
@@ -187,7 +178,7 @@ export default {
   created() {
     this.loading = true;
     this.$store
-      .dispatch("servicesProviders/fetch", {
+      .dispatch("servicesProviders/ensure", {
         anonymously: false,
         showDeleted: true,
       })
@@ -224,11 +215,16 @@ export default {
     tableData() {
       this.fetchError = "";
     },
-    allTypes(val) {
-      if (val) {
-        this.$store.commit("appSearch/setSearchName", "services-providers");
-        this.$store.commit("appSearch/setFields", this.searchFields);
-      }
+    // deep: types are pushed into the array; Vue 3 array watchers only fire
+    // on replacement unless deep
+    allTypes: {
+      handler(val) {
+        if (val) {
+          this.$store.commit("appSearch/setSearchName", "services-providers");
+          this.$store.commit("appSearch/setFields", this.searchFields);
+        }
+      },
+      deep: true,
     },
   },
 };

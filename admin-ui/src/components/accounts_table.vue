@@ -3,11 +3,11 @@
     :table-name="tableName"
     :headers="headers"
     :items="accounts"
-    :value="selected"
+    :model-value="selected"
     :loading="loading || isAccountsLoading"
     :single-select="singleSelect"
     :footer-error="fetchError"
-    @input="handleSelect"
+    @update:model-value="handleSelect"
     :server-items-length="total"
     :server-side-page="options.page"
     @update:options="setOptions"
@@ -50,6 +50,10 @@
       </div>
     </template>
 
+    <template v-slot:[`item.spending.amount`]="{ item }">
+      <account-grade :account="item" />
+    </template>
+
     <template v-slot:[`item.notifications`]="{ item }">
       <notifications-cell :uuid="item.uuid" />
     </template>
@@ -84,9 +88,9 @@
     </template>
 
     <template v-slot:[`item.address`]="{ item }">
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <span v-bind="attrs" v-on="on">
+      <v-tooltip location="bottom">
+        <template v-slot:activator="{ props }">
+          <span v-bind="props">
             {{ item.data?.city || item.data?.address }}
           </span>
         </template>
@@ -94,7 +98,7 @@
       </v-tooltip>
     </template>
     <template v-slot:[`item.access.level`]="{ item }">
-      <v-chip :color="item.access.color">
+      <v-chip variant="flat" :color="item.access.color">
         {{ item.access.level }}
       </v-chip>
     </template>
@@ -107,14 +111,16 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import NocloudTable from "@/components/table.vue";
 import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 import NotificationsCell from "@/components/ui/notificationsCell.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
+import { gradeFilterConditions } from "@/accountGrades.js";
 import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
-  value: {
+  modelValue: {
     type: Array,
     default: () => [],
   },
@@ -127,10 +133,10 @@ const props = defineProps({
   customFilter: { type: Object },
   tableName: { type: String, default: "accounts" },
 });
-const { value, singleSelect, customSearchParam, noSearch, customFilter } =
+const { modelValue: value, singleSelect, customSearchParam, noSearch, customFilter } =
   toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 const router = useRouter();
@@ -149,6 +155,7 @@ const headers = ref([
   { text: "Account Group", value: "account_group" },
   { text: "Status", value: "status" },
   { text: "Balance", value: "balance" },
+  { text: "Grade", value: "spending.amount" },
   { text: "Email", value: "data.email" },
   // How much has gone out to this customer in the last thirty days — the
   // campaigns plugin's journal, both halves of it. Sorting by it would mean
@@ -167,7 +174,7 @@ const levelColorMap = ref({
   ROOT: "info",
   ADMIN: "success",
   MGMT: "warning",
-  READ: "gray",
+  READ: "neutral",
   NONE: "error",
 });
 
@@ -177,7 +184,7 @@ onMounted(() => {
     event: fetchAccounts,
   });
 
-  store.dispatch("accountGroups/fetch");
+  store.dispatch("accountGroups/ensure");
 });
 
 const searchParam = computed(() => store.getters["appSearch/param"]);
@@ -255,6 +262,10 @@ const requestOptions = computed(() => {
           },
           account_groups: groups?.length ? groups : undefined,
           no_group: hasNoGroup ? true : undefined,
+          grade: gradeFilterConditions(
+            filter.value?.grade,
+            store.getters["settings/accountGrades"],
+          ),
           search_param:
             searchParam.value || filter.value.search_param || undefined,
         }
@@ -287,6 +298,15 @@ const searchFields = computed(() => [
     ],
   },
   { title: "Balance", key: "balance", type: "number-range" },
+  {
+    title: "Grade",
+    key: "grade",
+    type: "select",
+    items: store.getters["settings/accountGrades"].map((g) => ({
+      text: g.title,
+      value: g.title,
+    })),
+  },
   { title: "Email", key: "data.email", type: "input" },
   { title: "Phone verified", key: "is_phone_verified", type: "logic-select" },
   { title: "Created date", key: "data.date_create", type: "date" },
@@ -360,7 +380,7 @@ const fetchAccountsDebounce = debounce(() => {
 }, 300);
 
 const handleSelect = (item) => {
-  emit("input", item);
+  emit("update:modelValue", item);
 };
 const colorChip = (level) => {
   return levelColorMap.value[level];

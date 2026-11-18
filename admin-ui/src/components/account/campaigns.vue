@@ -9,7 +9,7 @@
 
 <script setup>
 import { computed } from "vue";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 import { useStore } from "@/store";
 import PluginIframe from "@/components/plugin/iframe.vue";
 

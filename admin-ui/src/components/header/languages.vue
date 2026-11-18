@@ -3,7 +3,7 @@
     class="mr-3 ml-3 mt-5 select-langs"
     :items="availableLangs"
     v-model="currentLang"
-    @change="changeLang"
+    @update:model-value="changeLang"
   >
   </v-select>
 </template>

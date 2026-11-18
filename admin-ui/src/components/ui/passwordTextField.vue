@@ -3,10 +3,10 @@
     :readonly="readonly"
     :label="label"
     :type="isVisible ? 'text' : 'password'"
-    :value="value"
-    @input="$emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
   >
-    <template v-slot:append>
+    <template v-slot:append-inner>
       <v-icon @click="isVisible = !isVisible">{{
         isVisible ? "mdi-eye" : "mdi-eye-off"
       }}</v-icon>
@@ -18,11 +18,11 @@
 </template>
 
 <script setup>
-import { defineProps, ref, toRefs } from "vue";
+import { ref, toRefs } from "vue";
 import { addToClipboard } from "@/functions";
 
 const props = defineProps({
-  value: {
+  modelValue: {
     type: String,
     default: "",
   },
@@ -30,7 +30,8 @@ const props = defineProps({
   copy: { type: Boolean, default: false },
   readonly: { type: Boolean, default: true },
 });
-const { value, label } = toRefs(props);
+const emit = defineEmits(["update:modelValue"]);
+const { modelValue: value, label } = toRefs(props);
 
 const isVisible = ref(false);
 </script>

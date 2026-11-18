@@ -7,7 +7,7 @@
       :show-expand="true"
       :items="resources"
       :headers="headers"
-      :expanded.sync="expanded"
+      v-model:expanded="expanded"
     >
       <template v-slot:top>
         <v-toolbar flat color="background">
@@ -15,14 +15,14 @@
           <v-divider inset vertical class="mx-4" />
           <v-spacer />
 
-          <v-btn class="mr-2" color="background-light" @click="addConfig">
+          <v-btn variant="elevated" class="mr-2" color="background-light" @click="addConfig">
             Create
           </v-btn>
           <confirm-dialog
             @confirm="removeConfig"
             :disabled="selected.length < 1"
           >
-            <v-btn color="background-light" :disabled="selected.length < 1"
+            <v-btn variant="elevated" color="background-light" :disabled="selected.length < 1"
               >Delete</v-btn
             >
           </confirm-dialog>
@@ -30,47 +30,47 @@
       </template>
       <template v-slot:[`item.key`]="{ item }">
         <v-text-field
-          dense
-          :value="item.key"
+          density="compact"
+          :model-value="item.key"
           :rules="requiredRules"
-          @change="changeResource('key', $event, item.id)"
+          @change="changeResource('key', $event.target.value, item.id)"
         />
       </template>
       <template v-slot:[`item.title`]="{ item }">
         <v-text-field
-          dense
-          :value="item.title"
+          density="compact"
+          :model-value="item.title"
           :rules="requiredRules"
-          @change="changeResource('title', $event, item.id)"
+          @change="changeResource('title', $event.target.value, item.id)"
         />
       </template>
 
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
-          dense
+          density="compact"
           type="number"
           :suffix="defaultCurrency?.code"
-          :value="item.price"
+          :model-value="item.price"
           :rules="priceRules"
-          @input="changeResource('price', $event, item.id)"
+          @update:model-value="changeResource('price', $event, item.id)"
         />
       </template>
       <template v-slot:[`item.min`]="{ item }">
         <v-text-field
-          dense
+          density="compact"
           type="number"
-          :value="item.min"
+          :model-value="item.min"
           :rules="minRules"
-          @input="changeResource('min', !!$event ? $event : undefined, item.id)"
+          @update:model-value="changeResource('min', !!$event ? $event : undefined, item.id)"
         />
       </template>
       <template v-slot:[`item.max`]="{ item }">
         <v-text-field
-          dense
+          density="compact"
           type="number"
-          :value="item.max"
+          :model-value="item.max"
           :rules="maxRules"
-          @input="changeResource('max', !!$event ? $event : undefined, item.id)"
+          @update:model-value="changeResource('max', !!$event ? $event : undefined, item.id)"
         />
       </template>
       <template v-slot:[`item.period`]="{ item }">
@@ -85,32 +85,31 @@
 
       <template v-slot:[`item.meta.oneTime`]="{ item }">
         <v-switch
-          :input-value="item.meta?.oneTime"
-          @change="changeOneTime(item, $event)"
+          :model-value="item.meta?.oneTime"
+          @update:model-value="changeOneTime(item, $event)"
         />
       </template>
 
       <template v-slot:[`item.meta.autoEnable`]="{ item }">
         <v-switch
-          :input-value="item.meta?.autoEnable"
-          @change="changeMeta('autoEnable', $event, item)"
+          :model-value="item.meta?.autoEnable"
+          @update:model-value="changeMeta('autoEnable', $event, item)"
         />
       </template>
 
       <template v-slot:[`item.public`]="{ item }">
         <v-switch
-          :input-value="item.public"
-          @change="changeResource('public', $event, item.id)"
+          :model-value="item.public"
+          @update:model-value="changeResource('public', $event, item.id)"
         />
       </template>
 
       <template v-slot:[`item.kind`]="{ item }">
         <v-radio-group
           :disabled="isOneTimePayment(item)"
-          row
-          mandatory
-          :value="item.kind"
-          @change="changeResource('kind', $event, item.id)"
+          inline
+          :model-value="item.kind"
+          @update:model-value="changeResource('kind', $event, item.id)"
         >
           <v-radio
             v-for="(kind, i) of kinds"
@@ -125,28 +124,28 @@
         <td />
         <td :colspan="headers.length - 1">
           <v-select
-            dense
+            density="compact"
             multiple
             label="State"
             class="d-inline-block mr-4"
-            :value="item.on"
+            :model-value="item.on"
             :items="states"
             :rules="requiredRules"
-            @change="changeResource('on', $event, item.id)"
+            @update:model-value="changeResource('on', $event, item.id)"
           />
           <v-switch
             label="Except"
             class="d-inline-block"
-            :value="item.except"
-            @change="changeResource('except', $event, item.id)"
+            :model-value="!!item.except"
+            @update:model-value="changeResource('except', $event, item.id)"
           />
 
-          <v-subheader class="px-0">Description</v-subheader>
+          <v-list-subheader class="px-0">Description</v-list-subheader>
 
           <rich-editor
             class="html-editor"
-            :value="item?.description"
-            @input="changeResource('description', $event, item)"
+            :model-value="item?.description"
+            @update:model-value="changeResource('description', $event, item)"
           />
         </td>
       </template>

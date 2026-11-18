@@ -2,8 +2,8 @@
   <nocloud-table
     :table-name="tableName"
     class="mt-4"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     sort-by="created"
     sort-desc
     :items="promocodes"
@@ -21,7 +21,7 @@
     <template v-slot:[`item.code`]="{ item }">
       <div>
         <v-chip>{{ item.code }}</v-chip>
-        <v-btn icon @click="copyCode(item)" class="ml-2">
+        <v-btn icon variant="text" @click="copyCode(item)" class="ml-2">
           <v-icon>mdi-content-copy</v-icon>
         </v-btn>
       </div>
@@ -68,16 +68,16 @@ import {
 
 const props = defineProps({
   tableName: { type: String, default: "promocode-table" },
-  value: {},
+  modelValue: {},
   customFilter: {},
   noSearch: { type: Boolean, default: false },
   hideSelect: { type: Boolean, default: false },
   refetch: { type: Boolean, default: false },
 });
 
-const { tableName, value, refetch, noSearch, customFilter } = toRefs(props);
+const { tableName, modelValue: value, refetch, noSearch, customFilter } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 useSearch({

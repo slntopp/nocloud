@@ -5,8 +5,9 @@
         v-if="!isLoading"
         :to="{ name: 'Account', params: { accountId: user?.uuid } }"
         label="User"
-        :value="user?.title"
+        :model-value="user?.title"
       />
+      <account-grade v-if="!isLoading" :account="user" />
       <v-skeleton-loader type="text" v-else />
     </v-col>
     <v-col> </v-col>
@@ -18,6 +19,7 @@ import { toRefs, defineProps, ref, onMounted } from "vue";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import api from "@/api";
 import { useStore } from "@/store";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["template"]);
 const { template } = toRefs(props);

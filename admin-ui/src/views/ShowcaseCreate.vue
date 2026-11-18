@@ -1,7 +1,7 @@
 <template>
   <div class="pa-10 h-100 w-100">
     <h1 class="page__title" v-if="!isEdit">Create showcase</h1>
-    <v-form ref="showcaseForm" align="center">
+    <v-form ref="showcaseForm">
       <v-row>
         <v-col cols="4">
           <v-text-field
@@ -13,8 +13,8 @@
         <v-col cols="4">
           <v-text-field
             :rules="[requiredRule]"
-            @input="setTitle"
-            :value="showcase.promo?.[currentLang]?.title || ''"
+            @update:model-value="setTitle"
+            :model-value="showcase.promo?.[currentLang]?.title || ''"
             label="Title"
           />
         </v-col>
@@ -32,8 +32,7 @@
           <icons-autocomplete
             v-if="!isIconUrl"
             label="Preview icon"
-            :value="showcase.icon"
-            @input:value="showcase.icon = $event"
+            v-model="showcase.icon"
           />
           <v-text-field
             v-else
@@ -55,7 +54,7 @@
         <v-col cols="3">
           <v-autocomplete
             clearable
-            item-text="title"
+            item-title="title"
             item-value="id"
             label="Default location"
             v-model="defaultLocation"
@@ -80,9 +79,9 @@
         </v-col>
       </v-row>
 
-      <v-expansion-panels :value="0">
+      <v-expansion-panels :model-value="0">
         <v-expansion-panel v-for="(item, i) in showcase.items" :key="i">
-          <v-expansion-panel-header color="background">
+          <v-expansion-panel-title color="background">
             {{ getProviderTitle(item.servicesProvider) }}
             -
             {{ getPlan(item.servicesProvider, item.plan)?.title || item.plan }}
@@ -100,26 +99,26 @@
             >
               mdi-close-circle
             </v-icon>
-          </v-expansion-panel-header>
+          </v-expansion-panel-title>
 
-          <v-expansion-panel-content color="background">
+          <v-expansion-panel-text class="bg-background">
             <v-row>
               <v-col cols="6">
                 <v-autocomplete
                   label="Service provider"
-                  item-text="title"
+                  item-title="title"
                   item-value="uuid"
                   v-model="item.servicesProvider"
                   :items="serviceProviders"
                   :rules="[requiredRule]"
-                  @change="addItem"
+                  @update:model-value="addItem"
                 />
               </v-col>
               <v-col cols="6">
                 <v-autocomplete
                   clearable
                   label="Price model"
-                  item-text="title"
+                  item-title="title"
                   item-value="uuid"
                   v-model="item.plan"
                   :loading="isPlansLoading"
@@ -139,7 +138,7 @@
                 />
               </v-col>
             </v-row>
-          </v-expansion-panel-content>
+          </v-expansion-panel-text>
         </v-expansion-panel>
       </v-expansion-panels>
 
@@ -159,7 +158,7 @@ import { onMounted, ref, computed, toRefs, watch } from "vue";
 import IconsAutocomplete from "@/components/ui/iconsAutocomplete.vue";
 import { useStore } from "@/store";
 import api from "@/api";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import LocationsAutocomplete from "@/components/ui/locationsAutocomplete.vue";
 import ColorPicker from "@/components/ui/colorPicker.vue";
 
@@ -309,7 +308,7 @@ onMounted(async () => {
   try {
     isLoading.value = true;
     await Promise.all([
-      store.dispatch("servicesProviders/fetch", { anonymously: true }),
+      store.dispatch("servicesProviders/ensure", { anonymously: true }),
     ]);
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
@@ -460,7 +459,7 @@ watch(isIconUrl, () => {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

@@ -41,20 +41,19 @@
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta.networking?.public">-</template>
       <v-menu
-        bottom
+        location="bottom"
         open-on-hover
         v-else
-        nudge-top="20"
-        nudge-left="15"
+        :offset="[-20, -15]"
         transition="slide-y-transition"
       >
-        <template v-slot:activator="{ on, attrs }">
-          <span v-bind="attrs" v-on="on">
+        <template v-slot:activator="{ props }">
+          <span v-bind="props">
             {{ item.state.meta.networking.public[0] }}
           </span>
         </template>
 
-        <v-list dense>
+        <v-list density="compact">
           <v-list-item
             v-for="net of item.state.meta.networking.public"
             :key="net"
@@ -144,13 +143,13 @@ export default {
 </script>
 
 <style scoped>
-.v-card__text .v-chip {
+.v-card-text .v-chip {
   width: 48%;
   display: flex;
   justify-content: center;
   align-items: center;
 }
-.v-card__text .hash {
+.v-card-text .hash {
   width: 100%;
 }
 </style>

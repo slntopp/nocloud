@@ -494,6 +494,13 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "uuid" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` FILTER t._key in @invoiceUuids`
+				vars["invoiceUuids"] = values
 			} else if key == "no_group" {
 				noGroup = value.GetBoolValue()
 			} else if key == "account_groups" {
@@ -1575,6 +1582,13 @@ FILTER LOWER(t["number"]) LIKE LOWER("%s") || t._key LIKE "%s" || t.meta["whmcs_
 				}
 				query += fmt.Sprintf(` FILTER LENGTH(INTERSECTION(@%s, t.instances)) > 0`, "instancesUuids")
 				vars["instancesUuids"] = values
+			} else if key == "uuid" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += ` FILTER t._key in @invoiceUuids`
+				vars["invoiceUuids"] = values
 			} else if key == "no_group" {
 				noGroup = value.GetBoolValue()
 			} else if key == "account_groups" {
@@ -2084,7 +2098,13 @@ type invoiceLineInstance interface {
 func invoiceLineServiceName(invoicePrefix, productTitle string, inst invoiceLineInstance) string {
 	name := strings.TrimSpace(fmt.Sprintf("%s%s", invoicePrefix, productTitle))
 	if inst != nil {
-		if title := strings.TrimSpace(inst.GetTitle()); title != "" {
+		title := strings.TrimSpace(inst.GetTitle())
+		// A plan with an invoice prefix names the line itself: an instance named
+		// after its product would only repeat it ("AI СТАРТ - AI СТАРТ").
+		if strings.TrimSpace(invoicePrefix) != "" && title == strings.TrimSpace(productTitle) {
+			title = ""
+		}
+		if title != "" {
 			name = fmt.Sprintf("%s - %s", name, title)
 		}
 	}

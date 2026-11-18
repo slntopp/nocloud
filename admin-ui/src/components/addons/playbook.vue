@@ -9,7 +9,7 @@
         style="
           max-width: 800px;
           font-size: 1rem;
-          color: var(--v-primary-base);
+          color: rgb(var(--v-theme-primary));
           text-align: center;
         "
       >

@@ -1,50 +1,73 @@
 <template>
   <v-container>
-    <v-row justify="end">
-      <v-col
-        style="max-height: 50px"
-        class="d-flex justify-end align-start pa-0"
-      >
-        <v-switch
-          hide-details
-          dense
-          :input-value="template.meta?.autoRenew"
-          @change="updateAutomaticDebit"
-          :disabled="isDeleted"
-          label="Automatic debit"
+    <!-- one wrapping flex row: when it runs out of width whole controls move
+         down together, instead of the switch label breaking in half -->
+    <div class="d-flex flex-wrap justify-end align-center billing-actions">
+      <template v-if="isAiPackage">
+        <v-progress-circular
+          v-if="isUsageLoading"
+          indeterminate
+          size="16"
+          width="2"
         />
-      </v-col>
-      <v-col class="d-flex justify-end" style="max-width: 120px">
-        <confirm-dialog
-          title="Do you want to renew server?"
-          :text="renewTemplate"
-          :disabled="isDeleted || isRenewDisabled"
-          :width="500"
-          :success-disabled="isRenewDisabled"
-          @confirm="sendRenew"
-        >
-          <v-btn
-            color="primary"
-            :disabled="isRenewDisabled"
-            :loading="isLoading"
-          >
-            Renew
-          </v-btn>
-        </confirm-dialog>
-      </v-col>
-    </v-row>
-    <v-row class="mt-0" align="center" justify="end">
+        <v-tooltip v-else location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-chip size="small" variant="outlined" color="primary" v-bind="props">{{
+              creditText
+            }}</v-chip>
+          </template>
+          <span>{{ creditHint }}</span>
+        </v-tooltip>
+        <v-tooltip location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-btn
+              icon variant="text"
+              color="primary"
+             
+              v-bind="props"
+              :loading="isChatLoading"
+              @click="openChat"
+            >
+              <v-icon>mdi-chat-outline</v-icon>
+            </v-btn>
+          </template>
+          <span>AI chat as client</span>
+        </v-tooltip>
+      </template>
+      <v-switch
+        class="ma-0 pa-0"
+        hide-details
+        density="compact"
+        :model-value="template.meta?.autoRenew"
+        @update:model-value="updateAutomaticDebit"
+        :disabled="isDeleted"
+        label="Auto debit"
+      />
+      <confirm-dialog
+        title="Do you want to renew server?"
+        :text="renewTemplate"
+        :disabled="isDeleted || isRenewDisabled"
+        :width="500"
+        :success-disabled="isRenewDisabled"
+        @confirm="sendRenew"
+      >
+        <v-btn color="primary" :disabled="isRenewDisabled" :loading="isLoading">
+          Renew
+        </v-btn>
+      </confirm-dialog>
+    </div>
+    <v-row class="mt-0 align-center justify-end">
       <v-col class="d-flex justify-end px-1">
         <instance-state :template="template" />
       </v-col>
       <v-col class="d-flex justify-end px-1">
-        <v-chip color="primary" outlined
+        <v-chip color="primary" variant="outlined"
           >Price: {{ formatPrice(price, accountCurrency) }}
           {{ accountCurrency?.code }}</v-chip
         >
       </v-col>
       <v-col class="px-1 d-flex justify-end">
-        <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
+        <v-chip variant="outlined" color="primary">Due to date: {{ dueDate }}</v-chip>
       </v-col>
     </v-row>
   </v-container>
@@ -56,6 +79,7 @@ import { useStore } from "@/store";
 import confirmDialog from "@/components/confirmDialog.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
+import useAiPackage from "@/hooks/useAiPackage";
 import { formatPrice } from "../../functions";
 
 const props = defineProps({
@@ -81,6 +105,32 @@ const currency = computed(() => ({
 const accountCurrency = computed(() => {
   return account.value?.currency;
 });
+
+// empty for anything that is not an AI package, so the chip and the button stay hidden
+const {
+  isAiPackage,
+  credit,
+  usage,
+  usageError,
+  isUsageLoading,
+  amount,
+  openChat,
+  isChatLoading,
+} = useAiPackage(template, account);
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
+
+const creditText = computed(() => {
+  const left = usage.value ? amount(usage.value.left) : "-";
+  const total = amount(usage.value ? usage.value.total : credit.value);
+  return `${left} / ${total} ${defaultCurrency.value?.code}`;
+});
+
+const creditHint = computed(() =>
+  usage.value
+    ? `Credit left, used ${amount(usage.value.total - usage.value.left)}`
+    : usageError.value
+);
 
 const priceForAddons = computed(() => {
   return convertTo(
@@ -170,4 +220,13 @@ const updateAutomaticDebit = (value) => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.billing-actions {
+  gap: 8px;
+}
+
+/* "Automatic debit" is the first thing to break when the row gets tight */
+.billing-actions :deep(.v-label) {
+  white-space: nowrap;
+}
+</style>

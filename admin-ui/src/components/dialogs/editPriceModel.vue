@@ -1,13 +1,13 @@
 <template>
   <v-dialog
     persistent
-    :value="value"
-    @input="emit('input', value)"
+    :model-value="modelValue"
+    @update:model-value="emit('update:modelValue', modelValue)"
     max-width="80%"
   >
     <v-card class="pa-5">
       <v-card-title class="text-center">Change price model</v-card-title>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="12">
           <plans-autocomplete
             v-model="plan"
@@ -21,7 +21,7 @@
           />
         </v-col>
       </v-row>
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
           <v-select
             v-model="selectedPeriod"
@@ -33,7 +33,7 @@
           <v-select
             v-model="product"
             label="tariff"
-            item-text="title"
+            item-title="title"
             item-value="key"
             :items="filteredTariffs"
           />
@@ -42,7 +42,7 @@
           <v-text-field
             :suffix="accountCurrency?.code"
             readonly
-            :value="isSelectedPlanAvailable ? accountPrice : null"
+            :model-value="isSelectedPlanAvailable ? accountPrice : null"
             label="account price"
           />
         </v-col>
@@ -50,23 +50,23 @@
           <v-text-field
             :suffix="defaultCurrency?.code"
             readonly
-            :value="isSelectedPlanAvailable ? fullProduct?.price : null"
+            :model-value="isSelectedPlanAvailable ? fullProduct?.price : null"
             label="price"
           />
         </v-col>
       </v-row>
 
-      <v-row align="center">
+      <v-row class="align-center">
         <v-col cols="2">
           <v-text-field
-            :value="fullProduct?.resources?.cpu"
+            :model-value="fullProduct?.resources?.cpu"
             readonly
             label="CPU"
           />
         </v-col>
         <v-col cols="4">
           <v-text-field
-            :value="fullProduct?.resources?.ram"
+            :model-value="fullProduct?.resources?.ram"
             readonly
             label="RAM"
           />
@@ -74,7 +74,7 @@
 
         <v-col>
           <v-text-field
-            :value="fullProduct?.resources?.drive_type"
+            :model-value="fullProduct?.resources?.drive_type"
             readonly
             label="Drive type"
           />
@@ -82,14 +82,14 @@
 
         <v-col>
           <v-text-field
-            :value="fullProduct?.resources?.drive_size"
+            :model-value="fullProduct?.resources?.drive_size"
             readonly
             label="Drive size"
           />
         </v-col>
       </v-row>
 
-      <v-row justify="end">
+      <v-row class="justify-end">
         <v-btn class="mx-3" @click="cancel">Cancel</v-btn>
         <v-btn
           class="mx-3"
@@ -113,11 +113,11 @@ import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 const props = defineProps([
   "template",
   "service",
-  "value",
+  "modelValue",
   "accountRate",
   "accountCurrency",
 ]);
-const emit = defineEmits(["refresh", "input"]);
+const emit = defineEmits(["refresh", "update:modelValue"]);
 
 const { convertTo, defaultCurrency } = useCurrency();
 
@@ -258,13 +258,13 @@ const changePM = () => {
     })
     .finally(() => {
       isChangePMLoading.value = false;
-      emit("input", false);
+      emit("update:modelValue", false);
     });
 };
 
 const cancel = () => {
   setDefaultPlan();
-  emit("input", false);
+  emit("update:modelValue", false);
 };
 
 const setDefaultPlan = () => {

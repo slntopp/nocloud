@@ -9,14 +9,14 @@
       <div class="d-flex justify-end">
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.period"
-          @change="
+          density="compact"
+          :model-value="data.period"
+          @update:model-value="
             $emit('update:key', { key: 'period', value: $event || data.period })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in periods">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>
         </v-btn-toggle>
@@ -41,13 +41,12 @@
       </div>
 
       <v-divider></v-divider>
-      <v-list dense color="transparent">
+      <v-list density="compact" color="transparent">
         <v-list-item
           v-for="account in lastFiveAccounts"
           :key="account.uuid"
           class="px-0"
         >
-          <v-list-item-content class="ma-0 pa-0">
             <div class="d-flex justify-space-between align-center">
               <router-link
                 target="_blank"
@@ -59,13 +58,13 @@
               >
                 {{ getShortName(account.title) }}
               </router-link>
+              <account-grade :account="account" />
               <balance-display
                 small
                 :currency="account.currency"
                 :value="account.balance"
               />
             </div>
-          </v-list-item-content>
         </v-list-item>
       </v-list>
     </v-card>
@@ -79,6 +78,7 @@ import BalanceDisplay from "@/components/balance.vue";
 import api from "@/api";
 import { getShortName, getDatesPeriod } from "@/functions";
 import { useStore } from "@/store";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);

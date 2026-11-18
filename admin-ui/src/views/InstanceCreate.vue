@@ -1,7 +1,7 @@
 <template>
   <v-form v-model="formValid" ref="form">
     <v-container>
-      <v-row justify="start">
+      <v-row class="justify-start">
         <v-col cols="4" md="3" lg="2">
           <accounts-autocomplete
             label="account"
@@ -14,9 +14,9 @@
         </v-col>
         <v-col v-if="servicesByAccount.length > 2" cols="4" md="3" lg="2">
           <v-autocomplete
-            :filter="defaultFilterObject"
+            :custom-filter="filterObject"
             label="service"
-            item-text="title"
+            item-title="title"
             :items="servicesByAccount"
             return-object
             v-model="service"
@@ -34,10 +34,10 @@
         </v-col>
         <v-col cols="4" md="3" lg="2">
           <v-autocomplete
-            :filter="defaultFilterObject"
+            :custom-filter="filterObject"
             label="service provider"
             item-value="uuid"
-            item-text="title"
+            item-title="title"
             v-model="serviceProviderId"
             :items="servicesProviders"
             :loading="isLoading"
@@ -71,9 +71,9 @@
           <date-picker
             :loading="isLoading"
             label="Next payment date"
-            :value="timestampToDateTimeLocal(nextPaymentDate)"
+            :model-value="timestampToDateTimeLocal(nextPaymentDate)"
             clearable
-            @input="nextPaymentDate = formatDateToTimestamp($event)"
+            @update:model-value="nextPaymentDate = formatDateToTimestamp($event)"
           />
         </v-col>
       </v-row>
@@ -91,7 +91,7 @@
         :sp-uuid="serviceProviderId"
         :is="templates[type] ?? templates.custom"
       />
-      <v-row class="mx-5" justify="end">
+      <v-row class="mx-5 justify-end">
         <v-btn :loading="isCreateLoading" @click="save">Create</v-btn>
       </v-row>
     </v-container>
@@ -99,9 +99,10 @@
 </template>
 
 <script setup>
+import { moduleComponent, moduleTypes } from "@/modules";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import api from "@/api";
-import { computed, onMounted, watch, ref } from "vue";
+import { computed, onMounted, watch, ref, markRaw } from "vue";
 import {
   defaultFilterObject,
   replaceNullWithUndefined,
@@ -179,26 +180,18 @@ const isInstanceControlsShowed = computed(
 );
 
 onMounted(async () => {
-  const types = require.context(
-    "@/components/modules/",
-    true,
-    /instanceCreate\.vue$/
-  );
-  types.keys().forEach((key) => {
-    const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i);
-    if (matched && matched.length > 1) {
-      const type = matched[1];
-      typeItems.value.push(type);
-      templates.value[type] = () =>
-        import(`@/components/modules/${type}/instanceCreate.vue`);
-    }
+  moduleTypes("instanceCreate").forEach((type) => {
+    typeItems.value.push(type);
+    const component = moduleComponent("instanceCreate", type);
+    // async components must not be made reactive
+    templates.value[type] = component && markRaw(component);
   });
 
   try {
     isLoading.value = true;
     await Promise.all([
       store.dispatch("services/fetch"),
-      store.dispatch("servicesProviders/fetch", { anonymously: false }),
+      store.dispatch("servicesProviders/ensure", { anonymously: false }),
     ]);
     const instanceId = route.query.instanceId;
     if (instanceId) {
@@ -248,8 +241,14 @@ const setValue = ({ key, value }) => {
     }
   }
 };
+// Vuetify 3 custom-filter is (value, query, internalItem); the shared helper
+// keeps the Vuetify 2 (item, query) signature
+const filterObject = (_, query, internalItem) =>
+  defaultFilterObject(internalItem?.raw, query);
+
 const save = async () => {
-  if (!form.value.validate()) {
+  const { valid } = await form.value.validate();
+  if (!valid) {
     return;
   }
 
@@ -472,7 +471,7 @@ watch(type, () => {
 
 <script>
 import snackbar from "@/mixins/snackbar.js";
-import { useRoute, useRouter } from "vue-router/composables";
+import { useRoute, useRouter } from "vue-router";
 
 export default {
   name: "instance-create",

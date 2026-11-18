@@ -8,7 +8,7 @@
     </h1>
     <v-tabs
       class="rounded-t-lg"
-      background-color="background-light"
+      bg-color="background-light"
       v-model="tabs"
     >
       <v-tab>Info</v-tab>
@@ -16,39 +16,39 @@
       <v-tab>Promocodes</v-tab>
       <v-tab>Template</v-tab>
     </v-tabs>
-    <v-tabs-items
+    <v-window
       class="rounded-b-lg"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       v-model="tabs"
     >
-      <v-tab-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <showcase-create
           v-if="showcase && showcaseTitle"
           :real-showcase="showcase"
           is-edit
         />
-      </v-tab-item>
-      <v-tab-item>
+      </v-window-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <promo-tab :template="showcase" />
-      </v-tab-item>
-      <v-tab-item>
+      </v-window-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <promocodes-tab :template="showcase" />
-      </v-tab-item>
-      <v-tab-item>
+      </v-window-item>
+      <v-window-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <showcase-template :template="showcase" />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
 <script setup>
 import config from "@/config.js";
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 import { useStore } from "@/store";
 import ShowcaseCreate from "@/views/ShowcaseCreate.vue";
 import PromoTab from "@/components/showcase/promo.vue";
@@ -110,7 +110,7 @@ watch(showcase, (newVal) => {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

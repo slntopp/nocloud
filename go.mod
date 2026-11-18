@@ -18,9 +18,9 @@ require (
 	github.com/maitres/number-to-words v0.0.0-20230503125140-a21d9e27dd01
 	github.com/pariz/gountries v0.1.6
 	github.com/pkg/sftp v1.13.7
-	github.com/rabbitmq/amqp091-go v1.13.0
+	github.com/rabbitmq/amqp091-go v1.14.0
 	github.com/rs/cors v1.10.1
-	github.com/slntopp/nocloud-proto v0.0.0-20261012234540-b183f5143898
+	github.com/slntopp/nocloud-proto v0.0.0-20261118145832-ef1373da3769
 	github.com/spf13/viper v1.18.2
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.9.0

@@ -319,6 +319,7 @@ func main() {
 	go server.ConsumeInvoiceStatusActions(log, ctx, ps, worker(workers))
 	go server.ConsumeCreatedInstances(log, ctx, ps, worker(workers))
 	go server.ConsumeInvoicesWhmcsSync(log, ctx, ps, whmcsGw, worker(workers))
+	go server.ConsumeAccountSpending(log, ctx, ps, worker(workers))
 	go server.HandleStreaming(ctx, worker(workers))
 
 	log.Info("Check settings server")
@@ -326,6 +327,10 @@ func main() {
 		log.Fatal("Can't check settings connection", zap.Error(err))
 	}
 	log.Info("Settings server connection established")
+
+	// Fill Account.spending right away instead of waiting for the daily cron.
+	// Needs settings for the default currency, hence after the check above.
+	go server.AccountSpendingCronJob(context.WithoutCancel(ctx), log)
 
 	log.Info("Starting Transaction Generator-Processor")
 	go server.GenTransactionsRoutine(ctx, worker(workers))

@@ -5,19 +5,20 @@
       :items="playbooks"
       v-model="playbookUuid"
       item-value="uuid"
-      item-text="title"
+      item-title="title"
       clearable
     />
 
     <v-data-table
-      class="elevation-0 background-light rounded-lg"
+      class="elevation-0 bg-background-light rounded-lg"
       color="background-light"
       :headers="varsHeaders"
       :items="playbookVars"
     >
-      <template v-slot:footer>
+      <template v-slot:bottom>
+        <v-data-table-footer />
         <div class="d-flex justify-end pa-3">
-          <v-btn small @click="addNewVar"> Add new </v-btn>
+          <v-btn size="small" @click="addNewVar"> Add new </v-btn>
         </div>
       </template>
 
@@ -31,7 +32,7 @@
 
       <template v-slot:item.actions="{ index }">
         <div class="d-flex justify-center">
-          <v-btn icon>
+          <v-btn icon variant="text">
             <v-icon @click="() => deleteVar(index)"> mdi-delete </v-icon>
           </v-btn>
         </div>
@@ -53,9 +54,9 @@ const { playbooks, playbook, vars } = toRefs(props);
 const emit = defineEmits(["save"]);
 
 const varsHeaders = [
-  { text: "Key", value: "key" },
-  { text: "Value", value: "value" },
-  { text: "Actions", value: "actions" },
+  { title: "Key", key: "key" },
+  { title: "Value", key: "value" },
+  { title: "Actions", key: "actions" },
 ];
 
 const playbookVars = ref([]);

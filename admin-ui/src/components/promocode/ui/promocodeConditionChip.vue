@@ -1,5 +1,5 @@
 <template>
-  <v-chip :color="promocodeConditionColor">{{
+  <v-chip variant="flat" :color="promocodeConditionColor">{{
     promocodeConditionTitle
   }}</v-chip>
 </template>
@@ -24,7 +24,7 @@ const promocodeConditionColor = computed(() => {
       return "warning";
     case PromocodeCondition.EXPIRED:
     default:
-      return "blue-grey darken-2";
+      return "blue-grey-darken-2";
   }
 });
 

@@ -2,7 +2,7 @@
   <div>
     <v-app
       :style="{
-        background: $vuetify.theme.themes[theme].background,
+        background: $vuetify.theme.themes[theme]?.colors.background,
         width: isFullscreen && !isNotPlugin ? '0px' : undefined,
         height: isFullscreen && !isNotPlugin ? '0px' : undefined,
       }"
@@ -11,20 +11,19 @@
         v-if="isFullscreenAvailable && isFullscreen"
         style="position: fixed; right: 5vw; z-index: 100; margin-top: 1vh"
       >
-        <v-btn @click="toggleFullscreen" color="background-light" fab small>
+        <v-btn @click="toggleFullscreen" color="background-light" icon variant="elevated" size="small">
           <v-icon>mdi-fullscreen-exit</v-icon>
         </v-btn>
       </div>
 
       <template v-if="!isFullscreen">
         <v-navigation-drawer
-          app
+          :model-value="isNarrow ? drawerOpen : true"
           :permanent="!isNarrow"
           :temporary="isNarrow"
-          :value="!isNarrow || drawerOpen"
           :color="asideColor"
-          :mini-variant="isMenuMinimize && !isNarrow"
-          @input="drawerOpen = $event"
+          :rail="isMenuMinimize && !isNarrow"
+          @update:model-value="drawerOpen = $event"
         >
           <router-link to="/">
             <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
@@ -35,7 +34,7 @@
                   src="@/assets/logo.svg"
                   max-height="42px"
                   max-width="48px"
-                  contain
+                  
                 ></v-img>
 
                 <v-img
@@ -45,7 +44,7 @@
                   src="@/assets/logoTitle.svg"
                   max-height="24px"
                   max-width="122px"
-                  contain
+                  
                 ></v-img>
               </template>
               <template v-else>
@@ -54,17 +53,19 @@
                   transition="fade-transition"
                   alt=""
                   :src="config.logoSrc"
-                  contain
+                  
                 ></v-img>
               </template>
             </div>
           </router-link>
 
+          <!-- min-height: a fixed-height v-list clips its items in Vuetify 3+
+               (Vuetify 2 let them overflow into the scrolling drawer) -->
           <v-list
-            style="height: 100%"
+            style="min-height: 100%"
             v-if="isLoggedIn"
-            dense
-            :dark="asideDark"
+            density="compact"
+            :theme="asideDark ? 'dark' : undefined"
           >
             <div
               :class="{
@@ -74,167 +75,177 @@
                 'flex-column-reverse': isMenuMinimize,
               }"
             >
-              <v-subheader>MAIN</v-subheader>
-              <v-btn v-if="isNarrow" icon @click="drawerOpen = false">
+              <v-list-subheader>MAIN</v-list-subheader>
+              <v-btn
+                v-if="isNarrow"
+                icon
+                variant="text"
+                @click="drawerOpen = false"
+              >
                 <v-icon>mdi-close</v-icon>
               </v-btn>
-              <v-btn v-else icon @click="isMenuMinimize = !isMenuMinimize">
+              <v-btn
+                v-else
+                icon
+                variant="text"
+                @click="isMenuMinimize = !isMenuMinimize"
+              >
                 <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
                 <v-icon v-else>mdi-arrow-left</v-icon>
               </v-btn>
             </div>
 
-            <div style="height: 100%" id="drawer-menu-hover">
+            <div style="min-height: 100%" id="drawer-menu-hover">
               <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-view-dashboard-variant</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Dashboard")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Accounts' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-account-multiple</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Accounts")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item
                 v-bind="listItemBind"
                 :to="{ name: 'AccountGroups' }"
               >
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-account-group-outline</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Account Groups")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-server</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Instances")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Showcases' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-store-search</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Showcases")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
-              <v-subheader>BILLING</v-subheader>
+              <v-list-subheader>BILLING</v-list-subheader>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-script-text</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Price Models")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Addons' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-tab-plus</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Addons")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Promocodes' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-sale</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Promocodes")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-abacus</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Transactions")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Invoices' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-invoice-list</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Invoices")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Currencies' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-cash</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Currencies")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-chart-gantt</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Reports")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
-              <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
+              <v-list-subheader v-if="plugins?.length > 0">PLUGINS</v-list-subheader>
 
               <v-list-item
                 v-bind="listItemBind"
@@ -242,116 +253,116 @@
                 :key="plugin.url"
                 :to="{
                   name: 'Plugin',
-                  params: plugin,
+                  params: { title: plugin.title },
                   query: {
                     url: plugin.url,
                     fullscreen: viewport > 768 ? false : true,
                   },
                 }"
               >
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-{{ plugin.icon }}</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle(plugin.title)
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
-              <v-subheader>SYSTEM</v-subheader>
+              <v-list-subheader>SYSTEM</v-list-subheader>
 
               <v-list-item
                 v-bind="listItemBind"
                 @click.ctrl.prevent="openChatsInNewWindow"
                 @click.exact="chatClick"
               >
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon
                     :color="
                       unreadChatsCount && isMenuMinimize ? 'red' : undefined
                     "
                     >mdi-chat</v-icon
                   >
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title
                     >{{ navTitle("Chats") }}
-                    <v-chip
+                    <v-chip variant="flat"
                       color="red"
                       class="pa-2"
                       v-if="unreadChatsCount"
-                      x-small
+                      size="x-small"
                     >
                       {{ unreadChatsCount }}
                     </v-chip>
                   </v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-history</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Event log")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Statistics' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-chart-box-outline</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Statistics")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-dns</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("DNS manager")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Namespaces' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-form-textbox</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Groups (NameSpaces)")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item
                 v-bind="listItemBind"
                 :to="{ name: 'ServicesProviders' }"
               >
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-database-marker</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Services Providers")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item
@@ -359,43 +370,43 @@
                 :to="{ name: 'Services' }"
                 @click.ctrl="() => (easterEgg = true)"
               >
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon :color="easterEgg ? 'green darker-2' : undefined"
                     >mdi-alien</v-icon
                   >
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Services")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
 
               <v-list-item v-bind="listItemBind" :to="{ name: 'Settings' }">
-                <v-list-item-icon>
+                <template #prepend>
                   <v-icon>mdi-cogs</v-icon>
-                </v-list-item-icon>
+                </template>
 
-                <v-list-item-content>
+                
                   <v-list-item-title>{{
                     navTitle("Settings")
                   }}</v-list-item-title>
-                </v-list-item-content>
+                
               </v-list-item>
             </div>
           </v-list>
         </v-navigation-drawer>
 
         <v-app-bar
-          app
           color="background"
           elevation="0"
-          :dense="isNarrow"
+          :density="isNarrow ? 'compact' : 'default'"
         >
           <v-btn
             v-if="isNarrow"
             icon
+            variant="text"
             class="flex-shrink-0"
             @click="drawerOpen = true"
           >
@@ -426,8 +437,9 @@
                   v-if="btnStates.visible"
                   :disabled="btnStates.disabled"
                   color="background-light"
-                  fab
-                  small
+                  icon
+                  variant="elevated"
+                  size="small"
                   :loading="btnLoading"
                   @click="() => this.$store.dispatch('reloadBtn/onclick')"
                 >
@@ -438,8 +450,9 @@
                   color="background-light"
                   v-if="isFullscreenAvailable && !isFullscreen"
                   @click="toggleFullscreen"
-                  fab
-                  small
+                  icon
+                  variant="elevated"
+                  size="small"
                 >
                   <v-icon>mdi-fullscreen</v-icon>
                 </v-btn>
@@ -478,9 +491,10 @@
       @close="overlay.isVisible = false"
       @hover="hoverOverlay"
     >
-      <template #activator>
+      <template #activator="{ props }">
         <v-btn
-          outlined
+          v-bind="props"
+          variant="outlined"
           color="success"
           :style="{
             position: 'absolute',
@@ -498,7 +512,7 @@
 </template>
 
 <script>
-import { reactive, ref } from "vue";
+import { defineAsyncComponent, reactive, ref } from "vue";
 import { mapGetters } from "vuex";
 import useLoginClient from "@/hooks/useLoginInClient.js";
 import api from "@/api.js";
@@ -506,11 +520,16 @@ import config from "@/config.js";
 import languages from "@/components/header/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
-import instancesTableModal from "@/components/instances_table_modal.vue";
+// only shown for the chats overlay; keeps the table and Sortable out of the entry chunk
+const instancesTableModal = defineAsyncComponent(() =>
+  import("@/components/instances_table_modal.vue"),
+);
 import Themes from "@/components/header/themes.vue";
 import userMenu from "@/components/header/userMenu.vue";
 import notifications from "@/components/header/notifications.vue";
-import { Buffer } from "buffer";
+
+// base64 of the UTF-8 bytes of a string, like Buffer.from(str).toString("base64")
+const utf8Base64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
 export default {
   name: "App",
@@ -615,9 +634,7 @@ export default {
       });
 
       return window.open(
-        `/cc.ui/?a=${Buffer.from(
-          unescape(encodeURIComponent(fullParams))
-        ).toString("base64")}`,
+        `/cc.ui/?a=${utf8Base64(unescape(encodeURIComponent(fullParams)))}`,
         "_blanc"
       );
     },
@@ -662,7 +679,7 @@ export default {
       if (this.asideLinksColor)
         return {
           color: this.asideLinksColor,
-          dark: this.asideDark,
+          theme: this.asideDark ? "dark" : undefined,
         };
       else return {};
     },
@@ -734,7 +751,7 @@ export default {
 
     this.$store.dispatch("auth/load");
 
-    this.$router.onReady(() => {
+    this.$router.isReady().then(() => {
       const route = this.$route;
       if (
         route.matched.some((el) => el.meta.requireLogin) &&
@@ -801,6 +818,14 @@ export default {
 };
 </script>
 
+<style lang="scss">
+/* Vuetify 2 dense lists used smaller titles in the navigation drawer */
+.v-navigation-drawer .v-list--density-compact .v-list-item-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+</style>
+
 <style scoped lang="scss">
 @import "@/styles/globalStyles.scss";
 </style>
@@ -818,11 +843,11 @@ export default {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--v-primary-base);
+  background: rgb(var(--v-theme-primary));
 }
 
 @media (max-width: 900px) {

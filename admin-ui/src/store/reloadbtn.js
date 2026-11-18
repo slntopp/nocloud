@@ -1,3 +1,5 @@
+import { invalidateAllCaches } from "@/store/cache.js";
+
 export default {
   namespaced: true,
   state: {
@@ -38,6 +40,9 @@ export default {
   },
   actions: {
     async onclick({ state, commit, dispatch }) {
+      // the user asked for fresh data: drop cached reference lists too
+      invalidateAllCaches();
+
       if(state.onclick.event){
         state.onclick.event()
         return

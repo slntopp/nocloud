@@ -2,10 +2,10 @@
   <div class="pa-5">
     <v-expansion-panels>
       <v-expansion-panel>
-        <v-expansion-panel-header color="background">
+        <v-expansion-panel-title color="background">
           Margin rules:
-        </v-expansion-panel-header>
-        <v-expansion-panel-content color="background">
+        </v-expansion-panel-title>
+        <v-expansion-panel-text class="bg-background">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
@@ -18,23 +18,23 @@
           >
             <v-btn class="mt-4" color="secondary">Set rules</v-btn>
           </confirm-dialog>
-        </v-expansion-panel-content>
+        </v-expansion-panel-text>
       </v-expansion-panel>
     </v-expansion-panels>
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
-      background-color="background-light"
+      bg-color="background-light"
     >
       <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
     </v-tabs>
 
-    <v-tabs-items
+    <v-window
       v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       class="rounded-b-lg"
     >
-      <v-tab-item v-for="tab in tabs" :key="tab">
+      <v-window-item v-for="tab in tabs" :key="tab">
         <nocloud-table
           v-if="tab === 'Old prices'"
           :headers="oldPricesHeaders"
@@ -42,47 +42,114 @@
           :show-select="false"
         >
           <template v-slot:[`item.header`]="{ item }">
-            <v-text-field type="number" dense v-model.number="item.price" />
+            <v-text-field type="number" density="compact" v-model.number="item.price" />
           </template>
           <template v-slot:[`item.price`]="{ item }">
-            <v-text-field type="number" dense v-model.number="item.price" />
+            <v-text-field type="number" density="compact" v-model.number="item.price" />
           </template>
         </nocloud-table>
 
         <div v-else-if="tab === 'Prices'">
-          <div class="d-flex justify-space-between align-center">
+          <div class="d-flex flex-wrap align-center prices-toolbar">
             <v-text-field
-              style="max-width: 400px"
-              v-model="searchParam"
+              class="toolbar-search"
+              density="compact"
+              hide-details
+              clearable
+              prepend-inner-icon="mdi-magnify"
               label="Search"
-            ></v-text-field>
-            <v-btn :loading="isFillLoading" @click="fillConfig"
-              >Fill config</v-btn
-            >
+              v-model="searchParam"
+            />
 
-            <v-btn :loading="isExportLoading" @click="exportToXlsx"
-              >Export to XLSX</v-btn
-            >
-          </div>
-          <div class="d-flex align-center">
             <v-select
-              style="max-width: 200px"
-              class="mr-2"
-              dense
+              class="toolbar-filter"
+              density="compact"
+              hide-details
+              clearable
               label="Provider"
               :items="providers"
-              v-model="bulkGroupProvider"
+              v-model="filterProvider"
             />
-            <v-text-field
-              style="max-width: 200px"
-              class="mr-2"
-              dense
-              label="Group"
-              v-model="bulkGroup"
-            />
-            <v-btn :disabled="!bulkGroupProvider" @click="setGroupForProvider"
-              >Set group for provider</v-btn
+
+            <v-select
+              class="toolbar-filter"
+              density="compact"
+              hide-details
+              clearable
+              multiple
+              label="Types"
+              :items="availableTypes"
+              v-model="filterTypes"
             >
+              <template v-slot:selection="{ internalItem: item, index }">
+                <v-chip variant="flat"
+                  v-if="index < 1"
+                  size="x-small"
+                  style="color: white"
+                  :color="typesColorMap[item.raw]"
+                  >{{ item.title }}</v-chip
+                >
+                <span v-else-if="index === 1" class="text-caption ml-1"
+                  >+{{ filterTypes.length - 1 }}</span
+                >
+              </template>
+            </v-select>
+
+            <v-select
+              class="toolbar-filter"
+              density="compact"
+              hide-details
+              clearable
+              label="State"
+              :items="states"
+              v-model="filterState"
+            />
+
+            <v-spacer />
+
+            <v-menu
+              v-model="isGroupMenu"
+              :close-on-content-click="false"
+              location="left"
+            >
+              <template v-slot:activator="{ props }">
+                <v-btn variant="outlined" v-bind="props">
+                  <v-icon size="small" start>mdi-folder-cog-outline</v-icon>
+                  Set group
+                </v-btn>
+              </template>
+              <v-card class="pa-4" color="background-light" width="320">
+                <div class="text-subtitle-2 mb-2">Set group for provider</div>
+                <v-select
+                  density="compact"
+                  label="Provider"
+                  :items="providers"
+                  v-model="bulkGroupProvider"
+                />
+                <v-text-field density="compact" label="Group" v-model="bulkGroup" />
+                <div class="d-flex justify-end">
+                  <v-btn variant="text" class="mr-2" @click="isGroupMenu = false"
+                    >Cancel</v-btn
+                  >
+                  <v-btn
+                    color="primary"
+                    :disabled="!bulkGroupProvider"
+                    @click="applyGroupForProvider"
+                    >Apply</v-btn
+                  >
+                </div>
+              </v-card>
+            </v-menu>
+
+            <v-btn variant="outlined" :loading="isFillLoading" @click="fillConfig">
+              <v-icon size="small" start>mdi-cog-sync-outline</v-icon>
+              Fill config
+            </v-btn>
+
+            <v-btn variant="outlined" :loading="isExportLoading" @click="exportToXlsx">
+              <v-icon size="small" start>mdi-file-excel-outline</v-icon>
+              Export to XLSX
+            </v-btn>
           </div>
           <nocloud-table
             :headers="newPricesHeaders"
@@ -90,62 +157,80 @@
             :show-select="false"
           >
             <template v-slot:[`item.name`]="{ item }">
-              <v-text-field dense v-model="item.name" />
+              <v-text-field density="compact" v-model="item.name" />
             </template>
 
             <template v-slot:[`item.meta.group`]="{ item }">
-              <v-text-field dense v-model="item.meta.group" />
+              <v-text-field density="compact" v-model="item.meta.group" />
             </template>
 
             <template v-slot:[`item.meta.sorter`]="{ item }">
-              <v-text-field dense type="number" v-model.number="item.meta.sorter" />
+              <v-text-field density="compact" type="number" v-model.number="item.meta.sorter" />
             </template>
 
             <template v-slot:[`item.disabled`]="{ item }">
               <v-switch
                 :key="item.key"
-                dense
-                :input-value="!item.disabled"
-                @change="changeDisabled(item, $event)"
+                density="compact"
+                :model-value="!item.disabled"
+                @update:model-value="changeDisabled(item, $event)"
               />
             </template>
 
             <template v-slot:[`item.sitebuilder`]="{ item }">
               <v-switch
                 :key="`${item.key}-sitebuilder`"
-                dense
-                :input-value="!!item.sitebuilder"
-                @change="changeSitebuilder(item, $event)"
+                density="compact"
+                :model-value="!!item.sitebuilder"
+                @update:model-value="changeSitebuilder(item, $event)"
               />
             </template>
 
+            <!-- Read-only here: bots need verified capabilities, so the mark is
+                 set in the model's dialog where the driver validates it. -->
+            <template v-slot:[`item.bots`]="{ item }">
+              <v-chip variant="flat"
+                v-if="item.bots?.enabled"
+                size="small"
+                :color="item.bots.default ? 'success' : 'primary'"
+              >
+                {{ item.bots.default ? "default" : "bots" }}
+              </v-chip>
+            </template>
+
             <template v-slot:[`item.key`]="{ item }">
-              {{ getShortName(item.key) }}
+              <v-tooltip location="bottom">
+                <template v-slot:activator="{ props }">
+                  <span v-bind="props">{{
+                    getShortName(item.key)
+                  }}</span>
+                </template>
+                <span>{{ item.key }}</span>
+              </v-tooltip>
             </template>
 
             <template v-slot:[`item.visibility`]="{ item }">
               <v-select
-                dense
+                density="compact"
                 :items="['api_only', 'public', 'private']"
                 v-model="item.visibility"
               />
             </template>
 
             <template v-slot:[`item.billing`]="{ item }">
-              <v-btn icon @click="openBillingSettings(item)">
+              <v-btn icon variant="text" @click="openBillingSettings(item)">
                 <v-icon> mdi-menu-open </v-icon>
               </v-btn>
             </template>
 
             <template v-slot:[`item.types`]="{ item }">
               <template v-if="item.types?.length">
-                <v-chip
+                <v-chip variant="flat"
                   v-for="type in item.types"
                   :key="type"
                   class="ml-1"
                   style="color: white"
-                  small
-                  dense
+                  size="small"
                   :color="typesColorMap[type]"
                   >{{ type }}</v-chip
                 >
@@ -154,14 +239,11 @@
             </template>
 
             <template v-slot:[`item.state.state`]="{ item }">
-              <v-tooltip left>
-                <template v-slot:activator="{ on, attrs }">
-                  <v-chip
-                    dense
-                    v-bind="attrs"
-                    v-on="on"
+              <v-tooltip location="left">
+                <template v-slot:activator="{ props }">
+                  <v-chip variant="flat"
+                    v-bind="props"
                     style="color: white"
-                    y
                     :color="item.state?.state === 'broken' ? 'red' : 'green'"
                     >{{ item.state?.state }}</v-chip
                   >
@@ -176,7 +258,7 @@
             </template>
 
             <template v-slot:[`item.provider`]="{ item }">
-              <v-chip dense color="blue">{{ item.provider }}</v-chip>
+              <v-chip variant="flat" color="blue">{{ item.provider }}</v-chip>
             </template>
           </nocloud-table>
 
@@ -190,13 +272,99 @@
                 >{{ currentBillingSettings.name }}
               </v-card-title>
               <v-select
-                outlined
+                variant="outlined"
                 chips
                 label="Types"
                 :items="availableTypes"
                 multiple
                 v-model="currentBillingSettings.types"
               />
+
+              <template v-if="(currentBillingSettings.types || []).includes('text')">
+                <v-card-title class="key_title" style="padding: 0px">
+                  Capabilities
+                </v-card-title>
+                <v-switch
+                  density="compact"
+                  hide-details
+                  class="mb-2"
+                  v-model="capsEnabled"
+                  label="Capabilities are verified (the proxy and bots rely on them)"
+                />
+                <div v-if="!capsEnabled" class="key_text mb-4">
+                  Not set: requests to this model are sent exactly as before.
+                </div>
+                <v-row v-else density="compact" class="mb-2 align-center">
+                  <v-col cols="auto">
+                    <v-checkbox density="compact" hide-details v-model="capsForm.tools" label="Tools" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox density="compact" hide-details v-model="capsForm.json_schema" label="JSON schema" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox density="compact" hide-details v-model="capsForm.temperature" label="Custom temperature" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-checkbox density="compact" hide-details v-model="capsForm.vision" label="Vision" />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-combobox
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      multiple
+                      chips
+                      label="Reasoning efforts (empty: not a reasoning model)"
+                      :items="reasoningEffortItems"
+                      v-model="capsForm.reasoning"
+                    />
+                  </v-col>
+                </v-row>
+
+                <v-card-title class="key_title" style="padding: 0px">
+                  AI bots
+                </v-card-title>
+                <v-row density="compact" class="mb-2 align-center">
+                  <v-col cols="auto">
+                    <v-switch density="compact" hide-details v-model="botsForm.enabled" label="Available for bots" />
+                  </v-col>
+                  <v-col cols="auto">
+                    <v-switch density="compact" hide-details v-model="botsForm.default" label="Default (recommended)" />
+                  </v-col>
+                  <v-col cols="4">
+                    <v-select
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      clearable
+                      label="Default reasoning effort"
+                      :items="capsEnabled ? capsForm.reasoning : []"
+                      v-model="botsForm.reasoning_effort"
+                    />
+                  </v-col>
+                </v-row>
+                <div class="key_text mb-4">
+                  Bots need Tools and JSON schema. Only one model can be the
+                  default: saving this one as default moves the mark here.
+                </div>
+
+                <v-card-title class="key_title" style="padding: 0px">
+                  Description
+                </v-card-title>
+                <v-row density="compact" class="mb-4">
+                  <v-col cols="12" md="6" v-for="lang in descriptionLangs" :key="lang">
+                    <v-textarea
+                      density="compact"
+                      variant="outlined"
+                      hide-details
+                      rows="2"
+                      auto-grow
+                      :label="lang"
+                      v-model="descForm[lang]"
+                    />
+                  </v-col>
+                </v-row>
+              </template>
 
               <v-row v-for="key in Object.keys(fieldsForAdd)" :key="key">
                 <v-col cols="12">
@@ -205,8 +373,7 @@
                   }}</v-card-title>
                 </v-col>
                 <v-col cols="12">
-                  <v-row
-                    align="center"
+                  <v-row class="align-center"
                     v-for="field in fieldsForAdd[key]"
                     :key="field.key"
                   >
@@ -225,16 +392,16 @@
                       >
                         <v-text-field
                           hide-details
-                          dense
-                          outlined
+                          density="compact"
+                          variant="outlined"
                           type="number"
                           :label="priceLabel"
-                          :value="
+                          :model-value="
                             currentBillingSettings.billing[field.key][
                               [field.subkey]
                             ].price[priceKey]
                           "
-                          @input="
+                          @update:model-value="
                             currentBillingSettings.billing[field.key][
                               [field.subkey]
                             ].price[priceKey] = +$event
@@ -266,10 +433,10 @@
                                 >
                                   <span>{{ resolution }}</span>
                                   <v-btn
-                                    icon
-                                    x-small
+                                    icon variant="text"
+                                    size="x-small"
                                     @click="removeResolution(field, resolution)"
-                                    ><v-icon small>mdi-close</v-icon></v-btn
+                                    ><v-icon size="small">mdi-close</v-icon></v-btn
                                   >
                                 </th>
                               </tr>
@@ -298,18 +465,18 @@
                                   >
                                     <v-text-field
                                       hide-details
-                                      dense
-                                      outlined
+                                      density="compact"
+                                      variant="outlined"
                                       type="number"
                                       :label="priceLabel"
-                                      :value="
+                                      :model-value="
                                         audioCell(
                                           field,
                                           resolution,
                                           row.key
                                         )[priceKey]
                                       "
-                                      @input="
+                                      @update:model-value="
                                         audioCell(field, resolution, row.key)[
                                           priceKey
                                         ] = +$event
@@ -321,11 +488,11 @@
                             </tbody>
                           </table>
                         </div>
-                        <v-row justify="end" class="mt-2">
+                        <v-row class="mt-2 justify-end">
                           <v-col cols="3">
                             <v-text-field
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               hide-details
                               label="New resolution"
                               v-model="newResolution"
@@ -344,14 +511,13 @@
                     <template v-else-if="field.type === 'map-number'">
                       <v-col cols="12" :key="field.subkey">
                         <span class="key_text">{{ fieldLabel(field) }}</span>
-                        <v-row
+                        <v-row class="align-center"
                           v-for="resolution in Object.keys(
                             currentBillingSettings.billing[field.key][
                               field.subkey
                             ] || {}
                           )"
                           :key="resolution"
-                          align="center"
                         >
                           <v-col cols="2">
                             <span class="key_text">{{ resolution }}</span>
@@ -366,16 +532,16 @@
                           >
                             <v-text-field
                               hide-details
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               type="number"
                               :label="priceLabel"
-                              :value="
+                              :model-value="
                                 currentBillingSettings.billing[field.key][
                                   field.subkey
                                 ][resolution][priceKey]
                               "
-                              @input="
+                              @update:model-value="
                                 currentBillingSettings.billing[field.key][
                                   field.subkey
                                 ][resolution][priceKey] = +$event
@@ -412,7 +578,7 @@
                                 >{{ key }} {{ subkey }}</span
                               >
 
-                              <v-btn icon @click="deleteFromMap(field, key)"
+                              <v-btn icon variant="text" @click="deleteFromMap(field, key)"
                                 ><v-icon>mdi-delete</v-icon></v-btn
                               >
                             </v-col>
@@ -425,17 +591,17 @@
                               :key="`${field.subkey}-${priceKey}`"
                             >
                               <v-text-field
-                                dense
-                                outlined
+                                density="compact"
+                                variant="outlined"
                                 type="number"
                                 :label="priceLabel"
-                                :value="
+                                :model-value="
                                   currentBillingSettings.billing[field.key][
                                     [field.subkey]
                                   ][key][subkey][priceKey]
                                 "
                                 hide-details
-                                @input="
+                                @update:model-value="
                                   currentBillingSettings.billing[field.key][
                                     [field.subkey]
                                   ][key][subkey][priceKey] = +$event
@@ -445,11 +611,11 @@
                           </v-row>
                         </template>
 
-                        <v-row justify="end">
+                        <v-row class="justify-end">
                           <v-col cols="3">
                             <v-text-field
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               hide-details
                               label="New key"
                               v-model="newKeysForMaps[field.subkey]"
@@ -457,8 +623,8 @@
                           </v-col>
                           <v-col cols="3">
                             <v-text-field
-                              dense
-                              outlined
+                              density="compact"
+                              variant="outlined"
                               hide-details
                               label="New subkey"
                               v-model="newSubkeysForMaps[field.subkey]"
@@ -513,8 +679,8 @@
             :addons="template.addons"
           />
         </div>
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
     <div class="d-flex justify-end">
       <v-btn :loading="isSaveLoading" @click="save">Save</v-btn>
     </div>
@@ -530,7 +696,6 @@ import { useStore } from "@/store";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import { getMarginedValue, getShortName } from "@/functions";
 import confirmDialog from "@/components/confirmDialog.vue";
-import XlsxService from "@/services/XlsxService";
 import { getTodayFullDate } from "../../functions";
 
 const props = defineProps(["template"]);
@@ -637,6 +802,7 @@ const newPricesHeaders = [
   { text: "Visibility", value: "visibility", width: 150 },
   { text: "Enabled", value: "disabled", width: 100 },
   { text: "Sitebuilder", value: "sitebuilder", width: 120 },
+  { text: "Bots", value: "bots", sortable: false, width: 110 },
   { text: "Billing", value: "billing", sortable: false, width: 100 },
   { text: "State", value: "state.state", width: 100 },
 ];
@@ -658,12 +824,26 @@ const fieldLabel = (field) => {
 };
 
 const searchParam = ref("");
+const filterProvider = ref(null);
+const filterTypes = ref([]);
+const filterState = ref(null);
+const isGroupMenu = ref(false);
 
 const isSaveLoading = ref(false);
 const isSaveModelLoading = ref(false);
 const isBillingSettingsOpen = ref(false);
 const billingSettinfsMessages = ref([]);
 const currentBillingSettings = ref({});
+// Capabilities, bots and description are edited in forms of their own and only
+// written back on save. Capabilities in particular must stay null until an
+// administrator verifies them: an empty object would tell the proxy the model
+// rejects temperature, and opening a model just to change a price would do that.
+const descriptionLangs = ["ru", "en", "pl", "fr", "vi"];
+const reasoningEffortItems = ["minimal", "low", "medium", "high"];
+const capsEnabled = ref(false);
+const capsForm = ref({});
+const botsForm = ref({});
+const descForm = ref({});
 const newKeysForMaps = ref({});
 const newSubkeysForMaps = ref({});
 const newResolution = ref("");
@@ -678,12 +858,12 @@ const availableTypes = [
   "vision",
 ];
 const typesColorMap = {
-  text: "indigo darken-4",
+  text: "indigo-darken-4",
   text_to_audio: "purple",
-  audio_to_text: "pink darken-4",
-  image: "red darken-4",
-  video: "orange darken-3",
-  vision: "blue darken-3",
+  audio_to_text: "pink-darken-4",
+  image: "red-darken-4",
+  video: "orange-darken-3",
+  vision: "blue-darken-3",
 };
 
 const keyLabelMap = {
@@ -881,14 +1061,33 @@ const setFee = () => {
 };
 
 const newPricesResourcesFiltred = computed(() => {
-  const param = searchParam.value.toLowerCase();
-  return newPricesResources.value.filter(
-    (r) =>
-      r.name.includes(param) ||
-      r.key.includes(param) ||
-      (r?.types || []).includes(param) ||
-      r.provider === param
-  );
+  const param = (searchParam.value || "").trim().toLowerCase();
+
+  return newPricesResources.value.filter((r) => {
+    if (filterProvider.value && r.provider !== filterProvider.value) {
+      return false;
+    }
+    if (filterState.value && r.state?.state !== filterState.value) {
+      return false;
+    }
+    // several types narrow to models having any of them, not all of them
+    if (
+      filterTypes.value.length &&
+      !filterTypes.value.some((type) => (r.types || []).includes(type))
+    ) {
+      return false;
+    }
+    if (!param) {
+      return true;
+    }
+
+    return (
+      (r.name || "").toLowerCase().includes(param) ||
+      (r.key || "").toLowerCase().includes(param) ||
+      (r.provider || "").toLowerCase().includes(param) ||
+      (r.types || []).some((type) => type.toLowerCase().includes(param))
+    );
+  });
 });
 
 const fieldsForAdd = computed(() => {
@@ -997,7 +1196,55 @@ const openBillingSettings = (item) => {
   }
 
   currentBillingSettings.value = temp;
+  fillModelForms(temp);
   isBillingSettingsOpen.value = true;
+};
+
+const fillModelForms = (model) => {
+  capsEnabled.value = !!model.capabilities;
+  capsForm.value = {
+    tools: !!model.capabilities?.tools,
+    json_schema: !!model.capabilities?.json_schema,
+    // A model that was never checked keeps its temperature when enabled first.
+    temperature: model.capabilities ? !!model.capabilities.temperature : true,
+    vision: !!model.capabilities?.vision,
+    reasoning: [...(model.capabilities?.reasoning || [])],
+  };
+  botsForm.value = {
+    enabled: !!model.bots?.enabled,
+    default: !!model.bots?.default,
+    reasoning_effort: model.bots?.reasoning_effort || "",
+  };
+  descForm.value = Object.fromEntries(
+    descriptionLangs.map((lang) => [lang, model.description?.[lang] || ""])
+  );
+};
+
+// What the forms hold, in the shape of the driver's config. Empty means null,
+// so a model nobody touched here saves exactly as it was loaded.
+const modelFormsToConfig = () => {
+  const capabilities = capsEnabled.value
+    ? {
+        ...capsForm.value,
+        reasoning: (capsForm.value.reasoning || []).filter(Boolean),
+      }
+    : null;
+  const bots = botsForm.value;
+  const botsTouched = bots.enabled || bots.default || bots.reasoning_effort;
+  const description = Object.fromEntries(
+    Object.entries(descForm.value).filter(([, text]) => text && text.trim())
+  );
+  return {
+    capabilities,
+    bots: botsTouched
+      ? {
+          enabled: !!bots.enabled,
+          default: !!bots.default,
+          reasoning_effort: bots.reasoning_effort || "",
+        }
+      : null,
+    description: Object.keys(description).length ? description : null,
+  };
 };
 
 const resolutionColumns = (field) => {
@@ -1073,6 +1320,7 @@ const saveBillingSettings = async () => {
     JSON.stringify({ ...currentBillingSettings.value, billing: {} })
   );
   delete configModel.key;
+  Object.assign(configModel, modelFormsToConfig());
 
   for (const type of configModel.types) {
     for (const fields of fieldsForTypes[type].fields) {
@@ -1187,12 +1435,24 @@ const saveBillingSettings = async () => {
       (item) => item.key === resultModel.key
     );
     newPricesResources.value[index] = withMeta(resultModel);
+    // The driver moved the default mark onto this model; mirror it here, or the
+    // next full "Save" would send two defaults and be refused.
+    if (resultModel.bots?.default) {
+      newPricesResources.value.forEach((item) => {
+        if (item.key !== resultModel.key && item.bots?.default) {
+          item.bots = { ...item.bots, default: false };
+        }
+      });
+    }
 
     newPricesResources.value = [...newPricesResources.value];
     isBillingSettingsOpen.value = false;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during save prices",
+      message:
+        e.response?.data?.answer ||
+        e.response?.data?.message ||
+        "Error during save prices",
     });
   } finally {
     isSaveModelLoading.value = false;
@@ -1281,6 +1541,7 @@ const exportToXlsx = async () => {
       (r) => !r.disabled && r.state?.state !== "broken"
     );
 
+    const { default: XlsxService } = await import("@/services/XlsxService");
     return XlsxService.downloadXlsx(template.value.title + getTodayFullDate(), [
       {
         name: template.value.title,
@@ -1397,7 +1658,10 @@ const save = async () => {
     store.dispatch("reloadBtn/onclick");
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during save prices",
+      message:
+        e.response?.data?.answer ||
+        e.response?.data?.message ||
+        "Error during save prices",
     });
   } finally {
     isSaveLoading.value = false;
@@ -1432,10 +1696,21 @@ const providers = computed(() => [
   ...new Set(newPricesResources.value.map((r) => r.provider)),
 ]);
 
+const states = computed(() => [
+  ...new Set(
+    newPricesResources.value.map((r) => r.state?.state).filter(Boolean)
+  ),
+]);
+
 const setGroupForProvider = () => {
   newPricesResources.value
     .filter((r) => r.provider === bulkGroupProvider.value)
     .forEach((r) => (r.meta.group = bulkGroup.value));
+};
+
+const applyGroupForProvider = () => {
+  setGroupForProvider();
+  isGroupMenu.value = false;
 };
 
 watch(isBillingSettingsOpen, (value) => {
@@ -1447,6 +1722,20 @@ watch(isBillingSettingsOpen, (value) => {
 </script>
 
 <style scoped>
+/* one wrapping toolbar: search and filters on the left, actions on the right */
+.prices-toolbar {
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.toolbar-search {
+  max-width: 260px;
+}
+
+.toolbar-filter {
+  max-width: 180px;
+}
+
 .key_text {
   font-size: 1rem;
 }

@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	redis "github.com/go-redis/redis/v8"
 	redisdb "github.com/slntopp/nocloud/pkg/nocloud/redis"
 	"github.com/slntopp/nocloud/pkg/nocloud/ssh"
@@ -712,6 +713,10 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
+	if !isNocloudAdmin(ctx) {
+		stripAdminOnlyFields(acc.Account)
+	}
+
 	if acc.Key == requestor {
 		return acc.Account, nil
 	}
@@ -750,7 +755,20 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	offset := (page - 1) * limit
 
-	pool, count, active, err := s.ctrl.ListImproved(ctx, acc.GetUuid(), depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
+	// Filtering or sorting by grade would let others guess an account spending.
+	isAdmin := isNocloudAdmin(ctx)
+	filters, field := request.GetFilters(), request.GetField()
+	if !isAdmin {
+		if _, ok := filters["grade"]; ok {
+			filters = maps.Clone(filters)
+			delete(filters, "grade")
+		}
+		if isAdminOnlySortField(field) {
+			field = ""
+		}
+	}
+
+	pool, count, active, err := s.ctrl.ListImproved(ctx, acc.GetUuid(), depth, offset, limit, field, request.GetSort(), filters)
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
@@ -761,6 +779,9 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	for i, acc := range pool {
 		if acc.Access.Level < access.Level_ROOT {
 			acc.Account.SuspendConf = nil
+		}
+		if !isAdmin {
+			stripAdminOnlyFields(acc.Account)
 		}
 		result[i] = acc.Account
 	}
@@ -1316,6 +1337,19 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		patch["status"] = request.GetStatus()
 	}
 
+	// spending is written only by billing. The manual grade is admin-only and
+	// silently ignored for everyone else, like suspend_conf above.
+	if request.GradeOverride != nil && isNocloudAdmin(ctx) {
+		grade, ok, err := gradeOverridePatch(acc.GetGradeOverride(), request.GradeOverride)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			log.Debug("Grade override patch detected")
+			patch["grade_override"] = grade
+		}
+	}
+
 	var requestData map[string]any
 	if request.Data == nil {
 		log.Debug("Data patch is not present, skipping")
@@ -1466,9 +1500,10 @@ func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddN
 
 	acc.AdminNotes = append(acc.GetAdminNotes(), &notes.AdminNote{
 		Admin:   requestor,
-		Msg:     request.GetMsg(),
-		Created: time.Now().Unix(),
-		Pinned:  request.Pinned,
+		Msg:         request.GetMsg(),
+		Created:     time.Now().Unix(),
+		Pinned:      request.Pinned,
+		Attachments: request.GetAttachments(),
 	})
 
 	patch := map[string]any{
@@ -1517,6 +1552,7 @@ func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.Pa
 		note.Msg = request.GetMsg()
 		note.Updated = time.Now().Unix()
 		note.Pinned = request.Pinned
+		note.Attachments = request.GetAttachments()
 
 		patch := map[string]any{
 			"admin_notes": acc.GetAdminNotes(),

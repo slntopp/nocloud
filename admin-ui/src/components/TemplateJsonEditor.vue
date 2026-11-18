@@ -20,9 +20,9 @@
     <div :class="{ 'editor-readonly': !isEditing }" class="editor-container">
       <json-editor-new
         ref="editorRef"
-        :value="currentEditorValue"
+        :model-value="currentEditorValue"
         :read-only="!isEditing"
-        @input="handleEditorInput"
+        @update:model-value="handleEditorInput"
         @change="handleEditorChange"
       />
     </div>
@@ -34,7 +34,7 @@ import { ref, watch } from "vue";
 import JsonEditorNew from "./JsonEditor-New.vue";
 
 const props = defineProps({
-  value: {
+  modelValue: {
     type: Object,
     required: true,
   },
@@ -48,14 +48,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["input", "save"]);
+const emit = defineEmits(["update:modelValue", "save"]);
 
 const editorRef = ref(null);
 const isEditing = ref(false);
 const isSaving = ref(false);
 const currentValue = ref("");
 const originalValue = ref("");
-const currentEditorValue = ref(props.value);
+const currentEditorValue = ref(props.modelValue);
 
 function getFormattedText(val) {
   try {
@@ -68,7 +68,7 @@ function getFormattedText(val) {
 function handleEditorInput(value) {
   try {
     currentValue.value = getFormattedText(value);
-    emit("input", value);
+    emit("update:modelValue", value);
   } catch (e) {
     console.error("Input error:", e);
   }
@@ -109,12 +109,12 @@ function handleCancel() {
 
 watch(isEditing, () => {
   if (isEditing.value) {
-    currentEditorValue.value = props.value;
+    currentEditorValue.value = props.modelValue;
   }
 });
 
 watch(
-  () => props.value,
+  () => props.modelValue,
   (newVal) => {
     if (!isEditing.value) {
       currentEditorValue.value = newVal;
@@ -124,8 +124,8 @@ watch(
   { deep: true },
 );
 
-originalValue.value = getFormattedText(props.value);
-currentEditorValue.value = props.value;
+originalValue.value = getFormattedText(props.modelValue);
+currentEditorValue.value = props.modelValue;
 </script>
 
 <style scoped lang="scss">
@@ -144,7 +144,7 @@ currentEditorValue.value = props.value;
   justify-content: space-between;
   align-items: center;
 
-  background: var(--v-background-light-base) !important;
+  background: rgb(var(--v-theme-background-light)) !important;
 
   padding: 10px 0;
   margin-bottom: 10px;
@@ -158,12 +158,18 @@ currentEditorValue.value = props.value;
   gap: 8px;
 }
 
+// No scroll of its own: the editor inside already scrolls, and a container
+// taller than its parent gave the page a second scrollbar on top of it.
 .editor-container {
   border-radius: 12px;
-  overflow-y: auto;
-  height: 110%;
   flex: 1;
   min-height: 0;
+}
+
+// JsonEditor-New is 500px tall by default (SettingsItem relies on that), here
+// it has to fill whatever height is left instead.
+.editor-container :deep(.editor-wrapper) {
+  height: 100%;
 }
 
 .editor-readonly {
@@ -182,7 +188,6 @@ currentEditorValue.value = props.value;
     z-index: 10;
     border-radius: 12px;
     pointer-events: none;
-    height: 110%;
   }
 }
 </style>

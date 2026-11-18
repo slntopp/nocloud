@@ -9,7 +9,7 @@
       style="z-index: 0; position: relative; top: -15px; right: 20px"
     >
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
-        <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
+        <v-chip variant="flat" class="mr-2" :color="getTotalColor(newInvoice)">
           Subtotal:
           {{
             `${newInvoice.subtotal} ${
@@ -18,7 +18,7 @@
           }}
         </v-chip>
 
-        <v-chip class="mr-2" :color="getTotalColor(newInvoice)">
+        <v-chip variant="flat" class="mr-2" :color="getTotalColor(newInvoice)">
           Total:
           {{
             `${newInvoice.total} ${
@@ -27,7 +27,7 @@
           }}
         </v-chip>
 
-        <v-chip v-if="isEdit" :color="getInvoiceStatusColor(newInvoice.status)">
+        <v-chip variant="flat" v-if="isEdit" :color="getInvoiceStatusColor(newInvoice.status)">
           {{ `${newInvoice.status}` }}
         </v-chip>
       </div>
@@ -39,7 +39,7 @@
           <v-select
             :disabled="isEdit"
             item-value="id"
-            item-text="title"
+            item-title="title"
             label="Type"
             v-model="newInvoice.type"
             :items="types"
@@ -51,7 +51,7 @@
           <accounts-autocomplete
             advanced
             :loading="isInstancesLoading"
-            @input="onChangeAccount"
+            @update:model-value="onChangeAccount"
             :disabled="isEdit"
             label="Account"
             v-model="newInvoice.account"
@@ -62,7 +62,7 @@
           <v-btn
             style="margin-top: 20px"
             @click="openAccountWindow"
-            icon
+            icon variant="text"
             v-if="isEdit && newInvoice.account && !isInstancesLoading"
           >
             <v-icon>mdi-login</v-icon>
@@ -71,8 +71,8 @@
 
         <div class="item" style="max-width: 80px">
           <v-text-field
-            :value="newInvoice.taxRate * 100"
-            @input="newInvoice.taxRate = $event / 100"
+            :model-value="newInvoice.taxRate * 100"
+            @update:model-value="newInvoice.taxRate = $event / 100"
             label="tax rate"
             type="number"
             suffix="%"
@@ -82,34 +82,38 @@
         <div class="item">
           <v-autocomplete
             :disabled="isEdit || isBalanceInvoice"
-            :filter="defaultFilterObject"
+            :custom-filter="instancesFilter"
             label="Instances"
             v-model="newInvoice.instances"
             multiple
-            item-text="title"
+            item-title="title"
             item-value="uuid"
             :items="instances"
-            @change="onChangeInstance"
+            @update:model-value="onChangeInstance"
             :loading="isInstancesLoading"
           >
-            <template v-slot:selection="{ item }">
-              <div class="mr-1">
-                <span>
-                  {{ item.title }}
-                  ({{ item.uuid.slice(0, 6) }})
-                </span>
-              </div>
-              <instance-state only-color small :template="item" />
+            <template v-slot:selection="{ internalItem: item }">
+              <template v-if="item.raw && typeof item.raw === 'object'">
+                <div class="mr-1">
+                  <span>
+                    {{ item.raw.title }}
+                    ({{ item.raw.uuid.slice(0, 6) }})
+                  </span>
+                </div>
+                <instance-state only-color small :template="item.raw" />
+              </template>
             </template>
 
-            <template v-slot:item="{ item }">
-              <div>
-                <span>
-                  {{ item.title }}
-                  ({{ item.uuid.slice(0, 6) }})
-                </span>
-                <instance-state only-color small :template="item" />
-              </div>
+            <template v-slot:item="{ internalItem: item, props: itemProps }">
+              <v-list-item v-bind="itemProps">
+                <template v-slot:title>
+                  <span>
+                    {{ item.raw.title }}
+                    ({{ item.raw.uuid.slice(0, 6) }})
+                  </span>
+                  <instance-state only-color small :template="item.raw" />
+                </template>
+              </v-list-item>
             </template>
           </v-autocomplete>
         </div>
@@ -118,9 +122,9 @@
           <v-text-field
             type="number"
             label="Total"
-            :value="newInvoice.total"
+            :model-value="newInvoice.total"
             :suffix="accountCurrency?.code"
-            @input="newInvoice.items[0].price = +$event"
+            @update:model-value="newInvoice.items[0].price = +$event"
           />
         </div>
 
@@ -174,7 +178,7 @@
       </div>
 
       <v-textarea
-        outlined
+        variant="outlined"
         no-resize
         label="Admin note"
         v-model="newInvoice.meta.note"
@@ -182,7 +186,7 @@
 
       <div class="mt-2">
         <div v-if="!isBalanceInvoice" class="d-flex justify-space-between">
-          <v-subheader>Invoice items</v-subheader>
+          <v-list-subheader>Invoice items</v-list-subheader>
           <v-btn @click="addInvoiceItem">Add</v-btn>
         </div>
         <invoice-items-table
@@ -202,7 +206,7 @@
         />
       </nocloud-expansion-panels>
 
-      <v-row justify="space-between" class="mt-4 mb-4">
+      <v-row class="mt-4 mb-4 justify-space-between">
         <div class="mt-2 ml-1">
           <v-btn
             v-if="!isEdit"
@@ -256,7 +260,7 @@
                 :disabled="isKsefDisabled"
               >
                 Ksef
-                <v-icon v-if="newInvoice.meta?.ksef_number || newInvoice.meta?.ksef_last_error" small class="ml-1">
+                <v-icon v-if="newInvoice.meta?.ksef_number || newInvoice.meta?.ksef_last_error" size="small" class="ml-1">
                   {{ newInvoice.meta?.ksef_last_error ? 'mdi-alert-circle' : 'mdi-check-circle' }}
                 </v-icon>
               </v-btn>
@@ -269,7 +273,7 @@
             color="background-light"
             @click="downloadInvoice"
           >
-            download <v-icon small>mdi-download</v-icon>
+            download <v-icon size="small">mdi-download</v-icon>
           </v-btn>
 
           <confirm-dialog
@@ -343,7 +347,7 @@
           <v-btn
             :disabled="isAddPaymentLoading"
             color="primary"
-            text
+            variant="text"
             @click="isAddPaymentDialogOpen = false"
           >
             Close</v-btn
@@ -352,7 +356,7 @@
           <v-btn
             color="primary"
             :loading="isAddPaymentLoading"
-            text
+            variant="text"
             @click="changeStatusToPaid"
           >
             Add payment
@@ -371,7 +375,7 @@ import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import datePicker from "@/components/ui/datePicker.vue";
 import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
-import { useRoute, useRouter } from "vue-router/composables";
+import { useRoute, useRouter } from "vue-router";
 import {
   BillingStatus,
   CreateInvoiceRequest,
@@ -429,6 +433,10 @@ const addPaymentOptions = ref({
   changePaymentDate: false,
   paymentDate: formatSecondsToDateString(Date.now() / 1000),
 });
+
+// Vuetify 3 custom-filter gets (value, query, item); item.raw is the instance
+const instancesFilter = (value, query, item) =>
+  defaultFilterObject(item?.raw, query);
 
 const isInstancesLoading = ref(true);
 const instancesAccountMap = ref({});
@@ -567,7 +575,8 @@ const getInvoiceDateTs = (originalTs, newDate) => {
 };
 
 const saveInvoice = async (withEmail = false, status) => {
-  if (!(await invoiceForm.value.validate())) {
+  const { valid } = await invoiceForm.value.validate();
+  if (!valid) {
     return;
   }
   isSaveLoading.value = true;
@@ -896,7 +905,7 @@ watch(
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

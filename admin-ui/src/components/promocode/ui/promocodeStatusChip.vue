@@ -1,5 +1,5 @@
 <template>
-  <v-chip :color="promocodeStatusColor">{{ promocodeStatusTitle }}</v-chip>
+  <v-chip variant="flat" :color="promocodeStatusColor">{{ promocodeStatusTitle }}</v-chip>
 </template>
 
 <script setup>
@@ -19,7 +19,7 @@ const promocodeStatusColor = computed(() => {
       return "warning";
     case PromocodeStatus.DELETED:
     default:
-      return "blue-grey darken-2";
+      return "blue-grey-darken-2";
   }
 });
 

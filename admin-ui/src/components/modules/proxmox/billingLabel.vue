@@ -10,5 +10,7 @@ export default {
   name: "proxmox-billing-label",
   components: { IoneBillingLabel },
   inheritAttrs: false,
+  // declared so these listeners are not also forwarded through $attrs (Vue 3)
+  emits: ["update"],
 };
 </script>

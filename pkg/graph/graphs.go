@@ -591,6 +591,15 @@ func listAccounts[T Accessible](
 			}
 			insert += ` FILTER TO_NUMBER(node.currency.id) in @currencies`
 			bindVars["currencies"] = values
+		} else if key == "grade" && collectionName == schema.ACCOUNTS_COL {
+			cond, vars := accountGradeFilter(val.GetListValue().AsSlice())
+			if cond == "" {
+				continue
+			}
+			insert += ` FILTER ` + cond
+			for k, v := range vars {
+				bindVars[k] = v
+			}
 		} else if key == "balance" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
@@ -680,6 +689,13 @@ func listNamespaces[T Accessible](
 			account := val.GetStringValue()
 			insert += ` FILTER path.vertices[-2]._key == @account`
 			bindVars["account"] = account
+		} else if key == "uuid" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER node._key in @uuids`
+			bindVars["uuids"] = values
 		}
 	}
 

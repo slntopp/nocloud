@@ -1,24 +1,28 @@
-# ui
+# NoCloud Admin UI
+
+Vue 3 + Vuetify 3 + Vite. Served under `/admin` by `apiserver_web`.
+
+Requires Node.js 22.12+ (or 20.19+).
 
 ## Project setup
 ```
-npm install
+yarn install
 ```
 
-### Compiles and hot-reloads for development
+### Dev server with hot reload
 ```
-npm run serve
+yarn dev
 ```
+The dev server runs on http://localhost:8080/admin/. Runtime settings (colors,
+theme, logo) come from `public/js/config.js`, which each installation mounts.
 
-### Compiles and minifies for production
+### Production build
 ```
-npm run build
+yarn build
 ```
+Output goes to `dist/`.
 
-### Lints and fixes files
+### Lint
 ```
-npm run lint
+yarn lint
 ```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).

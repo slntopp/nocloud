@@ -22,3 +22,7 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# temporary codemod config
+eslint.migrate.config.js
+eslint.migrate4.config.js

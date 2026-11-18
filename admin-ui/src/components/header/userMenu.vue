@@ -1,25 +1,25 @@
 <template>
-  <v-menu offset-y transition="slide-y-transition">
-    <template v-slot:activator="{ on, attrs }">
+  <v-menu transition="slide-y-transition">
+    <template v-slot:activator="{ props }">
       <v-btn
         :class="compact ? 'mx-1' : 'mx-2'"
-        :small="compact"
-        fab
+        icon
+        variant="elevated"
+        :size="compact ? 'small' : 'large'"
         color="background-light"
-        v-bind="attrs"
-        v-on="on"
+        v-bind="props"
       >
-        <v-icon dark> mdi-account </v-icon>
+        <v-icon> mdi-account </v-icon>
       </v-btn>
     </template>
     <v-list dence min-width="250px">
       <v-list-item>
-        <v-list-item-content>
+        
           <v-list-item-title class="text-h6">
             {{ userdata.title }}
           </v-list-item-title>
           <v-list-item-subtitle>#{{ userdata.uuid }}</v-list-item-subtitle>
-        </v-list-item-content>
+        
       </v-list-item>
       <v-list-item>
         <balance title="Balance: " loged-in-user />

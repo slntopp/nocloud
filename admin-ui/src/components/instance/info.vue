@@ -17,7 +17,7 @@
         />
       </v-col>
     </v-row>
-    <v-card-title class="primary--text">Client info</v-card-title>
+    <v-card-title class="text-primary">Client info</v-card-title>
     <v-row>
       <v-col>
         <route-text-field
@@ -26,7 +26,7 @@
             params: { namespaceId: namespace?.uuid },
           }"
           label="Group(Namespace)"
-          :value="!namespace ? '' : namespace.title"
+          :model-value="!namespace ? '' : namespace.title"
         />
       </v-col>
       <v-col>
@@ -34,9 +34,10 @@
           <route-text-field
             :to="{ name: 'Account', params: { accountId: account?.uuid } }"
             label="Account"
-            :value="account?.title"
+            :model-value="account?.title"
           />
-          <v-btn icon @click="moveDialog = true">
+          <account-grade :account="account" />
+          <v-btn icon variant="text" @click="moveDialog = true">
             <v-icon size="30">mdi-arrow-up-bold</v-icon>
           </v-btn>
         </div>
@@ -45,16 +46,16 @@
         <v-text-field
           readonly
           label="Email"
-          :value="account?.data?.email"
-          append-icon="mdi-content-copy"
-          @click:append="addToClipboard(account?.data?.email)"
+          :model-value="account?.data?.email"
+          append-inner-icon="mdi-content-copy"
+          @click:append-inner="addToClipboard(account?.data?.email)"
         />
       </v-col>
       <v-col>
         <v-text-field
           readonly
           label="Balance"
-          :value="account?.balance?.toFixed(2) || 0"
+          :model-value="account?.balance?.toFixed(2) || 0"
         />
       </v-col>
     </v-row>
@@ -64,8 +65,7 @@
     <!--      :template="template"-->
     <!--      @refresh="refreshInstance"-->
     <!--    />-->
-    <template>
-      <v-card-title class="primary--text">Instance info</v-card-title>
+      <v-card-title class="text-primary">Instance info</v-card-title>
       <v-row>
         <v-col>
           <v-text-field
@@ -73,7 +73,7 @@
             ref="instance-title"
             label="Instance name"
           >
-            <template v-slot:append>
+            <template v-slot:append-inner>
               <v-icon class="mr-2" @click="$refs['instance-title'].focus()"
                 >mdi-pencil</v-icon
               >
@@ -87,38 +87,50 @@
         </v-col>
         <v-col>
           <v-text-field
-            :value="template.uuid"
+            :model-value="template.uuid"
             readonly
             label="UUID"
-            append-icon="mdi-content-copy"
-            @click:append="addToClipboard(template.uuid)"
+            append-inner-icon="mdi-content-copy"
+            @click:append-inner="addToClipboard(template.uuid)"
           />
         </v-col>
         <v-col>
           <route-text-field
             :to="{ name: 'Service', params: { serviceId: service?.uuid } }"
-            :value="!service ? '' : service.title"
+            :model-value="!service ? '' : service.title"
             label="Service"
           />
         </v-col>
         <v-col>
           <route-text-field
             :to="{ name: 'ServicesProvider', params: { uuid: sp?.uuid } }"
-            :value="sp?.title"
+            :model-value="sp?.title"
             label="Service provider"
           />
         </v-col>
         <v-col>
           <v-text-field
             label="Location"
-            :value="template.config?.location || 'Unknown'"
-            @input="update({ key: 'config.location', value: $event })"
+            :model-value="template.config?.location || 'Unknown'"
+            @update:model-value="update({ key: 'config.location', value: $event })"
           />
         </v-col>
         <v-col>
-          <v-text-field readonly :value="type" label="Type" />
+          <v-text-field readonly :model-value="type" label="Type" />
         </v-col>
       </v-row>
+
+      <nocloud-expansion-panels
+        v-if="type === 'empty'"
+        title="Service data (visible to client)"
+        class="mb-5"
+      >
+        <rich-editor
+          class="pa-5"
+          :model-value="copyInstance.config?.service_data"
+          @update:model-value="updateServiceData"
+        />
+      </nocloud-expansion-panels>
 
       <nocloud-expansion-panels
         title="Description"
@@ -128,7 +140,7 @@
         <rich-editor
           class="pa-5"
           disabled
-          :value="
+          :model-value="
             template.billingPlan.products[template.product].meta?.description
           "
         />
@@ -155,7 +167,7 @@
         :addons="copyAddons"
         :template="template"
       />
-      <v-card-title class="primary--text">Billing info</v-card-title>
+      <v-card-title class="text-primary">Billing info</v-card-title>
       <component
         @update="update"
         :is="billingInfoComponent"
@@ -167,7 +179,6 @@
         :account="account"
         @refresh="refreshInstance"
       />
-    </template>
     <move-instance
       @refresh="refreshInstance"
       :account="account"
@@ -189,6 +200,8 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
+import { moduleComponent, moduleTypes } from "@/modules";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
@@ -201,6 +214,7 @@ import { addToClipboard } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import AdminNotesPinned from "@/components/adminNotesPinned.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 export default {
   name: "instance-info",
@@ -214,6 +228,7 @@ export default {
     instanceActions,
     JsonTextarea,
     AdminNotesPinned,
+    AccountGrade,
   },
   mixins: [snackbar],
   props: {
@@ -276,6 +291,12 @@ export default {
       this.copyInstance = { ...this.copyInstance };
       console.log(this.copyInstance);
     },
+    updateServiceData(value) {
+      if (!this.copyInstance.config) {
+        this.copyInstance = { ...this.copyInstance, config: {} };
+      }
+      this.update({ key: "config.service_data", value });
+    },
     goToPlan() {
       this.$router.push({
         name: "Plan",
@@ -301,33 +322,22 @@ export default {
       return this.template.billingPlan;
     },
     additionalInstanceInfoComponent() {
-      return () =>
-        import(`@/components/modules/${this.type}/additionalInstanceInfo.vue`);
+      return defineAsyncComponent(() =>
+        import(`@/components/modules/${this.type}/additionalInstanceInfo.vue`));
     },
     billingInfoComponent() {
-      return () => import(`@/components/modules/${this.type}/billingInfo.vue`);
+      return defineAsyncComponent(() => import(`@/components/modules/${this.type}/billingInfo.vue`));
     },
     billingLabelComponent() {
-      return () => import(`@/components/modules/${this.type}/billingLabel.vue`);
+      return defineAsyncComponent(() => import(`@/components/modules/${this.type}/billingLabel.vue`));
     },
     type() {
       return this.template.type;
     },
   },
   created() {
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /instanceCard\.vue$/,
-    );
-
-    types.keys().forEach((key) => {
-      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCard\.vue/i);
-
-      if (matched && matched.length > 1) {
-        this.templates[matched[1]] = () =>
-          import(`@/components/modules/${matched[1]}/instanceCard.vue`);
-      }
+    moduleTypes("instanceCard").forEach((type) => {
+      this.templates[type] = moduleComponent("instanceCard", type);
     });
   },
   mounted() {

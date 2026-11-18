@@ -969,9 +969,10 @@ func (s *InstancesServer) AddNote(ctx context.Context, _req *connect.Request[not
 
 	instance.AdminNotes = append(instance.AdminNotes, &notes.AdminNote{
 		Admin:   requestor,
-		Msg:     req.GetMsg(),
-		Created: time.Now().Unix(),
-		Pinned:  req.GetPinned(),
+		Msg:         req.GetMsg(),
+		Created:     time.Now().Unix(),
+		Pinned:      req.GetPinned(),
+		Attachments: req.GetAttachments(),
 	})
 
 	err = s.ctrl.UpdateNotes(ctx, instance.Instance)
@@ -1014,6 +1015,7 @@ func (s *InstancesServer) PatchNote(ctx context.Context, _req *connect.Request[n
 		note.Msg = req.GetMsg()
 		note.Updated = time.Now().Unix()
 		note.Pinned = req.GetPinned()
+		note.Attachments = req.GetAttachments()
 
 		err = s.ctrl.UpdateNotes(ctx, instance.Instance)
 		if err != nil {
@@ -1171,6 +1173,13 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 			query += fmt.Sprintf(` FILTER srv in @%s`, key)
 			bindVars[key] = values
+		} else if key == "uuid" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += ` FILTER node._key in @uuids`
+			bindVars["uuids"] = values
 		} else if key == "period" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {

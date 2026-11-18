@@ -1,16 +1,17 @@
 <template>
-  <v-menu v-model="isOpen" offset-y transition="slide-y-transition">
-    <template v-slot:activator="{ on, attrs }">
+  <v-menu v-model="isOpen" transition="slide-y-transition">
+    <template v-slot:activator="{ props }">
       <v-btn
         :class="compact ? 'mx-1' : 'mx-2'"
-        :small="compact"
         :loading="isFetchLoading"
-        fab
+        icon
+        variant="elevated"
+        :size="compact ? 'small' : 'large'"
         color="background-light"
-        v-bind="attrs"
-        v-on="on"
+       
+        v-bind="props"
       >
-        <v-icon :color="isUnseenNotification ? 'red' : ''" dark>
+        <v-icon :color="isUnseenNotification ? 'red' : ''" >
           {{ !isUnseenNotification ? "mdi-bell" : "mdi-bell-badge" }}
         </v-icon>
       </v-btn>
@@ -25,23 +26,23 @@
         :style="{ minWidth: 'min(250px, calc(100vw - 16px))' }"
       >
         <v-list-item>
-          <v-list-item-content>
+          
             <v-list-item-title class="text-h6">
               Last notifications</v-list-item-title
             >
-          </v-list-item-content>
+          
         </v-list-item>
 
         <v-list-item
           v-for="notification in notifications"
           :key="notification.uuid + notification.ts"
         >
-          <v-list-item-content>
+          
             <v-list-item-title> {{ notification.action }}</v-list-item-title>
             <v-list-item-subtitle>
               {{ formatSecondsToDate(notification.ts, true) }}
             </v-list-item-subtitle>
-          </v-list-item-content>
+          
         </v-list-item>
       </v-list>
     </v-card>

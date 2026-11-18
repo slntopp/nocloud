@@ -7,18 +7,18 @@
       >
         <v-col cols="5">
           <v-text-field
-            dense
+            density="compact"
             hide-details
-            :value="eventOverride.key"
+            :model-value="eventOverride.key"
             disabled
             label="Key"
           />
         </v-col>
         <v-col cols="5">
           <v-text-field
-            dense
+            density="compact"
             hide-details
-            :value="eventOverride.override"
+            :model-value="eventOverride.override"
             disabled
             label="Override"
           />
@@ -28,11 +28,11 @@
             <v-btn
               :loading="isDeleteOverrideLoading"
               @click="deleteOverride(eventOverride)"
-              icon
+              icon variant="text"
             >
               <v-icon>mdi-delete</v-icon>
             </v-btn>
-            <v-btn @click="editOverride(eventOverride)" icon>
+            <v-btn @click="editOverride(eventOverride)" icon variant="text">
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
           </div>
@@ -132,7 +132,8 @@ const saveEventOverrides = (data) => {
 };
 
 const addNewEvent = async () => {
-  if (!addOverrideForm.value.validate()) {
+  const { valid } = await addOverrideForm.value.validate();
+  if (!valid) {
     return;
   }
 

@@ -5,9 +5,9 @@
         <v-text-field
           readonly
           label="Price model"
-          :value="template.billingPlan.title"
+          :model-value="template.billingPlan.title"
         >
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
             <v-icon
               @click="
@@ -25,22 +25,22 @@
         <v-text-field
           readonly
           label="Product name"
-          :value="
+          :model-value="
             !isDynamicPlan
               ? template.billingPlan.products[template.product]?.title ||
                 template.product
               : '-'
           "
-          append-icon="mdi-pencil"
-          @click:append="changeTariffDialog = true"
+          append-inner-icon="mdi-pencil"
+          @click:append-inner="changeTariffDialog = true"
         />
       </v-col>
       <v-col>
         <date-picker
           label="Date (create)"
-          :value="timestampToDateTimeLocal(template?.created)"
+          :model-value="timestampToDateTimeLocal(template?.created)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'created',
               value: formatDateToTimestamp($event),
@@ -52,9 +52,9 @@
       <v-col>
         <date-picker
           label="Deleted date"
-          :value="timestampToDateTimeLocal(template?.deleted)"
+          :model-value="timestampToDateTimeLocal(template?.deleted)"
           :clearable="false"
-          @input="
+          @update:model-value="
             emit('update', {
               key: 'deleted',
               value: formatDateToTimestamp($event),
@@ -67,8 +67,8 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="!isDynamicPlan ? dueDate : 'PAYG'"
-          :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
+          :model-value="!isDynamicPlan ? dueDate : 'PAYG'"
+          :append-inner-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click="changeDatesDialog = true"
         />
       </v-col>
@@ -84,7 +84,14 @@
       >
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
-          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+          <template v-if="item.isAddon">
+            <v-chip size="small" class="ml-1">Addon</v-chip>
+            <confirm-dialog @confirm="removeAddon(item)">
+              <v-btn icon variant="text" size="small" class="ml-1">
+                <v-icon size="small">mdi-delete</v-icon>
+              </v-btn>
+            </confirm-dialog>
+          </template>
         </template>
 
         <template v-slot:[`item.price`]="{ item }">
@@ -94,17 +101,17 @@
               :suffix="defaultCurrency?.code"
               v-model="item.price"
               type="number"
-              @input="updatePrice(item, false)"
-              append-icon="mdi-pencil"
+              @update:model-value="updatePrice(item, false)"
+              append-inner-icon="mdi-pencil"
             />
             <v-text-field
-              style="color: var(--v-primary-base)"
+              style="color: rgb(var(--v-theme-primary))"
               class="ml-2"
               type="number"
               :suffix="accountCurrency?.code"
               v-model="item.accountPrice"
-              @input="updatePrice(item, true)"
-              append-icon="mdi-pencil"
+              @update:model-value="updatePrice(item, true)"
+              append-inner-icon="mdi-pencil"
             />
           </div>
         </template>
@@ -129,8 +136,8 @@
             <td></td>
             <td>
               <v-dialog v-model="isAddonsDialog" max-width="60%">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on"
+                <template v-slot:activator="{ props }">
+                  <v-btn class="ml-2" color="primary" v-bind="props"
                     >addons</v-btn
                   >
                 </template>
@@ -148,7 +155,7 @@
               </v-dialog>
             </td>
             <td>
-              <v-chip color="primary" outlined>
+              <v-chip color="primary" variant="outlined">
                 {{ totalPrice }}
                 {{ defaultCurrency?.code }} / {{ totalAccountPrice }}
                 {{ accountCurrency?.code }}
@@ -190,9 +197,7 @@
 
 <script setup>
 import {
-  defineProps,
   ref,
-  defineEmits,
   toRefs,
   computed,
   onMounted,
@@ -208,6 +213,7 @@ import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
+import ConfirmDialog from "@/components/confirmDialog.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
@@ -340,6 +346,12 @@ const getBillingItems = () => {
   }
 
   addons.value.forEach((addon, index) => {
+    // the instance may have dropped the addon since it was fetched, the index
+    // still has to point at the fetched array because item.path uses it
+    if (!template.value.addons?.includes(addon.uuid)) {
+      return;
+    }
+
     const { title, periods } = addon;
     const { period, kind } = billingPlan.value.products[template.value.product];
     items.push({
@@ -350,6 +362,7 @@ const getBillingItems = () => {
       accountPrice: toAccountPrice(periods[period]),
       quantity: 1,
       isAddon: true,
+      uuid: addon.uuid,
       kind,
       period,
     });
@@ -358,6 +371,13 @@ const getBillingItems = () => {
   return items.map((i) => {
     i.period = getBillingPeriod(i.period);
     return i;
+  });
+};
+
+const removeAddon = (item) => {
+  emit("update", {
+    key: "addons",
+    value: template.value.addons.filter((uuid) => uuid !== item.uuid),
   });
 };
 
@@ -389,6 +409,14 @@ const updatePrice = (item, isAccount) => {
   }
 };
 
+// the addons dialog and the delete button both only change the uuid list
+watch(
+  () => template.value.addons,
+  () => {
+    billingItems.value = getBillingItems();
+  }
+);
+
 watch(accountRate, () => {
   billingItems.value = billingItems.value.map((i) => {
     i.accountPrice = toAccountPrice(i.price);
@@ -399,7 +427,7 @@ watch(accountRate, () => {
 
 <style lang="scss">
 .ione-billing {
-  .v-expansion-panel-content__wrap {
+  .v-expansion-panel-text__wrapper {
     padding: 0px !important;
   }
 }

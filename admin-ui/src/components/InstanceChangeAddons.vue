@@ -20,10 +20,10 @@
       <template v-slot:[`item.enabled`]="{ item }">
         <div class="enabled_column">
           <v-switch
-            dense
+            density="compact"
             hide-details
-            :input-value="instanceAddons.find((a) => a.uuid === item.uuid)"
-            @change="toggleAddon(item)"
+            :model-value="instance.addons?.includes(item.uuid)"
+            @update:model-value="toggleAddon(item)"
           />
         </div>
       </template>
@@ -41,9 +41,9 @@ const props = defineProps({
   instanceAddons: {},
   instance: {},
 });
-const { instanceAddons, instance } = toRefs(props);
+const { instance } = toRefs(props);
 
-const emit = defineEmits(["update:options"]);
+const emit = defineEmits(["update", "update:options"]);
 
 const store = useStore();
 
@@ -114,7 +114,7 @@ const fetchAddonsDebounced = debounce(fetchAddons, 100);
 
 const toggleAddon = (item) => {
   let newAddons = [...instance.value.addons];
-  if (instanceAddons.value.find((a) => a.uuid === item.uuid)) {
+  if (newAddons.includes(item.uuid)) {
     newAddons = newAddons.filter((a) => a !== item.uuid);
   } else {
     newAddons.push(item.uuid);

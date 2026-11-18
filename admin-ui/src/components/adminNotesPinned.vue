@@ -7,11 +7,11 @@
     >
       <v-card-title class="d-flex justify-space-between align-center pa-3">
         <span class="text-subtitle-1">
-          <v-icon small class="mr-1">mdi-pin</v-icon>
+          <v-icon size="small" class="mr-1">mdi-pin</v-icon>
           Pinned Notes ({{ pinnedNotes.length }})
         </span>
-        <v-btn icon small @click="closePinned">
-          <v-icon small>mdi-close</v-icon>
+        <v-btn icon variant="text" size="small" @click="closePinned">
+          <v-icon size="small">mdi-close</v-icon>
         </v-btn>
       </v-card-title>
 
@@ -23,22 +23,23 @@
           :key="index"
           color="background"
           class="ma-2 pa-2"
-          outlined
+          border
         >
           <div class="d-flex justify-space-between align-center mb-2">
-            <v-chip x-small color="primary" v-if="!isAccountsLoading">
+            <v-chip variant="flat" size="x-small" color="primary" v-if="!isAccountsLoading">
               {{ getAccount(note.admin)?.title || note.admin }}
             </v-chip>
             <v-skeleton-loader type="chip" v-else />
 
-             <v-chip x-small class="mr-1 mb-1">
+             <v-chip size="x-small" class="mr-1 mb-1">
               Created: {{ formatDate(note.created) }}
             </v-chip>
           </div>
           <EditorContainer
-            :value="note.msg"
+            :model-value="note.msg"
             class="pinned-note-content"
           ></EditorContainer>
+          <note-attachments :model-value="note.attachments" />
         </v-card>
       </div>
     </v-card>
@@ -46,10 +47,11 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import { computed, ref, watch } from "vue";
 import { EditorContainer } from "nocloud-ui";
+import NoteAttachments from "@/components/noteAttachments.vue";
 import { formatSecondsToDate } from "@/functions";
-import api from "@/api";
 
 const props = defineProps({
   notes: {
@@ -59,8 +61,11 @@ const props = defineProps({
 });
 
 const showPinned = ref(true);
-const accounts = ref({});
-const isAccountsLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 
 const pinnedNotes = computed(() => {
   return props.notes.filter((note) => note.pinned);
@@ -81,19 +86,7 @@ const formatDate = (timestamp) => {
 watch(
   pinnedNotes,
   () => {
-    pinnedNotes.value.forEach(async ({ admin: uuid }) => {
-      isAccountsLoading.value = true;
-      try {
-        if (!accounts.value[uuid]) {
-          accounts.value[uuid] = api.accounts.get(uuid);
-          accounts.value[uuid] = await accounts.value[uuid];
-        }
-      } finally {
-        isAccountsLoading.value = Object.values(accounts.value).some(
-          (acc) => acc instanceof Promise
-        );
-      }
-    });
+    loadAccounts(pinnedNotes.value.map(({ admin }) => admin));
   },
   { deep: true, immediate: true }
 );
@@ -127,17 +120,17 @@ watch(
 }
 
 .pinned-notes-content::-webkit-scrollbar-track {
-  background: var(--v-background-base);
+  background: rgb(var(--v-theme-background));
   border-radius: 4px;
 }
 
 .pinned-notes-content::-webkit-scrollbar-thumb {
-  background: var(--v-primary-base);
+  background: rgb(var(--v-theme-primary));
   border-radius: 4px;
 }
 
 .pinned-notes-content::-webkit-scrollbar-thumb:hover {
-  background: var(--v-primary-darken1);
+  background: rgb(var(--v-theme-primary));
 }
 
 .pinned-note-content {

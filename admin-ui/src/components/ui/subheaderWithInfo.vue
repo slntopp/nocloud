@@ -1,22 +1,21 @@
 <template>
-  <v-subheader>
+  <v-list-subheader>
     <slot></slot>
     <v-tooltip
       open-on-click
       :open-on-hover="false"
       :open-on-focus="false"
-      :offset-overflow="true"
       v-if="infoText && isInfoExists"
-      bottom
+      location="bottom"
     >
-      <template v-slot:activator="{ on, attrs }">
-        <v-icon class="ml-5" dark v-bind="attrs" v-on="on">
+      <template v-slot:activator="{ props }">
+        <v-icon class="ml-5" v-bind="props">
           mdi-information-outline
         </v-icon>
       </template>
-      <p class="text subtitle-2 hint">{{ $t(infoText) }}</p>
+      <p class="text text-subtitle-2 hint">{{ $t(infoText) }}</p>
     </v-tooltip>
-  </v-subheader>
+  </v-list-subheader>
 </template>
 
 <script>

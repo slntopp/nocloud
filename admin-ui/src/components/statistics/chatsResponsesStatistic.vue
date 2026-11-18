@@ -34,7 +34,7 @@
     <template v-slot:options>
       <v-select
         style="width: 150px"
-        item-text="label"
+        item-title="label"
         item-value="value"
         :items="seriesTypes"
         v-model="seriesType"
@@ -46,7 +46,7 @@
 <script setup>
 import StatisticItem from "@/components/statistics/statisticItem.vue";
 import { ref, toRefs, watch } from "vue";
-import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 import DefaultChart from "@/components/statistics/defaultChart.vue";
 import {
   statisticPeriodProps,
@@ -63,7 +63,7 @@ const emit = defineEmits(statisticPeriodEmits);
 const series = ref([]);
 const categories = ref([]);
 const summary = ref({});
-const accounts = ref({});
+const { map: accounts, load: loadAccounts } = useEntityMap("accounts");
 const seriesType = ref("amount");
 const seriesTypes = [
   { label: "By users", value: "users" },
@@ -137,18 +137,7 @@ watch([chartData, seriesType], async ([value]) => {
       });
     });
 
-    await Promise.all(
-      newSeries.map(async ({ name }) => {
-        try {
-          if (!accounts.value[name]) {
-            accounts.value[name] = api.accounts.get(name);
-            accounts.value[name] = await accounts.value[name];
-          }
-        } catch {
-          accounts.value[name] = undefined;
-        }
-      })
-    );
+    await loadAccounts(newSeries.map(({ name }) => name));
 
     summary.value = newSeries.reduce((acc, series) => {
       acc[series.name] = series.data.reduce((acc, v) => acc + v, 0);

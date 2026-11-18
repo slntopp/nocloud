@@ -1,5 +1,4 @@
-import Vue from "vue";
-import Vuex from "vuex";
+import { createStore } from "vuex";
 
 // modules
 import app from "./app";
@@ -31,9 +30,7 @@ import statistic from "./statistic";
 import accountGroups from "./accountGroups";
 import campaigns from "./campaigns";
 
-Vue.use(Vuex);
-
-const store = new Vuex.Store({
+const store = createStore({
   state: {},
   mutations: {},
   actions: {},

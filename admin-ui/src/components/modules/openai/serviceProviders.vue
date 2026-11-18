@@ -1,19 +1,19 @@
 <template>
   <div class="sp-ovh">
-    <v-row align="center" v-for="field in Object.keys(fields)" :key="field">
+    <v-row class="align-center" v-for="field in Object.keys(fields)" :key="field">
       <v-col cols="4">
-        <v-subheader>
+        <v-list-subheader>
           {{ fields[field].subheader || field }}
-        </v-subheader>
+        </v-list-subheader>
       </v-col>
 
       <v-col cols="8">
         <v-text-field
-          :value="getValue(field)"
+          :model-value="getValue(field)"
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
-          @change="(data) => changeHandler(field, data)"
+          @change="changeHandler(field, $event.target.value)"
         />
       </v-col>
     </v-row>

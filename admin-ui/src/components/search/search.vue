@@ -1,33 +1,40 @@
 <template>
   <div class="search_container">
+    <!--
+      The menu is opened programmatically; in Vuetify 2 it was positioned (and
+      sized) by the search field. Vuetify 3+ needs an explicit target for that.
+    -->
     <v-menu
-      @input="setLayoutMode('preview')"
+      @update:model-value="setLayoutMode('preview')"
       content-class="search"
       :close-on-content-click="false"
       v-model="isOpen"
-      offset-y
+      target="parent"
+      location="bottom"
     >
-      <template v-slot:activator="{ attrs, on }">
+      <template v-slot:activator="{ props }">
         <v-text-field
           hide-details
           placeholder="Search..."
           single-line
-          background-color="background-light"
-          dence
-          rounded
+          bg-color="background-light"
+          variant="solo"
+          flat
+          density="compact"
+          rounded="pill"
           class="search__input"
           @keydown.enter="hideSearch"
           v-model="param"
         >
-          <template v-slot:append>
+          <template v-slot:append-inner>
             <div class="d-flex" style="margin-top: 2px">
-              <v-btn v-if="!isResetAllHide" icon small @click="resetAll">
+              <v-btn v-if="!isResetAllHide" icon variant="text" size="small" @click="resetAll">
                 <v-icon size="23">mdi-close</v-icon>
               </v-btn>
               <v-btn
                 v-if="searchName"
-                icon
-                small
+                icon variant="text"
+                size="small"
                 @click="isOpen ? hideSearch() : showSearch()"
               >
                 <v-icon size="30">
@@ -38,16 +45,15 @@
           </template>
           <template v-slot:prepend-inner>
             <v-chip
-              v-bind="searchName ? attrs : undefined"
-              v-on="searchName ? on : undefined"
+              v-bind="searchName ? props : undefined"
               class="px-2"
-              small
-              outlined
+              size="small"
+              variant="outlined"
               color="primary"
               v-if="currentLayout"
               >{{ currentLayout.title }}
-              <v-btn icon x-small @click.stop="setCurrentLayout('')">
-                <v-icon small>mdi-close</v-icon>
+              <v-btn icon variant="text" size="x-small" @click.stop="setCurrentLayout('')">
+                <v-icon size="small">mdi-close</v-icon>
               </v-btn>
             </v-chip>
             <template v-else>
@@ -70,8 +76,8 @@
               light: theme !== 'dark',
             }"
           >
-            <v-list dense color="background-light">
-              <v-subheader>LAYOUTS</v-subheader>
+            <v-list density="compact" color="background-light">
+              <v-list-subheader>LAYOUTS</v-list-subheader>
               <v-card
                 style="box-shadow: none"
                 :class="{ 'pa-3': isLayoutModePreview }"
@@ -80,12 +86,12 @@
                 :disabled="isLayoutModeAdd"
                 @click="setCurrentLayout(layout)"
               >
-                <v-list-item-content class="ma-0 pa-0">
+                  <div class="legacy-list-item-content ma-0 pa-0">
                   <v-list-item-title
                     :style="{
                       color:
                         layout.id === currentLayout?.id
-                          ? 'var(--v-primary-base) !important'
+                          ? 'rgb(var(--v-theme-primary)) !important'
                           : undefined,
                     }"
                     v-if="isLayoutModePreview || isLayoutModeAdd"
@@ -94,7 +100,7 @@
                       <span>
                         {{ layout.title }}
                       </span>
-                      <v-icon v-if="isPinned(layout)" small color="primary"
+                      <v-icon v-if="isPinned(layout)" size="small" color="primary"
                         >mdi-pin</v-icon
                       >
                     </div>
@@ -102,50 +108,52 @@
                   <v-text-field
                     v-else-if="isLayoutModeEdit"
                     v-model="layout.title"
-                    dense
+                    density="compact"
                     class="pa-0 ma-0"
                   >
-                    <template v-slot:append>
+                    <template v-slot:append-inner>
                       <v-btn
                         @click="setPinned(layout.id)"
-                        small
-                        icon
+                        size="small"
+                        icon variant="text"
                         :color="isPinned(layout) ? 'primary' : undefined"
                       >
-                        <v-icon small>{{
+                        <v-icon size="small">{{
                           isPinned(layout) ? "mdi-pin" : "mdi-pin-off"
                         }}</v-icon>
                       </v-btn>
-                      <v-btn @click="deleteLayout(layout.id)" small icon>
-                        <v-icon small>mdi-close</v-icon>
+                      <v-btn @click="deleteLayout(layout.id)" size="small" icon variant="text">
+                        <v-icon size="small">mdi-close</v-icon>
                       </v-btn>
                     </template>
                   </v-text-field>
-                </v-list-item-content>
+                  </div>
               </v-card>
 
               <v-card v-if="isLayoutModeAdd" style="box-shadow: none">
-                <v-list-item-content>
+                <div class="legacy-list-item-content">
+                
                   <v-form ref="addNewLayoutForm" v-model="isNewLayoutValid">
                     <v-text-field
                       :rules="newLayoutRules"
                       v-model="newLayoutName"
-                      dense
+                      density="compact"
                       class="pa-0 ma-0"
                     >
-                      <template v-slot:append>
+                      <template v-slot:append-inner>
                         <v-btn
                           :disabled="!isNewLayoutValid"
                           @click="saveNewLayout"
-                          small
-                          icon
+                          size="small"
+                          icon variant="text"
                         >
-                          <v-icon small>mdi-content-save</v-icon>
+                          <v-icon size="small">mdi-content-save</v-icon>
                         </v-btn>
                       </template>
                     </v-text-field>
                   </v-form>
-                </v-list-item-content>
+                
+                </div>
               </v-card>
 
               <v-card
@@ -153,16 +161,18 @@
                 :disabled="isLayoutModeAdd"
                 @click="onAddClick"
               >
-                <v-list-item-content>
+                <div class="legacy-list-item-content">
+                
                   <v-btn
                     :disabled="isLayoutModeAdd"
-                    small
-                    outlined
+                    size="small"
+                    variant="outlined"
                     color="primary"
                   >
-                    Add <v-icon small>mdi-plus</v-icon></v-btn
+                    Add <v-icon size="small">mdi-plus</v-icon></v-btn
                   >
-                </v-list-item-content>
+                
+                </div>
               </v-card>
             </v-list>
           </v-col>
@@ -185,6 +195,7 @@
                   clearable
                   :disabled="isFieldsDisabled"
                   dense
+                  density="compact"
                   :multiple="
                     currentFields[fieldKey]?.type === 'select'
                       ? !currentFields[fieldKey]?.single
@@ -192,7 +203,7 @@
                   "
                   :label="currentFields[fieldKey].title"
                   :item-value="currentFields[fieldKey].item?.value"
-                  :item-text="currentFields[fieldKey].item?.title"
+                  :item-title="currentFields[fieldKey].item?.title"
                   :items="currentFields[fieldKey].items"
                   :is="getFieldComponent(currentFields[fieldKey])"
                   v-model="localFilter[fieldKey]"
@@ -200,8 +211,8 @@
                 />
                 <v-btn
                   :disabled="isFieldsDisabled"
-                  icon
-                  small
+                  icon variant="text"
+                  size="small"
                   @click="changeFields(currentFields[fieldKey], false)"
                 >
                   <v-icon size="20">mdi-delete-outline</v-icon>
@@ -210,7 +221,7 @@
             </v-row>
           </v-col>
         </v-row>
-        <v-row justify="space-between">
+        <v-row class="justify-space-between">
           <v-col
             cols="3"
             :class="{
@@ -221,10 +232,10 @@
           >
             <v-btn
               :disabled="isLayoutsOptionsDisabled"
-              plain
+              variant="plain"
               color="primary"
               @click="onLayoutsOptionsClick"
-              small
+              size="small"
             >
               <span v-if="isLayoutModeEdit">Save</span>
               <span v-else-if="isLayoutModeAdd">Cancel</span>
@@ -235,22 +246,22 @@
             <v-menu
               :disabled="isFieldsDisabled"
               :close-on-content-click="false"
-              offset-y
-              top
+              
+              location="top"
             >
-              <template v-slot:activator="{ attrs, on }">
+              <template v-slot:activator="{ props }">
                 <v-btn
-                  small
+                  size="small"
                   color="primary"
-                  plain
+                  variant="plain"
                   :disabled="isFieldsDisabled"
-                  v-bind="attrs"
-                  v-on="on"
+                 
+                  v-bind="props"
                   >Add fields</v-btn
                 >
               </template>
               <v-card class="pa-5">
-                <v-row align="center" style="max-width: 35vw">
+                <v-row class="align-center" style="max-width: 35vw">
                   <v-col
                     v-for="field in allFields"
                     :key="field.key"
@@ -258,11 +269,9 @@
                     cols="4"
                   >
                     <v-checkbox
-                      dense
-                      :input-value="
-                        currentFieldsKeys.find((key) => key === field.key)
-                      "
-                      @change="changeFields(field, $event)"
+                      density="compact"
+                      :model-value="currentFieldsKeys.includes(field.key)"
+                      @update:model-value="changeFields(field, $event)"
                       :label="field.title"
                     />
                   </v-col>
@@ -295,7 +304,7 @@
 <script setup>
 import { computed, watch, ref, onMounted } from "vue";
 import { useStore } from "@/store";
-import { VAutocomplete, VTextField } from "vuetify/lib";
+import { VAutocomplete, VTextField } from "vuetify/components";
 import DatePicker from "@/components/ui/datePicker.vue";
 import LogickSelect from "@/components/ui/logickSelect.vue";
 import FromToNumberField from "@/components/ui/fromToNumberField.vue";
@@ -547,7 +556,7 @@ const setCurrentFieldsKeys = () => {
 };
 const changeFields = ({ key }, value) => {
   if (value) {
-    currentFieldsKeys.value.push(key);
+    if (!currentFieldsKeys.value.includes(key)) currentFieldsKeys.value.push(key);
   } else {
     currentFieldsKeys.value = currentFieldsKeys.value.filter((f) => f !== key);
     const newFilter = { ...localFilter.value };
@@ -725,7 +734,8 @@ export default {
       min-height: calc(40vh - 55px) !important;
       .layouts {
         min-height: calc(40vh - 55px) !important;
-        * {
+        // skip Vuetify 3+ state layers: an opaque underlay hides button text
+        *:not(.v-btn__overlay):not(.v-btn__underlay):not(.v-field__overlay) {
           background-color: inherit !important;
         }
       }
@@ -737,35 +747,35 @@ export default {
       right: 10px;
     }
     .layout__controls {
-      background-color: var(--v-background-base);
-      * {
+      background-color: rgb(var(--v-theme-background));
+      *:not(.v-btn__overlay):not(.v-btn__underlay):not(.v-field__overlay) {
         background-color: inherit !important;
       }
     }
 
     .dark {
       filter: brightness(110%);
-      background-color: var(--v-background-base);
+      background-color: rgb(var(--v-theme-background));
     }
 
     .light {
       filter: brightness(95%);
-      background-color: var(--v-background-base);
+      background-color: rgb(var(--v-theme-background));
     }
   }
 }
 </style>
 
 <style>
-.search__input .v-input__control .v-input__slot {
+.search__input .v-input__control .v-field {
   padding: 0 10px;
 }
 
-.search__input .v-input__append-inner {
+.search__input .v-field__append-inner {
   margin-top: 0px;
 }
 
-.search__input .v-input__prepend-inner {
+.search__input .v-field__prepend-inner {
   margin-right: unset !important;
 }
 </style>

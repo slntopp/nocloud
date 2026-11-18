@@ -16,9 +16,9 @@
           </v-card-text>
           <slot name="actions" />
           <v-card-actions class="buttons">
-            <v-btn color="red darken-1" @click="onCancel"> Cancel </v-btn>
+            <v-btn color="red-darken-1" @click="onCancel"> Cancel </v-btn>
             <v-btn
-              color="primary darken-1"
+              color="primary-darken-1"
               :disabled="successDisabled"
               @click="onConfirm"
             >
@@ -32,6 +32,7 @@
 </template>
 <script>
 export default {
+  emits: ["cancel", "confirm"],
   props: {
     successDisabled: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
@@ -64,7 +65,7 @@ export default {
   display: inline;
 }
 .confirm-card {
-  background-color: var(--v-background-base);
+  background-color: rgb(var(--v-theme-background));
   padding: 30px;
 
   .buttons {

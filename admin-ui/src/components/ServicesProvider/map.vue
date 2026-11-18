@@ -45,9 +45,13 @@
           <slot name="popup" :marker="marker">
             <div class="map__popup-content--default">
               <!-- {{ marker.title }} -->
-              <v-dialog :ref="`edit-dialog.${marker.id}`" width="800">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-icon v-on="on" v-bind="attrs" color="secondary">
+              <v-dialog
+                :model-value="!!openDialogs[marker.id]"
+                @update:model-value="openDialogs[marker.id] = $event"
+                width="800"
+              >
+                <template v-slot:activator="{ props }">
+                  <v-icon v-bind="props" color="secondary">
                     mdi-cog
                   </v-icon>
                 </template>
@@ -55,35 +59,35 @@
                   <v-select
                     v-if="regions.length"
                     class="mt-7"
-                    dense
+                    density="compact"
                     label="Region *"
                     :items="regionItems(marker)"
                     :error="!marker.extra.region"
                     v-model="marker.extra.region"
-                    @change="(region) => onRegionChange(marker, region)"
+                    @update:model-value="(region) => onRegionChange(marker, region)"
                   />
 
                   <v-text-field
                     :class="regions.length ? '' : 'mt-7'"
-                    dense
+                    density="compact"
                     label="Title"
-                    :value="marker.title"
+                    :model-value="marker.title"
                     :ref="`textField_${marker.id}`"
-                    @input="(title) => setTitle(marker.id, title)"
+                    @update:model-value="(title) => setTitle(marker.id, title)"
                     @keyup.enter="(e) => onEnterHandler(marker.id, e)"
                   />
 
                   <color-picker label="Color" v-model="marker.extra.color" />
 
                   <v-text-field
-                    dense
+                    density="compact"
                     label="Icon link"
                     v-model="marker.extra.link"
                   />
 
                   <v-card-actions class="justify-end">
-                    <v-btn text @click.stop="startMove(marker.id)">
-                      <v-icon left>mdi-cursor-move</v-icon> Move
+                    <v-btn variant="text" @click.stop="startMove(marker.id)">
+                      <v-icon start>mdi-cursor-move</v-icon> Move
                     </v-btn>
                     <v-btn
                       :disabled="regions.length > 0 && !marker.extra.region"
@@ -135,6 +139,7 @@ import { NcMap } from "nocloud-ui";
 import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {
+  emits: ["save", "set-locations"],
   components: { ColorPicker, NcMap },
   mixins: [snackbar],
   name: "support-map",
@@ -154,6 +159,8 @@ export default {
     markers: [],
     item: {},
     movingId: "",
+    // Vuetify 3 VDialog does not expose isActive, so dialogs are opened by id
+    openDialogs: {},
   }),
   methods: {
     formatText(tag, id) {
@@ -202,10 +209,12 @@ export default {
       }
     },
     onEnterHandler(id, e) {
-      const ref = this.$refs["textField_" + id]?.[0];
+      // not inside a v-for of this template, so Vue 3 stores a single ref
+      const refs = this.$refs["textField_" + id];
+      const ref = Array.isArray(refs) ? refs[0] : refs;
 
       this.mouseLeaveHandler(id);
-      ref.blur();
+      ref?.blur();
       e.stopPropagation();
     },
     // ponytail: nc-map hands the popup slot a shallow copy of the marker
@@ -229,7 +238,7 @@ export default {
       const taken = this.takenRegions(marker);
 
       return this.regions.map((region) => ({
-        text: taken.includes(region) ? `${region} (already used)` : region,
+        title: taken.includes(region) ? `${region} (already used)` : region,
         value: region,
       }));
     },
@@ -352,22 +361,13 @@ export default {
 
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
     },
-    dialog(id) {
-      const ref = this.$refs["edit-dialog." + id];
-
-      return Array.isArray(ref) ? ref[0] : ref;
-    },
     saveAndClose(id) {
-      const dialog = this.dialog(id);
-
-      if (dialog) dialog.isActive = false;
+      this.openDialogs[id] = false;
     },
     openDialog(id) {
       this.mouseEnterHandler(id);
       this.$nextTick(() => {
-        const dialog = this.dialog(id);
-
-        if (dialog) dialog.isActive = true;
+        this.openDialogs[id] = true;
       });
     },
     cancelSelectedCountry() {
@@ -491,22 +491,22 @@ export default {
   height: calc(100vh - 220px);
   margin-top: 10px;
 }
-#mapMain .v-input--dense > .v-input__control > .v-input__slot {
+#mapMain .v-input--density-compact > .v-input__control > .v-field {
   margin-bottom: -21px;
 }
 
-#mapMain .theme--dark.v-text-field--solo > .v-input__control > .v-input__slot {
+.v-theme--dark #mapMain .v-text-field .v-field--variant-solo {
   background: #ffffff;
   color: #000;
 }
-#mapMain .theme--dark.v-input input {
+.v-theme--dark #mapMain .v-input input {
   color: #000;
 }
 /* #mapMain .v-application--is-ltr .v-messages {
   z-index: -10;
 }
 
-#mapMain .v-text-field.v-text-field--enclosed .v-text-field__details {
+#mapMain .v-text-field .v-input__details {
   z-index: -10;
 } */
 </style>

@@ -1,13 +1,13 @@
 <template>
   <instance-control-btn hint="Activate">
     <v-dialog v-model="isModalOpen" max-width="500">
-      <template v-slot:activator="{ on, attrs }">
+      <template v-slot:activator="{ props }">
         <v-btn
           :disabled="disabled"
           :loading="loading || isInstanceSaveLoading"
           class="ma-1"
-          v-bind="attrs"
-          v-on="on"
+         
+          v-bind="props"
         >
           <v-icon>mdi-checkbox-marked-circle-auto-outline</v-icon>
         </v-btn>

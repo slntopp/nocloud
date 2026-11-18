@@ -35,7 +35,7 @@
       :items="licences"
       table-name="sp-licences-table"
       :footer-error="fetchError"
-      :options.sync="tableOptions"
+      v-model:options="tableOptions"
       :server-items-length="totalLicences"
     >
       <template v-slot:[`item.app_key`]="{ value, item }">
@@ -69,7 +69,7 @@
       <template v-slot:[`item.account`]="{ item }">
         <template v-if="linkedInstanceId(item)">
           <template v-if="isBrokenLink(item)">
-            <span class="error--text">Deleted</span>
+            <span class="text-error">Deleted</span>
           </template>
           <template v-else>
             <router-link
@@ -89,16 +89,20 @@
                 "—"
               }}
             </router-link>
+            <account-grade
+              v-if="!isAccountsLoading && !isInstancesLoading"
+              :account="getAccount(linkedInstanceId(item))"
+            />
             <v-skeleton-loader type="text" v-else />
           </template>
         </template>
-        <span v-else class="grey--text">Trial</span>
+        <span v-else class="text-grey">Trial</span>
       </template>
 
       <template v-slot:[`item.instance`]="{ item }">
         <template v-if="linkedInstanceId(item)">
           <template v-if="isBrokenLink(item)">
-            <span class="error--text">Deleted</span>
+            <span class="text-error">Deleted</span>
           </template>
           <template v-else>
             <router-link
@@ -109,13 +113,13 @@
               }"
             >
               {{
-                getInstance(linkedInstanceId(item))?.instance?.title || "—"
+                getInstance(linkedInstanceId(item))?.title || "—"
               }}
             </router-link>
             <v-skeleton-loader type="text" v-else />
           </template>
         </template>
-        <span v-else class="grey--text">Trial</span>
+        <span v-else class="text-grey">Trial</span>
       </template>
 
       <template v-slot:[`item.due_date`]="{ item }">
@@ -147,9 +151,11 @@ import api from "@/api";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import useSearch from "@/hooks/useSearch";
+import useEntityMap from "@/hooks/useEntityMap";
 import plansAutoComplete from "@/components/ui/plansAutoComplete.vue";
 import DatePicker from "@/components/ui/dateTimePicker.vue";
 import { timestampToDateTimeLocal, formatDateToTimestamp } from "@/functions";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["template", "plan"]);
 const { template, plan } = toRefs(props);
@@ -173,14 +179,21 @@ const trialEndDate = ref(
 );
 const totalLicences = ref(0);
 
-const plans = ref({});
-const isPlansLoading = ref(false);
-
-const accounts = ref({});
-const isAccountsLoading = ref(false);
-
-const instances = ref({});
-const isInstancesLoading = ref(false);
+const {
+  map: plans,
+  isLoading: isPlansLoading,
+  load: loadPlans,
+} = useEntityMap("plans");
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
+const {
+  map: instances,
+  isLoading: isInstancesLoading,
+  load: loadInstances,
+} = useEntityMap("instances");
 
 const tableOptions = ref({
   page: 1,
@@ -265,13 +278,8 @@ const getPlan = (uuid) => {
 };
 
 const getAccount = (instanceUuid) => {
-  const cached = instances.value[instanceUuid];
-  if (!cached || cached.broken) return null;
-  const accountId =
-    cached.account ||
-    // legacy shape
-    cached.instance?.account;
-  return accounts.value[accountId];
+  const accountId = instances.value[instanceUuid]?.account;
+  return accountId ? accounts.value[accountId] : null;
 };
 
 const getInstance = (uuid) => {
@@ -282,7 +290,8 @@ const linkedInstanceId = (item) => item?.licence_metadata?.nocloud_instance;
 
 const isBrokenLink = (item) => {
   const id = linkedInstanceId(item);
-  return !!(id && instances.value[id]?.broken);
+  // loaded, but the instance wasn't found
+  return !!(id && id in instances.value && !instances.value[id]);
 };
 
 const getProduct = (plan, product, meta) => {
@@ -434,85 +443,20 @@ watch(
 );
 
 watch(licences, () => {
-  licences.value.forEach(async ({ app_key: uuid }) => {
-    if (!uuid) return;
-
-    isPlansLoading.value = true;
-    try {
-      if (!plans.value[uuid]) {
-        plans.value[uuid] = api.plans.get(uuid);
-        plans.value[uuid] = await plans.value[uuid];
-      }
-    } catch (e) {
-      console.error(`Error fetching plan ${uuid}:`, e);
-      delete plans.value[uuid];
-    } finally {
-      isPlansLoading.value = Object.values(plans.value).some(
-        (acc) => acc instanceof Promise,
-      );
-    }
-  });
-
-  licences.value.forEach(async (license) => {
-    const instanceId = license.licence_metadata?.nocloud_instance;
-    if (!instanceId) return;
-
-    isInstancesLoading.value = true;
-    try {
-      if (!instances.value[instanceId]) {
-        instances.value[instanceId] = store.getters[
-          "instances/instancesClient"
-        ].get({ uuid: instanceId });
-
-        instances.value[instanceId] = await instances.value[instanceId];
-      }
-    } catch (e) {
-      const code = e?.code ?? e?.status ?? e?.statusCode;
-      const isNotFound =
-        code === 404 ||
-        code === "NotFound" ||
-        /not found/i.test(String(e?.message || e));
-      if (isNotFound) {
-        instances.value[instanceId] = { broken: true, uuid: instanceId };
-      } else {
-        console.error(`Error fetching instance ${instanceId}:`, e);
-        delete instances.value[instanceId];
-      }
-    } finally {
-      isInstancesLoading.value = Object.values(instances.value).some(
-        (acc) => acc instanceof Promise,
-      );
-    }
-  });
+  loadPlans(licences.value.map(({ app_key }) => app_key));
+  loadInstances(licences.value.map(linkedInstanceId));
 });
 
 watch(
-  isInstancesLoading,
+  instances,
   () => {
-    Object.values(instances.value).forEach(async (instance) => {
-      if (!instance || instance instanceof Promise || instance.broken) return;
-
-      const accountId = instance.account;
-      if (!accountId) return;
-
-      isAccountsLoading.value = true;
-      try {
-        if (!accounts.value[accountId]) {
-          accounts.value[accountId] = api.accounts.get(accountId);
-
-          accounts.value[accountId] = await accounts.value[accountId];
-        }
-      } catch (e) {
-        console.error(`Error fetching account ${accountId}:`, e);
-        delete accounts.value[accountId];
-      } finally {
-        isAccountsLoading.value = Object.values(accounts.value).some(
-          (acc) => acc instanceof Promise,
-        );
-      }
-    });
+    loadAccounts(
+      Object.values(instances.value)
+        .filter(Boolean)
+        .map(({ account }) => account)
+    );
   },
-  { deep: true },
+  { deep: true }
 );
 
 onMounted(() => {

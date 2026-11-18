@@ -12,18 +12,18 @@
 
           <v-switch
             class="ml-3"
-            @change="suspendRules[day].enabled = $event"
-            :input-value="suspendRules[day]?.enabled"
+            @update:model-value="suspendRules[day].enabled = $event"
+            :model-value="suspendRules[day]?.enabled"
             label="Rules enabled"
           />
 
           <v-switch
             class="ml-3"
-            @change="changeEnableAll(day)"
-            :input-value="suspendRules[day]?.rules?.length === 0"
+            @update:model-value="changeEnableAll(day)"
+            :model-value="suspendRules[day]?.rules?.length === 0"
             label="Enable all day"
           />
-          <v-btn @click="addNewIn(day)" class="ml-2" icon>
+          <v-btn @click="addNewIn(day)" class="ml-2" icon variant="text">
             <v-icon>mdi-plus</v-icon>
           </v-btn></v-card-title
         >
@@ -42,7 +42,7 @@
             <v-text-field
               disabled
               readonly
-              :value="formatTimeFromUtc(rule.startTime)"
+              :model-value="formatTimeFromUtc(rule.startTime)"
             />
           </div>
           <div class="field">
@@ -54,12 +54,12 @@
             <v-text-field
               disabled
               readonly
-              :value="formatTimeFromUtc(rule.endTime)"
+              :model-value="formatTimeFromUtc(rule.endTime)"
             />
           </div>
 
           <div class="d-flex justify-center align-center">
-            <v-btn @click="deleteRangeFromDay(day, index)" class="mr-2" icon>
+            <v-btn @click="deleteRangeFromDay(day, index)" class="mr-2" icon variant="text">
               <v-icon>mdi-delete</v-icon>
             </v-btn>
           </div>
@@ -157,7 +157,8 @@ const changeEnableAll = (day) => {
 };
 
 const save = async () => {
-  if (!suspendRulesForm.value.validate()) {
+  const { valid } = await suspendRulesForm.value.validate();
+  if (!valid) {
     store.commit("snackbar/showSnackbarError", {
       message: "Rules not valid!!!",
     });

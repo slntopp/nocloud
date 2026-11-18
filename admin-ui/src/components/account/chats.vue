@@ -8,7 +8,7 @@
 
 <script setup>
 import { computed } from "vue";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 import PluginIframe from "@/components/plugin/iframe.vue";
 
 const route = useRoute()

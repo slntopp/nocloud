@@ -6,24 +6,24 @@
       }}</router-link>
       / {{ instanceTitle }}
     </h1>
-    <v-tabs
-      class="rounded-t-lg"
-      background-color="background-light"
-      v-model="tabsIndex"
-    >
-      <v-tab v-for="tab of tabs" :key="tab.title"
-        >{{ tab.title }}
-        <v-chip class="ml-1" small v-if="tab.title === 'notes'">{{
-          instance?.adminNotes?.length || 0
-        }}</v-chip></v-tab
-      >
-    </v-tabs>
-    <v-tabs-items
+    <div class="tabs-row rounded-t-lg">
+      <v-tabs bg-color="transparent" v-model="tabsIndex">
+        <v-tab v-for="tab of tabs" :key="tab.title"
+          >{{ tab.title }}
+          <v-chip class="ml-1" size="small" v-if="tab.title === 'notes'">{{
+            instance?.adminNotes?.length || 0
+          }}</v-chip></v-tab
+        >
+      </v-tabs>
+      <!-- instance/controls.vue parks its Save button here, see tabsActionsId -->
+      <div id="instance-tabs-actions" class="px-2" />
+    </div>
+    <v-window
       class="rounded-b-lg"
-      style="background: var(--v-background-light-base)"
+      style="background: rgb(var(--v-theme-background-light))"
       v-model="tabsIndex"
     >
-      <v-tab-item v-for="tab of tabs" :key="tab.title">
+      <v-window-item v-for="tab of tabs" :key="tab.title">
         <v-progress-linear
           indeterminate
           class="pt-2"
@@ -36,12 +36,13 @@
           :addons="addons"
           :account="account"
         />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-window-item>
+    </v-window>
   </div>
 </template>
 
 <script>
+import { defineAsyncComponent } from "vue";
 import config from "@/config.js";
 import snackbar from "@/mixins/snackbar";
 import api from "@/api";
@@ -125,7 +126,7 @@ export default {
           this.$store.dispatch("instances/get", this.$route.params?.instanceId),
         ]);
 
-        this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+        this.$store.dispatch("servicesProviders/fetchById", this.instance.sp);
         this.$store.dispatch("services/fetch", {
           filters: { uuid: [this.instance.service] },
         });
@@ -176,40 +177,40 @@ export default {
       return [
         {
           title: "Info",
-          component: () => import("@/components/instance/info.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/info.vue")),
         },
         {
           title: "promocodes",
-          component: () => import("@/components/instance/promocodes.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/promocodes.vue")),
         },
         this.instance?.state &&
           this.instance.billingPlan.type !== "ovh dedicated" && {
             title: "Snapshots",
-            component: () => import("@/components/instance/snapshots.vue"),
+            component: defineAsyncComponent(() => import("@/components/instance/snapshots.vue")),
           },
         {
           title: "notes",
-          component: () => import("@/components/instance/notes.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/notes.vue")),
         },
         {
           title: "Event log",
-          component: () => import("@/components/instance/history.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/history.vue")),
         },
         {
           title: "Invoices",
-          component: () => import("@/components/instance/invoices.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/invoices.vue")),
         },
         {
           title: "Reports",
-          component: () => import("@/components/instance/reports.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/reports.vue")),
         },
         {
           title: "Helpdesk",
-          component: () => import("@/components/instance/chats.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/chats.vue")),
         },
         {
           title: "Template",
-          component: () => import("@/components/instance/template.vue"),
+          component: defineAsyncComponent(() => import("@/components/instance/template.vue")),
         },
       ].filter((el) => !!el);
     },
@@ -232,7 +233,7 @@ export default {
 
     this.fetchInstanceData();
   },
-  destroyed() {
+  unmounted() {
     socket?.close(1000, "job is done");
   },
   watch: {
@@ -251,8 +252,19 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.tabs-row {
+  display: flex;
+  align-items: center;
+  background: rgb(var(--v-theme-background-light));
+
+  .v-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

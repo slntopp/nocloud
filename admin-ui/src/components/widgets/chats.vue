@@ -9,28 +9,28 @@
       <div class="d-flex justify-space-between">
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.status"
-          @change="
+          density="compact"
+          :model-value="data.status"
+          @update:model-value="
             emit('update:key', { value: $event || data.status, key: 'status' })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in statuses">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in statuses">
             {{ item }}
           </v-btn>
         </v-btn-toggle>
 
         <v-btn-toggle
           class="mt-2"
-          dense
-          :value="data.period"
-          @change="
+          density="compact"
+          :model-value="data.period"
+          @update:model-value="
             emit('update:key', { value: $event || data.period, key: 'period' })
           "
-          borderless
+          
         >
-          <v-btn x-small :value="item" :key="item" v-for="item in periods">
+          <v-btn size="x-small" :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>
         </v-btn-toggle>
@@ -49,7 +49,7 @@
       <v-card
         v-for="chat in lastActivityChats"
         :key="chat.uuid"
-        dense
+        density="compact"
         color="transparent"
         class="d-flex justify-space-between pa-3"
         style="margin: 3px"
@@ -80,6 +80,10 @@
             >
               {{ accounts[chat.owner]?.title }}
             </router-link>
+            <account-grade
+              v-if="!isAccountsLoading"
+              :account="accounts[chat.owner]"
+            />
             <v-skeleton-loader type="text" v-else />
           </div>
         </div>
@@ -109,8 +113,9 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import api from "@/api";
+import useEntityMap from "@/hooks/useEntityMap";
 import { formatSecondsToDate, getShortName, getDatesPeriod } from "@/functions";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);
@@ -121,8 +126,11 @@ const store = useStore();
 
 const periods = ref(["day", "week", "month"]);
 const statuses = ref(["total", "closed", "created"]);
-const accounts = ref({});
-const isAccountsLoading = ref(false);
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
 const statisticForPeriod = ref();
 const statisticParams = ref({});
 
@@ -160,21 +168,7 @@ const setDefaultData = () => {
 };
 
 const fetchAccounts = () => {
-  lastActivityChats.value.forEach(async ({ owner: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise
-      );
-    }
-  });
+  loadAccounts(lastActivityChats.value.map(({ owner }) => owner));
 };
 
 watch(lastActivityChats, fetchAccounts);

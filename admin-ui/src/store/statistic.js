@@ -1,6 +1,6 @@
 import api from "@/api";
 import { formatWarsawDate } from "@/functions";
-import qs from "qs";
+import { serializeParams } from "@/functions";
 
 const getCacheKey = (params) => JSON.stringify(params);
 
@@ -34,8 +34,7 @@ export default {
 
         const promise = api.get(`/statistic/${params.entity}`, {
           params: params.params,
-          paramsSerializer: (params) =>
-            qs.stringify(params, { arrayFormat: "repeat" }),
+          paramsSerializer: serializeParams,
         });
 
         if (withCache) {

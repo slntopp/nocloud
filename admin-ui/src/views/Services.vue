@@ -68,7 +68,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
+    this.$store.dispatch("servicesProviders/ensure", { anonymously: true });
   },
   methods: {
     deleteSelectedServices() {
@@ -80,7 +80,7 @@ export default {
           .then((res) => {
             if (res.every((el) => el.result)) {
               console.log("all ok");
-              this.$store.dispatch("services/fetch", { showDeleted: true });
+              this.refetchServices();
 
               const ending = deletePromices.length == 1 ? "" : "s";
               this.showSnackbar({
@@ -158,7 +158,7 @@ export default {
 
 <style>
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;
@@ -166,7 +166,7 @@ export default {
   margin-bottom: 10px;
 }
 
-.v-expansion-panel-content .v-expansion-panel-content__wrap {
+.v-expansion-panel-text .v-expansion-panel-text__wrapper {
   padding: 22px;
 }
 

@@ -3,7 +3,7 @@
     <div class="d-flex align-center mb-4">
       <v-spacer />
       <v-btn class="mr-2" @click="openCreate">
-        <v-icon left>mdi-plus</v-icon>
+        <v-icon start>mdi-plus</v-icon>
         Add package
       </v-btn>
       <v-btn
@@ -16,7 +16,7 @@
       </v-btn>
     </div>
 
-    <v-alert v-if="modelsError" type="warning" text dense>
+    <v-alert v-if="modelsError" type="warning" variant="tonal" density="compact">
       {{ modelsError }}
     </v-alert>
 
@@ -29,9 +29,9 @@
     >
       <template v-slot:[`item.key`]="{ item }">
         {{ item.key }}
-        <v-tooltip v-if="item.misplaced" bottom>
-          <template v-slot:activator="{ on, attrs }">
-            <v-icon small color="warning" v-bind="attrs" v-on="on">
+        <v-tooltip v-if="item.misplaced" location="bottom">
+          <template v-slot:activator="{ props }">
+            <v-icon size="small" color="warning" v-bind="props">
               mdi-alert
             </v-icon>
           </template>
@@ -44,16 +44,16 @@
       </template>
       <template v-slot:[`item.credit`]="{ item }">
         <span v-if="item.isAi">{{ item.credit }} NCU</span>
-        <v-chip v-else x-small label>not an AI package</v-chip>
+        <v-chip v-else size="x-small" label>not an AI package</v-chip>
       </template>
       <template v-slot:[`item.models`]="{ item }">
         <span v-if="!item.isAi">—</span>
         <span v-else-if="!packageModels(item.form).length">All models</span>
         <template v-else>
-          <v-chip
+          <v-chip variant="flat"
             v-for="model in packageModels(item.form).slice(0, MODELS_SHOWN)"
             :key="model"
-            x-small
+            size="x-small"
             class="mr-1"
             :color="modelsByKey[model] ? undefined : 'warning'"
           >
@@ -61,8 +61,8 @@
           </v-chip>
           <v-chip
             v-if="packageModels(item.form).length > MODELS_SHOWN"
-            x-small
-            outlined
+            size="x-small"
+            variant="outlined"
             :title="packageModels(item.form).slice(MODELS_SHOWN).map(modelLabel).join(', ')"
           >
             +{{ packageModels(item.form).length - MODELS_SHOWN }}
@@ -70,32 +70,32 @@
         </template>
       </template>
       <template v-slot:[`item.promocode`]="{ item }">
-        <v-chip v-if="item.form.promocode" x-small label>
+        <v-chip v-if="item.form.promocode" size="x-small" label>
           {{ item.form.promocode }}
         </v-chip>
         <span v-else>—</span>
       </template>
       <template v-slot:[`item.public`]="{ item }">
-        <v-icon small>{{ item.public ? "mdi-check" : "mdi-minus" }}</v-icon>
+        <v-icon size="small">{{ item.public ? "mdi-check" : "mdi-minus" }}</v-icon>
       </template>
       <template v-slot:[`item.site`]="{ item }">
-        <v-icon small>{{ item.form.site ? "mdi-check" : "mdi-minus" }}</v-icon>
+        <v-icon size="small">{{ item.form.site ? "mdi-check" : "mdi-minus" }}</v-icon>
       </template>
       <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex">
-          <v-btn icon small title="Edit" @click="openEdit(item.key)">
-            <v-icon small>mdi-pencil</v-icon>
+          <v-btn icon variant="text" size="small" title="Edit" @click="openEdit(item.key)">
+            <v-icon size="small">mdi-pencil</v-icon>
           </v-btn>
-          <v-btn icon small title="Duplicate" @click="duplicate(item.key)">
-            <v-icon small>mdi-content-copy</v-icon>
+          <v-btn icon variant="text" size="small" title="Duplicate" @click="duplicate(item.key)">
+            <v-icon size="small">mdi-content-copy</v-icon>
           </v-btn>
           <confirm-dialog
             title="Delete this package?"
             text="Instances bought on it keep running but lose their product: renewals and AI credit stop working for them. Save to apply."
             @confirm="remove(item.key)"
           >
-            <v-btn icon small title="Delete">
-              <v-icon small color="error">mdi-delete</v-icon>
+            <v-btn icon variant="text" size="small" title="Delete">
+              <v-icon size="small" color="error">mdi-delete</v-icon>
             </v-btn>
           </confirm-dialog>
         </div>
@@ -108,7 +108,7 @@
           {{ editingKey ? "Edit package" : "New package" }}
         </v-card-title>
         <v-card-text>
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="6">
               <v-text-field
                 v-model="form.key"
@@ -128,6 +128,14 @@
               />
             </v-col>
             <v-col cols="6">
+              <v-switch
+                v-model="form.oneTime"
+                label="One-time"
+                hint="Bought once and never renewed: it lasts until its credit is spent, then it is suspended."
+                persistent-hint
+              />
+            </v-col>
+            <v-col v-if="!form.oneTime" cols="6">
               <date-field
                 :key="`${dialogKey}-period`"
                 :period="form.period"
@@ -158,8 +166,7 @@
                   persistent-hint
                   multiple
                   chips
-                  small-chips
-                  deletable-chips
+                  closable-chips
                 />
               </v-col>
               <v-col cols="12">
@@ -172,8 +179,7 @@
                   persistent-hint
                   multiple
                   chips
-                  small-chips
-                  deletable-chips
+                  closable-chips
                 />
               </v-col>
             </template>
@@ -185,8 +191,7 @@
                 label="Models"
                 multiple
                 chips
-                small-chips
-                deletable-chips
+                closable-chips
               />
             </v-col>
             <v-col cols="12">
@@ -205,7 +210,7 @@
               <v-switch
                 v-model="form.site"
                 label="Site constructor only"
-                @change="onSiteToggle"
+                @update:model-value="onSiteToggle"
               />
             </v-col>
             <v-col cols="6">
@@ -216,13 +221,13 @@
               />
             </v-col>
           </v-row>
-          <v-alert v-if="formMessage" type="error" text dense class="mt-3 mb-0">
+          <v-alert v-if="formMessage" type="error" variant="tonal" density="compact" class="mt-3 mb-0">
             {{ formMessage }}
           </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="closeDialog">Cancel</v-btn>
+          <v-btn variant="text" @click="closeDialog">Cancel</v-btn>
           <v-btn color="primary" :disabled="!!formMessage" @click="apply">
             Apply
           </v-btn>
@@ -245,6 +250,7 @@ import {
   formError,
   copyKey,
   isAiPackage,
+  isOneTime,
   hasMisplacedKeys,
 } from "./aiPackages";
 
@@ -381,6 +387,7 @@ const formMessage = computed(() => (form.value ? formError(form.value, otherKeys
 
 
 function periodLabel(product) {
+  if (isOneTime(product)) return "one-time, until spent";
   const kinds = {
     CALENDAR_MONTH: "calendar month",
     CALENDAR_QUARTER: "calendar quarter",

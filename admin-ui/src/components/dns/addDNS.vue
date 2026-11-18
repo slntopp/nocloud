@@ -18,6 +18,7 @@
 <script>
 export default {
   name: "add-dns",
+  emits: ["addDNS", "close", "editDNS"],
   props: {
     item: { type: Object },
     isEdit: { type: Boolean, default: false },
@@ -49,9 +50,9 @@ export default {
     close() {
       this.$emit("close");
     },
-    add() {
-      if (!this.isValid) {
-        this.$refs.dnsForm.validate();
+    async add() {
+      const { valid } = await this.$refs.dnsForm.validate();
+      if (!valid) {
         return;
       }
 

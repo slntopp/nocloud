@@ -9,8 +9,9 @@
         v-if="!isAccountsLoading"
         :to="{ name: 'Account', params: { accountId: value } }"
       >
-        {{ account(value) && accounts[value]?.title }}
+        {{ accounts[value]?.title }}
       </router-link>
+      <account-grade v-if="!isAccountsLoading" :account="accounts[value]" />
       <v-skeleton-loader type="text" v-else />
     </template>
 
@@ -19,7 +20,7 @@
         v-if="!isInstancesLoading"
         :to="{ name: 'Instance', params: { instanceId: value } }"
       >
-        {{ instance(value) && instances[value]?.instance?.title }}
+        {{ instances[value]?.title }}
       </router-link>
       <v-skeleton-loader type="text" v-else />
     </template>
@@ -28,21 +29,24 @@
 
 <script setup>
 import nocloudTable from "@/components/table.vue";
-import { ref, toRefs } from "vue";
-import api from "@/api";
+import { ref, toRefs, watch } from "vue";
+import useEntityMap from "@/hooks/useEntityMap";
 import { formatSecondsToDate } from "../../functions";
-import { useStore } from "@/store";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const props = defineProps(["promocode"]);
 const { promocode } = toRefs(props);
 
-const store = useStore();
-
-const isAccountsLoading = ref(false);
-const accounts = ref({});
-
-const isInstancesLoading = ref(false);
-const instances = ref({});
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+} = useEntityMap("accounts");
+const {
+  map: instances,
+  isLoading: isInstancesLoading,
+  load: loadInstances,
+} = useEntityMap("instances");
 
 const headers = ref([
   { text: "Account", value: "account" },
@@ -50,45 +54,14 @@ const headers = ref([
   { text: "Execution", value: "exec" },
 ]);
 
-const account = async (uuid) => {
-  if (accounts.value[uuid]) {
-    return accounts.value[uuid] === 1 ? {} : accounts.value[uuid];
-  }
-  isAccountsLoading.value = true;
-
-  try {
-    accounts.value[uuid] = 1;
-
-    accounts.value[uuid] = await api.accounts.get(uuid);
-  } finally {
-    setTimeout(() => {
-      isAccountsLoading.value = Object.keys(accounts.value).every(
-        (key) => accounts.value[key] === 1
-      );
-    }, 0);
-  }
-};
-
-const instance = async (uuid) => {
-  if (instances.value[uuid]) {
-    return instances.value[uuid] === 1 ? {} : instances.value[uuid];
-  }
-  isInstancesLoading.value = true;
-
-  try {
-    instances.value[uuid] = 1;
-
-    instances.value[uuid] = await store.dispatch("instances/get", uuid);
-  } catch {
-    instances.value[uuid] = "no";
-  } finally {
-    setTimeout(() => {
-      isInstancesLoading.value = Object.keys(instances.value).every(
-        (key) => instances.value[key] === 1
-      );
-    }, 0);
-  }
-};
+watch(
+  () => promocode.value?.uses,
+  (uses = []) => {
+    loadAccounts(uses.map(({ account }) => account));
+    loadInstances(uses.map(({ instance }) => instance));
+  },
+  { immediate: true }
+);
 </script>
 
 <script>

@@ -4,6 +4,34 @@ import {
   GetCurrenciesRequest,
   GetExchangeRatesRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
+import { createListCache } from "@/store/cache.js";
+
+// currencies change through the connect client, which the cache doesn't see:
+// the currencies page calls fetch() after its changes
+const currenciesCache = createListCache();
+
+const load = async (commit, getters, options) => {
+  if (!options?.silent) {
+    commit("setRates", []);
+    commit("setDefault", []);
+    commit("setCurrencies", []);
+    commit("setLoading", true);
+  }
+
+  try {
+    const { currencies } = await getters["currencyClient"].getCurrencies(
+      new GetCurrenciesRequest()
+    );
+    commit("setCurrencies", currencies);
+    commit("setDefault", currencies);
+    const { rates } = await getters["currencyClient"].getExchangeRates(
+      new GetExchangeRatesRequest()
+    );
+    commit("setRates", rates);
+  } finally {
+    commit("setLoading", false);
+  }
+};
 
 export default {
   namespaced: true,
@@ -43,28 +71,17 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit, state, getters }, options) {
-      if (state.loading) return;
-      if (!options?.silent) {
-        commit("setRates", []);
-        commit("setDefault", []);
-        commit("setCurrencies", []);
-        commit("setLoading", true);
-      }
-
-      try {
-        const { currencies } = await getters["currencyClient"].getCurrencies(
-          new GetCurrenciesRequest()
-        );
-        commit("setCurrencies", currencies);
-        commit("setDefault", currencies);
-        const { rates } = await getters["currencyClient"].getExchangeRates(
-          new GetExchangeRatesRequest()
-        );
-        commit("setRates", rates);
-      } finally {
-        commit("setLoading", false);
-      }
+    // Always goes to the server (reload button, after changes)
+    fetch({ commit, getters }, options) {
+      return currenciesCache.run(
+        null,
+        () => load(commit, getters, options),
+        { force: true }
+      );
+    },
+    // Reuses the loaded currencies and rates if they're fresh
+    ensure({ commit, getters }) {
+      return currenciesCache.run(null, () => load(commit, getters));
     },
   },
   getters: {

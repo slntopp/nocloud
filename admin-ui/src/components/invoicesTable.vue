@@ -2,8 +2,8 @@
   <nocloud-table
     :table-name="tableName"
     class="mt-4"
-    :value="value"
-    @input="emit('input', $event)"
+    :model-value="value"
+    @update:model-value="emit('update:modelValue', $event)"
     sort-by="created"
     sort-desc
     :items="invoices"
@@ -15,7 +15,7 @@
     :show-select="!hideSelect"
   >
     <template v-slot:[`uuid-actions`]="{ item }">
-      <v-btn @click="downloadInvoice(item)" icon>
+      <v-btn @click="downloadInvoice(item)" icon variant="text">
         <v-icon>mdi-download</v-icon>
       </v-btn>
     </template>
@@ -27,14 +27,15 @@
       >
         {{ account(value) }}
       </router-link>
+      <account-grade v-if="!isAccountsLoading" :account="accounts[value]" />
       <v-skeleton-loader type="text" v-else />
     </template>
 
     <template v-slot:[`item.number`]="{ item }">
       <router-link :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
-        <v-tooltip bottom>
-          <template v-slot:activator="{ on, attrs }">
-            <span v-bind="attrs" v-on="on">
+        <v-tooltip location="bottom">
+          <template v-slot:activator="{ props }">
+            <span v-bind="props">
               {{ item.number }}
             </span>
           </template>
@@ -44,9 +45,9 @@
     </template>
 
     <template v-slot:[`item.total`]="{ item }">
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <v-chip v-bind="attrs" v-on="on" :color="getTotalColor(item)" abs>
+      <v-tooltip location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-chip variant="flat" v-bind="props" :color="getTotalColor(item)">
             {{
               `${formatPrice(item.total, item.currency)} ${
                 item.currency?.code || defaultCurrency.code
@@ -59,9 +60,9 @@
     </template>
 
     <template v-slot:[`item.subtotal`]="{ item }">
-      <v-tooltip bottom>
-        <template v-slot:activator="{ on, attrs }">
-          <v-chip v-bind="attrs" v-on="on" :color="getTotalColor(item)" abs>
+      <v-tooltip location="bottom">
+        <template v-slot:activator="{ props }">
+          <v-chip variant="flat" v-bind="props" :color="getTotalColor(item)">
             {{
               `${formatPrice(item.subtotal, item.currency)} ${
                 item.currency?.code || defaultCurrency.code
@@ -116,7 +117,7 @@
     </template>
 
     <template v-slot:[`item.status`]="{ item }">
-      <v-chip :color="getInvoiceStatusColor(item.status)">{{
+      <v-chip variant="flat" :color="getInvoiceStatusColor(item.status)">{{
         item.status
       }}</v-chip>
     </template>
@@ -124,14 +125,15 @@
 </template>
 
 <script setup>
+import useEntityMap from "@/hooks/useEntityMap";
 import nocloudTable from "@/components/table.vue";
 import { debounce, formatPrice, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
-import api from "@/api";
 import useInvoices from "../hooks/useInvoices";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 import invoicePreview from "@/components/ui/invoicePreview.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 import {
   ActionType,
   BillingStatus,
@@ -140,15 +142,15 @@ import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
-  value: {},
+  modelValue: {},
   customFilter: {},
   noSearch: { type: Boolean, default: false },
   hideSelect: { type: Boolean, default: false },
   refetch: { type: Boolean, default: false },
 });
-const { tableName, value, refetch, noSearch, customFilter } = toRefs(props);
+const { tableName, modelValue: value, refetch, noSearch, customFilter } = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["update:modelValue"]);
 
 const store = useStore();
 const { getInvoiceStatusColor, getTotalColor } = useInvoices();
@@ -164,8 +166,12 @@ const isCountLoading = ref(true);
 const options = ref({});
 const fetchError = ref("");
 
-const isAccountsLoading = ref(false);
-const accounts = ref({});
+const {
+  map: accounts,
+  isLoading: isAccountsLoading,
+  load: loadAccounts,
+  reset: resetAccounts,
+} = useEntityMap("accounts");
 
 const headers = ref([
   { text: "UUID", value: "uuid" },
@@ -186,10 +192,10 @@ const headers = ref([
 ]);
 
 onMounted(() => {
-  store.dispatch("accountGroups/fetch");
+  store.dispatch("accountGroups/ensure");
   store.commit("reloadBtn/setCallback", {
     event: () => {
-      accounts.value = [];
+      resetAccounts();
       fetchInvoices();
     },
   });
@@ -433,21 +439,7 @@ watch(options, fetchInvoicesDebounce);
 watch(refetch, fetchInvoicesDebounce);
 
 watch(invoices, () => {
-  invoices.value.forEach(async ({ account: uuid }) => {
-    isAccountsLoading.value = true;
-    try {
-      if (!accounts.value[uuid]) {
-        accounts.value[uuid] = api.accounts.get(uuid);
-        accounts.value[uuid] = await accounts.value[uuid];
-      }
-    } catch (e) {
-      accounts.value[uuid] = undefined;
-    } finally {
-      isAccountsLoading.value = Object.values(accounts.value).some(
-        (acc) => acc instanceof Promise,
-      );
-    }
-  });
+  loadAccounts(invoices.value.map(({ account }) => account));
 });
 
 watch([searchFields, noSearch], () => {

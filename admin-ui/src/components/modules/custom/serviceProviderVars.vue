@@ -7,7 +7,7 @@
           <v-col :cols="12" v-for="(value, key) in variable.value" :key="key">
             <v-text-field
               readonly
-              :value="JSON.stringify(value)"
+              :model-value="JSON.stringify(value)"
               :label="key"
               style="display: inline-block; width: 200px"
             >

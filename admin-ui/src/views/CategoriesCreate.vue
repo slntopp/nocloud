@@ -36,9 +36,9 @@
         </v-col>
       </v-row>
 
-      <v-card color="background-light" class="mt-6" variant="outlined">
+      <v-card color="background-light" class="mt-6">
         <v-card-title class="text-h6 bg-primary">
-          <v-icon left>mdi-translate</v-icon>
+          <v-icon start>mdi-translate</v-icon>
           Translations
         </v-card-title>
 
@@ -52,23 +52,20 @@
                 density="compact"
                 :rules="localeRules"
                 maxlength="2"
-                dense
-                @input="formatLocale"
+                @update:model-value="formatLocale"
               />
             </v-col>
             <v-col cols="9">
               <v-text-field
-                dense
+                density="compact"
                 v-model="newTranslation"
                 :label="`Translation${newLocale ? ' (' + newLocale + ')' : ''}`"
-                density="compact"
                 @keyup.enter="addTranslation"
               />
             </v-col>
             <v-col cols="1" class="d-flex align-center">
               <v-btn
                 color="primary"
-                variant="outlined"
                 size="small"
                 @click="addTranslation"
                 :disabled="
@@ -89,18 +86,17 @@
               :key="locale"
               class="mb-2"
             >
-              <v-row align="center">
+              <v-row class="align-center">
                 <v-col cols="1">
-                  <v-chip color="primary" variant="outlined" size="small">
+                  <v-chip color="primary">
                     {{ locale.toUpperCase() }}
                   </v-chip>
                 </v-col>
                 <v-col cols="10">
                   <v-text-field
-                    dense
+                    density="compact"
                     v-model="categoryData.promo[locale]"
                     :label="`Translation (${locale})`"
-                    density="compact"
                     hide-details
                   />
                 </v-col>
@@ -108,7 +104,6 @@
                   <v-btn
                     size="small"
                     color="error"
-                    variant="text"
                     @click="removeTranslation(locale)"
                     icon
                   >
@@ -120,7 +115,7 @@
           </div>
 
           <div v-else class="text-center text-grey">
-            <v-icon size="48" color="grey-lighten-2">mdi-translate-off</v-icon>
+            <v-icon size="48" color="neutral">mdi-translate-off</v-icon>
             <p class="mt-2">No translations added yet</p>
           </div>
         </v-card-text>
@@ -128,7 +123,7 @@
 
       <v-row class="mt-6">
         <v-col cols="12" class="d-flex justify-end gap-3">
-          <v-btn variant="outlined" @click="resetForm"> Reset </v-btn>
+          <v-btn @click="resetForm"> Reset </v-btn>
 
           <v-btn
             color="primary"
@@ -136,7 +131,7 @@
             :loading="isSaveLoading"
             @click="saveCategory"
           >
-            <v-icon left>{{
+            <v-icon start>{{
               isEdit ? "mdi-pencil" : "mdi-content-save"
             }}</v-icon>
             {{ isEdit ? "Update Category" : "Create Category" }}
@@ -146,10 +141,9 @@
             <v-btn
               v-if="isEdit"
               color="error"
-              variant="outlined"
               :loading="isDeleteLoading"
             >
-              <v-icon left>mdi-delete</v-icon>
+              <v-icon start>mdi-delete</v-icon>
               Delete
             </v-btn>
           </confirm-dialog>
@@ -163,7 +157,7 @@
 import { ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
-import { useRouter } from "vue-router/composables";
+import { useRouter } from "vue-router";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 const props = defineProps({
@@ -280,7 +274,8 @@ const resetForm = () => {
 };
 
 const saveCategory = async () => {
-  if (!categoryForm.value.validate()) {
+  const { valid } = await categoryForm.value.validate();
+  if (!valid) {
     store.commit("snackbar/showSnackbarError", {
       message: "Please fill in all required fields correctly",
     });
@@ -393,7 +388,7 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 .page__title {
-  color: var(--v-primary-base);
+  color: rgb(var(--v-theme-primary));
   font-weight: 400;
   font-size: 32px;
   font-family: "Quicksand", sans-serif;

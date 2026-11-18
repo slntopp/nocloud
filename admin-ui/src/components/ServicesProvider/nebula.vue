@@ -7,7 +7,7 @@
           v-model="service"
           :items="services"
           label="Service"
-          item-text="title"
+          item-title="title"
           item-value="uuid"
         ></v-select>
       </v-col>
@@ -24,7 +24,7 @@
           v-model="plan"
           :items="plans"
           label="Plan"
-          item-text="title"
+          item-title="title"
           item-value="uuid"
         ></v-select>
       </v-col>
@@ -54,7 +54,7 @@
       table-name="nebula-accounts"
       :footer-error="fetchError"
       show-expand
-      :expanded.sync="expanded"
+      v-model:expanded="expanded"
       item-key="data.userid"
     >
       <template v-slot:expanded-item="{ item, headers }">
@@ -73,7 +73,7 @@
                 <v-text-field v-model="item.title" />
               </template>
               <template v-slot:[`item.pass`]="{ item }">
-                <password-text-field :value="item.config.password" />
+                <password-text-field :model-value="item.config.password" />
               </template>
               <template v-slot:[`item.os`]="{ item }">
                 {{
@@ -144,7 +144,7 @@ onMounted(async () => {
   try {
     await Promise.all([
       store.dispatch("services/fetch",{showDeleted:true}),
-      store.dispatch("plans/fetch"),
+      store.dispatch("plans/fetch", { filters: { type: ["ione"] } }),
     ]);
 
     const res = await api.servicesProviders.action({

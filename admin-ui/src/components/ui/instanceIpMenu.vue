@@ -1,31 +1,29 @@
 <template>
   <v-menu
-    bottom
-    nudge-top="20"
-    nudge-left="15"
+    location="bottom start"
+    :offset="[-20, 15]"
     transition="slide-y-transition"
     :close-on-content-click="false"
   >
-    <template v-slot:activator="{ on, attrs }">
+    <template v-slot:activator="{ props: activatorProps }">
       <v-text-field
         :label="`IPs_${type}`"
-        v-if="props.ui !== 'span'"
-        v-bind="attrs"
-        v-on="on"
+        v-if="ui !== 'span'"
+        v-bind="activatorProps"
         readonly
-        :value="ip"
+        :model-value="ip"
       >
-        <template v-slot:append>
+        <template v-slot:append-inner>
           <v-icon v-if="!edit && ip" @click="addToClipboard(ip)"
             >mdi-content-copy</v-icon
           >
           <v-icon v-else>mdi-swap-horizontal</v-icon>
         </template>
       </v-text-field>
-      <span v-else v-bind="attrs" v-on="on">{{ ip }}</span>
+      <span v-else v-bind="activatorProps">{{ ip }}</span>
     </template>
 
-    <v-list v-if="!edit && item.state.meta?.networking?.[type]?.length" dense>
+    <v-list v-if="!edit && item.state.meta?.networking?.[type]?.length" density="compact">
       <v-list-item v-for="net of item.state.meta.networking?.[type]" :key="net">
         <v-list-item-title>{{ net }}</v-list-item-title>
         <v-icon @click="addToClipboard(net)"> mdi-content-copy</v-icon>
@@ -34,12 +32,12 @@
 
     <v-list v-else>
       <v-list-item v-for="(net, index) of newIps" :key="net + index">
-        <v-text-field :value="net" @input="newIps[index] = $event" dense>
-          <template v-slot:append>
-            <v-btn icon @click="deleteFromNewIps(index)">
+        <v-text-field :model-value="net" @update:model-value="newIps[index] = $event" density="compact">
+          <template v-slot:append-inner>
+            <v-btn icon variant="text" @click="deleteFromNewIps(index)">
               <v-icon> mdi-delete</v-icon>
             </v-btn>
-            <v-btn icon @click="addToClipboard(net)">
+            <v-btn icon variant="text" @click="addToClipboard(net)">
               <v-icon> mdi-content-copy</v-icon>
             </v-btn>
           </template>
@@ -54,10 +52,10 @@
       </v-list-item>
 
       <v-list-item class="d-flex justify-end">
-        <v-btn icon @click="addToNewIps()">
+        <v-btn icon variant="text" @click="addToNewIps()">
           <v-icon> mdi-plus</v-icon>
         </v-btn>
-        <v-btn :loading="isSaveNewIpLoading" icon @click="saveNewIps()">
+        <v-btn :loading="isSaveNewIpLoading" icon variant="text" @click="saveNewIps()">
           <v-icon> mdi-content-save</v-icon>
         </v-btn>
       </v-list-item>
@@ -66,7 +64,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, ref, watch, toRefs } from "vue";
+import { computed, ref, watch, toRefs } from "vue";
 import { addToClipboard } from "@/functions";
 import { useStore } from "@/store";
 
@@ -76,7 +74,7 @@ const props = defineProps({
   type: { type: String, default: "public" },
   edit: { type: Boolean, default: false },
 });
-const { type, item } = toRefs(props);
+const { type, item, ui } = toRefs(props);
 
 const store = useStore();
 

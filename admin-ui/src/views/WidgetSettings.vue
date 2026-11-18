@@ -1,16 +1,16 @@
 <template>
   <div class="settings pa-10">
-    <v-row justify="center">
+    <v-row class="justify-center">
       <v-card-title>Map settings</v-card-title>
     </v-row>
     <v-card-title>Map widget script:</v-card-title>
     <v-text-field
-      filled
+      variant="filled"
       color="background-light"
-      :value="script"
+      :model-value="script"
       readonly
-      append-icon="mdi-content-copy"
-      @click:append="copyScript"
+      append-inner-icon="mdi-content-copy"
+      @click:append-inner="copyScript"
     />
     <div ref="script" id="script"></div>
     <div
@@ -23,12 +23,16 @@
 
 <script>
 import api from "@/api";
+import { containExternalStyles } from "@/services/containExternalStyles";
+
 export default {
   data: () => ({
     script:
       "https://cdn.jsdelivr.net/npm/nocloud-map-widget@latest/dist/map-widget.js",
   }),
   mounted() {
+    // the widget bundles global CSS (Ant Design reset) that would restyle the app
+    this.stopContainingStyles = containExternalStyles();
     let script = document.createElement("script");
     script.setAttribute("src", this.script);
     script.setAttribute("type", "module");
@@ -45,6 +49,9 @@ export default {
 
       previewWidget.init();
     };
+  },
+  beforeUnmount() {
+    this.stopContainingStyles?.();
   },
   methods: {
     copyScript() {

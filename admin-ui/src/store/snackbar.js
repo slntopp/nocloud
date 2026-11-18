@@ -33,7 +33,7 @@ export default {
       const opts = {
         message,
         timeout,
-        color: "red darken-3",
+        color: "red-darken-3",
         buttonColor: "white",
       };
       this.commit("snackbar/showSnackbar", opts);
@@ -42,7 +42,7 @@ export default {
       const opts = {
         message,
         timeout,
-        color: "green darken-3",
+        color: "green-darken-3",
         buttonColor: "white",
       };
       this.commit("snackbar/showSnackbar", opts);

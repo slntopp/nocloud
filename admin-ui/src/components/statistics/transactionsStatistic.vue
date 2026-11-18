@@ -25,7 +25,7 @@
     <template v-slot:options>
       <v-select
         style="width: 220px"
-        item-text="label"
+        item-title="label"
         item-value="value"
         :items="typeItems"
         v-model="txType"

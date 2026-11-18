@@ -1,4 +1,19 @@
 import api from "@/api.js";
+import { createListCache } from "@/store/cache.js";
+
+const accountGroupsCache = createListCache({
+  invalidateOn: /^\/?account_groups(\/|\?|$)/,
+});
+
+const load = async (commit) => {
+  commit("setLoading", true);
+  try {
+    const response = await api.get("account_groups");
+    commit("setAccountGroups", response.pool);
+  } finally {
+    commit("setLoading", false);
+  }
+};
 
 export default {
   namespaced: true,
@@ -44,19 +59,13 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit, state }) {
-      if (state.accountGroups.length > 0 || state.loading) {
-        return;
-      }
-
-      commit("setAccountGroups", []);
-      commit("setLoading", true);
-      try {
-        const response = await api.get("account_groups");
-        commit("setAccountGroups", response.pool);
-      } finally {
-        commit("setLoading", false);
-      }
+    // Always goes to the server (reload button, after changes)
+    fetch({ commit }) {
+      return accountGroupsCache.run(null, () => load(commit), { force: true });
+    },
+    // Reuses the loaded list if it's fresh
+    ensure({ commit }) {
+      return accountGroupsCache.run(null, () => load(commit));
     },
 
     async fetchById({ commit }, id) {

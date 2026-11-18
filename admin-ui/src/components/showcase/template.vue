@@ -1,7 +1,7 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <template-json-editor
-      :value="template"
+      :model-value="template"
       title="Template JSON"
       @save="editShowcase"
     />

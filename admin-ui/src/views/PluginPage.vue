@@ -16,7 +16,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import { useRoute } from "vue-router/composables";
+import { useRoute } from "vue-router";
 import { useStore } from "@/store";
 import PluginIframe from "@/components/plugin/iframe.vue";
 
@@ -25,7 +25,7 @@ const store = useStore();
 
 const plugin = ref();
 
-const url = computed(() => route.params.url || route.query.url);
+const url = computed(() => route.query.url);
 const viewport = ref(window.innerWidth);
 const onResize = () => (viewport.value = window.innerWidth);
 onMounted(() => window.addEventListener("resize", onResize));
@@ -37,9 +37,12 @@ const isMaximized = computed(() => {
 });
 const params = computed(() => {
   const result = {
-    ...route.params.params,
     fullUrl: location.href,
   };
+
+  if (route.query.redirect) {
+    result.redirect = route.query.redirect;
+  }
 
   if (route.query.chat) {
     result.redirect = `dashboard/${route.query.chat}`;

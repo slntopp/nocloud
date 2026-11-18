@@ -11,13 +11,13 @@
     </confirm-dialog>
 
     <v-autocomplete
-      :filter="defaultFilterObject"
+      :customFilter="defaultFilterObject"
       label="Account"
-      item-text="title"
+      item-title="title"
       item-value="uuid"
       class="d-inline-block ml-2"
       :items="accounts"
-      @change="getActivity($event)"
+      @update:model-value="getActivity($event)"
     />
 
     <nocloud-table
@@ -32,6 +32,7 @@
         <router-link :to="{ name: 'Account', params: { accountId: value } }">
           {{ getAccount(value)?.title ?? value }}
         </router-link>
+        <account-grade :account="getAccount(value)" />
       </template>
 
       <template v-slot:[`item.created`]="{ value }">
@@ -56,6 +57,7 @@ import { formatSecondsToDate, defaultFilterObject } from "@/functions.js";
 import api from "@/api";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
+import AccountGrade from "@/components/ui/accountGrade.vue";
 
 const store = useStore();
 

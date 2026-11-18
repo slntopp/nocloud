@@ -8,7 +8,7 @@ const openPlanWiki = () => {
 </script>
 
 <template>
-  <v-icon class="mx-3" large color="light" @click="openPlanWiki">
+  <v-icon class="mx-3" size="large" color="light" @click="openPlanWiki">
     mdi-information-outline
   </v-icon>
 </template>

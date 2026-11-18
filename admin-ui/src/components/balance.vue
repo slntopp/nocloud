@@ -1,10 +1,10 @@
 <template>
-  <v-chip
+  <v-chip variant="flat"
     @click="$emit('click')"
     style="cursor: pointer"
     v-if="balance !== undefined"
     :color="colorChip"
-    :small="small"
+    :size="small ? 'small' : undefined"
   >
     {{ title }}{{ abs ? Math.abs(balance) : balance }}
     {{ (!hideCurrency && (currency?.code || defaultCurrency?.code)) || "" }}
@@ -16,6 +16,7 @@ import { formatPrice } from "../functions";
 
 export default {
   name: "balance-display",
+  emits: ["click"],
   props: {
     title: {},
     value: {},
@@ -50,7 +51,7 @@ export default {
       } else if (+this.balance < 0) {
         return this["negative-color"] || "error";
       } else {
-        return "gray";
+        return "neutral";
       }
     },
   },

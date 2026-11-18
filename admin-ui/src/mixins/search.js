@@ -1,5 +1,5 @@
 const searchMixin = ({name,defaultLayout}) => ({
-  beforeDestroy() {
+  beforeUnmount() {
     this.$store.commit("appSearch/setSearchName", "");
     this.$store.commit("appSearch/setFields", []);
     this.$store.commit("appSearch/setDefaultLayout", null);

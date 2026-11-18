@@ -2,48 +2,47 @@
   <v-form ref="opensrsForm" v-model="isValid">
     <v-row>
       <v-col>
-        <v-expansion-panels :value="0">
+        <v-expansion-panels :model-value="0">
           <v-expansion-panel>
-            <v-expansion-panel-header
+            <v-expansion-panel-title
               color="background"
               style="padding-left: 16px"
             >
               Ranged margin (%)
-            </v-expansion-panel-header>
-            <v-expansion-panel-content color="background">
-              <v-list v-if="currentFee.ranges.length > 0" color="background">
-                <v-list-item-group>
-                  <template v-for="(item, index) in currentFee.ranges">
-                    <v-list-item :key="generateKey(index)">
-                      <template v-slot:default>
-                        <v-list-item-content>
-                          <v-list-item-title>
-                            Price from: {{ item.from }}
-                            {{ defaultCurrency?.code }}, Price to:
-                            {{ item.to }} {{ defaultCurrency?.code }}, Margin:
-                            {{ item.factor }}%
-                          </v-list-item-title>
-                        </v-list-item-content>
+            </v-expansion-panel-title>
+            <v-expansion-panel-text class="bg-background">
+              <v-list
+                v-if="currentFee.ranges.length > 0"
+                bg-color="background"
+              >
+                <template
+                  v-for="(item, index) in currentFee.ranges"
+                  :key="generateKey(index)"
+                >
+                  <v-list-item>
+                    <v-list-item-title>
+                      Price from: {{ item.from }}
+                      {{ defaultCurrency?.code }}, Price to:
+                      {{ item.to }} {{ defaultCurrency?.code }}, Margin:
+                      {{ item.factor }}%
+                    </v-list-item-title>
 
-                        <v-list-item-action>
-                          <v-list-item-action-text></v-list-item-action-text>
+                    <template v-slot:append>
+                      <v-list-item-action>
+                        <v-icon
+                          @click="deleteRange(index)"
+                          color="grey-lighten-1"
+                        >
+                          mdi-delete
+                        </v-icon>
+                      </v-list-item-action>
+                    </template>
+                  </v-list-item>
 
-                          <v-icon
-                            @click="deleteRange(index)"
-                            color="grey lighten-1"
-                          >
-                            mdi-delete
-                          </v-icon>
-                        </v-list-item-action>
-                      </template>
-                    </v-list-item>
-
-                    <v-divider
-                      v-if="index < currentFee.ranges.length - 1"
-                      :key="index"
-                    ></v-divider>
-                  </template>
-                </v-list-item-group>
+                  <v-divider
+                    v-if="index < currentFee.ranges.length - 1"
+                  ></v-divider>
+                </template>
               </v-list>
               <p v-else class="text-center">Margin clear</p>
               <v-form
@@ -79,47 +78,47 @@
                   <v-btn color="secondary" @click="addRange">Add</v-btn>
                 </v-col>
               </v-form>
-            </v-expansion-panel-content>
+            </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
       </v-col>
       <v-col>
-        <v-row align="center">
+        <v-row class="align-center">
           <v-col cols="3">
-            <v-subheader>Fixed margin (%)</v-subheader>
+            <v-list-subheader>Fixed margin (%)</v-list-subheader>
           </v-col>
           <v-col cols="9">
             <v-text-field
               type="number"
-              @change="changeFee"
+              @change="changeFee($event.target.value)"
               :rules="generalRule"
               label="default"
               v-model="currentFee.default"
             />
           </v-col>
         </v-row>
-        <v-row align="center">
+        <v-row class="align-center">
           <v-col cols="3">
-            <v-subheader>Round</v-subheader>
+            <v-list-subheader>Round</v-list-subheader>
           </v-col>
           <v-col cols="9">
             <v-select
-              item-text="key"
+              item-title="key"
               item-value="value"
-              @change="changeFee"
+              @update:model-value="changeFee"
               v-model="currentFee.round"
               :items="availableRoundes"
             />
           </v-col>
         </v-row>
-        <v-row align="center">
+        <v-row class="align-center">
           <v-col cols="3">
-            <v-subheader>Rounding precision</v-subheader>
+            <v-list-subheader>Rounding precision</v-list-subheader>
           </v-col>
           <v-col cols="9">
             <v-text-field
               type="number"
-              @change="changeFee"
+              @change="changeFee($event.target.value)"
               :rules="generalRule"
               label="precision"
               v-model="currentFee.precision"
@@ -138,6 +137,7 @@ export default {
     isEdit: { type: Boolean, default: false },
   },
   name: "plan-opensrs",
+  emits: ["changeFee", "onValid"],
   data() {
     return {
       currentFee: {
@@ -181,11 +181,10 @@ export default {
         (item, i) => i !== index
       );
     },
-    addRange() {
-      if (!this.isNewRangeValid) {
-        this.$refs.newRangeForm.validate();
-        return;
-      }
+    async addRange() {
+      // Vuetify 3 keeps the form model null until validated, so validate here
+      const { valid } = await this.$refs.newRangeForm.validate();
+      if (!valid) return;
 
       const { to, from, factor } = this.newRange;
       const range = this.currentFee.ranges.find((el) => {
@@ -211,11 +210,9 @@ export default {
 
       this.newRange = { from: 0, to: 0, factor: 0 };
     },
-    changeFee() {
-      if (!this.isValid) {
-        this.$refs.opensrsForm.validate();
-        return;
-      }
+    async changeFee() {
+      const { valid } = await this.$refs.opensrsForm.validate();
+      if (!valid) return;
 
       const { precision, round, ranges } = this.currentFee;
 
