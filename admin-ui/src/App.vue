@@ -622,6 +622,10 @@ export default {
       this.$store.commit("app/setChatClicks", 1);
       this.$router.push({ name: "Chats" });
     },
+    /** The client cabinet's address, known ahead, so "Log in as the client" opens it at once. */
+    prefetchAppURL() {
+      this.$store.dispatch("auth/getAppURL").catch(() => {});
+    },
     openChatsInNewWindow() {
       const { title } = this.$store.getters["auth/userdata"];
       const { token } = this.$store.state.auth;
@@ -793,6 +797,7 @@ export default {
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
       this.$store.dispatch("chats/fetch");
+      this.prefetchAppURL();
     }
   },
   mounted() {
@@ -806,6 +811,7 @@ export default {
   watch: {
     isLoggedIn(newVal) {
       if (newVal) {
+        this.prefetchAppURL();
         this.$store.dispatch("plugins/fetch");
         this.$store.dispatch("currencies/fetch");
         this.$store.dispatch("settings/fetch");
