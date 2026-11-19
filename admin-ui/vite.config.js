@@ -1,4 +1,5 @@
 import { readdirSync } from "node:fs";
+import process from "node:process";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
@@ -42,6 +43,17 @@ const appCssLayer = {
   },
 };
 
+function devProxy() {
+  const api = process.env.NOCLOUD_API;
+  if (!api) return undefined;
+  const grpc = process.env.NOCLOUD_GRPC || api;
+  return {
+    "^/nocloud\\.": { target: grpc, changeOrigin: true },
+    // everything that is not the app itself or a Vite internal
+    "^/(?!admin(/|$)|@|node_modules/|src/)": { target: api, changeOrigin: true, ws: true },
+  };
+}
+
 export default defineConfig({
   // the app is served under /admin (see apiserver_web and traefik)
   base: "/admin/",
@@ -84,6 +96,11 @@ export default defineConfig({
   },
   server: {
     port: 8080,
+    // Run the dev server against a backend that lives elsewhere:
+    //   NOCLOUD_API=http://localhost:18080 NOCLOUD_GRPC=http://localhost:18000 yarn dev
+    // NOCLOUD_API is the REST gateway (apiserver-web), NOCLOUD_GRPC the
+    // gRPC/Connect entrypoint; without them nothing is proxied.
+    proxy: devProxy(),
   },
   optimizeDeps: {
     include: ["vuetify", "vuetify/directives", ...vuetifyComponents],

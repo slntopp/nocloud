@@ -824,6 +824,16 @@ export default {
 
           ...this.baseVmControls,
         ],
+        mondoo: [
+          {
+            action: "scan",
+            title: "Scan now",
+            icon: "mdi-radar",
+            // an imported integration is read-only for the driver
+            disabled: !!this.template.data?.imported || this.template.state?.state !== "RUNNING",
+          },
+          ...this.baseVmControls,
+        ],
         cpanel: [
           {
             action: "start",

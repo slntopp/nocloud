@@ -253,7 +253,7 @@ const save = async () => {
   }
 
   instance.value.config.auto_start =
-    instance.value.billing_plan.meta.auto_start ||
+    instance.value.billing_plan.meta?.auto_start ||
     instance.value.config.auto_start;
   if (typeof instance.value.billing_plan === "string") {
     instance.value.billing_plan = { uuid: instance.value.billing_plan };
@@ -272,7 +272,7 @@ const save = async () => {
       )
     )?.title;
   } else {
-    instance.value.config.location = fullSp.locations[0]?.title;
+    instance.value.config.location = fullSp.locations?.[0]?.title;
   }
   if (nextPaymentDate.value) {
     const next_payment_date = nextPaymentDate.value;

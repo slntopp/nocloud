@@ -227,6 +227,11 @@
                   @changeValue="changeProduct('amount', $event, item.id)"
                 />
               </template>
+              <plans-trial-fields
+                v-if="type === 'mondoo'"
+                :meta="item.meta"
+                @update:meta="changeProduct('meta', $event, item.id)"
+              />
               <v-row>
                 <v-col>
                   <v-list-subheader class="px-0 pt-4"
@@ -314,6 +319,7 @@ import productAddonsDialog from "@/components/product_addons_dialog.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
+import plansTrialFields from "@/components/plans_trial_fields.vue";
 
 const props = defineProps({
   addons: { type: Array, required: true },
