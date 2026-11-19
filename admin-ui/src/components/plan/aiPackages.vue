@@ -78,9 +78,6 @@
       <template v-slot:[`item.public`]="{ item }">
         <v-icon size="small">{{ item.public ? "mdi-check" : "mdi-minus" }}</v-icon>
       </template>
-      <template v-slot:[`item.site`]="{ item }">
-        <v-icon size="small">{{ item.form.site ? "mdi-check" : "mdi-minus" }}</v-icon>
-      </template>
       <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex">
           <v-btn icon variant="text" size="small" title="Edit" @click="openEdit(item.key)">
@@ -155,40 +152,14 @@
             <v-col cols="6">
               <v-text-field v-model="form.seats" type="number" label="Seats" />
             </v-col>
-            <template v-if="form.site">
-              <v-col cols="12">
-                <v-autocomplete
-                  v-model="form.surveyModels"
-                  :items="modelItemsFor(form.surveyModels)"
-                  :loading="isModelsLoading"
-                  label="Survey models"
-                  hint="Models offered for the questionnaire (опрос)."
-                  persistent-hint
-                  multiple
-                  chips
-                  closable-chips
-                />
-              </v-col>
-              <v-col cols="12">
-                <v-autocomplete
-                  v-model="form.buildModels"
-                  :items="modelItemsFor(form.buildModels)"
-                  :loading="isModelsLoading"
-                  label="Build models"
-                  hint="Models offered for site assembly (сборка)."
-                  persistent-hint
-                  multiple
-                  chips
-                  closable-chips
-                />
-              </v-col>
-            </template>
-            <v-col v-else cols="12">
+            <v-col cols="12">
               <v-autocomplete
                 v-model="form.models"
                 :items="modelItemsFor(form.models)"
                 :loading="isModelsLoading"
                 label="Models"
+                hint="Empty pays for every model. A model that is not listed is paid from the balance."
+                persistent-hint
                 multiple
                 chips
                 closable-chips
@@ -205,13 +176,6 @@
             </v-col>
             <v-col cols="6">
               <v-switch v-model="form.public" label="Public" />
-            </v-col>
-            <v-col cols="6">
-              <v-switch
-                v-model="form.site"
-                label="Site constructor only"
-                @update:model-value="onSiteToggle"
-              />
             </v-col>
             <v-col cols="6">
               <v-text-field
@@ -284,7 +248,6 @@ const headers = [
   { text: "Models", value: "models", sortable: false },
   { text: "Promocode", value: "promocode", sortable: false },
   { text: "Public", value: "public" },
-  { text: "Site", value: "site" },
   { text: "Sorter", value: "sorter" },
   { text: "Actions", value: "actions", sortable: false },
 ];
@@ -301,7 +264,6 @@ const rows = computed(() =>
         credit: form.credit,
         seats: form.seats || "—",
         public: form.public,
-        site: form.site,
         sorter: form.sorter,
         form,
         isAi: isAiPackage(product),
@@ -324,13 +286,7 @@ const modelLabel = (key) => {
   return `${model.name || key}${model.disabled ? " · disabled" : ""}`;
 };
 
-/** Models shown for a package row: the billing union, or survey∪build on a constructor package. */
-const packageModels = (pkg) => {
-  if (pkg.site) {
-    return [...new Set([...(pkg.surveyModels || []), ...(pkg.buildModels || [])])];
-  }
-  return pkg.models || [];
-};
+const packageModels = (pkg) => pkg.models || [];
 
 /**
  * The driver's models by provider, for the picker. A disabled model is not offered, but one the
@@ -363,19 +319,6 @@ const modelItemsFor = (chosenKeys = []) => {
     .filter((key) => !modelsByKey.value[key])
     .forEach((key) => items.push({ text: `${key} (not in the driver config)`, value: key }));
   return items;
-};
-
-/** Turning constructor mode on seeds both role lists from the shared Models field. */
-const onSiteToggle = (enabled) => {
-  if (!form.value || !enabled) {
-    return;
-  }
-  if ((form.value.surveyModels || []).length || (form.value.buildModels || []).length) {
-    return;
-  }
-  const shared = [...(form.value.models || [])];
-  form.value.surveyModels = shared;
-  form.value.buildModels = [...shared];
 };
 
 const otherKeys = computed(() =>
