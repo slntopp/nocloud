@@ -119,19 +119,6 @@
               @update:model-value="(value) => changeProduct('public', value, item.id)"
             />
           </template>
-          <template v-slot:[`item.meta.ai_site`]="{ item }">
-            <v-switch
-              :model-value="item.meta?.ai_site"
-              @update:model-value="
-                (value) =>
-                  changeProduct(
-                    'meta',
-                    { ...(item.meta || {}), ai_site: value },
-                    item.id
-                  )
-              "
-            />
-          </template>
           <template v-slot:[`item.sorter`]="{ item }">
             <v-text-field
               type="number"
@@ -375,11 +362,6 @@ const headers = computed(() =>
     { text: "Kind", value: "kind", width: 228 },
     { text: "Group", value: "group", width: 300 },
     { text: "Public", value: "public" },
-    type.value === "empty" && {
-      text: "Site constructor",
-      value: "meta.ai_site",
-      width: 160,
-    },
     { text: "Sorter", value: "sorter" },
     ["ione", "proxmox"].includes(type.value) && {
       text: "High CPU",

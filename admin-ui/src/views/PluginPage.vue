@@ -1,8 +1,8 @@
 <template>
   <div
     class="plugin-page h-100 w-100"
-    :class="{ 'pa-4': viewport > 900 }"
-    :style="isMaximized ? { width: '100vw', height: '100vh' } : {}"
+    :class="{ 'pa-4': viewport > 900, 'plugin-page--keyboard': keyboardOpen }"
+    :style="frameStyle"
   >
     <plugin-iframe
       v-if="$route.query.url"
@@ -28,8 +28,41 @@ const plugin = ref();
 const url = computed(() => route.query.url);
 const viewport = ref(window.innerWidth);
 const onResize = () => (viewport.value = window.innerWidth);
-onMounted(() => window.addEventListener("resize", onResize));
-onUnmounted(() => window.removeEventListener("resize", onResize));
+const vvTop = ref(0);
+const vvHeight = ref(0);
+const keyboardOpen = ref(false);
+
+function syncVisualViewport() {
+  const vv = window.visualViewport;
+  const isChats = String(url.value || "").includes("cc.ui");
+  if (!vv || viewport.value > 900 || !isChats) {
+    keyboardOpen.value = false;
+    return;
+  }
+  vvTop.value = vv.offsetTop;
+  vvHeight.value = vv.height;
+  keyboardOpen.value = window.innerHeight - vv.height > 150;
+}
+
+const frameStyle = computed(() => {
+  if (isMaximized.value) return { width: "100vw", height: "100vh" };
+  if (!keyboardOpen.value) return undefined;
+  return {
+    top: `${vvTop.value}px`,
+    height: `${vvHeight.value}px`,
+  };
+});
+
+onMounted(() => {
+  window.addEventListener("resize", onResize);
+  window.visualViewport?.addEventListener("resize", syncVisualViewport);
+  window.visualViewport?.addEventListener("scroll", syncVisualViewport);
+});
+onUnmounted(() => {
+  window.removeEventListener("resize", onResize);
+  window.visualViewport?.removeEventListener("resize", syncVisualViewport);
+  window.visualViewport?.removeEventListener("scroll", syncVisualViewport);
+});
 const isMaximized = computed(() => {
   const isChats = String(url.value || "").includes("cc.ui");
   if (isChats && viewport.value <= 900) return false;
@@ -80,6 +113,15 @@ export default { name: "plugin-view" };
   flex: 1 1 auto;
   min-height: 0;
   height: 100%;
+}
+
+.plugin-page--keyboard {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  width: 100%;
+  padding: 0 !important;
 }
 
 .w-100 {
