@@ -1285,7 +1285,7 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 	}
 
 	log.Debug("Generating transaction after invoice payment")
-	noCancelCtx := context.WithoutCancel(ctx)
+	noCancelCtx, runSuspendChecks := s.withDeferredSuspendChecks(context.WithoutCancel(ctx), log)
 	trCtx, err := graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
 		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL, schema.INVOICES_COL},
 	})
@@ -1303,6 +1303,7 @@ func (s *BillingServiceServer) executeNocloudPayWithBalance(ctx context.Context,
 			log.Error("Failed to commit transaction")
 			return err
 		}
+		runSuspendChecks()
 		return nil
 	}
 
@@ -1451,7 +1452,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	if accCurrency == nil {
 		accCurrency = currConf.Currency
 	}
-	invCurrency := acc.Currency
+	invCurrency := accCurrency
 
 	if accCurrency.GetId() != invCurrency.GetId() {
 		var convErr error
@@ -1473,7 +1474,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 	}
 
 	log.Debug("Generating transaction after whmcs invoice payment")
-	noCancelCtx := context.WithoutCancel(ctx)
+	noCancelCtx, runSuspendChecks := s.withDeferredSuspendChecks(context.WithoutCancel(ctx), log)
 	trCtx, errTr := graph.BeginTransaction(noCancelCtx, s.db, driver.TransactionCollections{
 		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.ACCOUNTS_COL, schema.INVOICES_COL},
 	})
@@ -1491,6 +1492,7 @@ func (s *BillingServiceServer) payWithBalanceWhmcsInvoice(ctx context.Context, i
 			log.Error("Failed to commit transaction")
 			return errCmt
 		}
+		runSuspendChecks()
 		return nil
 	}
 	_, errTr = s.applyTransaction(ctxWithInternalAccess(trCtx), math.Min(balance, float64(inv.Balance)), requester, invCurrency, true, &applyTransactionMeta{
@@ -2514,12 +2516,17 @@ func (s *BillingServiceServer) executePostPaidActions(ctx context.Context, log *
 			if err != nil {
 				return inv, fmt.Errorf("failed to get instance price: %w", err)
 			}
-			cost, err = s.currencies.Convert(ctx, defCurr, acc.GetCurrency(), cost)
+			// Accounts without a currency are billed in the default one.
+			accCurr := acc.GetCurrency()
+			if accCurr == nil {
+				accCurr = defCurr
+			}
+			cost, err = s.currencies.Convert(ctx, defCurr, accCurr, cost)
 			if err != nil {
 				log.Error("Failed to convert cost", zap.Error(err))
 				return inv, fmt.Errorf("failed to convert cost: %w", err)
 			}
-			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), acc.GetCurrency(), false, &applyTransactionMeta{
+			_, err = s.applyTransaction(ctx, -cost, acc.GetUuid(), accCurr, false, &applyTransactionMeta{
 				TransactionType: "transaction top-up",
 				InstanceUUID:    i,
 				Description:     fmt.Sprintf("Instance start balance credit (%s)", i),

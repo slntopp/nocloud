@@ -93,6 +93,7 @@ type BillingServiceServer struct {
 	sp           graph.ServicesProvidersController
 	addons       graph.AddonsController
 	promocodes   graph.PromocodesController
+	trials       graph.TrialsController
 	ca           graph.CommonActionsController
 	pgs          graph.PaymentGatewaysController
 	accGroups    graph.AccountGroupsController
@@ -225,6 +226,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn rabbit
 		sp:                  sp,
 		addons:              addons,
 		promocodes:          promocodes,
+		trials:              graph.NewTrialsController(log, db),
 		ca:                  ca,
 		pgs:                 pgs,
 		accGroups:           accGroups,
