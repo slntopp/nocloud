@@ -52,13 +52,13 @@
         v-for="item of templateOs"
         :key="item.id"
       >
-        <v-chip variant="flat"
-          closable
+        <v-chip
+          variant="flat"
           :color="!hidedOs?.includes(item.id) ? 'info' : 'error'"
-          :close-icon="
+          :append-icon="
             hidedOs?.includes(item.id) ? 'mdi-plus-circle' : 'mdi-close-circle'
           "
-          @click:close="changeOsState(item)"
+          @click="changeOsState(item)"
         >
           <span>
             {{ item.name }}
@@ -158,7 +158,7 @@ export default {
     if (!this.meta.maxDiskSize) {
       this.meta.maxDiskSize = {};
     }
-    this.hidedOs = this.template.meta?.hidedOs || [];
+    this.hidedOs = [...(this.template.meta?.hidedOs || [])];
   },
   watch: {
     "template.meta"(newVal) {
