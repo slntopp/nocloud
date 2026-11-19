@@ -110,13 +110,14 @@
             hide-details
             style="max-width: 160px"
           />
-          <v-switch
-            v-model="grouped"
-            label="Group by domain"
-            color="primary"
+          <v-select
+            v-if="namespaces.length > 1"
+            v-model="findingsFilter.namespace"
+            :items="domainItems"
+            label="Domain"
             density="compact"
             hide-details
-            class="ml-2"
+            style="max-width: 220px"
           />
         </template>
         <v-spacer />
@@ -129,56 +130,16 @@
         {{ error }}
       </v-alert>
 
-      <template v-if="tab === 'findings'">
-        <v-expansion-panels v-if="grouped" multiple variant="accordion" class="mondoo-groups">
-          <v-expansion-panel v-for="group in groups" :key="group.namespace">
-            <v-expansion-panel-title>
-              <div class="d-flex align-center flex-wrap ga-2">
-                <span class="font-weight-medium">{{ group.namespace || "(no domain)" }}</span>
-                <v-chip v-if="group.configured === false" size="x-small" color="warning" variant="outlined">
-                  discovered
-                </v-chip>
-                <span class="text-caption text-medium-emphasis">
-                  {{ group.findings }} findings · {{ group.hosts }} hosts
-                  <template v-if="group.grade"> · grade {{ group.grade }} ({{ group.score }})</template>
-                </span>
-                <template v-for="rating in ratings" :key="rating.key">
-                  <v-chip
-                    v-if="group.findings_by_rating?.[rating.key]"
-                    :color="rating.color"
-                    variant="flat"
-                    size="x-small"
-                  >
-                    {{ rating.title }}: {{ group.findings_by_rating[rating.key] }}
-                  </v-chip>
-                </template>
-              </div>
-            </v-expansion-panel-title>
-            <v-expansion-panel-text>
-              <mondoo-findings-table
-                :uuid="template.uuid"
-                :namespace="group.namespace"
-                :rating="findingsFilter.rating"
-                :state="findingsFilter.state"
-                :page-size="pageSize"
-                :refresh-key="refreshKey"
-              />
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-          <div v-if="!groups.length" class="text-center text-disabled pa-4">
-            {{ loading ? "Loading..." : "No domains scanned yet" }}
-          </div>
-        </v-expansion-panels>
-        <mondoo-findings-table
-          v-else
-          :uuid="template.uuid"
-          :rating="findingsFilter.rating"
-          :state="findingsFilter.state"
-          :page-size="pageSize"
-          :refresh-key="refreshKey"
-          @total="findings.total = $event"
-        />
-      </template>
+      <mondoo-findings-table
+        v-if="tab === 'findings'"
+        :uuid="template.uuid"
+        :rating="findingsFilter.rating"
+        :state="findingsFilter.state"
+        :namespace="findingsFilter.namespace"
+        :page-size="pageSize"
+        :refresh-key="refreshKey"
+        @total="findings.total = $event"
+      />
 
       <template v-else>
       <v-table density="compact" class="mondoo-table">
@@ -244,17 +205,9 @@ const page = ref(1);
 const loading = ref(false);
 const error = ref("");
 const findings = reactive({ total: 0 });
-const groups = ref([]);
-const refreshKey = ref(0);
-// Findings are grouped per domain namespace once there is more than one,
-// unless the switch was used.
-const groupChoice = ref(null);
-const grouped = computed({
-  get: () => groupChoice.value ?? groups.value.length > 1,
-  set: (value) => (groupChoice.value = value),
-});
 const assets = reactive({ items: [], total: 0 });
-const findingsFilter = reactive({ rating: "", state: "" });
+const refreshKey = ref(0);
+const findingsFilter = reactive({ rating: "", state: "", namespace: "" });
 
 const ratingItems = [{ key: "", title: "Any rating" }, ...ratings];
 const stateItems = [
@@ -272,6 +225,10 @@ const summary = computed(() => liveSummary.value ?? data.value.summary ?? {});
 const byRating = computed(() => summary.value.findings_by_rating ?? {});
 const namespaces = computed(() => summary.value.namespaces ?? []);
 const domains = computed(() => config.value.domains ?? []);
+const domainItems = computed(() => [
+  { title: "All domains", value: "" },
+  ...namespaces.value.map(({ name }) => ({ title: name, value: name })),
+]);
 const imported = computed(() => !!data.value.imported);
 const integrationMrn = computed(() => data.value.integration_mrn);
 
@@ -304,11 +261,6 @@ async function invoke(action, params) {
   return response?.meta ?? {};
 }
 
-const findingsParams = () => ({
-  ...(findingsFilter.rating && { rating: findingsFilter.rating }),
-  ...(findingsFilter.state && { state: findingsFilter.state }),
-});
-
 // The assets page; findings tables load themselves.
 async function load() {
   if (!template.value?.uuid || tab.value !== "assets") return;
@@ -329,17 +281,6 @@ async function load() {
   }
 }
 
-async function loadGroups() {
-  try {
-    const meta = await invoke("finding_groups", findingsParams());
-    groups.value = meta.items ?? [];
-    findings.total = +meta.total || 0;
-  } catch {
-    // A driver without grouping still lists findings ungrouped.
-    groups.value = [];
-  }
-}
-
 async function loadCounts() {
   // Totals for the toggle, without waiting for a tab switch.
   try {
@@ -356,7 +297,6 @@ async function loadCounts() {
 
 function reload() {
   loadCounts();
-  loadGroups();
   load();
   refreshKey.value++;
 }
@@ -389,7 +329,6 @@ watch(tab, () => {
   load();
 });
 watch(page, load);
-watch(findingsFilter, loadGroups);
 
 onMounted(reload);
 </script>
@@ -404,8 +343,7 @@ export default {
 .mondoo-dim {
   opacity: 0.45;
 }
-.mondoo-table,
-.mondoo-groups :deep(.v-expansion-panel) {
+.mondoo-table {
   background: transparent;
 }
 </style>
