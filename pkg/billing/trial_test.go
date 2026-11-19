@@ -1,8 +1,10 @@
 package billing
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/arangodb/go-driver"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -108,5 +110,20 @@ func TestTrialInvoiceDate(t *testing.T) {
 
 	if conf, err := productTrial(plan, trialProduct(t, map[string]any{"period": day, "invoice_before": -1})); err == nil {
 		t.Errorf("negative lead accepted as %+v", conf)
+	}
+}
+
+func TestIsWriteConflict(t *testing.T) {
+	if isWriteConflict(nil) {
+		t.Error("nil is not a conflict")
+	}
+	if !isWriteConflict(fmt.Errorf("AQL: write-write conflict [node #4: UpdateNode] (while executing)")) {
+		t.Error("wrapped AQL conflict not recognised")
+	}
+	if !isWriteConflict(driver.ArangoError{HasError: true, Code: 409, ErrorNum: driver.ErrArangoConflict}) {
+		t.Error("ArangoDB conflict error not recognised")
+	}
+	if isWriteConflict(fmt.Errorf("document not found")) {
+		t.Error("unrelated error taken for a conflict")
 	}
 }

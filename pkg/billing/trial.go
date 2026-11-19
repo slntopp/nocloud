@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/arangodb/go-driver"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -38,6 +40,17 @@ const TrialEndsKey = "trial_ends"
 // defaultTrialInvoiceBefore is how long before the end of a trial its first
 // renewal invoice is issued unless the product says otherwise.
 const defaultTrialInvoiceBefore = int64(2 * 24 * 60 * 60)
+
+const (
+	trialStartAttempts = 5
+	trialStartBackoff  = 200 * time.Millisecond
+)
+
+// isWriteConflict reports whether ArangoDB refused a write because another
+// transaction was changing the same document.
+func isWriteConflict(err error) bool {
+	return err != nil && (driver.IsArangoErrorWithErrorNum(err, driver.ErrArangoConflict) || strings.Contains(err.Error(), "write-write conflict"))
+}
 
 const (
 	trialScopeAccount      = "account"
@@ -158,7 +171,22 @@ func (s *BillingServiceServer) tryStartTrial(ctx context.Context, log *zap.Logge
 		started.Meta = &ipb.InstanceMeta{}
 	}
 	started.Meta.NextForcedRenewInvoice = &invoiceAt
-	if err := s.instances.Update(ctx, "", started, inst); err != nil {
+	// The order is still being brought up by other services when this runs,
+	// and their writes to the instance can collide with this one. Left to
+	// the queue, a collision would delay the trial by a redelivery (a minute).
+	err = nil
+	for attempt := 1; attempt <= trialStartAttempts; attempt++ {
+		// Update strips the UUID from what it is given: hand it a fresh copy.
+		if err = s.instances.Update(ctx, "", proto.Clone(started).(*ipb.Instance), inst); err == nil || !isWriteConflict(err) {
+			break
+		}
+		log.Warn("Write conflict starting instance on trial, retrying", zap.Int("attempt", attempt), zap.Error(err))
+		select {
+		case <-ctx.Done():
+		case <-time.After(time.Duration(attempt) * trialStartBackoff):
+		}
+	}
+	if err != nil {
 		// Without this the trial would be spent on an instance that never ran.
 		if relErr := s.trials.Release(ctx, conf.Group, conf.Scope, value); relErr != nil {
 			log.Error("Failed to release trial after failed start", zap.Error(relErr))
