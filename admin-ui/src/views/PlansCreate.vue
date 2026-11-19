@@ -649,6 +649,7 @@ export default {
         case "bitrix24":
         case "vpn":
         case "ione-vpn":
+        case "mondoo":
         case "cpanel": {
           allowed.push("STATIC");
           break;
