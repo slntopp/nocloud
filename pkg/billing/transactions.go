@@ -31,8 +31,6 @@ import (
 
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"github.com/slntopp/nocloud-proto/registry/accounts"
-
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -324,7 +322,6 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
 		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
-		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
 		enforce := transactionEnforcesSufficientBalance(r.Transaction)
 		if enforce {
@@ -363,56 +360,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			return resp, nil
 		}
 
-		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
-		if err != nil {
-			log.Error("Failed to get account", zap.String("err", err.Error()))
-			return resp, nil
-		}
-
-		var cur *pb.Currency
-
-		if dbAcc.Currency == nil {
-			cur = currencyConf.Currency
-		} else {
-			cur = dbAcc.Currency
-		}
-
-		var rate float64 = 1
-
-		if cur.GetId() != currencyConf.Currency.GetId() {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
-			if err != nil {
-				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
-				return resp, nil
-			}
-		}
-
-		var balance = 0.0
-		if dbAcc.Balance != nil {
-			balance = *dbAcc.Balance
-		}
-
-		balance = balance * rate
-
-		var isSuspended = false
-
-		if dbAcc.Suspended != nil {
-			isSuspended = *dbAcc.Suspended
-		}
-
-		if !isSuspended && balance < suspConf.Limit {
-			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
-			if err != nil {
-				log.Error("Failed to suspend account", zap.String("err", err.Error()))
-				return resp, nil
-			}
-		} else if isSuspended && balance > suspConf.Limit {
-			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
-			if err != nil {
-				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
-				return resp, nil
-			}
-		}
+		// Failures are logged inside; the transaction itself is already applied.
+		_ = s.checkAccountSuspension(ctx, log, r.Transaction.Account)
 
 	} else {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
@@ -565,7 +514,6 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
 		currencyConf := MakeCurrencyConf(log, &s.settingsClient)
-		suspConf := MakeSuspendConf(log, &s.settingsClient)
 
 		enforce := transactionEnforcesSufficientBalance(t)
 		if enforce {
@@ -597,56 +545,8 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 			return nil, err2
 		}
 
-		dbAcc, err := s.accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
-
-		if err != nil {
-			log.Error("Failed to get account", zap.String("err", err.Error()))
+		if err := s.checkAccountSuspension(ctx, log, t.Account); err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		var cur *pb.Currency
-
-		if dbAcc.Currency == nil {
-			cur = currencyConf.Currency
-		} else {
-			cur = dbAcc.Currency
-		}
-
-		var rate float64 = 1
-
-		if cur.GetId() != currencyConf.Currency.GetId() {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
-			if err != nil {
-				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		var balance = 0.0
-		if dbAcc.Balance != nil {
-			balance = *dbAcc.Balance
-		}
-
-		balance = balance * rate
-
-		var isSuspended = false
-
-		if dbAcc.Suspended != nil {
-			isSuspended = *dbAcc.Suspended
-		}
-
-		if !isSuspended && balance < suspConf.Limit {
-			_, err := s.accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
-			if err != nil {
-				log.Error("Failed to suspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		} else if isSuspended && balance > suspConf.Limit {
-			_, err := s.accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
-			if err != nil {
-				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
 		}
 	}
 

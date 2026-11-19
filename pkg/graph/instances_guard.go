@@ -13,8 +13,8 @@ import (
 const LockProductKey = "lock_product"
 
 // AdminConfigKeys are instance config keys only platform admins set, like admin-ui's "start without
-// payment" (skip_next_payment).
-var AdminConfigKeys = []string{"skip_next_payment"}
+// payment" (skip_next_payment) and the end of a free trial granted by billing (trial_ends).
+var AdminConfigKeys = []string{"skip_next_payment", "trial_ends"}
 
 // ChangesProductOrPlan reports whether updating old with inst moves the instance to another product
 // or billing plan. A product or plan left out of the update keeps its stored value.

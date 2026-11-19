@@ -166,6 +166,7 @@ func (s *BillingServiceServer) ProcessInvoiceStatusAction(log *zap.Logger, ctx c
 func (s *BillingServiceServer) processInvoiceStatusActionLocked(log *zap.Logger, ctx context.Context, event *epb.Event) error {
 	currConf := MakeCurrencyConf(log, &s.settingsClient)
 
+	ctx, runSuspendChecks := s.withDeferredSuspendChecks(ctx, log)
 	ctx, err := graph.BeginTransaction(ctx, s.db, driver.TransactionCollections{
 		Exclusive: []string{schema.TRANSACTIONS_COL, schema.RECORDS_COL, schema.INSTANCES_COL, schema.INVOICES_COL, schema.ACCOUNTS_COL},
 	})
@@ -182,6 +183,7 @@ func (s *BillingServiceServer) processInvoiceStatusActionLocked(log *zap.Logger,
 			log.Error("Failed to commit transaction")
 			return err
 		}
+		runSuspendChecks()
 		return nil
 	}
 
@@ -377,6 +379,13 @@ func (s *BillingServiceServer) ProcessInstanceCreation(log *zap.Logger, ctx cont
 	initCost, _ := s.instances.CalculateInstanceEstimatePrice(instance.Instance, true)
 	if initCost <= 0 {
 		log.Info("Skipping creation of 0 invoice for instance with 0 price")
+		return nil
+	}
+	// A product may offer a free trial: the instance then starts right away and no start invoice is issued
+	if onTrial, err := s.tryStartTrial(ctx, log, instance.Instance, acc.GetUuid(), now); err != nil {
+		log.Error("Failed to start trial", zap.Error(err))
+		return err
+	} else if onTrial {
 		return nil
 	}
 	_, summary, err := s.promocodes.GetDiscountPriceByInstance(instance.Instance, true)

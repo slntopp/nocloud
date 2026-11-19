@@ -316,6 +316,9 @@ func (c *сurrencyController) DeleteExchangeRate(ctx context.Context, from *pb.C
 }
 
 func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error) {
+	if from == nil || to == nil {
+		return 0, status.Error(codes.InvalidArgument, "currency is not set")
+	}
 
 	if from.Id == to.Id && from.Code != to.Code {
 		curr, _ := c.GetByCode(ctx, from.Code)
@@ -343,6 +346,9 @@ func (c *сurrencyController) Convert(ctx context.Context, from *pb.Currency, to
 
 func (c *сurrencyController) ConvertMany(ctx context.Context, from *pb.Currency, to *pb.Currency, amounts []float64) ([]float64, error) {
 	results := make([]float64, len(amounts))
+	if from == nil || to == nil {
+		return amounts, status.Error(codes.InvalidArgument, "currency is not set")
+	}
 
 	if from.Id == to.Id && from.Code != to.Code {
 		curr, _ := c.GetByCode(ctx, from.Code)
