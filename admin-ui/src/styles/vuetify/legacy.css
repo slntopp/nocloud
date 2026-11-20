@@ -274,6 +274,19 @@
   }
 }
 
+/* Vuetify 4 makes a card directly in a dialog a flex column, and inputs and
+   rows are flex: 1 1 auto, so in a card with a min-height they stretched to
+   fill it (e.g. the AI prices "Types" select took the whole dialog). Vuetify 2
+   cards were plain blocks: keep their natural height. */
+@layer vuetify-overrides {
+  .v-dialog > .v-overlay__content > .v-card > .v-input,
+  .v-dialog > .v-overlay__content > .v-card > .v-row,
+  .v-dialog > .v-overlay__content > form > .v-card > .v-input,
+  .v-dialog > .v-overlay__content > form > .v-card > .v-row {
+    flex: 0 0 auto;
+  }
+}
+
 /* Vuetify 3+ renders text inputs with size="1", so a field in a container
    that sizes to its content (e.g. a div with only max-width) collapsed to its
    label. Vuetify 2 inputs had the browser's default ~20 character width.
