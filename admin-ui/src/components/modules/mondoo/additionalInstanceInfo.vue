@@ -1,7 +1,16 @@
 <template>
   <div class="mondoo-info">
     <v-row>
-      <v-col cols="12" md="6">
+      <v-col v-if="isSsh" cols="12" md="6">
+        <v-text-field
+          readonly
+          label="Scanned machine"
+          :model-value="scan.asset_name || config.instance"
+          hint="Scanned over SSH from the scan runner. Nothing runs on the machine itself."
+          persistent-hint
+        />
+      </v-col>
+      <v-col v-else cols="12" md="6">
         <v-combobox
           label="Domains"
           :model-value="domains"
@@ -49,6 +58,28 @@
         </v-chip>
       </v-col>
       <v-col cols="12" md="6" class="d-flex flex-wrap align-center ga-2 justify-md-end">
+        <v-tooltip v-if="isSsh && scan.error" location="top" :text="scan.error">
+          <template #activator="{ props: tip }">
+            <v-chip v-bind="tip" size="small" color="warning" variant="outlined">
+              last scan failed
+            </v-chip>
+          </template>
+        </v-tooltip>
+        <v-chip v-else-if="isSsh && scan.finished_at" size="small" color="success" variant="outlined">
+          scanned {{ formatTs(scan.finished_at) }}
+        </v-chip>
+        <v-chip v-else-if="isSsh" size="small" color="primary" variant="outlined">
+          <v-progress-circular indeterminate size="12" width="2" class="mr-2" />
+          {{ scan.requested_at ? "first scan running" : "waiting for the first scan" }}
+        </v-chip>
+        <v-tooltip v-if="fix.status" location="top" :text="fix.error || fix.title">
+          <template #activator="{ props: tip }">
+            <v-chip v-bind="tip" size="small" variant="outlined" :color="fixColor">
+              <v-progress-circular v-if="fixActive" indeterminate size="12" width="2" class="mr-2" />
+              fix {{ fix.status }}
+            </v-chip>
+          </template>
+        </v-tooltip>
         <v-chip v-if="imported" size="small" color="primary" variant="outlined">
           imported, read-only
         </v-chip>
@@ -119,6 +150,16 @@
             hide-details
             style="max-width: 220px"
           />
+          <v-text-field
+            v-model="searchText"
+            label="Search"
+            placeholder="title or CVE"
+            density="compact"
+            hide-details
+            clearable
+            prepend-inner-icon="mdi-magnify"
+            style="max-width: 240px"
+          />
         </template>
         <v-spacer />
         <v-btn size="small" variant="text" :loading="loading" @click="reload">
@@ -136,9 +177,11 @@
         :rating="findingsFilter.rating"
         :state="findingsFilter.state"
         :namespace="findingsFilter.namespace"
+        :search="findingsFilter.search"
         :page-size="pageSize"
         :refresh-key="refreshKey"
         @total="findings.total = $event"
+        @fix="watchFix"
       />
 
       <template v-else>
@@ -186,7 +229,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, toRefs, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, toRefs, watch } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
@@ -207,7 +250,14 @@ const error = ref("");
 const findings = reactive({ total: 0 });
 const assets = reactive({ items: [], total: 0 });
 const refreshKey = ref(0);
-const findingsFilter = reactive({ rating: "", state: "", namespace: "" });
+const findingsFilter = reactive({ rating: "", state: "", namespace: "", search: "" });
+// Typing must not fire a request per key.
+const searchText = ref("");
+let searchTimer;
+watch(searchText, (value) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => (findingsFilter.search = (value ?? "").trim()), 350);
+});
 
 const ratingItems = [{ key: "", title: "Any rating" }, ...ratings];
 const stateItems = [
@@ -230,6 +280,14 @@ const domainItems = computed(() => [
   ...namespaces.value.map(({ name }) => ({ title: name, value: name })),
 ]);
 const imported = computed(() => !!data.value.imported);
+const isSsh = computed(() => summary.value.kind === "ssh" || !!config.value.instance);
+const scan = computed(() => summary.value.scan ?? {});
+// The last fix run on the machine, and whether it is still under way.
+const fix = computed(() => summary.value.remediation ?? {});
+const fixActive = computed(() => ["requested", "running"].includes(fix.value.status));
+const fixColor = computed(
+  () => ({ done: "success", failed: "warning" })[fix.value.status] ?? "primary"
+);
 const integrationMrn = computed(() => data.value.integration_mrn);
 
 const formatTs = (seconds) =>
@@ -300,6 +358,23 @@ function reload() {
   load();
   refreshKey.value++;
 }
+
+// After a fix is requested, follow it: its status first, then the scan that
+// comes after it, and reload the findings once that scan is in.
+let fixTimer;
+function watchFix() {
+  clearInterval(fixTimer);
+  let ticks = 0;
+  fixTimer = setInterval(async () => {
+    await loadCounts();
+    const rescanned = +scan.value.finished_at >= +fix.value.finished_at;
+    if (++ticks > 72 || (!fixActive.value && fix.value.finished_at && rescanned)) {
+      clearInterval(fixTimer);
+      refreshKey.value++;
+    }
+  }, 5000);
+}
+onBeforeUnmount(() => clearInterval(fixTimer));
 
 function filterRating(rating) {
   tab.value = "findings";
