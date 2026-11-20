@@ -18,16 +18,8 @@
           <div class="finding__text" v-html="renderMarkdown(details.description || details.message)" />
         </template>
 
-        <template v-if="details.remediation">
-          <div class="finding__title">How to fix it</div>
-          <!-- eslint-disable-next-line vue/no-v-html -->
-          <div class="finding__text" v-html="renderMarkdown(details.remediation)" />
-        </template>
-        <div v-else class="text-disabled mb-3">
-          Mondoo provides no remediation steps for this finding.
-        </div>
-
-        <div v-if="details.ansible_fix" class="mb-4">
+        <div v-if="details.remediation || details.ansible_fix" class="finding__title">How to fix it</div>
+        <div v-if="details.ansible_fix" class="mb-3">
           <v-btn
             size="small"
             color="primary"
@@ -57,6 +49,7 @@
                   including the scanner's. Read it before running.
                 </p>
                 <pre class="finding__play">{{ details.ansible_fix }}</pre>
+                <mondoo-login-form v-if="details.accepts_login" v-model="login" class="mt-3" />
               </v-card-text>
               <v-card-actions>
                 <v-spacer />
@@ -65,6 +58,13 @@
               </v-card-actions>
             </v-card>
           </v-dialog>
+        </div>
+        <template v-if="details.remediation">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <div class="finding__text" v-html="renderMarkdown(details.remediation)" />
+        </template>
+        <div v-else-if="!details.ansible_fix" class="text-disabled mb-3">
+          Mondoo provides no remediation steps for this finding.
         </div>
 
         <template v-if="details.audit">
@@ -121,6 +121,7 @@
 import { computed, onMounted, ref } from "vue";
 import api from "@/api";
 import { renderMarkdown } from "./markdown";
+import MondooLoginForm, { emptyLogin, loginParams } from "./loginForm.vue";
 
 const props = defineProps({
   uuid: { type: String, required: true },
@@ -140,12 +141,14 @@ const confirmFix = ref(false);
 const fixing = ref(false);
 const fixRequested = ref(false);
 const fixError = ref("");
+const login = ref(emptyLogin());
 
 async function runFix() {
   fixing.value = true;
   fixError.value = "";
   try {
-    await api.instances.action({ uuid: props.uuid, action: "fix", params: { mrn: props.mrn } });
+    await api.instances.action({ uuid: props.uuid, action: "fix", params: { mrn: props.mrn, ...loginParams(login.value) } });
+    login.value = emptyLogin();
     fixRequested.value = true;
     confirmFix.value = false;
     emit("fix");

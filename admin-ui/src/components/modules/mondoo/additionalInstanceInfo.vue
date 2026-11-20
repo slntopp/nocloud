@@ -72,6 +72,30 @@
           <v-progress-circular indeterminate size="12" width="2" class="mr-2" />
           {{ scan.requested_at ? "first scan running" : "waiting for the first scan" }}
         </v-chip>
+        <v-btn-group v-if="isSsh && !imported" density="compact" variant="outlined" divided>
+          <v-btn size="small" :loading="scanning" @click="scanNow()">Scan now</v-btn>
+          <v-btn v-if="summary.accepts_login" size="small" icon :disabled="scanning">
+            <v-icon size="small">mdi-menu-down</v-icon>
+            <v-menu activator="parent">
+              <v-list density="compact">
+                <v-list-item title="Scan with a different SSH login" @click="askLogin = true" />
+              </v-list>
+            </v-menu>
+          </v-btn>
+        </v-btn-group>
+        <v-dialog v-model="askLogin" max-width="560">
+          <v-card>
+            <v-card-title>Scan with a different SSH login</v-card-title>
+            <v-card-text>
+              <mondoo-login-form v-model="login" expanded />
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer />
+              <v-btn variant="text" @click="askLogin = false">Cancel</v-btn>
+              <v-btn color="primary" :loading="scanning" @click="scanNow(login)">Scan now</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
         <v-tooltip v-if="fix.status" location="top" :text="fix.error || fix.title">
           <template #activator="{ props: tip }">
             <v-chip v-bind="tip" size="small" variant="outlined" :color="fixColor">
@@ -234,6 +258,7 @@ import api from "@/api";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import MondooFindingsTable from "./findingsTable.vue";
+import MondooLoginForm, { emptyLogin, loginParams } from "./loginForm.vue";
 import { ratings } from "./serviceAccount";
 
 const props = defineProps(["template", "sp", "account", "addons"]);
@@ -350,6 +375,32 @@ async function loadCounts() {
     assets.total = +a.total || 0;
   } catch {
     // The tables' own loads report errors.
+  }
+}
+
+// "Scan now" for a machine scanned over SSH, optionally with a login typed in
+// for this one scan.
+const scanning = ref(false);
+const askLogin = ref(false);
+const login = ref(emptyLogin());
+async function scanNow(withLogin) {
+  const params = loginParams(withLogin);
+  if (withLogin && !params.login) {
+    error.value = "Enter a password or a private key";
+    return;
+  }
+  scanning.value = true;
+  error.value = "";
+  try {
+    await invoke("scan", params);
+    askLogin.value = false;
+    login.value = emptyLogin();
+    loadCounts();
+  } catch (err) {
+    askLogin.value = false;
+    error.value = err?.response?.data?.message ?? err?.message ?? "Failed to request the scan";
+  } finally {
+    scanning.value = false;
   }
 }
 

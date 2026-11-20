@@ -45,6 +45,22 @@
         />
       </v-col>
     </v-row>
+
+    <v-row class="align-center">
+      <v-col cols="4">
+        <v-list-subheader>SSH logins from customers</v-list-subheader>
+      </v-col>
+      <v-col cols="8">
+        <v-switch
+          :model-value="!!secrets.ssh_login_key"
+          color="primary"
+          label="accept a login for one scan or fix"
+          hint="For machines the scan runner's key no longer opens. Turning this on creates the key such logins are encrypted with; the Ansible service reads it from this provider. Add INSTANCE_LOGIN: ssh_login.box to the vars of the SCAN and REMEDIATE hooks."
+          persistent-hint
+          @update:model-value="changeLogins"
+        />
+      </v-col>
+    </v-row>
   </div>
 </template>
 
@@ -92,6 +108,17 @@ export default {
         });
       }
       this.$emit("passed", !!account);
+    },
+    changeLogins(on) {
+      const secrets = { ...this.secrets };
+      if (on) {
+        // 32 random bytes, base64: the key the driver and the Ansible
+        // service share through this provider's secrets.
+        const bytes = crypto.getRandomValues(new Uint8Array(32));
+        secrets.ssh_login_key = btoa(String.fromCharCode(...bytes));
+      } else delete secrets.ssh_login_key;
+      this.$emit("change:secrets", secrets);
+      this.$emit("passed", !!this.account);
     },
     changeImportMode(value) {
       const secrets = { ...this.secrets };
