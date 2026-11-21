@@ -18,12 +18,52 @@
           <div class="finding__text" v-html="renderMarkdown(details.description || details.message)" />
         </template>
 
+        <div v-if="details.remediation || details.ansible_fix" class="finding__title">How to fix it</div>
+        <div v-if="details.ansible_fix" class="mb-3">
+          <v-btn
+            size="small"
+            color="primary"
+            :disabled="!details.can_fix || fixRequested"
+            :loading="fixing"
+            @click="confirmFix = true"
+          >
+            <v-icon start>mdi-wrench</v-icon>Fix with Ansible
+          </v-btn>
+          <span v-if="fixRequested" class="text-caption ml-3">
+            Fix requested. The machine is scanned again when it finishes.
+          </span>
+          <span v-else-if="!details.can_fix" class="text-caption text-disabled ml-3">
+            Fixes are not enabled for your access level on this product.
+          </span>
+          <v-alert v-if="fixError" type="warning" variant="tonal" density="compact" class="mt-2">
+            {{ fixError }}
+          </v-alert>
+
+          <v-dialog v-model="confirmFix" max-width="820">
+            <v-card>
+              <v-card-title>Run this fix on the machine?</v-card-title>
+              <v-card-text>
+                <p class="mb-3">
+                  This Ansible play from Mondoo runs on the scanned machine as root and
+                  changes its configuration. A change to SSH settings can end remote access,
+                  including the scanner's. Read it before running.
+                </p>
+                <pre class="finding__play">{{ details.ansible_fix }}</pre>
+                <mondoo-login-form v-if="details.accepts_login" v-model="login" class="mt-3" />
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer />
+                <v-btn variant="text" @click="confirmFix = false">Cancel</v-btn>
+                <v-btn color="primary" :loading="fixing" @click="runFix">Run fix</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+        </div>
         <template v-if="details.remediation">
-          <div class="finding__title">How to fix it</div>
           <!-- eslint-disable-next-line vue/no-v-html -->
           <div class="finding__text" v-html="renderMarkdown(details.remediation)" />
         </template>
-        <div v-else class="text-disabled mb-3">
+        <div v-else-if="!details.ansible_fix" class="text-disabled mb-3">
           Mondoo provides no remediation steps for this finding.
         </div>
 
@@ -81,6 +121,7 @@
 import { computed, onMounted, ref } from "vue";
 import api from "@/api";
 import { renderMarkdown } from "./markdown";
+import MondooLoginForm, { emptyLogin, loginParams } from "./loginForm.vue";
 
 const props = defineProps({
   uuid: { type: String, required: true },
@@ -94,6 +135,30 @@ const loading = ref(true);
 const error = ref("");
 const details = ref({});
 const showAudit = ref(false);
+
+const emit = defineEmits(["fix"]);
+const confirmFix = ref(false);
+const fixing = ref(false);
+const fixRequested = ref(false);
+const fixError = ref("");
+const login = ref(emptyLogin());
+
+async function runFix() {
+  fixing.value = true;
+  fixError.value = "";
+  try {
+    await api.instances.action({ uuid: props.uuid, action: "fix", params: { mrn: props.mrn, ...loginParams(login.value) } });
+    login.value = emptyLogin();
+    fixRequested.value = true;
+    confirmFix.value = false;
+    emit("fix");
+  } catch (err) {
+    fixError.value = err?.response?.data?.message ?? err?.message ?? "Failed to request the fix";
+    confirmFix.value = false;
+  } finally {
+    fixing.value = false;
+  }
+}
 
 const facts = computed(() => {
   const d = details.value;
@@ -145,6 +210,15 @@ export default {
 </script>
 
 <style scoped>
+.finding__play {
+  max-height: 46vh;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 12px;
+  line-height: 1.45;
+}
 .finding {
   padding: 12px 4px 16px;
   white-space: normal;
