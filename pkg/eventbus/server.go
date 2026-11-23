@@ -2,12 +2,13 @@ package eventbus
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"sync"
+	"time"
+
 	"github.com/slntopp/nocloud/pkg/nocloud/rabbitmq"
 	"github.com/spf13/viper"
 	"google.golang.org/protobuf/proto"
-	"sync"
-	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/google/uuid"
@@ -24,6 +25,13 @@ import (
 
 var (
 	RabbitMQConn string
+)
+
+var errEventCancelled = errors.New("event cancelled by override")
+
+const (
+	aiTrialSuspendedKey = "ai_trial_suspended"
+	aiTrialExpiringKey  = "ai_trial_expiring"
 )
 
 func init() {
@@ -110,7 +118,7 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event, i
 	for _, ce := range customEvents {
 		if ce.Override == event.Key {
 			if ce.Key == "-" {
-				return nil, fmt.Errorf("event cancelled by override")
+				return nil, errEventCancelled
 			}
 			log.Debug("Event override", zap.Any("old_key", event.Key), zap.Any("new_key", ce.Key))
 			event.Key = ce.Key
@@ -118,7 +126,39 @@ func (s *EventBusServer) HandleEventOverride(log *zap.Logger, event *pb.Event, i
 		}
 	}
 
+	if event.GetKey() == "expiry_notification" && aiTrialPlan(customEvents) {
+		return rewriteAITrialExpiry(event, time.Now())
+	}
+
 	log.Debug("No override")
+	return event, nil
+}
+
+func aiTrialPlan(events []*bpb.CustomEvent) bool {
+	for _, ce := range events {
+		if ce.GetOverride() == "instance_suspended" && ce.GetKey() == aiTrialSuspendedKey {
+			return true
+		}
+	}
+	return false
+}
+
+func rewriteAITrialExpiry(event *pb.Event, now time.Time) (*pb.Event, error) {
+	data := event.GetData()
+	days := int64(0)
+	var due float64
+	if data != nil {
+		if v := data["period"]; v != nil {
+			days = int64(v.GetNumberValue())
+		}
+		if v := data["next_payment_date"]; v != nil {
+			due = v.GetNumberValue()
+		}
+	}
+	if days != 1 || (due > 0 && int64(due) <= now.Unix()) {
+		return nil, errEventCancelled
+	}
+	event.Key = aiTrialExpiringKey
 	return event, nil
 }
 
@@ -195,7 +235,11 @@ init:
 
 			updEvent, err = s.HandleEventOverride(log, updEvent, instanceUuid)
 			if err != nil {
-				log.Error("Fail event override", zap.Error(err))
+				if errors.Is(err, errEventCancelled) {
+					log.Debug("Event cancelled by override", zap.String("key", event.Key))
+				} else {
+					log.Error("Fail event override", zap.Error(err))
+				}
 				if err = msg.Ack(false); err != nil {
 					log.Warn("Failed to Acknowledge the delivery while executing event override", zap.Error(err))
 				}
