@@ -1,7 +1,17 @@
 <template>
   <div>
     <v-card-title class="px-0 mb-3"> Vlans:</v-card-title>
-    <v-row v-if="template.secrets.vlans">
+    <v-row v-if="!secretVlans && vlansHidden">
+      <v-col>
+        <v-btn :loading="isVlansLoading" @click="loadVlans">
+          Show VLAN settings
+        </v-btn>
+        <span class="ml-3 text-caption">
+          They are kept with the provider's secrets.
+        </span>
+      </v-col>
+    </v-row>
+    <v-row v-if="secretVlans">
       <v-col>
         <v-text-field
           readonly
@@ -14,7 +24,7 @@
       <v-col>
         <v-text-field
           readonly
-          :model-value="template.secrets.vlans[vlansKey].start"
+          :model-value="secretVlans[vlansKey]?.start"
           label="start"
           style="display: inline-block; width: 330px"
         >
@@ -23,7 +33,7 @@
       <v-col>
         <v-text-field
           readonly
-          :model-value="template.secrets.vlans[vlansKey].size"
+          :model-value="secretVlans[vlansKey]?.size"
           label="size"
           style="display: inline-block; width: 330px"
         >
@@ -303,11 +313,31 @@
 </template>
 
 <script>
+import { fetchSpSecrets, isRedacted } from "@/spSecrets.js";
+
 export default {
   name: "service-provider-ione",
   props: { template: { type: Object, required: true } },
-  data: () => ({ counter: 1 }),
+  data: () => ({ counter: 1, loadedVlans: null, isVlansLoading: false }),
   methods: {
+    // VLAN settings live in the secrets, which the provider comes with
+    // redacted: read them on request
+    async loadVlans() {
+      this.isVlansLoading = true;
+      try {
+        const secrets = await fetchSpSecrets(this.template.uuid);
+        this.loadedVlans = secrets.vlans ?? {};
+      } catch (e) {
+        this.$store.commit("snackbar/showSnackbarError", {
+          message:
+            e.response?.status === 403
+              ? "Only root can read provider secrets"
+              : e.response?.data?.message || "Error reading VLAN settings",
+        });
+      } finally {
+        this.isVlansLoading = false;
+      }
+    },
     changeWidth() {
       const { clientWidth } = this.$refs?.private;
       let cols = 64;
@@ -334,8 +364,15 @@ export default {
     this.changeWidth();
   },
   computed: {
+    secretVlans() {
+      const vlans = this.loadedVlans ?? this.template.secrets?.vlans;
+      return vlans && typeof vlans === "object" ? vlans : null;
+    },
+    vlansHidden() {
+      return isRedacted(this.template.secrets?.vlans);
+    },
     vlansKey() {
-      return Object.keys(this.template.secrets.vlans ?? {})[0];
+      return Object.keys(this.secretVlans ?? {})[0];
     },
     vlans() {
       const { free_vlans } =
@@ -354,12 +391,12 @@ export default {
       return res;
     },
     vlansCount() {
-      if (!this.template.secrets.vlans) return 0;
-      return this.template.secrets.vlans[this.vlansKey]?.size;
+      if (!this.secretVlans) return 0;
+      return this.secretVlans[this.vlansKey]?.size;
     },
     vlansStart() {
-      if (!this.template.secrets.vlans) return 0;
-      return this.template.secrets.vlans[this.vlansKey]?.start;
+      if (!this.secretVlans) return 0;
+      return this.secretVlans[this.vlansKey]?.start;
     },
     vlansRowCount() {
       if (this.vlansCount < 400) {

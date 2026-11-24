@@ -181,6 +181,16 @@ func main() {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
 
+	// GET /sp/{uuid}/secrets: root reads a provider's secrets, which the
+	// other routes return redacted
+	spConn, err := grpc.NewClient(apiserver, opts...)
+	if err != nil {
+		log.Fatal("Failed to dial ServicesProvidersService for the secrets route", zap.Error(err))
+	}
+	if err = registerSpSecretsRoute(gwmux, sppb.NewServicesProvidersServiceClient(spConn)); err != nil {
+		log.Fatal("Failed to register the ServicesProvider secrets route", zap.Error(err))
+	}
+
 	// ShowcasesService
 	log.Info("Registering ShowcasesService Gateway")
 	err = sppb.RegisterShowcasesServiceHandlerFromEndpoint(

@@ -198,6 +198,7 @@ import { moduleComponent, moduleTypes } from "@/modules";
 import api from "@/api.js";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
+import { fetchSpSecrets } from "@/spSecrets.js";
 import JsonEditor from "@/components/JsonEditor.vue";
 
 import {
@@ -262,14 +263,30 @@ export default {
     this.fetchExtentions();
 
     if (id) {
-      this.$store.dispatch("servicesProviders/fetchById", id).then((res) => {
-        if (!this.types.includes(res.type)) {
-          this.customTitle = res.type;
-          res.type = "custom";
+      this.$store.dispatch("servicesProviders/fetchById", id).then(async (res) => {
+        // a copy: the real secret values below must not end up in the store
+        const provider = JSON.parse(JSON.stringify(res));
+        if (!this.types.includes(provider.type)) {
+          this.customTitle = provider.type;
+          provider.type = "custom";
         }
-        this.originalSecrets = JSON.parse(JSON.stringify(res.secrets));
+        // GET /sp/:uuid gives the secrets redacted; the editor needs the values
+        try {
+          provider.secrets = await fetchSpSecrets(id);
+        } catch {
+          this.showSnackbarError({
+            message:
+              "Secret values are hidden (root only): fields you leave as they are keep their stored values.",
+          });
+        }
+        provider.secrets = provider.secrets ?? {};
+        // the API leaves out empty fields; the form expects them (as on create)
+        provider.proxy = provider.proxy ?? { socket: "" };
+        provider.vars = provider.vars ?? {};
+        this.originalSecrets = JSON.parse(JSON.stringify(provider.secrets));
 
-        this.provider = res;
+        this.providerKey = this.generateComponentId();
+        this.provider = provider;
       });
     }
   },

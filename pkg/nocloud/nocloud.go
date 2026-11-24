@@ -33,6 +33,11 @@ const NOCLOUD_LOG_LEVEL = zapcore.DebugLevel - 1
 const NOCLOUD_SESSION_CLAIM = "session"
 const NOCLOUD_NOSESSION_CLAIM = "nosession"
 
+// NOCLOUD_REVEAL_SECRETS_METADATA is the gRPC metadata key ("true") with which
+// a root user asks ServicesProvidersService/Get for the provider's real secret
+// values; without it users get them redacted. REST: GET /sp/{uuid}/secrets.
+const NOCLOUD_REVEAL_SECRETS_METADATA = "nocloud-reveal-secrets"
+
 type ContextKey string
 
 const NoCloudAccount = ContextKey("account")
