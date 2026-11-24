@@ -17,6 +17,13 @@
       <v-col cols="12" md="6">
         <v-text-field readonly :model-value="importMode" label="import mode" />
       </v-col>
+      <v-col cols="12" md="6">
+        <v-text-field
+          readonly
+          :model-value="template.secrets?.ssh_login_key ? 'accepted' : 'not accepted'"
+          label="SSH logins from customers"
+        />
+      </v-col>
     </v-row>
     <slot v-else></slot>
   </div>

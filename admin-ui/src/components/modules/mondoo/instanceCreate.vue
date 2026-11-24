@@ -56,7 +56,28 @@
           </v-autocomplete>
         </v-col>
       </v-row>
-      <v-row>
+      <v-row v-if="isSsh">
+        <v-col cols="12">
+          <v-autocomplete
+            label="Machine to scan"
+            :model-value="instance.config?.instance"
+            :items="machines"
+            item-title="title"
+            item-value="uuid"
+            :loading="machinesLoading"
+            :rules="requiredRule"
+            hint="One of this account's instances. It is scanned over SSH from the scan runner; results appear after the first scan."
+            persistent-hint
+            no-data-text="This account has no instances to scan"
+            @update:model-value="setValue('config.instance', $event)"
+          >
+            <template v-slot:item="{ internalItem: item, props: itemProps }">
+              <v-list-item v-bind="itemProps" :subtitle="item.raw.subtitle" />
+            </template>
+          </v-autocomplete>
+        </v-col>
+      </v-row>
+      <v-row v-else>
         <v-col cols="12">
           <v-combobox
             label="Domains"
@@ -86,10 +107,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
+import { useStore } from "@/store";
+import { ListInstancesRequest } from "nocloud-proto/proto/es/instances/instances_pb";
 import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
 
-const props = defineProps(["instance", "planRules", "spUuid"]);
+const props = defineProps(["instance", "planRules", "spUuid", "accountId"]);
 const { instance, planRules } = toRefs(props);
 
 const emit = defineEmits(["set-instance", "set-value"]);
@@ -119,6 +142,46 @@ const products = computed(() =>
 const product = computed(
   () => bilingPlan.value?.products?.[instance.value.product]
 );
+// A product of kind "ssh" scans one of the account's machines over SSH
+// instead of a set of domains.
+const isSsh = computed(() => product.value?.meta?.kind === "ssh");
+const store = useStore();
+const machines = ref([]);
+const machinesLoading = ref(false);
+
+async function loadMachines() {
+  machines.value = [];
+  if (!isSsh.value || !props.accountId) return;
+  machinesLoading.value = true;
+  try {
+    const response = await store.getters["instances/instancesClient"].list(
+      ListInstancesRequest.fromJson({
+        page: 1,
+        limit: 100,
+        filters: { account: [props.accountId] },
+      })
+    );
+    machines.value = response.pool
+      .map((i) => i.instance.toJson())
+      // a scan of a machine is not itself a machine
+      .filter((i) => !i.config?.instance && i.state?.state !== "DELETED")
+      .map((i) => ({
+        uuid: i.uuid,
+        title: i.title,
+        subtitle: i.config?.host || i.uuid,
+      }));
+  } catch {
+    machines.value = [];
+  } finally {
+    machinesLoading.value = false;
+  }
+}
+watch([isSsh, () => props.accountId], loadMachines, { immediate: true });
+watch(isSsh, (ssh) => {
+  if (ssh) setValue("config.domains", []);
+  else setValue("config.instance", undefined);
+});
+
 const limit = computed(() => +product.value?.resources?.domains || 0);
 const trial = computed(() => product.value?.meta?.trial);
 const trialDays = computed(() => {
