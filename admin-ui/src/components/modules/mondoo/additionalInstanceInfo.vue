@@ -12,20 +12,17 @@
       </v-col>
       <v-col v-else cols="12" md="6">
         <v-combobox
-          label="Domains"
+          :label="domains.length > 1 ? 'Domains' : 'Domain'"
           :model-value="domains"
           multiple
           chips
-          closable-chips
-          :readonly="imported"
+          readonly
           :hint="
             imported
               ? 'Imported integration: its domains are managed in Mondoo.'
-              : 'The driver updates the integration on its next monitoring pass.'
+              : 'The domain is what was ordered and cannot be changed. For another domain, create another instance.'
           "
           persistent-hint
-          :delimiters="[',', ' ']"
-          @update:model-value="changeDomains"
         />
       </v-col>
       <v-col cols="6" md="2">
@@ -262,7 +259,7 @@ import MondooLoginForm, { emptyLogin, loginParams } from "./loginForm.vue";
 import { ratings } from "./serviceAccount";
 
 const props = defineProps(["template", "sp", "account", "addons"]);
-const emit = defineEmits(["update"]);
+defineEmits(["update"]);
 const { template } = toRefs(props);
 
 const store = useStore();
@@ -430,19 +427,6 @@ onBeforeUnmount(() => clearInterval(fixTimer));
 function filterRating(rating) {
   tab.value = "findings";
   findingsFilter.rating = findingsFilter.rating === rating ? "" : rating;
-}
-
-function changeDomains(values) {
-  const next = [
-    ...new Set(
-      (values ?? [])
-        .map((d) =>
-          String(d).trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "")
-        )
-        .filter(Boolean)
-    ),
-  ];
-  emit("update", { key: "config.domains", value: next });
 }
 
 function copy(text) {

@@ -48,7 +48,14 @@
                     class="d-flex justify-space-between align-center"
                   >
                     <span>{{ item.raw.key }}</span>
-                    <span class="ml-4">{{ item.raw.title }}</span>
+                    <span class="ml-4">
+                      {{ item.raw.title }}
+                      <span
+                        v-if="item.raw.title !== item.raw.kindTitle"
+                        class="text-medium-emphasis"
+                        >({{ item.raw.kindTitle }})</span
+                      >
+                    </span>
                   </div>
                 </template>
               </v-list-item>
@@ -80,7 +87,7 @@
       <v-row v-else>
         <v-col cols="12">
           <v-combobox
-            label="Domains"
+            label="Domain"
             :model-value="instance.config?.domains ?? []"
             multiple
             chips
@@ -111,6 +118,7 @@ import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { ListInstancesRequest } from "nocloud-proto/proto/es/instances/instances_pb";
 import plansAutocomplete from "@/components/ui/plansAutoComplete.vue";
+import { kindTitle } from "./productKinds";
 
 const props = defineProps(["instance", "planRules", "spUuid", "accountId"]);
 const { instance, planRules } = toRefs(props);
@@ -137,6 +145,7 @@ const products = computed(() =>
   Object.entries(bilingPlan.value?.products ?? {}).map(([key, product]) => ({
     key,
     title: product.title,
+    kindTitle: kindTitle(product),
   }))
 );
 const product = computed(
@@ -182,24 +191,19 @@ watch(isSsh, (ssh) => {
   else setValue("config.instance", undefined);
 });
 
-const limit = computed(() => +product.value?.resources?.domains || 0);
 const trial = computed(() => product.value?.meta?.trial);
 const trialDays = computed(() => {
   const days = (+trial.value?.period || 0) / 86400;
   return days >= 1 ? `${Math.round(days)}-day` : `${trial.value?.period}s`;
 });
 
-const domainsHint = computed(() =>
-  limit.value
-    ? `Up to ${limit.value} domain(s) on this product. Subdomains are discovered by the scan.`
-    : "Domains to scan. Subdomains are discovered by the scan."
-);
+// One domain per instance: each further domain is another order. Several
+// only make sense on a provider that imports: to adopt an existing
+// integration that has exactly those domains. The driver checks this.
+const domainsHint =
+  "One domain per instance; subdomains are discovered by the scan. Enter several only to import an existing integration with exactly those domains.";
 const domainRules = computed(() => [
-  (val) => (val?.length ?? 0) > 0 || "At least one domain is required",
-  (val) =>
-    !limit.value ||
-    (val?.length ?? 0) <= limit.value ||
-    `This product allows ${limit.value} domain(s)`,
+  (val) => (val?.length ?? 0) > 0 || "A domain is required",
   (val) =>
     (val ?? []).every((d) => domainPattern.test(d)) || "Not a valid domain name",
 ]);

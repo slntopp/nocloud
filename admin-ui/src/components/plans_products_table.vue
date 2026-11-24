@@ -70,6 +70,27 @@
               <v-btn variant="elevated" class="mr-2" color="background-light" @click="addConfig">
                 Create
               </v-btn>
+              <v-menu v-if="type === 'mondoo'">
+                <template v-slot:activator="{ props: menuProps }">
+                  <v-btn
+                    variant="elevated"
+                    class="mr-2"
+                    color="background-light"
+                    v-bind="menuProps"
+                  >
+                    Add preset
+                  </v-btn>
+                </template>
+                <v-list density="compact">
+                  <v-list-item
+                    v-for="kind in mondooKinds"
+                    :key="kind.value"
+                    :title="kind.title"
+                    :subtitle="kind.subtitle"
+                    @click="addMondooPreset(kind.value)"
+                  />
+                </v-list>
+              </v-menu>
               <confirm-dialog @confirm="removeConfig">
                 <v-btn variant="elevated" color="background-light" :disabled="selected.length < 1">
                   Delete
@@ -220,6 +241,13 @@
                 />
               </template>
 
+              <template v-else-if="type === 'mondoo'">
+                <mondoo-product-fields
+                  :meta="item.meta"
+                  @update:meta="changeProduct('meta', $event, item.id)"
+                />
+              </template>
+
               <template v-else>
                 <v-list-subheader class="px-0"> Amount of resources </v-list-subheader>
                 <json-editor
@@ -232,7 +260,7 @@
                 :meta="item.meta"
                 @update:meta="changeProduct('meta', $event, item.id)"
               />
-              <v-row>
+              <v-row v-if="type !== 'mondoo'">
                 <v-col>
                   <v-list-subheader class="px-0 pt-4"
                     >Installation price:</v-list-subheader
@@ -320,6 +348,11 @@ import confirmDialog from "@/components/confirmDialog.vue";
 import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
 import plansTrialFields from "@/components/plans_trial_fields.vue";
+import mondooProductFields from "@/components/modules/mondoo/productFields.vue";
+import {
+  productKinds as mondooKinds,
+  productPreset as mondooPreset,
+} from "@/components/modules/mondoo/productKinds";
 
 const props = defineProps({
   addons: { type: Array, required: true },
@@ -572,6 +605,26 @@ function addConfig() {
     resources: {},
     public: true,
     meta: {},
+    sorter: Object.keys(result).length,
+    id: Math.random().toString(16).slice(2),
+  };
+
+  changeProduct("products", result);
+  setProductsArray();
+}
+
+// A ready product for one of the two Mondoo kinds, to adjust and price.
+function addMondooPreset(kind) {
+  const result = { ...products.value };
+  const { key: base, ...preset } = mondooPreset(kind);
+  let key = base;
+  for (let n = 2; key in result; n++) key = `${base}_${n}`;
+  const group = groups.value.values().next().value ?? "default";
+  groups.value.set(group, group);
+  result[key] = {
+    ...preset,
+    key,
+    group,
     sorter: Object.keys(result).length,
     id: Math.random().toString(16).slice(2),
   };
