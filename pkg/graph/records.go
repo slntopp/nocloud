@@ -225,7 +225,8 @@ func (ctrl *recordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "transactionType" {
+			// transactionType, and key (the AI API key a charge was made with), live in the meta.
+			if key == "transactionType" || key == "key" {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
 					continue
@@ -341,7 +342,8 @@ func (ctrl *recordsController) GetRecordsReportsCount(ctx context.Context, req *
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "transactionType" {
+			// transactionType, and key (the AI API key a charge was made with), live in the meta.
+			if key == "transactionType" || key == "key" {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
 					continue
