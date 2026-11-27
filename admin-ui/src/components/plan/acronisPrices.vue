@@ -27,6 +27,7 @@ import nocloudTable from "@/components/table.vue";
 import { ref, defineProps, onMounted, computed } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
+import { fetchSpSecrets } from "@/spSecrets.js";
 
 const props = defineProps(["template"]);
 
@@ -53,8 +54,11 @@ onMounted(async () => {
     const spUuid = sps.value.find((sp) => sp.type === props.template.type).uuid;
     await store.dispatch("servicesProviders/fetchById", spUuid);
     sp.value = sps.value.find((sp) => sp.uuid === spUuid);
-    Object.keys(sp.value.secrets.offeringItems).forEach((key) => {
-      availableResources.value.push(sp.value.secrets.offeringItems[key]);
+    // offering items are kept in the provider's secrets, which the provider
+    // comes with redacted
+    const { offeringItems = {} } = await fetchSpSecrets(spUuid);
+    Object.keys(offeringItems).forEach((key) => {
+      availableResources.value.push(offeringItems[key]);
     });
     Object.keys(props.template.products).forEach((key) => {
       const resource = availableResources.value.find((r) => r.name === key);

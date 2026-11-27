@@ -41,7 +41,7 @@ func SetContext(logger *zap.Logger, _rdb redisdb.Client, key []byte) {
 	log = logger.Named("JWT")
 	rdb = _rdb
 	SIGNING_KEY = key
-	log.Debug("Context set", zap.ByteString("signing_key", key))
+	log.Debug("Context set") // never log the signing key
 }
 
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {

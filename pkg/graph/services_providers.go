@@ -72,7 +72,7 @@ func NewServicesProvidersController(logger *zap.Logger, db driver.Database) Serv
 }
 
 func (ctrl *servicesProvidersController) Create(ctx context.Context, sp *ServicesProvider) (err error) {
-	ctrl.log.Debug("Creating Document for ServicesProvider", zap.Any("config", sp))
+	ctrl.log.Debug("Creating Document for ServicesProvider", zap.String("type", sp.GetType()), zap.String("title", sp.GetTitle())) // no secrets in logs
 	meta, err := ctrl.col.CreateDocument(ctx, *sp)
 	sp.Uuid = meta.Key
 	return err
@@ -80,7 +80,7 @@ func (ctrl *servicesProvidersController) Create(ctx context.Context, sp *Service
 
 // Update ServicesProvider in DB
 func (ctrl *servicesProvidersController) Update(ctx context.Context, sp *pb.ServicesProvider) error {
-	ctrl.log.Debug("Updating ServicesProvider", zap.Any("sp", sp))
+	ctrl.log.Debug("Updating ServicesProvider", zap.String("uuid", sp.GetUuid())) // no secrets in logs
 
 	meta, err := ctrl.col.ReplaceDocument(ctx, sp.GetUuid(), sp)
 	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))

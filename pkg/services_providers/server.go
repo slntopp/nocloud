@@ -97,9 +97,43 @@ func (s *ServicesProviderServer) ListExtentions(ctx context.Context, req *sppb.L
 	return &sppb.ListExtentionsResponse{Types: keys}, nil
 }
 
+// Test checks a provider config with its driver. For a saved provider (uuid
+// set) and an admin caller, the secrets are first merged into the stored ones
+// as Update would merge them, so a config with redacted secrets tests with
+// the real values.
 func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
-	s.log.Debug("Test request received", zap.Any("request", req))
+	s.log.Debug("Test request received", zap.Any("request", forLog(req)))
 
+	// Drivers and core services test exactly what they send, as before.
+	if req.GetUuid() != "" && !isServiceCall(ctx) && s.hasRootNsAccess(ctx, access.Level_ADMIN) {
+		if stored, err := s.ctrl.Get(ctx, req.GetUuid()); err == nil {
+			secrets, err := applySecrets(s.hasRootNsAccess(ctx, access.Level_ROOT), stored.GetSecrets(), req.GetSecrets())
+			if err != nil {
+				return nil, err
+			}
+			req = cloneSP(req)
+			req.Secrets = secrets
+		} else {
+			s.log.Debug("Test: no stored ServicesProvider to take secrets from", zap.String("uuid", req.GetUuid()), zap.Error(err))
+		}
+	}
+
+	return s.test(ctx, req)
+}
+
+// hasRootNsAccess reports whether the requestor has at least the given access
+// to the root namespace (admin: may change providers, as Update requires;
+// root: may also read their secrets).
+func (s *ServicesProviderServer) hasRootNsAccess(ctx context.Context, level access.Level) bool {
+	requestor, _ := ctx.Value(nocloud.NoCloudAccount).(string)
+	if requestor == "" {
+		return false
+	}
+	return s.ca.HasAccess(ctx, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), level)
+}
+
+// test sends the config to its driver (and extension servers) as given.
+func (s *ServicesProviderServer) test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
 	title := req.GetTitle()
 	if title == "" {
 		return nil, status.Error(codes.InvalidArgument, "Services Provider 'title' is not given")
@@ -143,9 +177,12 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 
 func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
 	log := s.log.Named("Create")
-	log.Debug("Create request received", zap.Any("request", req))
+	log.Debug("Create request received", zap.Any("request", forLog(req)))
 
-	testRes, err := s.Test(ctx, req)
+	// A new provider has no stored secrets the placeholders could refer to.
+	req.Secrets = dropSecretSentinels(req.GetSecrets())
+
+	testRes, err := s.test(ctx, req)
 	if err != nil {
 		return req, err
 	}
@@ -175,7 +212,7 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 	}
 
 	ctx = context.WithValue(ctx, nocloud.TestFromCreate, true)
-	testRes, err = s.Test(ctx, req)
+	testRes, err = s.test(ctx, req)
 	if err != nil {
 		s.UnregisterExtentions(ctx, log, sp)
 		return req, err
@@ -192,10 +229,10 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 	err = s.ctrl.Create(ctx, sp)
 	if err != nil {
 		s.UnregisterExtentions(ctx, log, sp)
-		s.log.Debug("Error allocating in DataBase", zap.Any("sp", sp), zap.Error(err))
-		return req, status.Error(codes.Internal, "Error allocating in DataBase")
+		s.log.Debug("Error allocating in DataBase", zap.Any("sp", forLog(sp.ServicesProvider)), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error allocating in DataBase")
 	}
-	return sp.ServicesProvider, err
+	return forResponse(ctx, sp.ServicesProvider), nil
 }
 
 func (s *ServicesProviderServer) UnregisterExtentions(ctx context.Context, log *zap.Logger, sp *graph.ServicesProvider) {
@@ -273,7 +310,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 
 func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
 	log := s.log.Named("Update")
-	log.Debug("Update request received", zap.Any("request", req))
+	log.Debug("Update request received", zap.Any("request", forLog(req)))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -302,8 +339,19 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if newTitle := req.GetTitle(); newTitle != "" {
 		sp.Title = newTitle
 	}
-	if newSecrets := req.GetSecrets(); newSecrets != nil {
-		sp.Secrets = newSecrets
+	if isServiceCall(ctx) {
+		// drivers and core services: as before, what they send replaces
+		if newSecrets := req.GetSecrets(); newSecrets != nil {
+			sp.Secrets = newSecrets
+		}
+	} else {
+		// users get secrets redacted and send them back that way: see
+		// secrets.go for how a key is kept, changed or removed
+		secrets, err := applySecrets(s.ca.HasAccess(ctx, requestor, ns.ID, access.Level_ROOT), sp.GetSecrets(), req.GetSecrets())
+		if err != nil {
+			return nil, err
+		}
+		sp.Secrets = secrets
 	}
 	if newProxy := req.GetProxy(); newProxy != nil {
 		sp.Proxy = newProxy
@@ -333,27 +381,27 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	sp.Meta = req.GetMeta()
 	sp.Public = req.GetPublic()
 
-	testRes, err := s.Test(ctx, sp.ServicesProvider)
+	testRes, err := s.test(ctx, sp.ServicesProvider)
 	if err != nil {
-		return req, err
+		return nil, err
 	}
 	if !testRes.Result {
-		return req, status.Error(codes.Internal, testRes.Error)
+		return nil, status.Error(codes.Internal, testRes.Error)
 	}
 
 	log.Info("meta", zap.Any("meta", sp.ServicesProvider.GetMeta()))
 
 	err = s.ctrl.Update(ctx, sp.ServicesProvider)
 	if err != nil {
-		s.log.Debug("Error updating in DataBase", zap.Any("sp", sp), zap.Error(err))
-		return req, status.Error(codes.Internal, "Error updating in DataBase")
+		s.log.Debug("Error updating in DataBase", zap.Any("sp", forLog(sp.ServicesProvider)), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error updating in DataBase")
 	}
-	return sp.ServicesProvider, err
+	return forResponse(ctx, sp.ServicesProvider), nil
 }
 
 func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetRequest) (res *sppb.ServicesProvider, err error) {
 	log := s.log.Named("Get")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request)) // no ctx: it holds the bearer token
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -381,8 +429,23 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 		return nil, status.Error(codes.PermissionDenied, "Not enough rights")
 	}
 
-	if acc.Level < access.Level_ROOT {
+	reveal := revealRequested(ctx)
+	if reveal && acc.Level < access.Level_ROOT {
+		log.Warn("Secrets requested without root access", zap.String("requestor", requestor), zap.String("sp", request.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to read ServicesProvider secrets")
+	}
+
+	switch {
+	case acc.Level < access.Level_ADMIN:
 		r.Secrets = nil
+	case acc.Level == access.Level_ROOT && (reveal || isServiceCall(ctx)):
+		// Root asked for the values, or a driver/core service reads the
+		// provider: real secrets, as before.
+		if reveal {
+			log.Info("ServicesProvider secrets revealed", zap.String("requestor", requestor), zap.String("sp", request.GetUuid()))
+		}
+	default:
+		r.Secrets = RedactSecrets(r.Secrets)
 	}
 	if acc.Level < access.Level_ADMIN {
 		r.Vars = nil
@@ -393,7 +456,7 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 
 func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest) (res *sppb.ListResponse, err error) {
 	log := s.log.Named("List")
-	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", req)) // no ctx: it holds the bearer token
 
 	var requestor string
 	if !req.Anonymously {
@@ -479,7 +542,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 
 func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.UnbindPlanRequest) (res *sppb.UnbindPlanResponse, err error) {
 	log := s.log.Named("UnbindPlan")
-	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", req)) // no ctx: it holds the bearer token
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
