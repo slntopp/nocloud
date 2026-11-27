@@ -1,8 +1,8 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go/compute/metadata v0.9.0 h1:pDUj4QMoPejqq20dK0Pg2N4yG9zIkYGdBtwLoEkH9Zs=
 cloud.google.com/go/compute/metadata v0.9.0/go.mod h1:E0bWwX5wTnLPedCKqk3pJmVgCBSM6qQI1yTBdEb3C10=
-connectrpc.com/connect v1.14.0 h1:PDS+J7uoz5Oui2VEOMcfz6Qft7opQM9hPiKvtGC01pA=
-connectrpc.com/connect v1.14.0/go.mod h1:uoAq5bmhhn43TwhaKdGKN/bZcGtzPW1v+ngDTn5u+8s=
+connectrpc.com/connect v1.21.1 h1:h2kacdlzXpZU2OQFSv98xkjYXNUSr/ptxmGVbS/+CRM=
+connectrpc.com/connect v1.21.1/go.mod h1:fhMcVJ5w6r/yTYhnkEbW6+sIF7OZ5Ay7KYgmfebh2ek=
 connectrpc.com/grpchealth v1.3.0 h1:FA3OIwAvuMokQIXQrY5LbIy8IenftksTP/lG4PbYN+E=
 connectrpc.com/grpchealth v1.3.0/go.mod h1:3vpqmX25/ir0gVgW6RdnCPPZRcR6HvqtXX5RNPmDXHM=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
@@ -139,10 +139,6 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/slntopp/nocloud-proto v0.0.0-20261012234540-b183f5143898 h1:r/9DqkSzy+de6mgTnXU28BoJFLKuSS2xWOIE0U8uvAg=
-github.com/slntopp/nocloud-proto v0.0.0-20261012234540-b183f5143898/go.mod h1:qPbslPB2J9Q7qm6H9Jaqf/Ysf61YlPL0DUFhIdAEikI=
-github.com/slntopp/nocloud-proto v0.0.0-20261112131757-cb1b18823702 h1:DZ0RsyR8CN41PJxKoCA9QW/lqQUPdFYW6hLNAEM6AtU=
-github.com/slntopp/nocloud-proto v0.0.0-20261112131757-cb1b18823702/go.mod h1:qPbslPB2J9Q7qm6H9Jaqf/Ysf61YlPL0DUFhIdAEikI=
 github.com/slntopp/nocloud-proto v0.0.0-20261118145832-ef1373da3769 h1:zKFXqSopiUVLZLvSH5Vebh/bTdKTPxs4t3lQzd+dMIM=
 github.com/slntopp/nocloud-proto v0.0.0-20261118145832-ef1373da3769/go.mod h1:qPbslPB2J9Q7qm6H9Jaqf/Ysf61YlPL0DUFhIdAEikI=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
